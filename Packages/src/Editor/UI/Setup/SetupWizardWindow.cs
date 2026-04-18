@@ -7,6 +7,7 @@ using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
+using RuntimePlatform = UnityEngine.RuntimePlatform;
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -140,6 +141,7 @@ namespace io.github.hatayama.uLoopMCP
         private bool _isSkillsTargetFieldInitialized;
         private bool _shouldUseFirstInstallSkillsUi;
         private bool _installSkillsFlat;
+        private IVisualElementScheduledItem _initialRefreshScheduledItem;
         private IVisualElementScheduledItem _resizeScheduledItem;
         private CancellationTokenSource _skillInstallStateRefreshCts;
         private SkillsTarget _skillsTarget = SkillsTarget.Claude;
@@ -151,7 +153,8 @@ namespace io.github.hatayama.uLoopMCP
             BindElements();
             BindEvents();
             BindSizeUpdates();
-            RefreshUI();
+            ApplyInitialCheckingState();
+            ScheduleInitialRefresh();
             ScheduleResizeToContent();
         }
 
@@ -164,6 +167,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private void OnDisable()
         {
+            _initialRefreshScheduledItem?.Pause();
             CancelSkillInstallStateRefresh();
         }
 
@@ -283,6 +287,31 @@ namespace io.github.hatayama.uLoopMCP
             _suppressAutoShowToggle.SetValueWithoutNotify(McpEditorSettings.GetSuppressSetupWizardAutoShow());
         }
 
+        private void ApplyInitialCheckingState()
+        {
+            RefreshAutoShowToggle();
+            ViewDataBinder.SetVisible(_nodejsWarning, false);
+            ViewDataBinder.SetVisible(_nodejsOk, false);
+            ViewDataBinder.ToggleClass(_cliStatusIcon, "setup-status-icon--success", false);
+            ViewDataBinder.ToggleClass(_cliStatusIcon, "setup-status-icon--pending", true);
+            _cliStatusLabel.text = "Checking...";
+            _installCliButton.SetEnabled(false);
+            _installCliButton.text = "Checking...";
+            _groupSkillsToggle.SetEnabled(false);
+            _skillsStatusLabel.text = "Checking installed skills...";
+            _installSkillsButton.SetEnabled(false);
+            _installSkillsButton.text = "Checking...";
+            ViewDataBinder.SetVisible(_skillsTargetRow, _shouldUseFirstInstallSkillsUi);
+            ViewDataBinder.SetVisible(_skillsTargetList, !_shouldUseFirstInstallSkillsUi);
+            _skillsTargetList.Clear();
+        }
+
+        private void ScheduleInitialRefresh()
+        {
+            _initialRefreshScheduledItem?.Pause();
+            _initialRefreshScheduledItem = rootVisualElement.schedule.Execute(RefreshUI).StartingIn(0);
+        }
+
         private void RefreshSkillsSection()
         {
             string cachedCliVersion = CliInstallationDetector.GetCachedCliVersion();
@@ -297,9 +326,11 @@ namespace io.github.hatayama.uLoopMCP
         private async void RefreshUI()
         {
             CancelSkillInstallStateRefresh();
-            RefreshAutoShowToggle();
+            ApplyInitialCheckingState();
+            await Task.Yield();
 
-            string nodePath = NodeEnvironmentResolver.FindNodePath();
+            RuntimePlatform platform = Application.platform;
+            string nodePath = await Task.Run(() => NodeEnvironmentResolver.FindNodePathAtPlatform(platform));
             bool nodeDetected = !string.IsNullOrEmpty(nodePath);
 
             ViewDataBinder.SetVisible(_nodejsWarning, !nodeDetected);
@@ -699,7 +730,7 @@ namespace io.github.hatayama.uLoopMCP
             finally
             {
                 _isInstallingSkills = false;
-                RefreshUI();
+                RefreshSkillsSection();
             }
         }
 
