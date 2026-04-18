@@ -441,11 +441,7 @@ function collectProjectSkills(excludedRoots: string[] = []): SkillDefinition[] {
   const skills: SkillDefinition[] = [];
   const seenNames = new Set<string>();
 
-  const searchPaths = [
-    join(projectRoot, SkillsPathConstants.ASSETS_DIR),
-    join(projectRoot, SkillsPathConstants.PACKAGES_DIR),
-    join(projectRoot, SkillsPathConstants.LIBRARY_DIR, SkillsPathConstants.PACKAGE_CACHE_DIR),
-  ];
+  const searchPaths = getProjectSkillSearchRoots(projectRoot);
 
   for (const searchPath of searchPaths) {
     if (!existsSync(searchPath)) {
@@ -471,6 +467,128 @@ function collectProjectSkills(excludedRoots: string[] = []): SkillDefinition[] {
   }
 
   return uniqueSkills;
+}
+
+export function getProjectSkillSearchRoots(projectRoot: string): string[] {
+  const searchRoots: string[] = [];
+  const seenRoots = new Set<string>();
+
+  const addSearchRoot = (root: string | null): void => {
+    if (!root) {
+      return;
+    }
+
+    const normalizedRoot = resolve(root);
+    if (seenRoots.has(normalizedRoot)) {
+      return;
+    }
+
+    seenRoots.add(normalizedRoot);
+    searchRoots.push(normalizedRoot);
+  };
+
+  addSearchRoot(join(projectRoot, SkillsPathConstants.ASSETS_DIR));
+  addSearchRoot(resolvePackageRoot(projectRoot));
+
+  for (const packageRoot of enumerateDirectProjectPackageRoots(projectRoot)) {
+    addSearchRoot(packageRoot);
+  }
+
+  for (const packageRoot of resolveManifestLocalPackageRoots(projectRoot)) {
+    addSearchRoot(packageRoot);
+  }
+
+  for (const packageRoot of resolveDependencyPackageCacheRoots(projectRoot)) {
+    addSearchRoot(packageRoot);
+  }
+
+  return searchRoots;
+}
+
+function enumerateDirectProjectPackageRoots(projectRoot: string): string[] {
+  const packagesRoot = join(projectRoot, SkillsPathConstants.PACKAGES_DIR);
+  if (!existsSync(packagesRoot)) {
+    return [];
+  }
+
+  const packageRoots: string[] = [];
+  const entries = readdirSync(packagesRoot, { withFileTypes: true });
+  for (const entry of entries) {
+    if (!entry.isDirectory()) {
+      continue;
+    }
+
+    packageRoots.push(resolveSkillSearchRootCandidate(join(packagesRoot, entry.name)));
+  }
+
+  return packageRoots;
+}
+
+function resolveManifestLocalPackageRoots(projectRoot: string): string[] {
+  const dependencies = readManifestDependencies(projectRoot);
+  if (!dependencies) {
+    return [];
+  }
+
+  const packageRoots: string[] = [];
+  for (const dependencyValue of Object.values(dependencies)) {
+    const localPath = resolveLocalDependencyPath(dependencyValue, projectRoot);
+    if (!localPath) {
+      continue;
+    }
+
+    packageRoots.push(resolveSkillSearchRootCandidate(localPath));
+  }
+
+  return packageRoots;
+}
+
+function resolveDependencyPackageCacheRoots(projectRoot: string): string[] {
+  const dependencies = readManifestDependencies(projectRoot);
+  if (!dependencies) {
+    return [];
+  }
+
+  const dependencyNames = new Set(Object.keys(dependencies).map((name) => name.toLowerCase()));
+  if (dependencyNames.size === 0) {
+    return [];
+  }
+
+  const packageCacheDir = join(
+    projectRoot,
+    SkillsPathConstants.LIBRARY_DIR,
+    SkillsPathConstants.PACKAGE_CACHE_DIR,
+  );
+  if (!existsSync(packageCacheDir)) {
+    return [];
+  }
+
+  const packageRoots: string[] = [];
+  const entries = readdirSync(packageCacheDir, { withFileTypes: true });
+  for (const entry of entries) {
+    if (!entry.isDirectory()) {
+      continue;
+    }
+
+    const separatorIndex = entry.name.indexOf('@');
+    const dependencyName = separatorIndex === -1 ? entry.name : entry.name.slice(0, separatorIndex);
+    if (!dependencyNames.has(dependencyName.toLowerCase())) {
+      continue;
+    }
+
+    packageRoots.push(resolveSkillSearchRootCandidate(join(packageCacheDir, entry.name)));
+  }
+
+  return packageRoots;
+}
+
+function resolveSkillSearchRootCandidate(candidate: string): string {
+  const nestedRoot = join(candidate, SkillsPathConstants.PACKAGES_DIR, SkillsPathConstants.SRC_DIR);
+  if (existsSync(nestedRoot)) {
+    return nestedRoot;
+  }
+
+  return candidate;
 }
 
 export function getAllSkillStatuses(
@@ -832,28 +950,11 @@ function resolvePackageRoot(projectRoot: string): string | null {
 }
 
 function resolveManifestPackagePaths(projectRoot: string): string[] {
-  const manifestPath = join(
-    projectRoot,
-    SkillsPathConstants.PACKAGES_DIR,
-    SkillsPathConstants.MANIFEST_FILE,
-  );
-  if (!existsSync(manifestPath)) {
-    return [];
-  }
-  const manifestContent = readFileSync(manifestPath, 'utf-8');
-  let manifestJson: { dependencies?: Record<string, string> };
-  try {
-    manifestJson = JSON.parse(manifestContent) as { dependencies?: Record<string, string> };
-  } catch (error) {
-    // Manifest is user-editable; fail-soft to keep skill installation usable.
-    // eslint-disable-next-line no-console -- Warning is required; silent failure would hide manifest issues.
-    console.warn('Failed to parse manifest.json; skipping manifest-based path resolution.', error);
-    return [];
-  }
-  const dependencies = manifestJson.dependencies;
+  const dependencies = readManifestDependencies(projectRoot);
   if (!dependencies) {
     return [];
   }
+
   const resolvedPaths: string[] = [];
   for (const [dependencyName, dependencyValue] of Object.entries(dependencies)) {
     if (!isTargetPackageName(dependencyName)) {
@@ -865,6 +966,32 @@ function resolveManifestPackagePaths(projectRoot: string): string[] {
     }
   }
   return resolvedPaths;
+}
+
+function readManifestDependencies(projectRoot: string): Record<string, string> | null {
+  const manifestPath = join(
+    projectRoot,
+    SkillsPathConstants.PACKAGES_DIR,
+    SkillsPathConstants.MANIFEST_FILE,
+  );
+  if (!existsSync(manifestPath)) {
+    return null;
+  }
+  const manifestContent = readFileSync(manifestPath, 'utf-8');
+  let manifestJson: { dependencies?: Record<string, string> };
+  try {
+    manifestJson = JSON.parse(manifestContent) as { dependencies?: Record<string, string> };
+  } catch (error) {
+    // Manifest is user-editable; fail-soft to keep skill installation usable.
+    // eslint-disable-next-line no-console -- Warning is required; silent failure would hide manifest issues.
+    console.warn('Failed to parse manifest.json; skipping manifest-based path resolution.', error);
+    return null;
+  }
+  const dependencies = manifestJson.dependencies;
+  if (!dependencies) {
+    return null;
+  }
+  return dependencies;
 }
 
 function resolveLocalDependencyPath(dependencyValue: string, projectRoot: string): string | null {

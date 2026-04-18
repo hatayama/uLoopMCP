@@ -12,6 +12,7 @@ import {
   getPreferredSkillDir,
   getInstallDir,
   getManagedSkillsDir,
+  getProjectSkillSearchRoots,
   migrateLegacyManagedSkills,
   parseFrontmatter,
   removeDeprecatedSkillDirs,
@@ -216,6 +217,51 @@ describe('skill install layout', () => {
     );
     expect(getPreferredSkillDir(skillsRoot, 'uloop-compile', false)).toBe(
       join(skillsRoot, 'uloop-compile'),
+    );
+  });
+
+  it('should narrow project skill search roots to assets and relevant package roots', () => {
+    const projectRoot = mkdtempSync(join(tmpdir(), 'uloop-skill-roots-'));
+    temporaryRoots.push(projectRoot);
+
+    mkdirSync(join(projectRoot, 'Assets'), { recursive: true });
+    mkdirSync(join(projectRoot, 'Packages', 'src'), { recursive: true });
+    mkdirSync(join(projectRoot, 'Packages', 'com.example.embedded'), { recursive: true });
+    mkdirSync(join(projectRoot, 'Library', 'PackageCache', 'com.example.cached@1.0.0'), {
+      recursive: true,
+    });
+    mkdirSync(join(projectRoot, 'Library', 'PackageCache', 'com.example.unused@1.0.0'), {
+      recursive: true,
+    });
+
+    const localPackageRoot = join(projectRoot, '..', 'com.example.local');
+    mkdirSync(localPackageRoot, { recursive: true });
+    temporaryRoots.push(localPackageRoot);
+
+    writeFileSync(
+      join(projectRoot, 'Packages', 'manifest.json'),
+      JSON.stringify(
+        {
+          dependencies: {
+            'com.example.cached': '1.0.0',
+            'com.example.local': 'file:../com.example.local',
+          },
+        },
+        null,
+        2,
+      ),
+      'utf-8',
+    );
+
+    const searchRoots = getProjectSkillSearchRoots(projectRoot);
+
+    expect(searchRoots).toContain(join(projectRoot, 'Assets'));
+    expect(searchRoots).toContain(join(projectRoot, 'Packages', 'src'));
+    expect(searchRoots).toContain(join(projectRoot, 'Packages', 'com.example.embedded'));
+    expect(searchRoots).toContain(join(projectRoot, 'Library', 'PackageCache', 'com.example.cached@1.0.0'));
+    expect(searchRoots).toContain(localPackageRoot);
+    expect(searchRoots).not.toContain(
+      join(projectRoot, 'Library', 'PackageCache', 'com.example.unused@1.0.0'),
     );
   });
 
