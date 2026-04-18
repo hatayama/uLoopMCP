@@ -189,7 +189,7 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
         public void CreateFirstInstallSkillTarget_WhenClaudeSelected_ReturnsClaudeProjectTarget()
         {
             ToolSkillSynchronizer.SkillTargetInfo target =
-                SetupWizardWindow.CreateFirstInstallSkillTarget(SkillsTarget.Claude);
+                SetupWizardWindow.CreateFirstInstallSkillTarget(SkillsTarget.Claude, true);
 
             Assert.That(target.DisplayName, Is.EqualTo("Claude Code"));
             Assert.That(target.DirName, Is.EqualTo(".claude"));
@@ -209,13 +209,78 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
             string expectedInstallFlag)
         {
             ToolSkillSynchronizer.SkillTargetInfo target =
-                SetupWizardWindow.CreateFirstInstallSkillTarget(targetType);
+                SetupWizardWindow.CreateFirstInstallSkillTarget(targetType, true);
 
             Assert.That(target.DisplayName, Is.EqualTo(expectedDisplayName));
             Assert.That(target.DirName, Is.EqualTo(expectedDirName));
             Assert.That(target.InstallFlag, Is.EqualTo(expectedInstallFlag));
             Assert.That(target.HasSkillsDirectory, Is.False);
             Assert.That(target.HasExistingSkills, Is.False);
+        }
+
+        [Test]
+        public void CreateFirstInstallSkillTarget_WhenGroupingDisabled_KeepsTargetMetadata()
+        {
+            ToolSkillSynchronizer.SkillTargetInfo target =
+                SetupWizardWindow.CreateFirstInstallSkillTarget(SkillsTarget.Claude, false);
+
+            Assert.That(target.DisplayName, Is.EqualTo("Claude Code"));
+            Assert.That(target.DirName, Is.EqualTo(".claude"));
+            Assert.That(target.InstallFlag, Is.EqualTo("--claude"));
+        }
+
+        [TestCase(SkillInstallState.Installed, false, true, "Installed")]
+        [TestCase(SkillInstallState.Checking, false, true, "Checking...")]
+        [TestCase(SkillInstallState.Outdated, false, true, "Outdated")]
+        [TestCase(SkillInstallState.Missing, false, true, "Missing")]
+        [TestCase(SkillInstallState.Missing, true, true, "Not grouped")]
+        [TestCase(SkillInstallState.Missing, true, false, "Grouped")]
+        public void GetSkillInstallStatusText_ReturnsExpectedLabel(
+            SkillInstallState installState,
+            bool hasDifferentLayoutSkills,
+            bool groupSkillsUnderUnityCliLoop,
+            string expectedLabel)
+        {
+            string label = SetupWizardWindow.GetSkillInstallStatusText(
+                installState,
+                hasDifferentLayoutSkills,
+                groupSkillsUnderUnityCliLoop);
+
+            Assert.That(label, Is.EqualTo(expectedLabel));
+        }
+
+        [TestCase(true, false, "Installing...")]
+        [TestCase(false, true, "Update Skills")]
+        [TestCase(false, false, "Install Skills")]
+        public void GetInstallSkillsButtonText_ReturnsExpectedLabel(
+            bool isInstallingSkills,
+            bool hasOutdatedSkills,
+            string expectedLabel)
+        {
+            string label = SetupWizardWindow.GetInstallSkillsButtonText(
+                isInstallingSkills,
+                hasOutdatedSkills);
+
+            Assert.That(label, Is.EqualTo(expectedLabel));
+        }
+
+        [TestCase(SkillInstallState.Installed, false, true, "setup-target-item__status--installed")]
+        [TestCase(SkillInstallState.Checking, false, true, "setup-target-item__status--checking")]
+        [TestCase(SkillInstallState.Outdated, false, true, "setup-target-item__status--outdated")]
+        [TestCase(SkillInstallState.Missing, false, true, "setup-target-item__status--missing")]
+        [TestCase(SkillInstallState.Missing, true, true, "setup-target-item__status--different-layout")]
+        public void GetSkillInstallStatusClass_ReturnsExpectedClass(
+            SkillInstallState installState,
+            bool hasDifferentLayoutSkills,
+            bool groupSkillsUnderUnityCliLoop,
+            string expectedClass)
+        {
+            string className = SetupWizardWindow.GetSkillInstallStatusClass(
+                installState,
+                hasDifferentLayoutSkills,
+                groupSkillsUnderUnityCliLoop);
+
+            Assert.That(className, Is.EqualTo(expectedClass));
         }
 
         [Test]

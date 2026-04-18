@@ -27,6 +27,13 @@
         <ui:VisualElement name="step-2" class="setup-step">
             <ui:Label text="Step 2: Install Skills (Optional)" class="setup-step__title" />
             <ui:VisualElement class="setup-step__content">
+                <ui:VisualElement name="group-skills-row" class="setup-toggle-row">
+                    <ui:Toggle name="group-skills-toggle" class="setup-toggle-row__toggle" />
+                    <ui:Label
+                        name="group-skills-label"
+                        text="Group in subfolder"
+                        class="setup-toggle-row__label" />
+                </ui:VisualElement>
                 <ui:VisualElement name="skills-target-row" class="setup-target-row">
                     <ui:Label text="Target:" class="setup-target-row__label" />
                     <uie:EnumField name="skills-target-field" class="setup-target-row__field" />

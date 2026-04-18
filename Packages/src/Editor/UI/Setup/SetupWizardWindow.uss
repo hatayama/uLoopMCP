@@ -135,15 +135,58 @@
     margin-bottom: 6px;
 }
 
+.setup-toggle-row {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.setup-toggle-row__toggle {
+    width: 20px;
+    margin-right: 4px;
+}
+
+.setup-toggle-row__label {
+    flex-grow: 1;
+    white-space: normal;
+}
+
 .setup-target-item {
     flex-direction: row;
     align-items: center;
+    justify-content: space-between;
     margin-bottom: 2px;
     margin-left: 4px;
 }
 
 .setup-target-item__label {
-    margin-left: 4px;
+    flex-grow: 1;
+    margin-right: 8px;
+}
+
+.setup-target-item__status {
+    flex-shrink: 0;
+    -unity-font-style: bold;
+}
+
+.setup-target-item__status--installed {
+    color: var(--setup-color-success);
+}
+
+.setup-target-item__status--checking {
+    color: var(--setup-color-muted);
+}
+
+.setup-target-item__status--outdated {
+    color: var(--setup-color-warning);
+}
+
+.setup-target-item__status--missing {
+    color: var(--setup-color-muted);
+}
+
+.setup-target-item__status--different-layout {
+    color: var(--setup-color-warning);
 }
 
 /* ===========================================
