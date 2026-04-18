@@ -485,7 +485,11 @@ namespace io.github.hatayama.uLoopMCP
                 ToolSkillSynchronizer.SkillInstallResult result =
                     await ToolSkillSynchronizer.InstallSkillFiles(installableTargets);
 
-                if (!result.IsSuccessful)
+                if (result.IsSuccessful)
+                {
+                    EditorDialogHelper.ShowSkillsInstalledDialog();
+                }
+                else
                 {
                     EditorUtility.DisplayDialog(
                         "Installation Partially Failed",
