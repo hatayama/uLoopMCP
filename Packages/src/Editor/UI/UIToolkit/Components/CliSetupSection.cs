@@ -54,7 +54,6 @@ namespace io.github.hatayama.uLoopMCP
                 evt.StopPropagation();
                 OnGroupSkillsChanged?.Invoke(evt.newValue);
             });
-            _groupSkillsRow.RegisterCallback<ClickEvent>(HandleGroupSkillsRowClicked);
             _groupSkillsLabel.RegisterCallback<ClickEvent>(HandleGroupSkillsRowClicked);
         }
 

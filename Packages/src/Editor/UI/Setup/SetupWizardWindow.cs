@@ -266,7 +266,6 @@ namespace io.github.hatayama.uLoopMCP
                 McpEditorSettings.SetInstallSkillsFlat(_installSkillsFlat);
                 RefreshSkillsSection();
             });
-            _groupSkillsRow.RegisterCallback<ClickEvent>(HandleGroupSkillsRowClicked);
             _groupSkillsLabel.RegisterCallback<ClickEvent>(HandleGroupSkillsRowClicked);
         }
 
