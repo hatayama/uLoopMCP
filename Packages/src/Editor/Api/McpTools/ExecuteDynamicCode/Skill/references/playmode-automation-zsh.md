@@ -15,7 +15,7 @@ Choose the tool based on what you are trying to validate:
 | Scenario | Recommended tool | Why |
 |----------|------------------|-----|
 | Verify that a uGUI element responds through the real EventSystem pointer path | `simulate-mouse-ui` | Fires `PointerDown` / `PointerUp` / `PointerClick` / drag events through EventSystem raycasts instead of bypassing the UI input route. |
-| Test gameplay that reads `Mouse.current`, button state, delta, or scroll | `simulate-mouse-input` | Injects Input System mouse state into `Mouse.current`, so game code can observe `wasPressedThisFrame`, movement delta, and scroll like player input. This assumes the project uses the New Input System (`Input System Package (New)` or `Both`). |
+| Test gameplay that reads `Mouse.current`, button state, delta, or scroll | `simulate-mouse-input` | Injects Input System mouse state into `Mouse.current`, so game code can observe `wasPressedThisFrame`, movement delta, and scroll like player input. This assumes the project uses the New Input System (`Input System Package (New)` or `Both`). If that is not available in the target project, prefer `execute-dynamic-code` for a project-specific workaround instead of changing project settings just to use this tool. |
 | Jump straight to a known button callback, invoke a method, inspect state, or set up a test precondition | `execute-dynamic-code` | Best when you intentionally want direct automation without reproducing the full input pipeline. |
 | Drive custom runtime behavior that does not map cleanly to the built-in mouse tools | `execute-dynamic-code` | Lets you call project-specific methods, inspect scene objects, and prototype one-off flows immediately. |
 
