@@ -5,15 +5,18 @@
  */
 
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
-import { tmpdir } from 'os';
+import { homedir, tmpdir } from 'os';
 import { join } from 'path';
 
 import {
+  getInstallDir,
   getManagedSkillsDir,
   migrateLegacyManagedSkills,
   parseFrontmatter,
   removeDeprecatedSkillDirs,
+  syncInstalledSkillDirectory,
 } from '../skills/skills-manager.js';
+import { getTargetConfig } from '../skills/target-config.js';
 
 describe('parseFrontmatter', () => {
   it('should parse basic frontmatter with string values', () => {
@@ -198,6 +201,12 @@ describe('skill install layout', () => {
     );
   });
 
+  it('should resolve the flat install directory when grouping is disabled', () => {
+    expect(getInstallDir(getTargetConfig('claude'), true, false)).toBe(
+      join(homedir(), '.claude', 'skills'),
+    );
+  });
+
   it('should migrate only managed legacy skills into the unity-cli-loop namespace', () => {
     const skillsRoot = createSkillsRoot();
 
@@ -244,5 +253,22 @@ describe('skill install layout', () => {
     expect(removed).toBe(2);
     expect(existsSync(join(skillsRoot, 'uloop-unity-search'))).toBe(false);
     expect(existsSync(join(managedSkillsRoot, 'uloop-unity-search'))).toBe(false);
+  });
+
+  it('should remove stale files when syncing an installed skill directory', () => {
+    const skillsRoot = createSkillsRoot();
+    const skillDir = join(skillsRoot, 'unity-cli-loop', 'uloop-execute-dynamic-code');
+
+    mkdirSync(join(skillDir, 'references'), { recursive: true });
+    writeFileSync(join(skillDir, 'SKILL.md'), 'stale', 'utf-8');
+    writeFileSync(join(skillDir, 'references', 'stale.md'), 'stale', 'utf-8');
+
+    syncInstalledSkillDirectory(skillDir, 'SKILL.md', 'fresh', {
+      'references/reference.md': Buffer.from('reference', 'utf-8'),
+    });
+
+    expect(readFileSync(join(skillDir, 'SKILL.md'), 'utf-8')).toBe('fresh');
+    expect(readFileSync(join(skillDir, 'references', 'reference.md'), 'utf-8')).toBe('reference');
+    expect(existsSync(join(skillDir, 'references', 'stale.md'))).toBe(false);
   });
 });

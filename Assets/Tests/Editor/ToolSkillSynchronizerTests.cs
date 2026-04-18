@@ -214,6 +214,60 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         [Test]
+        public void DetectTargets_WhenGroupedLayoutRequested_IgnoresFlatInstalledSkills()
+        {
+            string temporaryRoot = CreateTemporaryProjectRoot();
+            foreach (string dir in ToolSkillSynchronizer.SkillTargetDirs)
+            {
+                string targetRoot = Path.Combine(temporaryRoot, dir);
+                WriteSkillFile(Path.Combine(targetRoot, SkillInstallLayout.SkillsDirName, "uloop-compile"));
+            }
+
+            ToolSkillSynchronizer.SkillTargetInfo[] detectedTargets = ToolSkillSynchronizer.DetectTargets(
+                    temporaryRoot,
+                    requireSkillsDirectory: true,
+                    groupSkillsUnderUnityCliLoop: true)
+                .ToArray();
+
+            foreach (ToolSkillSynchronizer.SkillTargetInfo target in detectedTargets)
+            {
+                Assert.IsFalse(target.HasExistingSkills,
+                    $"Target '{target.DirName}' should ignore flat installs when grouped layout is selected");
+                Assert.IsTrue(target.HasDifferentLayoutSkills,
+                    $"Target '{target.DirName}' should detect flat installs as a different layout");
+            }
+        }
+
+        [Test]
+        public void DetectTargets_WhenFlatLayoutRequested_IgnoresGroupedInstalledSkills()
+        {
+            string temporaryRoot = CreateTemporaryProjectRoot();
+            foreach (string dir in ToolSkillSynchronizer.SkillTargetDirs)
+            {
+                string targetRoot = Path.Combine(temporaryRoot, dir);
+                WriteSkillFile(Path.Combine(
+                    targetRoot,
+                    SkillInstallLayout.SkillsDirName,
+                    SkillInstallLayout.ManagedSkillsDirName,
+                    "uloop-compile"));
+            }
+
+            ToolSkillSynchronizer.SkillTargetInfo[] detectedTargets = ToolSkillSynchronizer.DetectTargets(
+                    temporaryRoot,
+                    requireSkillsDirectory: true,
+                    groupSkillsUnderUnityCliLoop: false)
+                .ToArray();
+
+            foreach (ToolSkillSynchronizer.SkillTargetInfo target in detectedTargets)
+            {
+                Assert.IsFalse(target.HasExistingSkills,
+                    $"Target '{target.DirName}' should ignore grouped installs when flat layout is selected");
+                Assert.IsTrue(target.HasDifferentLayoutSkills,
+                    $"Target '{target.DirName}' should detect grouped installs as a different layout");
+            }
+        }
+
+        [Test]
         public void DetectTargets_WhenLegacyThirdPartySkillsExist_ReportsInstalled()
         {
             string temporaryRoot = CreateTemporaryProjectRoot();
@@ -292,6 +346,181 @@ namespace io.github.hatayama.uLoopMCP
                 "Namespaced managed skills should be detected");
         }
 
+        [Test]
+        public void AreSkillsInstalled_WhenLayoutSpecified_MatchesOnlySelectedLayout()
+        {
+            string temporaryRoot = CreateTemporaryProjectRoot();
+
+            string flatTargetRoot = Path.Combine(temporaryRoot, ".claude");
+            WriteSkillFile(Path.Combine(flatTargetRoot, SkillInstallLayout.SkillsDirName, "uloop-compile"));
+            Assert.IsTrue(CliInstallationDetector.AreSkillsInstalled(temporaryRoot, ".claude", false));
+            Assert.IsFalse(CliInstallationDetector.AreSkillsInstalled(temporaryRoot, ".claude", true));
+
+            string groupedTargetRoot = Path.Combine(temporaryRoot, ".codex");
+            WriteSkillFile(Path.Combine(
+                groupedTargetRoot,
+                SkillInstallLayout.SkillsDirName,
+                SkillInstallLayout.ManagedSkillsDirName,
+                "uloop-compile"));
+            Assert.IsTrue(CliInstallationDetector.AreSkillsInstalled(temporaryRoot, ".codex", true));
+            Assert.IsFalse(CliInstallationDetector.AreSkillsInstalled(temporaryRoot, ".codex", false));
+        }
+
+        [Test]
+        public void DetectTargets_WhenExpectedLayoutMatchesSourceContent_ReportsInstalled()
+        {
+            string temporaryRoot = CreateTemporaryProjectRoot();
+            CreateFakeSourceSkill(temporaryRoot, "uloop-fake-skill", "FakeTool", "reference.md", "reference");
+
+            string targetRoot = Path.Combine(temporaryRoot, ".claude");
+            WriteSkillFile(
+                Path.Combine(
+                    targetRoot,
+                    SkillInstallLayout.SkillsDirName,
+                    SkillInstallLayout.ManagedSkillsDirName,
+                    "uloop-fake-skill"),
+                "---\nname: uloop-fake-skill\n---\n");
+            File.WriteAllText(Path.Combine(
+                targetRoot,
+                SkillInstallLayout.SkillsDirName,
+                SkillInstallLayout.ManagedSkillsDirName,
+                "uloop-fake-skill",
+                "reference.md"), "reference");
+
+            ToolSkillSynchronizer.SkillTargetInfo[] detectedTargets = ToolSkillSynchronizer.DetectTargets(
+                    temporaryRoot,
+                    requireSkillsDirectory: true,
+                    groupSkillsUnderUnityCliLoop: true)
+                .ToArray();
+
+            Assert.That(detectedTargets.Length, Is.EqualTo(1));
+            Assert.That(detectedTargets[0].InstallState, Is.EqualTo(SkillInstallState.Installed));
+            Assert.That(detectedTargets[0].HasExistingSkills, Is.True);
+        }
+
+        [Test]
+        public void DetectTargets_WhenExpectedLayoutDiffersFromSourceContent_ReportsOutdated()
+        {
+            string temporaryRoot = CreateTemporaryProjectRoot();
+            CreateFakeSourceSkill(temporaryRoot, "uloop-fake-skill", "FakeTool", "reference.md", "reference");
+
+            string installedSkillDir = Path.Combine(
+                temporaryRoot,
+                ".claude",
+                SkillInstallLayout.SkillsDirName,
+                SkillInstallLayout.ManagedSkillsDirName,
+                "uloop-fake-skill");
+            WriteSkillFile(installedSkillDir, "---\nname: uloop-fake-skill\n---\nchanged");
+            File.WriteAllText(Path.Combine(installedSkillDir, "reference.md"), "reference");
+
+            ToolSkillSynchronizer.SkillTargetInfo[] detectedTargets = ToolSkillSynchronizer.DetectTargets(
+                    temporaryRoot,
+                    requireSkillsDirectory: true,
+                    groupSkillsUnderUnityCliLoop: true)
+                .ToArray();
+
+            Assert.That(detectedTargets.Length, Is.EqualTo(1));
+            Assert.That(detectedTargets[0].InstallState, Is.EqualTo(SkillInstallState.Outdated));
+            Assert.That(detectedTargets[0].HasExistingSkills, Is.False);
+        }
+
+        [Test]
+        public void DetectTargets_WhenOnlyInternalSkillsAreMissing_IgnoresThem()
+        {
+            string temporaryRoot = CreateTemporaryProjectRoot();
+            CreateFakeSourceSkill(temporaryRoot, "uloop-public-skill", "PublicTool", "reference.md", "reference");
+            CreateFakeSourceSkill(
+                temporaryRoot,
+                "uloop-internal-skill",
+                "InternalTool",
+                "reference.md",
+                "internal-reference",
+                isInternal: true);
+
+            string installedSkillDir = Path.Combine(
+                temporaryRoot,
+                ".claude",
+                SkillInstallLayout.SkillsDirName,
+                SkillInstallLayout.ManagedSkillsDirName,
+                "uloop-public-skill");
+            WriteSkillFile(installedSkillDir, "---\nname: uloop-public-skill\n---\n");
+            File.WriteAllText(Path.Combine(installedSkillDir, "reference.md"), "reference");
+
+            ToolSkillSynchronizer.SkillTargetInfo[] detectedTargets = ToolSkillSynchronizer.DetectTargets(
+                    temporaryRoot,
+                    requireSkillsDirectory: true,
+                    groupSkillsUnderUnityCliLoop: true)
+                .ToArray();
+
+            Assert.That(detectedTargets.Length, Is.EqualTo(1));
+            Assert.That(detectedTargets[0].InstallState, Is.EqualTo(SkillInstallState.Installed));
+            Assert.That(detectedTargets[0].HasExistingSkills, Is.True);
+        }
+
+        [Test]
+        public void DetectTargets_WhenSourceOnlyHasMetaSidecars_IgnoresThem()
+        {
+            string temporaryRoot = CreateTemporaryProjectRoot();
+            CreateFakeSourceSkill(
+                temporaryRoot,
+                "uloop-public-skill",
+                "PublicTool",
+                "reference.md",
+                "reference",
+                sourceMetaFileRelativePath: "reference.md.meta");
+
+            string installedSkillDir = Path.Combine(
+                temporaryRoot,
+                ".claude",
+                SkillInstallLayout.SkillsDirName,
+                SkillInstallLayout.ManagedSkillsDirName,
+                "uloop-public-skill");
+            WriteSkillFile(installedSkillDir, "---\nname: uloop-public-skill\n---\n");
+            File.WriteAllText(Path.Combine(installedSkillDir, "reference.md"), "reference");
+
+            ToolSkillSynchronizer.SkillTargetInfo[] detectedTargets = ToolSkillSynchronizer.DetectTargets(
+                    temporaryRoot,
+                    requireSkillsDirectory: true,
+                    groupSkillsUnderUnityCliLoop: true)
+                .ToArray();
+
+            Assert.That(detectedTargets.Length, Is.EqualTo(1));
+            Assert.That(detectedTargets[0].InstallState, Is.EqualTo(SkillInstallState.Installed));
+            Assert.That(detectedTargets[0].HasExistingSkills, Is.True);
+        }
+
+        [Test]
+        public void DetectTargets_WhenInstalledSkillHasExtraFiles_ReportsOutdated()
+        {
+            string temporaryRoot = CreateTemporaryProjectRoot();
+            CreateFakeSourceSkill(
+                temporaryRoot,
+                "uloop-public-skill",
+                "PublicTool",
+                "reference.md",
+                "reference");
+
+            string installedSkillDir = Path.Combine(
+                temporaryRoot,
+                ".claude",
+                SkillInstallLayout.SkillsDirName,
+                SkillInstallLayout.ManagedSkillsDirName,
+                "uloop-public-skill");
+            WriteSkillFile(installedSkillDir, "---\nname: uloop-public-skill\n---\n");
+            File.WriteAllText(Path.Combine(installedSkillDir, "reference.md"), "reference");
+            File.WriteAllText(Path.Combine(installedSkillDir, "stale.md"), "stale");
+
+            ToolSkillSynchronizer.SkillTargetInfo[] detectedTargets = ToolSkillSynchronizer.DetectTargets(
+                    temporaryRoot,
+                    requireSkillsDirectory: true,
+                    groupSkillsUnderUnityCliLoop: true)
+                .ToArray();
+
+            Assert.That(detectedTargets.Length, Is.EqualTo(1));
+            Assert.That(detectedTargets[0].InstallState, Is.EqualTo(SkillInstallState.Outdated));
+            Assert.That(detectedTargets[0].HasExistingSkills, Is.False);
+        }
+
         private string CreateTemporaryProjectRoot()
         {
             string temporaryRoot = Path.Combine(
@@ -307,6 +536,34 @@ namespace io.github.hatayama.uLoopMCP
         {
             Directory.CreateDirectory(skillDir);
             File.WriteAllText(Path.Combine(skillDir, SkillInstallLayout.SkillFileName), content);
+        }
+
+        private static void CreateFakeSourceSkill(
+            string projectRoot,
+            string skillName,
+            string toolDirectoryName,
+            string additionalFileRelativePath,
+            string additionalFileContent,
+            bool isInternal = false,
+            string sourceMetaFileRelativePath = null)
+        {
+            string skillDir = Path.Combine(
+                projectRoot,
+                "Packages",
+                "com.example.fake",
+                "Editor",
+                toolDirectoryName,
+                "Skill");
+            Directory.CreateDirectory(skillDir);
+            string internalLine = isInternal ? "internal: true\n" : string.Empty;
+            File.WriteAllText(
+                Path.Combine(skillDir, SkillInstallLayout.SkillFileName),
+                $"---\nname: {skillName}\n{internalLine}---\n");
+            File.WriteAllText(Path.Combine(skillDir, additionalFileRelativePath), additionalFileContent);
+            if (!string.IsNullOrEmpty(sourceMetaFileRelativePath))
+            {
+                File.WriteAllText(Path.Combine(skillDir, sourceMetaFileRelativePath), "meta");
+            }
         }
     }
 }

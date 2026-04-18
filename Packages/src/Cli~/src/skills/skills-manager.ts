@@ -129,30 +129,65 @@ function getManagedSkillPath(skillDirName: string, target: TargetConfig, global:
   );
 }
 
+function getPreferredSkillPath(
+  skillDirName: string,
+  target: TargetConfig,
+  global: boolean,
+  groupManagedSkills: boolean,
+): string {
+  return groupManagedSkills
+    ? getManagedSkillPath(skillDirName, target, global)
+    : getLegacySkillPath(skillDirName, target, global);
+}
+
+function getFallbackSkillPath(
+  skillDirName: string,
+  target: TargetConfig,
+  global: boolean,
+  groupManagedSkills: boolean,
+): string {
+  return groupManagedSkills
+    ? getLegacySkillPath(skillDirName, target, global)
+    : getManagedSkillPath(skillDirName, target, global);
+}
+
 function getInstalledSkillPath(
   skillDirName: string,
   target: TargetConfig,
   global: boolean,
+  groupManagedSkills: boolean = true,
+  includeFallback: boolean = false,
 ): string | null {
-  const managedSkillPath = getManagedSkillPath(skillDirName, target, global);
-  if (existsSync(managedSkillPath)) {
-    return managedSkillPath;
+  const candidatePaths = [getPreferredSkillPath(skillDirName, target, global, groupManagedSkills)];
+  if (includeFallback) {
+    candidatePaths.push(getFallbackSkillPath(skillDirName, target, global, groupManagedSkills));
   }
 
-  const legacySkillPath = getLegacySkillPath(skillDirName, target, global);
-  if (existsSync(legacySkillPath)) {
-    return legacySkillPath;
+  for (const candidatePath of candidatePaths) {
+    if (existsSync(candidatePath)) {
+      return candidatePath;
+    }
   }
 
   return null;
 }
 
-function isSkillInstalled(skill: SkillDefinition, target: TargetConfig, global: boolean): boolean {
-  return getInstalledSkillPath(skill.dirName, target, global) !== null;
+function isSkillInstalled(
+  skill: SkillDefinition,
+  target: TargetConfig,
+  global: boolean,
+  groupManagedSkills: boolean,
+): boolean {
+  return getInstalledSkillPath(skill.dirName, target, global, groupManagedSkills) !== null;
 }
 
-function isSkillOutdated(skill: SkillDefinition, target: TargetConfig, global: boolean): boolean {
-  const skillPath = getInstalledSkillPath(skill.dirName, target, global);
+function isSkillOutdated(
+  skill: SkillDefinition,
+  target: TargetConfig,
+  global: boolean,
+  groupManagedSkills: boolean,
+): boolean {
+  const skillPath = getInstalledSkillPath(skill.dirName, target, global, groupManagedSkills);
   if (skillPath === null) {
     return false;
   }
@@ -177,6 +212,14 @@ function isSkillOutdated(skill: SkillDefinition, target: TargetConfig, global: b
     }
   }
 
+  const installedFiles = collectSkillFolderFiles(skillDir);
+  const expectedFileCount =
+    1 + ('additionalFiles' in skill && skill.additionalFiles ? Object.keys(skill.additionalFiles).length : 0);
+  const installedFileCount = 1 + (installedFiles ? Object.keys(installedFiles).length : 0);
+  if (installedFileCount !== expectedFileCount) {
+    return true;
+  }
+
   return false;
 }
 
@@ -184,11 +227,12 @@ function getSkillStatus(
   skill: SkillDefinition,
   target: TargetConfig,
   global: boolean,
+  groupManagedSkills: boolean,
 ): SkillStatus {
-  if (!isSkillInstalled(skill, target, global)) {
+  if (!isSkillInstalled(skill, target, global, groupManagedSkills)) {
     return 'not_installed';
   }
-  if (isSkillOutdated(skill, target, global)) {
+  if (isSkillOutdated(skill, target, global, groupManagedSkills)) {
     return 'outdated';
   }
   return 'installed';
@@ -428,31 +472,63 @@ function collectProjectSkills(excludedRoots: string[] = []): SkillDefinition[] {
   return uniqueSkills;
 }
 
-export function getAllSkillStatuses(target: TargetConfig, global: boolean): SkillInfo[] {
+export function getAllSkillStatuses(
+  target: TargetConfig,
+  global: boolean,
+  groupManagedSkills: boolean = true,
+): SkillInfo[] {
   const allSkills = collectAllSkills();
   return allSkills.map((skill) => ({
     name: skill.name,
-    status: getSkillStatus(skill, target, global),
-    path: getInstalledSkillPath(skill.dirName, target, global) ?? undefined,
+    status: getSkillStatus(skill, target, global, groupManagedSkills),
+    path:
+      getInstalledSkillPath(skill.dirName, target, global, groupManagedSkills, true) ?? undefined,
     source: skill.sourceType === 'project' ? 'project' : 'bundled',
   }));
 }
 
-function installSkill(skill: SkillDefinition, target: TargetConfig, global: boolean): void {
+function getPreferredSkillDir(baseDir: string, skillDirName: string, groupManagedSkills: boolean): string {
+  return groupManagedSkills
+    ? getManagedSkillDir(baseDir, skillDirName)
+    : getLegacySkillDir(baseDir, skillDirName);
+}
+
+function installSkill(
+  skill: SkillDefinition,
+  target: TargetConfig,
+  global: boolean,
+  groupManagedSkills: boolean,
+): void {
   const baseDir = getSkillsBaseDir(target, global);
-  const skillDir = getManagedSkillDir(baseDir, skill.dirName);
-  const skillPath = join(skillDir, target.skillFileName);
+  const skillDir = getPreferredSkillDir(baseDir, skill.dirName, groupManagedSkills);
+  syncInstalledSkillDirectory(skillDir, target.skillFileName, skill.content, skill.additionalFiles);
 
+  const alternateSkillDir = getPreferredSkillDir(baseDir, skill.dirName, !groupManagedSkills);
+  if (alternateSkillDir !== skillDir && existsSync(alternateSkillDir)) {
+    rmSync(alternateSkillDir, { recursive: true, force: true });
+  }
+}
+
+export function syncInstalledSkillDirectory(
+  skillDir: string,
+  skillFileName: string,
+  skillContent: string,
+  additionalFiles?: Record<string, Buffer>,
+): void {
+  const skillPath = join(skillDir, skillFileName);
+
+  rmSync(skillDir, { recursive: true, force: true });
   mkdirSync(skillDir, { recursive: true });
-  writeFileSync(skillPath, skill.content, 'utf-8');
+  writeFileSync(skillPath, skillContent, 'utf-8');
 
-  if ('additionalFiles' in skill && skill.additionalFiles) {
-    const additionalFiles: Record<string, Buffer> = skill.additionalFiles;
-    for (const [relativePath, content] of Object.entries(additionalFiles)) {
-      const fullPath = join(skillDir, relativePath);
-      mkdirSync(dirname(fullPath), { recursive: true });
-      writeFileSync(fullPath, content);
-    }
+  if (!additionalFiles) {
+    return;
+  }
+
+  for (const [relativePath, content] of Object.entries(additionalFiles)) {
+    const fullPath = join(skillDir, relativePath);
+    mkdirSync(dirname(fullPath), { recursive: true });
+    writeFileSync(fullPath, content);
   }
 }
 
@@ -485,7 +561,11 @@ interface InstallResult {
   deprecatedRemoved: number;
 }
 
-export function installAllSkills(target: TargetConfig, global: boolean): InstallResult {
+export function installAllSkills(
+  target: TargetConfig,
+  global: boolean,
+  groupManagedSkills: boolean = true,
+): InstallResult {
   const result: InstallResult = {
     installed: 0,
     updated: 0,
@@ -498,10 +578,12 @@ export function installAllSkills(target: TargetConfig, global: boolean): Install
   const allSkills = collectAllSkills();
   const baseDir = getSkillsBaseDir(target, global);
   result.deprecatedRemoved = removeDeprecatedSkillDirs(baseDir);
-  migrateLegacyManagedSkills(
-    baseDir,
-    allSkills.map((skill) => skill.dirName),
-  );
+  if (groupManagedSkills) {
+    migrateLegacyManagedSkills(
+      baseDir,
+      allSkills.map((skill) => skill.dirName),
+    );
+  }
 
   // Global installs ignore project-local tool settings
   const disabledTools: string[] = global ? [] : loadDisabledTools();
@@ -514,13 +596,13 @@ export function installAllSkills(target: TargetConfig, global: boolean): Install
       continue;
     }
 
-    const status = getSkillStatus(skill, target, global);
+    const status = getSkillStatus(skill, target, global, groupManagedSkills);
 
     if (status === 'not_installed') {
-      installSkill(skill, target, global);
+      installSkill(skill, target, global, groupManagedSkills);
       result.installed++;
     } else if (status === 'outdated') {
-      installSkill(skill, target, global);
+      installSkill(skill, target, global, groupManagedSkills);
       result.updated++;
     } else {
       result.skipped++;
@@ -568,8 +650,13 @@ export function uninstallAllSkills(target: TargetConfig, global: boolean): Unins
   return result;
 }
 
-export function getInstallDir(target: TargetConfig, global: boolean): string {
-  return getManagedSkillsDir(getSkillsBaseDir(target, global));
+export function getInstallDir(
+  target: TargetConfig,
+  global: boolean,
+  groupManagedSkills: boolean = true,
+): string {
+  const baseDir = getSkillsBaseDir(target, global);
+  return groupManagedSkills ? getManagedSkillsDir(baseDir) : baseDir;
 }
 
 export function getTotalSkillCount(): number {

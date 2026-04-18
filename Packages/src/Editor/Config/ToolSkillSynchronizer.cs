@@ -10,6 +10,14 @@ using Debug = UnityEngine.Debug;
 
 namespace io.github.hatayama.uLoopMCP
 {
+    public enum SkillInstallState
+    {
+        Missing,
+        Checking,
+        Installed,
+        Outdated
+    }
+
     /// <summary>
     /// Synchronizes skill files when tools are enabled/disabled.
     /// Removes skill directories on disable, re-installs on enable.
@@ -52,19 +60,25 @@ namespace io.github.hatayama.uLoopMCP
             public readonly string InstallFlag;
             public readonly bool HasSkillsDirectory;
             public readonly bool HasExistingSkills;
+            public readonly bool HasDifferentLayoutSkills;
+            public readonly SkillInstallState InstallState;
 
             public SkillTargetInfo(
                 string displayName,
                 string dirName,
                 string installFlag,
                 bool hasSkillsDirectory,
-                bool hasExistingSkills)
+                bool hasExistingSkills,
+                bool hasDifferentLayoutSkills = false,
+                SkillInstallState installState = SkillInstallState.Missing)
             {
                 DisplayName = displayName;
                 DirName = dirName;
                 InstallFlag = installFlag;
                 HasSkillsDirectory = hasSkillsDirectory;
                 HasExistingSkills = hasExistingSkills;
+                HasDifferentLayoutSkills = hasDifferentLayoutSkills;
+                InstallState = installState;
             }
         }
 
@@ -135,12 +149,54 @@ namespace io.github.hatayama.uLoopMCP
             return DetectTargets(requireSkillsDirectory: false);
         }
 
+        public static List<SkillTargetInfo> DetectTargetsForLayout(bool groupSkillsUnderUnityCliLoop)
+        {
+            return DetectTargets(requireSkillsDirectory: false, groupSkillsUnderUnityCliLoop);
+        }
+
+        public static List<SkillTargetInfo> DetectTargetsForLayoutFast(bool groupSkillsUnderUnityCliLoop)
+        {
+            return DetectTargets(
+                requireSkillsDirectory: false,
+                groupSkillsUnderUnityCliLoop,
+                includeFreshnessCheck: false);
+        }
+
         internal static List<SkillTargetInfo> DetectTargets(bool requireSkillsDirectory)
         {
             string projectRoot = UnityMcpPathResolver.GetProjectRoot();
             Debug.Assert(!string.IsNullOrEmpty(projectRoot), "projectRoot must not be null or empty");
 
             return DetectTargets(projectRoot, requireSkillsDirectory);
+        }
+
+        internal static List<SkillTargetInfo> DetectTargets(
+            bool requireSkillsDirectory,
+            bool groupSkillsUnderUnityCliLoop)
+        {
+            string projectRoot = UnityMcpPathResolver.GetProjectRoot();
+            Debug.Assert(!string.IsNullOrEmpty(projectRoot), "projectRoot must not be null or empty");
+
+            return DetectTargets(
+                projectRoot,
+                requireSkillsDirectory,
+                groupSkillsUnderUnityCliLoop,
+                includeFreshnessCheck: true);
+        }
+
+        internal static List<SkillTargetInfo> DetectTargets(
+            bool requireSkillsDirectory,
+            bool groupSkillsUnderUnityCliLoop,
+            bool includeFreshnessCheck)
+        {
+            string projectRoot = UnityMcpPathResolver.GetProjectRoot();
+            Debug.Assert(!string.IsNullOrEmpty(projectRoot), "projectRoot must not be null or empty");
+
+            return DetectTargets(
+                projectRoot,
+                requireSkillsDirectory,
+                groupSkillsUnderUnityCliLoop,
+                includeFreshnessCheck);
         }
 
         internal static List<SkillTargetInfo> DetectTargets(string projectRoot, bool requireSkillsDirectory)
@@ -169,10 +225,94 @@ namespace io.github.hatayama.uLoopMCP
                     target.DirName,
                     target.Flag,
                     hasSkillsDirectory,
-                    hasULoopSkills));
+                    hasULoopSkills,
+                    installState: hasULoopSkills
+                        ? SkillInstallState.Installed
+                        : SkillInstallState.Missing));
             }
 
             return targets;
+        }
+
+        internal static List<SkillTargetInfo> DetectTargets(
+            string projectRoot,
+            bool requireSkillsDirectory,
+            bool groupSkillsUnderUnityCliLoop)
+        {
+            return DetectTargets(
+                projectRoot,
+                requireSkillsDirectory,
+                groupSkillsUnderUnityCliLoop,
+                includeFreshnessCheck: true);
+        }
+
+        internal static List<SkillTargetInfo> DetectTargets(
+            string projectRoot,
+            bool requireSkillsDirectory,
+            bool groupSkillsUnderUnityCliLoop,
+            bool includeFreshnessCheck)
+        {
+            Debug.Assert(!string.IsNullOrEmpty(projectRoot), "projectRoot must not be null or empty");
+
+            List<SkillTargetInfo> targets = new();
+
+            foreach (SkillTargetDefinition target in SkillTargets)
+            {
+                string targetRoot = Path.Combine(projectRoot, target.DirName);
+                if (!Directory.Exists(targetRoot))
+                {
+                    continue;
+                }
+
+                bool hasSkillsDirectory = SkillInstallLayout.HasOptedInSkillsDirectory(targetRoot);
+                if (requireSkillsDirectory && !hasSkillsDirectory)
+                {
+                    continue;
+                }
+
+                SkillInstallState installState = ResolveInstallState(
+                    projectRoot,
+                    targetRoot,
+                    hasSkillsDirectory,
+                    groupSkillsUnderUnityCliLoop,
+                    includeFreshnessCheck);
+                bool hasULoopSkills = installState == SkillInstallState.Installed
+                    || installState == SkillInstallState.Checking;
+                bool hasDifferentLayoutSkills = hasSkillsDirectory
+                    && SkillInstallLayout.HasInstalledSkills(targetRoot, !groupSkillsUnderUnityCliLoop);
+                targets.Add(new SkillTargetInfo(
+                    target.DisplayName,
+                    target.DirName,
+                    target.Flag,
+                    hasSkillsDirectory,
+                    hasULoopSkills,
+                    hasDifferentLayoutSkills,
+                    installState));
+            }
+
+            return targets;
+        }
+
+        private static SkillInstallState ResolveInstallState(
+            string projectRoot,
+            string targetRoot,
+            bool hasSkillsDirectory,
+            bool groupSkillsUnderUnityCliLoop,
+            bool includeFreshnessCheck)
+        {
+            if (!hasSkillsDirectory)
+            {
+                return SkillInstallState.Missing;
+            }
+
+            if (!includeFreshnessCheck)
+            {
+                return SkillInstallLayout.HasInstalledSkills(targetRoot, groupSkillsUnderUnityCliLoop)
+                    ? SkillInstallState.Checking
+                    : SkillInstallState.Missing;
+            }
+
+            return SkillInstallLayout.GetInstalledState(projectRoot, targetRoot, groupSkillsUnderUnityCliLoop);
         }
 
         /// <summary>
@@ -180,11 +320,23 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public static async Task<SkillInstallResult> InstallSkillFiles()
         {
+            return await InstallSkillFiles(groupSkillsUnderUnityCliLoop: true);
+        }
+
+        public static async Task<SkillInstallResult> InstallSkillFiles(bool groupSkillsUnderUnityCliLoop)
+        {
             List<SkillTargetInfo> targets = DetectTargets(requireSkillsDirectory: true);
-            return await InstallSkillFiles(targets);
+            return await InstallSkillFiles(targets, groupSkillsUnderUnityCliLoop);
         }
 
         public static async Task<SkillInstallResult> InstallSkillFiles(List<SkillTargetInfo> targets)
+        {
+            return await InstallSkillFiles(targets, groupSkillsUnderUnityCliLoop: true);
+        }
+
+        public static async Task<SkillInstallResult> InstallSkillFiles(
+            List<SkillTargetInfo> targets,
+            bool groupSkillsUnderUnityCliLoop)
         {
             Debug.Assert(targets != null, "targets must not be null");
 
@@ -196,7 +348,11 @@ namespace io.github.hatayama.uLoopMCP
 
             foreach (SkillTargetInfo target in targets)
             {
-                bool success = await RunSkillsInstall(target.InstallFlag, uloopFileName, nodePath);
+                bool success = await RunSkillsInstall(
+                    target.InstallFlag,
+                    groupSkillsUnderUnityCliLoop,
+                    uloopFileName,
+                    nodePath);
                 if (success)
                 {
                     succeeded++;
@@ -206,12 +362,19 @@ namespace io.github.hatayama.uLoopMCP
             return new SkillInstallResult(targets.Count, succeeded);
         }
 
-        private static async Task<bool> RunSkillsInstall(string targetFlag, string uloopFileName, string nodePath)
+        private static async Task<bool> RunSkillsInstall(
+            string targetFlag,
+            bool groupSkillsUnderUnityCliLoop,
+            string uloopFileName,
+            string nodePath)
         {
+            string arguments = groupSkillsUnderUnityCliLoop
+                ? $"skills install {targetFlag}"
+                : $"skills install {targetFlag} --flat";
             ProcessStartInfo startInfo = new ProcessStartInfo
             {
                 FileName = uloopFileName,
-                Arguments = $"skills install {targetFlag}",
+                Arguments = arguments,
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
@@ -224,7 +387,7 @@ namespace io.github.hatayama.uLoopMCP
                 Process process = ProcessStartHelper.TryStart(startInfo);
                 if (process == null)
                 {
-                    Debug.LogWarning($"[uLoopMCP] Failed to start uloop process for: skills install {targetFlag}");
+                    Debug.LogWarning($"[uLoopMCP] Failed to start uloop process for: {arguments}");
                     return false;
                 }
 
@@ -239,7 +402,7 @@ namespace io.github.hatayama.uLoopMCP
 
                     if (process.ExitCode != 0)
                     {
-                        Debug.LogWarning($"[uLoopMCP] uloop skills install {targetFlag} exited with code {process.ExitCode}: {stderr}");
+                        Debug.LogWarning($"[uLoopMCP] uloop {arguments} exited with code {process.ExitCode}: {stderr}");
                         return false;
                     }
 

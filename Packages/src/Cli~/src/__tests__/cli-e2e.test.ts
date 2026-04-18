@@ -673,6 +673,23 @@ describe('CLI E2E Tests (requires running Unity)', () => {
       expect(existsSync(installedSkillPath)).toBe(true);
     });
 
+    it('should install skills directly under skills when grouping is disabled', () => {
+      runCli('skills uninstall --claude');
+
+      const { stdout, exitCode } = runCli('skills install --claude --flat');
+      const installedSkillPath = join(
+        UNITY_PROJECT_ROOT,
+        '.claude',
+        'skills',
+        'uloop-compile',
+        'SKILL.md',
+      );
+
+      expect(exitCode).toBe(0);
+      expect(stdout).toMatch(/installed|updated|skipped/i);
+      expect(existsSync(installedSkillPath)).toBe(true);
+    });
+
     it('should uninstall skills for claude target', () => {
       // First install to ensure there are skills to uninstall
       runCli('skills install --claude');
@@ -701,6 +718,7 @@ describe('CLI E2E Tests (requires running Unity)', () => {
       // Should mention project skills were installed
       expect(stdout).toMatch(/project|installed/i);
     });
+
   });
 
   describe('execute-dynamic-code', () => {
