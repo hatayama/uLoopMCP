@@ -1,6 +1,6 @@
 ---
 name: uloop-simulate-mouse-ui
-description: "Simulate mouse click, long-press, and drag on PlayMode UI elements via EventSystem screen coordinates. Use when you need to: (1) Click buttons or interactive UI elements during PlayMode testing, (2) Drag UI elements from one position to another, (3) Hold a drag at a position for inspection before releasing, (4) Long-press UI elements that respond to sustained pointer-down. For game logic that reads Input System (e.g. WasPressedThisFrame), use simulate-mouse-input instead."
+description: "Simulate mouse click, long-press, and drag on PlayMode UI elements via EventSystem screen coordinates. Use when you need to: (1) Click buttons or interactive UI elements during PlayMode testing, (2) Drag UI elements from one position to another, (3) Hold a drag at a position for inspection before releasing, (4) Long-press UI elements that respond to sustained pointer-down. For game logic that reads Input System (e.g. WasPressedThisFrame), use simulate-mouse-input when the project uses the New Input System; otherwise prefer execute-dynamic-code."
 context: fork
 ---
 
@@ -34,7 +34,7 @@ uloop simulate-mouse-ui --action <action> --x <x> --y <y> [options]
 | `--from-y` | number | `0` | Start Y position for Drag action. Drag starts here and moves to x,y. |
 | `--drag-speed` | number | `2000` | Drag speed in pixels per second (0 for instant). 2000 is fast (default), 200 is slow enough to watch. Applies to Drag, DragMove, and DragEnd actions. |
 | `--duration` | number | `0.5` | Hold duration in seconds for LongPress action. |
-| `--button` | enum | `Left` | Mouse button: `Left`, `Right`, `Middle`. Drag actions support `Left` only. |
+| `--button` | enum | `Left` | Mouse button: `Left`, `Right`, `Middle`. |
 
 ### Actions
 
@@ -53,7 +53,7 @@ uloop simulate-mouse-ui --action <action> --x <x> --y <y> [options]
 - `DragEnd` must be called to release an active drag — failing to call it leaves drag state stuck
 - Calling `DragMove` or `DragEnd` without an active drag returns an error
 
-### Global Options (optional)
+### Global Options (all optional, mutually exclusive)
 
 | Option | Description |
 |--------|-------------|
@@ -95,3 +95,4 @@ uloop simulate-mouse-ui --action DragEnd --x 600 --y 300
 - Unity must be in **PlayMode**
 - Target scene must have an **EventSystem** GameObject
 - UI elements must have a **GraphicRaycaster** on their Canvas
+- If you need gameplay mouse input rather than UI pointer events, `simulate-mouse-input` assumes the project uses the New Input System; otherwise prefer `execute-dynamic-code`

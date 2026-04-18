@@ -93,24 +93,19 @@ if (guids.Length == 0)
 AssetDatabase.StartAssetEditing();
 
 int modified = 0;
-try
+foreach (string guid in guids)
 {
-    foreach (string guid in guids)
+    string path = AssetDatabase.GUIDToAssetPath(guid);
+    Material mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+    if (mat != null)
     {
-        string path = AssetDatabase.GUIDToAssetPath(guid);
-        Material mat = AssetDatabase.LoadAssetAtPath<Material>(path);
-        if (mat != null)
-        {
-            mat.color = Color.white;
-            EditorUtility.SetDirty(mat);
-            modified++;
-        }
+        mat.color = Color.white;
+        EditorUtility.SetDirty(mat);
+        modified++;
     }
 }
-finally
-{
-    AssetDatabase.StopAssetEditing();
-}
+
+AssetDatabase.StopAssetEditing();
 AssetDatabase.SaveAssets();
 
 return $"Reset color of {modified} materials";
@@ -287,32 +282,26 @@ if (guids.Length == 0)
     return "No textures found";
 }
 
-int resized = 0;
-try
+int processed = 0;
+foreach (string guid in guids)
 {
-    for (int index = 0; index < guids.Length; index++)
+    string path = AssetDatabase.GUIDToAssetPath(guid);
+    TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
+    if (importer != null && importer.maxTextureSize > 1024)
     {
-        string guid = guids[index];
-        string path = AssetDatabase.GUIDToAssetPath(guid);
-        TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
-        if (importer != null && importer.maxTextureSize > 1024)
-        {
-            importer.maxTextureSize = 1024;
-            importer.SaveAndReimport();
-            resized++;
-        }
+        importer.maxTextureSize = 1024;
+        importer.SaveAndReimport();
+        processed++;
+    }
 
-        if ((index + 1) % 10 == 0)
-        {
-            EditorUtility.DisplayProgressBar("Processing Textures", path, (float)(index + 1) / guids.Length);
-        }
+    if (processed % 10 == 0)
+    {
+        EditorUtility.DisplayProgressBar("Processing Textures", path, (float)processed / guids.Length);
     }
 }
-finally
-{
-    EditorUtility.ClearProgressBar();
-}
-return $"Resized {resized} textures to max 1024";
+
+EditorUtility.ClearProgressBar();
+return $"Resized {processed} textures to max 1024";
 ```
 
 ## Batch Align Objects
@@ -402,3 +391,4 @@ foreach (GameObject obj in selected)
 Undo.CollapseUndoOperations(undoGroup);
 return $"Replaced material on {replaced} objects";
 ```
+

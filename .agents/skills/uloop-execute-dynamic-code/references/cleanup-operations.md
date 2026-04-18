@@ -308,7 +308,7 @@ if (negativeScale.Count == 0)
 return $"Negative scale objects: {string.Join(", ", negativeScale.Take(10))}";
 ```
 
-## Remove Empty Leaf GameObjects
+## Remove Empty Parent GameObjects
 
 ```csharp
 using UnityEditor;
@@ -316,7 +316,7 @@ using UnityEditor;
 GameObject[] allObjects = Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None);
 
 int undoGroup = Undo.GetCurrentGroup();
-Undo.SetCurrentGroupName("Remove Empty Leaves");
+Undo.SetCurrentGroupName("Remove Empty Parents");
 
 int removedCount = 0;
 foreach (GameObject obj in allObjects)
@@ -332,7 +332,7 @@ foreach (GameObject obj in allObjects)
 }
 
 Undo.CollapseUndoOperations(undoGroup);
-return $"Removed {removedCount} empty leaf GameObjects";
+return $"Removed {removedCount} empty GameObjects";
 ```
 
 ## Find Large Meshes
@@ -398,3 +398,4 @@ if (invalidRefs.Count == 0)
 
 return $"Invalid references ({invalidRefs.Count}): {string.Join(", ", invalidRefs.Take(10))}";
 ```
+
