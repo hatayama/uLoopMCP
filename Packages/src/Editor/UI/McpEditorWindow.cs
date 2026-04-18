@@ -541,6 +541,8 @@ namespace io.github.hatayama.uLoopMCP
             bool isClaudeInstalled = CliInstallationDetector.AreSkillsInstalled(".claude");
             bool isAgentsInstalled = CliInstallationDetector.AreSkillsInstalled(".agents");
             bool isCursorInstalled = CliInstallationDetector.AreSkillsInstalled(".cursor");
+            bool isGeminiInstalled = CliInstallationDetector.AreSkillsInstalled(".gemini");
+            bool isCodexInstalled = CliInstallationDetector.AreSkillsInstalled(".codex");
             bool isAntigravityInstalled = CliInstallationDetector.AreSkillsInstalled(".agent");
 
             return new CliSetupData(
@@ -554,6 +556,8 @@ namespace io.github.hatayama.uLoopMCP
                 isClaudeInstalled,
                 isAgentsInstalled,
                 isCursorInstalled,
+                isGeminiInstalled,
+                isCodexInstalled,
                 isAntigravityInstalled,
                 _skillsTarget,
                 _isInstallingSkills);
@@ -641,12 +645,8 @@ namespace io.github.hatayama.uLoopMCP
 
             try
             {
-                string arguments = _skillsTarget switch
-                {
-                    SkillsTarget.Claude => "skills install --claude",
-                    SkillsTarget.Agents => "skills install --codex",
-                    _ => "skills install --claude"
-                };
+                SkillsTargetSelection selection = SkillsTargetSelectionResolver.Resolve(_skillsTarget);
+                string arguments = selection.InstallArguments;
 
                 string uloopPath = NodeEnvironmentResolver.FindExecutablePath(CliConstants.EXECUTABLE_NAME);
                 // FindExecutablePath resolves .cmd shims on Windows via 'where' command
