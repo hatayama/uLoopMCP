@@ -903,7 +903,7 @@ namespace io.github.hatayama.uLoopMCP
             WhiteSpace whiteSpace)
         {
             if (whiteSpace != WhiteSpace.Normal) return measuredWidth;
-            if (lineCount <= PreferredWrappedTextLineCount) return laidOutWidth;
+            if (lineCount <= PreferredWrappedTextLineCount) return Mathf.Min(laidOutWidth, measuredWidth);
 
             return Mathf.Max(laidOutWidth, measuredWidth / PreferredWrappedTextLineCount);
         }

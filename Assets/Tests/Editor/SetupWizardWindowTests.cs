@@ -308,6 +308,14 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
         }
 
         [Test]
+        public void SelectPreferredTextWidth_WhenShorterTextFitsWithinCurrentWidth_ShrinksToMeasuredWidth()
+        {
+            float preferredWidth = SetupWizardWindow.SelectPreferredTextWidth(420f, 180f, 1, WhiteSpace.Normal);
+
+            Assert.That(preferredWidth, Is.EqualTo(180f));
+        }
+
+        [Test]
         public void SelectPreferredTextWidth_WhenTextDoesNotWrap_UsesMeasuredWidth()
         {
             float preferredWidth = SetupWizardWindow.SelectPreferredTextWidth(180f, 320f, 1, WhiteSpace.NoWrap);
