@@ -298,12 +298,18 @@ namespace io.github.hatayama.uLoopMCP
             _installCliButton.SetEnabled(false);
             _installCliButton.text = "Checking...";
             _groupSkillsToggle.SetEnabled(false);
-            _skillsStatusLabel.text = "Checking installed skills...";
+            UpdateSkillsStatusLabel("Checking installed skills...");
             _installSkillsButton.SetEnabled(false);
             _installSkillsButton.text = "Checking...";
             ViewDataBinder.SetVisible(_skillsTargetRow, _shouldUseFirstInstallSkillsUi);
             ViewDataBinder.SetVisible(_skillsTargetList, !_shouldUseFirstInstallSkillsUi);
             _skillsTargetList.Clear();
+        }
+
+        private void UpdateSkillsStatusLabel(string text)
+        {
+            _skillsStatusLabel.text = text;
+            ViewDataBinder.SetVisible(_skillsStatusLabel, !string.IsNullOrEmpty(text));
         }
 
         private void ScheduleInitialRefresh()
@@ -344,7 +350,7 @@ namespace io.github.hatayama.uLoopMCP
                 _installCliButton.SetEnabled(false);
                 _installSkillsButton.SetEnabled(false);
                 _groupSkillsToggle.SetEnabled(false);
-                _skillsStatusLabel.text = "";
+                UpdateSkillsStatusLabel(string.Empty);
                 _skillsTargetList.Clear();
                 ScheduleResizeToContent();
                 return;
@@ -481,7 +487,7 @@ namespace io.github.hatayama.uLoopMCP
 
             if (!cliInstalled)
             {
-                _skillsStatusLabel.text = "";
+                UpdateSkillsStatusLabel(string.Empty);
                 _installSkillsButton.SetEnabled(false);
                 _groupSkillsToggle.SetEnabled(false);
                 ViewDataBinder.SetVisible(_skillsTargetRow, false);
@@ -497,7 +503,7 @@ namespace io.github.hatayama.uLoopMCP
 
             if (useFirstInstallSkillsUi)
             {
-                _skillsStatusLabel.text = "";
+                UpdateSkillsStatusLabel(string.Empty);
                 _installSkillsButton.SetEnabled(!_isInstallingSkills);
                 _installSkillsButton.text = GetInstallSkillsButtonText(
                     _isInstallingSkills,
@@ -532,7 +538,8 @@ namespace io.github.hatayama.uLoopMCP
 
             if (installableTargets.Count == 0)
             {
-                _skillsStatusLabel.text = "Create a skills directory to opt in (.claude/skills/, .agents/skills/, etc.)";
+                UpdateSkillsStatusLabel(
+                    "Create a skills directory to opt in (.claude/skills/, .agents/skills/, etc.)");
                 _installSkillsButton.SetEnabled(false);
                 _installSkillsButton.text = "Install Skills";
                 return;
@@ -542,7 +549,7 @@ namespace io.github.hatayama.uLoopMCP
                 t => t.InstallState == SkillInstallState.Checking);
             if (isCheckingSkills)
             {
-                _skillsStatusLabel.text = "Checking installed skills...";
+                UpdateSkillsStatusLabel("Checking installed skills...");
                 _installSkillsButton.SetEnabled(false);
                 _installSkillsButton.text = "Checking...";
                 return;
@@ -552,7 +559,7 @@ namespace io.github.hatayama.uLoopMCP
                 t => t.InstallState == SkillInstallState.Installed);
             if (allSkillsInstalled)
             {
-                _skillsStatusLabel.text = $"Installed for {installableTargets.Count} opted-in targets";
+                UpdateSkillsStatusLabel($"Installed for {installableTargets.Count} opted-in targets");
                 _installSkillsButton.SetEnabled(false);
                 _installSkillsButton.text = "Installed";
             }
@@ -560,9 +567,10 @@ namespace io.github.hatayama.uLoopMCP
             {
                 bool hasOutdatedSkills = installableTargets.Any(
                     t => t.InstallState == SkillInstallState.Outdated);
-                _skillsStatusLabel.text = installableTargets.Count == targets.Count
-                    ? ""
-                    : "Only opted-in targets will be installed.";
+                UpdateSkillsStatusLabel(
+                    installableTargets.Count == targets.Count
+                        ? string.Empty
+                        : "Only opted-in targets will be installed.");
                 _installSkillsButton.SetEnabled(!_isInstallingSkills);
                 _installSkillsButton.text = GetInstallSkillsButtonText(
                     _isInstallingSkills,
@@ -737,7 +745,6 @@ namespace io.github.hatayama.uLoopMCP
         private void HandleOpenSettings()
         {
             McpEditorWindow.ShowWindow();
-            Close();
         }
 
         private void HandleSuppressAutoShowChanged(bool suppressAutoShow)
