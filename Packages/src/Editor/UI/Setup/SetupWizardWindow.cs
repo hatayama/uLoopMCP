@@ -427,7 +427,7 @@ namespace io.github.hatayama.uLoopMCP
             IEnumerable<ToolSkillSynchronizer.SkillTargetInfo> targets)
         {
             Debug.Assert(targets != null, "targets must not be null");
-            return targets.Where(target => target.HasSkillsDirectory).ToList();
+            return targets.ToList();
         }
 
         internal static bool ShouldUseFirstInstallSkillsUi(bool hasShownSetupWizardSkillsSelection)
@@ -543,7 +543,7 @@ namespace io.github.hatayama.uLoopMCP
             if (installableTargets.Count == 0)
             {
                 UpdateSkillsStatusLabel(
-                    "Create a skills directory to opt in (.claude/skills/, .agents/skills/, etc.)");
+                    "Create a tool folder to enable skill installation (.claude/, .agents/, etc.)");
                 _installSkillsButton.SetEnabled(false);
                 _installSkillsButton.text = "Install Skills";
                 return;
@@ -563,7 +563,7 @@ namespace io.github.hatayama.uLoopMCP
                 t => t.InstallState == SkillInstallState.Installed);
             if (allSkillsInstalled)
             {
-                UpdateSkillsStatusLabel($"Installed for {installableTargets.Count} opted-in targets");
+                UpdateSkillsStatusLabel($"Installed for {installableTargets.Count} targets");
                 _installSkillsButton.SetEnabled(false);
                 _installSkillsButton.text = "Installed";
             }

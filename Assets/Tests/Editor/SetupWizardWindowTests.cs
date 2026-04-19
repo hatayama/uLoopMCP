@@ -154,7 +154,7 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
         }
 
         [Test]
-        public void FilterInstallableSkillTargets_ReturnsOnlyOptedInTargets()
+        public void FilterInstallableSkillTargets_ReturnsAllDetectedTargets()
         {
             List<ToolSkillSynchronizer.SkillTargetInfo> targets = new()
             {
@@ -165,8 +165,9 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
             List<ToolSkillSynchronizer.SkillTargetInfo> installableTargets =
                 SetupWizardWindow.FilterInstallableSkillTargets(targets);
 
-            Assert.That(installableTargets.Count, Is.EqualTo(1));
+            Assert.That(installableTargets.Count, Is.EqualTo(2));
             Assert.That(installableTargets[0].DirName, Is.EqualTo(".claude"));
+            Assert.That(installableTargets[1].DirName, Is.EqualTo(".cursor"));
         }
 
         [Test]
