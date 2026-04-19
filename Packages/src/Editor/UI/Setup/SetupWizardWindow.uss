@@ -241,8 +241,8 @@
    Block: Footer
    =========================================== */
 .setup-footer {
-    margin-top: 8px;
-    padding-top: 8px;
+    margin-top: 4px;
+    padding-top: 4px;
 }
 
 .setup-footer__toggle {
