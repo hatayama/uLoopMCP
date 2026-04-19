@@ -212,7 +212,7 @@
 
 .setup-button--primary {
     background-color: #2e7d32;
-    border-color: var(--setup-color-success);
+    border-color: var(--setup-colo--setup-color-dividerr-success);
     color: #ffffff;
 }
 
@@ -232,9 +232,9 @@
 
 .setup-step__divider {
     border-top-width: 1px;
-    border-top-color: var(--unity-colors-helpbox-border);
+    border-top-color: rgba(255, 255, 255, 0.12);
     margin-top: 6px;
-    margin-bottom: 6px;
+    margin-bottom: 12px;
 }
 
 /* ===========================================
@@ -243,8 +243,6 @@
 .setup-footer {
     margin-top: 8px;
     padding-top: 8px;
-    border-top-width: 1px;
-    border-top-color: var(--unity-colors-helpbox-border);
 }
 
 .setup-footer__toggle {
