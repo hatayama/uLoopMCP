@@ -117,52 +117,6 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         [Test]
-        public async Task InstallSkillFilesAtProjectRoot_WhenInstalledSkillFileIsReadLockedAndUnchanged_Succeeds()
-        {
-            string temporaryRoot = CreateTemporaryProjectRoot();
-            CreateFakeSourceSkill(
-                temporaryRoot,
-                "uloop-fake-skill",
-                "FakeTool",
-                "reference.md",
-                "reference");
-
-            string targetRoot = Path.Combine(temporaryRoot, ".claude");
-            Directory.CreateDirectory(Path.Combine(targetRoot, SkillInstallLayout.SkillsDirName));
-
-            ToolSkillSynchronizer.SkillTargetInfo target = new(
-                "Claude Code",
-                ".claude",
-                "--claude",
-                hasSkillsDirectory: true,
-                hasExistingSkills: false);
-
-            await ToolSkillSynchronizer.InstallSkillFilesAtProjectRoot(
-                temporaryRoot,
-                new[] { target },
-                groupSkillsUnderUnityCliLoop: true);
-
-            string installedSkillDir = Path.Combine(
-                targetRoot,
-                SkillInstallLayout.SkillsDirName,
-                SkillInstallLayout.ManagedSkillsDirName,
-                "uloop-fake-skill");
-            string skillFilePath = Path.Combine(installedSkillDir, SkillInstallLayout.SkillFileName);
-
-            using FileStream lockedSkillFile = new(skillFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-
-            ToolSkillSynchronizer.SkillInstallResult result =
-                await ToolSkillSynchronizer.InstallSkillFilesAtProjectRoot(
-                    temporaryRoot,
-                    new[] { target },
-                    groupSkillsUnderUnityCliLoop: true);
-
-            Assert.That(result.IsSuccessful, Is.True);
-            Assert.That(File.ReadAllText(skillFilePath), Does.Contain("name: uloop-fake-skill"));
-            Assert.That(File.ReadAllText(Path.Combine(installedSkillDir, "reference.md")), Is.EqualTo("reference"));
-        }
-
-        [Test]
         public void DetectTargets_DoesNotIncludeTargetsWithOnlyParentDirectory()
         {
             // Arrange

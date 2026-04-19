@@ -508,10 +508,27 @@ namespace io.github.hatayama.uLoopMCP
             string parentDirectory = Path.GetDirectoryName(skillDirectory);
             Debug.Assert(!string.IsNullOrEmpty(parentDirectory), "parentDirectory must not be null or empty");
             Directory.CreateDirectory(parentDirectory);
+            bool skillDirectoryExisted = Directory.Exists(skillDirectory);
+            Dictionary<string, byte[]> backupFiles = skillDirectoryExisted
+                ? ReadSkillFiles(skillDirectory)
+                : new Dictionary<string, byte[]>(StringComparer.Ordinal);
             Directory.CreateDirectory(skillDirectory);
-            WriteSkillFiles(skillDirectory, skillFiles);
-            DeleteUnexpectedSkillFiles(skillDirectory, skillFiles.Keys);
-            DeleteEmptyDirectories(skillDirectory);
+
+            bool syncCompleted = false;
+            try
+            {
+                WriteSkillFiles(skillDirectory, skillFiles);
+                DeleteUnexpectedSkillFiles(skillDirectory, skillFiles.Keys);
+                DeleteEmptyDirectories(skillDirectory);
+                syncCompleted = true;
+            }
+            finally
+            {
+                if (!syncCompleted)
+                {
+                    RollbackSkillDirectory(skillDirectory, backupFiles, skillDirectoryExisted);
+                }
+            }
         }
 
         private static void WriteSkillFiles(
@@ -529,7 +546,54 @@ namespace io.github.hatayama.uLoopMCP
                     continue;
                 }
 
-                File.WriteAllBytes(fullPath, skillFile.Value);
+                WriteFileAtomically(fullPath, skillFile.Value);
+            }
+        }
+
+        private static Dictionary<string, byte[]> ReadSkillFiles(string skillDirectory)
+        {
+            Dictionary<string, byte[]> files = new(StringComparer.Ordinal);
+            foreach (string filePath in Directory.EnumerateFiles(skillDirectory, "*", SearchOption.AllDirectories))
+            {
+                string fileName = Path.GetFileName(filePath);
+                if (IsExcludedSkillFile(fileName))
+                {
+                    continue;
+                }
+
+                string relativePath = Path.GetRelativePath(skillDirectory, filePath);
+                files[relativePath] = File.ReadAllBytes(filePath);
+            }
+
+            return files;
+        }
+
+        private static void WriteFileAtomically(string fullPath, byte[] content)
+        {
+            string fileDirectory = Path.GetDirectoryName(fullPath);
+            Debug.Assert(!string.IsNullOrEmpty(fileDirectory), "fileDirectory must not be null or empty");
+
+            string tempPath = Path.Combine(
+                fileDirectory,
+                $"{Path.GetFileName(fullPath)}.tmp-{Guid.NewGuid():N}");
+            File.WriteAllBytes(tempPath, content);
+
+            try
+            {
+                if (File.Exists(fullPath))
+                {
+                    File.Replace(tempPath, fullPath, null, true);
+                    return;
+                }
+
+                File.Move(tempPath, fullPath);
+            }
+            finally
+            {
+                if (File.Exists(tempPath))
+                {
+                    File.Delete(tempPath);
+                }
             }
         }
 
@@ -568,6 +632,27 @@ namespace io.github.hatayama.uLoopMCP
 
                 Directory.Delete(directoryPath);
             }
+        }
+
+        private static void RollbackSkillDirectory(
+            string skillDirectory,
+            IReadOnlyDictionary<string, byte[]> backupFiles,
+            bool skillDirectoryExisted)
+        {
+            if (!skillDirectoryExisted)
+            {
+                if (Directory.Exists(skillDirectory))
+                {
+                    Directory.Delete(skillDirectory, true);
+                }
+
+                return;
+            }
+
+            Directory.CreateDirectory(skillDirectory);
+            WriteSkillFiles(skillDirectory, backupFiles);
+            DeleteUnexpectedSkillFiles(skillDirectory, backupFiles.Keys);
+            DeleteEmptyDirectories(skillDirectory);
         }
 
         private static bool IsExcludedSkillFile(string fileName)
