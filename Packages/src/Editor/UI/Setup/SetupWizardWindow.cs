@@ -571,10 +571,7 @@ namespace io.github.hatayama.uLoopMCP
             {
                 bool hasOutdatedSkills = installableTargets.Any(
                     t => t.InstallState == SkillInstallState.Outdated);
-                UpdateSkillsStatusLabel(
-                    installableTargets.Count == targets.Count
-                        ? string.Empty
-                        : "Only eligible targets will be installed or updated.");
+                UpdateSkillsStatusLabel(string.Empty);
                 _installSkillsButton.SetEnabled(!_isInstallingSkills);
                 _installSkillsButton.text = GetInstallSkillsButtonText(
                     _isInstallingSkills,
