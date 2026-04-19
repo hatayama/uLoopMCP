@@ -120,15 +120,20 @@
     flex-direction: row;
     align-items: center;
     margin-bottom: 6px;
+    overflow: hidden;
 }
 
 .setup-target-row__label {
-    min-width: 42px;
+    width: 50px;
+    flex-shrink: 0;
     margin-right: 6px;
 }
 
 .setup-target-row__field {
     flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .setup-target-list {
