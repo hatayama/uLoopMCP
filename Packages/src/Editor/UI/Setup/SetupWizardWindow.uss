@@ -230,6 +230,13 @@
     margin-top: 4px;
 }
 
+#skills-hint-label {
+    border-top-width: 1px;
+    border-top-color: var(--unity-colors-helpbox-border);
+    padding-top: 6px;
+    margin-top: 6px;
+}
+
 /* ===========================================
    Block: Footer
    =========================================== */
