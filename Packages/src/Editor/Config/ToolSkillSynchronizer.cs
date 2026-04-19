@@ -100,6 +100,12 @@ namespace io.github.hatayama.uLoopMCP
             "uloop-get-menu-items",
             "uloop-get-unity-search-providers"
         };
+        private static readonly string[] ExcludedSkillFileNames =
+        {
+            ".meta",
+            ".DS_Store",
+            ".gitkeep"
+        };
 
         internal static readonly string[] SkillTargetDirs = SkillTargets.Select(t => t.DirName).ToArray();
 
@@ -502,53 +508,10 @@ namespace io.github.hatayama.uLoopMCP
             string parentDirectory = Path.GetDirectoryName(skillDirectory);
             Debug.Assert(!string.IsNullOrEmpty(parentDirectory), "parentDirectory must not be null or empty");
             Directory.CreateDirectory(parentDirectory);
-
-            string tempDirectory = Path.Combine(
-                parentDirectory,
-                $"{Path.GetFileName(skillDirectory)}.tmp-{Guid.NewGuid():N}");
-            string backupDirectory = Path.Combine(
-                parentDirectory,
-                $"{Path.GetFileName(skillDirectory)}.bak-{Guid.NewGuid():N}");
-            Directory.CreateDirectory(tempDirectory);
-
-            bool movedExisting = false;
-            bool movedTemp = false;
-
-            try
-            {
-                WriteSkillFiles(tempDirectory, skillFiles);
-
-                if (Directory.Exists(skillDirectory))
-                {
-                    Directory.Move(skillDirectory, backupDirectory);
-                    movedExisting = true;
-                }
-
-                Directory.Move(tempDirectory, skillDirectory);
-                movedTemp = true;
-
-                if (Directory.Exists(backupDirectory))
-                {
-                    Directory.Delete(backupDirectory, true);
-                }
-            }
-            finally
-            {
-                if (!movedTemp && Directory.Exists(tempDirectory))
-                {
-                    Directory.Delete(tempDirectory, true);
-                }
-
-                if (!movedTemp && movedExisting && Directory.Exists(backupDirectory) && !Directory.Exists(skillDirectory))
-                {
-                    Directory.Move(backupDirectory, skillDirectory);
-                }
-
-                if (movedTemp && Directory.Exists(backupDirectory))
-                {
-                    Directory.Delete(backupDirectory, true);
-                }
-            }
+            Directory.CreateDirectory(skillDirectory);
+            WriteSkillFiles(skillDirectory, skillFiles);
+            DeleteUnexpectedSkillFiles(skillDirectory, skillFiles.Keys);
+            DeleteEmptyDirectories(skillDirectory);
         }
 
         private static void WriteSkillFiles(
@@ -561,8 +524,68 @@ namespace io.github.hatayama.uLoopMCP
                 string fileDirectory = Path.GetDirectoryName(fullPath);
                 Debug.Assert(!string.IsNullOrEmpty(fileDirectory), "fileDirectory must not be null or empty");
                 Directory.CreateDirectory(fileDirectory);
+                if (File.Exists(fullPath) && File.ReadAllBytes(fullPath).SequenceEqual(skillFile.Value))
+                {
+                    continue;
+                }
+
                 File.WriteAllBytes(fullPath, skillFile.Value);
             }
+        }
+
+        private static void DeleteUnexpectedSkillFiles(
+            string skillDirectory,
+            IEnumerable<string> expectedRelativePaths)
+        {
+            HashSet<string> expectedPaths = new(expectedRelativePaths, StringComparer.Ordinal);
+            foreach (string filePath in Directory.EnumerateFiles(skillDirectory, "*", SearchOption.AllDirectories))
+            {
+                string fileName = Path.GetFileName(filePath);
+                if (IsExcludedSkillFile(fileName))
+                {
+                    continue;
+                }
+
+                string relativePath = Path.GetRelativePath(skillDirectory, filePath);
+                if (expectedPaths.Contains(relativePath))
+                {
+                    continue;
+                }
+
+                File.Delete(filePath);
+            }
+        }
+
+        private static void DeleteEmptyDirectories(string skillDirectory)
+        {
+            foreach (string directoryPath in Directory.EnumerateDirectories(skillDirectory, "*", SearchOption.AllDirectories)
+                         .OrderByDescending(path => path.Length))
+            {
+                if (Directory.EnumerateFileSystemEntries(directoryPath).Any())
+                {
+                    continue;
+                }
+
+                Directory.Delete(directoryPath);
+            }
+        }
+
+        private static bool IsExcludedSkillFile(string fileName)
+        {
+            if (ExcludedSkillFileNames.Contains(fileName))
+            {
+                return true;
+            }
+
+            foreach (string excludedPattern in ExcludedSkillFileNames)
+            {
+                if (fileName.EndsWith(excludedPattern, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static void DeleteSkillDirectoryIfExists(
