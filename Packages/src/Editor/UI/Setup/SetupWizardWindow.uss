@@ -240,11 +240,6 @@
 /* ===========================================
    Block: Footer
    =========================================== */
-.setup-footer {
-    margin-top: 4px;
-    padding-top: 4px;
-}
-
 .setup-footer__toggle {
     margin-top: 6px;
 }
@@ -270,6 +265,9 @@
     flex-direction: row;
     justify-content: flex-end;
     align-items: center;
+    border-top-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.12);
+    padding-top: 8px;
     margin-top: 10px;
     opacity: 0.78;
 }
