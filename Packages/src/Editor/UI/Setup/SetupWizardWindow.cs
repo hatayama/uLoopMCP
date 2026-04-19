@@ -122,6 +122,7 @@ namespace io.github.hatayama.uLoopMCP
         private Toggle _groupSkillsToggle;
         private Label _groupSkillsLabel;
         private VisualElement _skillsTargetList;
+        private VisualElement _skillsStatusDivider;
         private Label _skillsStatusLabel;
         private Button _installSkillsButton;
 
@@ -200,6 +201,7 @@ namespace io.github.hatayama.uLoopMCP
             _groupSkillsToggle = rootVisualElement.Q<Toggle>("group-skills-toggle");
             _groupSkillsLabel = rootVisualElement.Q<Label>("group-skills-label");
             _skillsTargetList = rootVisualElement.Q<VisualElement>("skills-target-list");
+            _skillsStatusDivider = rootVisualElement.Q<VisualElement>("skills-status-divider");
             _skillsStatusLabel = rootVisualElement.Q<Label>("skills-status-label");
             _installSkillsButton = rootVisualElement.Q<Button>("install-skills-button");
 
@@ -309,7 +311,9 @@ namespace io.github.hatayama.uLoopMCP
         private void UpdateSkillsStatusLabel(string text)
         {
             _skillsStatusLabel.text = text;
-            ViewDataBinder.SetVisible(_skillsStatusLabel, !string.IsNullOrEmpty(text));
+            bool isVisible = !string.IsNullOrEmpty(text);
+            ViewDataBinder.SetVisible(_skillsStatusDivider, isVisible);
+            ViewDataBinder.SetVisible(_skillsStatusLabel, isVisible);
         }
 
         private void ScheduleInitialRefresh()

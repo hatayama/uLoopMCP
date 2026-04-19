@@ -39,6 +39,7 @@
                     <uie:EnumField name="skills-target-field" class="setup-target-row__field" />
                 </ui:VisualElement>
                 <ui:VisualElement name="skills-target-list" class="setup-target-list" />
+                <ui:VisualElement name="skills-status-divider" class="setup-step__divider" />
                 <ui:Label name="skills-status-label" text="" class="setup-step__status-label" />
                 <ui:VisualElement class="setup-step__button-row">
                     <ui:Button name="install-skills-button" text="Install Skills" class="setup-button" />
