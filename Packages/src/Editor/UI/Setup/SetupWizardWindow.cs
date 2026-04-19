@@ -574,7 +574,7 @@ namespace io.github.hatayama.uLoopMCP
                 UpdateSkillsStatusLabel(
                     installableTargets.Count == targets.Count
                         ? string.Empty
-                        : "Only opted-in targets will be installed.");
+                        : "Only targets with a skills folder are managed here.");
                 _installSkillsButton.SetEnabled(!_isInstallingSkills);
                 _installSkillsButton.text = GetInstallSkillsButtonText(
                     _isInstallingSkills,
