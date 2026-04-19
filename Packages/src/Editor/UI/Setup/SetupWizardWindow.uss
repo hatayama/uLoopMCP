@@ -212,7 +212,7 @@
 
 .setup-button--primary {
     background-color: #2e7d32;
-    border-color: var(--setup-colo--setup-color-dividerr-success);
+    border-color: var(--setup-color-success);
     color: #ffffff;
 }
 
