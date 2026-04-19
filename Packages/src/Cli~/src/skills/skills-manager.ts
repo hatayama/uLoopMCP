@@ -7,6 +7,7 @@
 // File paths are constructed from home directory and skill names, not from untrusted user input
 /* eslint-disable security/detect-non-literal-fs-filename */
 
+import assert from 'node:assert';
 import { PRODUCT_DISPLAY_NAME } from '../cli-constants';
 import {
   existsSync,
@@ -111,11 +112,36 @@ export function getManagedSkillsDir(baseDir: string): string {
   return join(baseDir, SkillsPathConstants.MANAGED_SKILLS_DIR);
 }
 
+function isSafeSkillPathComponent(skillDirName: string): boolean {
+  if (skillDirName.length === 0) {
+    return false;
+  }
+
+  if (skillDirName === '.' || skillDirName === '..') {
+    return false;
+  }
+
+  if (isAbsolute(skillDirName)) {
+    return false;
+  }
+
+  return !skillDirName.includes('/') && !skillDirName.includes('\\') && !skillDirName.includes(sep);
+}
+
+function assertSafeSkillPathComponent(skillDirName: string): void {
+  assert(
+    isSafeSkillPathComponent(skillDirName),
+    'skillDirName must be a single safe path component',
+  );
+}
+
 function getLegacySkillDir(baseDir: string, skillDirName: string): string {
+  assertSafeSkillPathComponent(skillDirName);
   return join(baseDir, skillDirName);
 }
 
 function getManagedSkillDir(baseDir: string, skillDirName: string): string {
+  assertSafeSkillPathComponent(skillDirName);
   return join(getManagedSkillsDir(baseDir), skillDirName);
 }
 
@@ -384,6 +410,10 @@ function scanEditorFolderForSkills(
         }
 
         const name = typeof frontmatter.name === 'string' ? frontmatter.name : entry.name;
+        if (!isSafeSkillPathComponent(name)) {
+          continue;
+        }
+
         const toolName =
           typeof frontmatter.toolName === 'string' ? frontmatter.toolName : undefined;
         const additionalFiles = collectSkillFolderFiles(skillDir);
@@ -611,6 +641,7 @@ export function getPreferredSkillDir(
   skillDirName: string,
   groupManagedSkills: boolean,
 ): string {
+  assertSafeSkillPathComponent(skillDirName);
   return groupManagedSkills
     ? getManagedSkillDir(baseDir, skillDirName)
     : getLegacySkillDir(baseDir, skillDirName);

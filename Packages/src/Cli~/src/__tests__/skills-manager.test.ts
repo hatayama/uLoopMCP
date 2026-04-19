@@ -220,6 +220,17 @@ describe('skill install layout', () => {
     );
   });
 
+  it('should reject skill directory names that are not safe path components', () => {
+    const skillsRoot = createSkillsRoot();
+
+    expect(() => getPreferredSkillDir(skillsRoot, '../uloop-compile', true)).toThrow(
+      'skillDirName must be a single safe path component',
+    );
+    expect(() => getPreferredSkillDir(skillsRoot, '/tmp/uloop-compile', false)).toThrow(
+      'skillDirName must be a single safe path component',
+    );
+  });
+
   it('should narrow project skill search roots to assets and relevant package roots', () => {
     const projectRoot = mkdtempSync(join(tmpdir(), 'uloop-skill-roots-'));
     temporaryRoots.push(projectRoot);

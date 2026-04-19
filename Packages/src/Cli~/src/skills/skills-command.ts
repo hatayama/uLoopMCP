@@ -133,7 +133,7 @@ function showTargetGuidance(command: string): void {
   console.log('');
   console.log('Options:');
   console.log('  -g, --global   Use global location');
-  console.log('  --flat         Install directly under skills/ without unity-cli-loop/');
+  console.log('  --flat         Use skills/ directly instead of skills/unity-cli-loop/');
   console.log('');
   console.log('Examples:');
   console.log(`  uloop skills ${command} --claude`);
