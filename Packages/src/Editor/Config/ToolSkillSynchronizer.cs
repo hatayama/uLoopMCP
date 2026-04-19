@@ -471,6 +471,11 @@ namespace io.github.hatayama.uLoopMCP
                 SyncInstalledSkillDirectory(installedSkillDirectory, skill.SkillFiles);
                 DeleteSkillDirectoryIfExists(targetRoot, skill.Name, !groupSkillsUnderUnityCliLoop);
             }
+
+            DeleteUnexpectedInstalledSkillDirectories(
+                targetRoot,
+                enabledSkills.Select(skill => skill.Name),
+                groupSkillsUnderUnityCliLoop);
         }
 
         private static bool IsSkillDisabled(
@@ -494,6 +499,25 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             return disabledTools.Contains(toolName);
+        }
+
+        private static void DeleteUnexpectedInstalledSkillDirectories(
+            string targetRoot,
+            IEnumerable<string> expectedSkillNames,
+            bool groupSkillsUnderUnityCliLoop)
+        {
+            HashSet<string> expectedSkillNameSet = new(expectedSkillNames, StringComparer.Ordinal);
+            foreach (string installedSkillName in SkillInstallLayout.EnumerateInstalledSkillDirectoryNamesForLayout(
+                         targetRoot,
+                         groupSkillsUnderUnityCliLoop))
+            {
+                if (expectedSkillNameSet.Contains(installedSkillName))
+                {
+                    continue;
+                }
+
+                DeleteSkillDirectoryIfExists(targetRoot, installedSkillName, groupSkillsUnderUnityCliLoop);
+            }
         }
 
         private static void SyncInstalledSkillDirectory(

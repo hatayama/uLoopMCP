@@ -185,6 +185,18 @@ namespace io.github.hatayama.uLoopMCP
             return GetInstalledSkillDirectoryPath(targetRoot, skillName, groupSkillsUnderUnityCliLoop);
         }
 
+        internal static IEnumerable<string> EnumerateInstalledSkillDirectoryNamesForLayout(
+            string targetRoot,
+            bool groupSkillsUnderUnityCliLoop)
+        {
+            IEnumerable<string> installedSkillDirectories = groupSkillsUnderUnityCliLoop
+                ? EnumerateManagedSkillDirectories(targetRoot)
+                : EnumerateLegacyManagedSkillDirectories(targetRoot);
+            return installedSkillDirectories
+                .Select(Path.GetFileName)
+                .Where(name => !string.IsNullOrEmpty(name));
+        }
+
         private static IEnumerable<string> EnumerateManagedSkillDirectories(string targetRoot)
         {
             string managedSkillsRoot = GetManagedSkillsRoot(targetRoot);
@@ -689,6 +701,16 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             if (skillName.Contains('/') || skillName.Contains('\\'))
+            {
+                return false;
+            }
+
+            if (Path.IsPathRooted(skillName))
+            {
+                return false;
+            }
+
+            if (skillName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
             {
                 return false;
             }
