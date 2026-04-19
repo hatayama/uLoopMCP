@@ -296,6 +296,7 @@
 
 .setup-step__button-row {
     flex-direction: row;
+    margin-top: 4px;
 }
 
 .setup-step__button-row .setup-button {
