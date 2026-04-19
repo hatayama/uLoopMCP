@@ -60,9 +60,6 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-        private static string _cachedProjectRoot;
-        private static Dictionary<string, SkillSourceDefinition> _cachedSkillSources;
-
         internal static string GetSkillsRoot(string targetRoot)
         {
             return Path.Combine(targetRoot, SkillsDirName);
@@ -316,11 +313,6 @@ namespace io.github.hatayama.uLoopMCP
 
         private static Dictionary<string, SkillSourceDefinition> GetSkillSources(string projectRoot)
         {
-            if (_cachedSkillSources != null && _cachedProjectRoot == projectRoot)
-            {
-                return _cachedSkillSources;
-            }
-
             Dictionary<string, SkillSourceDefinition> sources = new(StringComparer.Ordinal);
             foreach (string searchRoot in EnumerateSkillSourceRoots(projectRoot))
             {
@@ -363,8 +355,6 @@ namespace io.github.hatayama.uLoopMCP
                 }
             }
 
-            _cachedProjectRoot = projectRoot;
-            _cachedSkillSources = sources;
             return sources;
         }
 

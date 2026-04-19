@@ -770,22 +770,10 @@ namespace io.github.hatayama.uLoopMCP
                     selection.InstallFlag,
                     hasSkillsDirectory: true,
                     hasExistingSkills: false);
-                ToolSkillSynchronizer.SkillInstallResult result =
-                    await ToolSkillSynchronizer.InstallSkillFiles(
-                        new List<ToolSkillSynchronizer.SkillTargetInfo> { target },
-                        !_installSkillsFlat);
-
-                if (result.IsSuccessful)
-                {
-                    EditorDialogHelper.ShowSkillsInstalledDialog();
-                }
-                else
-                {
-                    EditorUtility.DisplayDialog(
-                        "Installation Failed",
-                        $"Failed to install skills for {selection.DisplayName}.",
-                        "OK");
-                }
+                await ToolSkillSynchronizer.InstallSkillFiles(
+                    new List<ToolSkillSynchronizer.SkillTargetInfo> { target },
+                    !_installSkillsFlat);
+                EditorDialogHelper.ShowSkillsInstalledDialog();
             }
             finally
             {

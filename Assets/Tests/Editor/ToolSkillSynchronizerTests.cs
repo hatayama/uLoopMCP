@@ -502,7 +502,7 @@ namespace io.github.hatayama.uLoopMCP
 
             Assert.That(detectedTargets.Length, Is.EqualTo(1));
             Assert.That(detectedTargets[0].InstallState, Is.EqualTo(SkillInstallState.Outdated));
-            Assert.That(detectedTargets[0].HasExistingSkills, Is.False);
+            Assert.That(detectedTargets[0].HasExistingSkills, Is.True);
         }
 
         [Test]
@@ -599,7 +599,7 @@ namespace io.github.hatayama.uLoopMCP
 
             Assert.That(detectedTargets.Length, Is.EqualTo(1));
             Assert.That(detectedTargets[0].InstallState, Is.EqualTo(SkillInstallState.Outdated));
-            Assert.That(detectedTargets[0].HasExistingSkills, Is.False);
+            Assert.That(detectedTargets[0].HasExistingSkills, Is.True);
         }
 
         [Test]

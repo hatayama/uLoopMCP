@@ -718,23 +718,10 @@ namespace io.github.hatayama.uLoopMCP
 
             try
             {
-                ToolSkillSynchronizer.SkillInstallResult result =
-                    await ToolSkillSynchronizer.InstallSkillFiles(
-                        installableTargets,
-                        !_installSkillsFlat);
-
-                if (result.IsSuccessful)
-                {
-                    EditorDialogHelper.ShowSkillsInstalledDialog();
-                }
-                else
-                {
-                    EditorUtility.DisplayDialog(
-                        "Installation Partially Failed",
-                        $"{result.SucceededTargets}/{result.AttemptedTargets} targets succeeded.\n"
-                        + "Run 'uloop skills install' to retry failed targets.",
-                        "OK");
-                }
+                await ToolSkillSynchronizer.InstallSkillFiles(
+                    installableTargets,
+                    !_installSkillsFlat);
+                EditorDialogHelper.ShowSkillsInstalledDialog();
             }
             finally
             {

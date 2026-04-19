@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -173,9 +174,13 @@ namespace io.github.hatayama.uLoopMCP
 
                 return failed ? null : output;
             }
-            catch
+            catch (Exception ex)
             {
                 process.Dispose();
+                if (!ct.IsCancellationRequested)
+                {
+                    UnityEngine.Debug.LogWarning($"[uLoopMCP] Failed to detect CLI version: {ex.Message}");
+                }
                 return null;
             }
         }

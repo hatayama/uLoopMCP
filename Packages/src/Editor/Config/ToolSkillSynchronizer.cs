@@ -323,7 +323,8 @@ namespace io.github.hatayama.uLoopMCP
                     groupSkillsUnderUnityCliLoop,
                     includeFreshnessCheck);
                 bool hasULoopSkills = installState == SkillInstallState.Installed
-                    || installState == SkillInstallState.Checking;
+                    || installState == SkillInstallState.Checking
+                    || installState == SkillInstallState.Outdated;
                 bool hasDifferentLayoutSkills = hasSkillsDirectory
                     && SkillInstallLayout.HasInstalledSkills(targetRoot, !groupSkillsUnderUnityCliLoop);
                 targets.Add(new SkillTargetInfo(
