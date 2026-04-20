@@ -13,7 +13,7 @@
 ### Bug Fixes
 
 * allow installation without the new Input System package ([#938](https://github.com/hatayama/unity-cli-loop/issues/938)) ([b08d899](https://github.com/hatayama/unity-cli-loop/commit/b08d899856d8c760aae7856b33f6a5bb3cc06d7f))
-* compile and log commands stay more reliable while the Unity server recovers ([#925](https://github.com/hatayama/unity-cli-loop/issues/925)) ([0f63ed5](https://github.com/hatayama/unity-cli-loop/commit/0f63ed5fdd9dc20ddc6b005dc1c7a4d9d1900090))
+* compile commands stay more reliable while the Unity server recovers ([#925](https://github.com/hatayama/unity-cli-loop/issues/925)) ([0f63ed5](https://github.com/hatayama/unity-cli-loop/commit/0f63ed5fdd9dc20ddc6b005dc1c7a4d9d1900090))
 * Dynamic code commands recover more cleanly after Unity restarts ([#944](https://github.com/hatayama/unity-cli-loop/issues/944)) ([bdbe286](https://github.com/hatayama/unity-cli-loop/commit/bdbe286d710bb2c7415b4f401d3b65e8c98f9e13))
 * invalid EditMode test requests now return a clear error during play mode ([#940](https://github.com/hatayama/unity-cli-loop/issues/940)) ([ed0c7ea](https://github.com/hatayama/unity-cli-loop/commit/ed0c7eaebfa5430fbdf95bfbd77f36e3fa500f2c))
 * make MCP deprecation easier to notice in the settings window ([#948](https://github.com/hatayama/unity-cli-loop/issues/948)) ([0ace70d](https://github.com/hatayama/unity-cli-loop/commit/0ace70d944fca67172ce24d3bca84b91a76c36a0))
