@@ -3,15 +3,10 @@
 ## [2.0.0](https://github.com/hatayama/unity-cli-loop/compare/v1.7.3...v2.0.0) (2026-04-20)
 
 
-### ⚠ BREAKING CHANGES
-
-* Rebuild execute-dynamic-code with shared Roslyn compilation and layered architecture ([#901](https://github.com/hatayama/unity-cli-loop/issues/901))
-
 ### Features
 
-* improve first-time Setup Wizard skill installation ([#927](https://github.com/hatayama/unity-cli-loop/issues/927)) ([cc65f80](https://github.com/hatayama/unity-cli-loop/commit/cc65f801dc55c2cf09df3af41ccffa5263341c50))
-* Rebuild execute-dynamic-code with shared Roslyn compilation and layered architecture ([#901](https://github.com/hatayama/unity-cli-loop/issues/901)) ([f48cdaa](https://github.com/hatayama/unity-cli-loop/commit/f48cdaaee5e3df0f4035a8281a6b7fe8511df04c))
-* skill installation state is clearer in setup and settings ([#951](https://github.com/hatayama/unity-cli-loop/issues/951)) ([9c4e36c](https://github.com/hatayama/unity-cli-loop/commit/9c4e36cf9902ea9b622535103e73205f80380f3d))
+* execute-dynamic-code now runs more than 6x faster ([#901](https://github.com/hatayama/unity-cli-loop/issues/901)) ([f48cdaa](https://github.com/hatayama/unity-cli-loop/commit/f48cdaaee5e3df0f4035a8281a6b7fe8511df04c))
+* Setup Wizard now handles first-time skill installation, grouping skills into a subfolder, target detection, status reporting, and startup behavior more clearly and reliably ([#927](https://github.com/hatayama/unity-cli-loop/issues/927), [#950](https://github.com/hatayama/unity-cli-loop/issues/950), [#951](https://github.com/hatayama/unity-cli-loop/issues/951), [#952](https://github.com/hatayama/unity-cli-loop/issues/952), [#953](https://github.com/hatayama/unity-cli-loop/issues/953), [#954](https://github.com/hatayama/unity-cli-loop/issues/954), [#963](https://github.com/hatayama/unity-cli-loop/issues/963), [#922](https://github.com/hatayama/unity-cli-loop/issues/922))
 * Windows users can follow PowerShell-specific PlayMode automation examples ([#947](https://github.com/hatayama/unity-cli-loop/issues/947)) ([59e50b4](https://github.com/hatayama/unity-cli-loop/commit/59e50b4e26f4e49c08761108737ae5a702a22788))
 
 
@@ -25,13 +20,6 @@
 * make MCP deprecation easier to notice in the settings window ([#948](https://github.com/hatayama/unity-cli-loop/issues/948)) ([0ace70d](https://github.com/hatayama/unity-cli-loop/commit/0ace70d944fca67172ce24d3bca84b91a76c36a0))
 * make the setup and settings windows easier to use ([#932](https://github.com/hatayama/unity-cli-loop/issues/932)) ([6d61a7d](https://github.com/hatayama/unity-cli-loop/commit/6d61a7dccc418b2c8a41cab4132accf27780afd9))
 * prevent installation errors when the Unity Test Framework package is missing ([#939](https://github.com/hatayama/unity-cli-loop/issues/939)) ([958e4b5](https://github.com/hatayama/unity-cli-loop/commit/958e4b5050f64a47dff00575c670ebf5a9ad3196))
-* README pages now show the refreshed logo ([#943](https://github.com/hatayama/unity-cli-loop/issues/943)) ([d47c7b1](https://github.com/hatayama/unity-cli-loop/commit/d47c7b1d2c76c5444cdba8c4afa2f3098776312d))
-* restore separate skill install targets for Claude, Cursor, Gemini, Codex, and .agents ([#950](https://github.com/hatayama/unity-cli-loop/issues/950)) ([8f583b9](https://github.com/hatayama/unity-cli-loop/commit/8f583b9f09326cf4b34bae0066369d07aaf98449))
-* Setup no longer shows unconfigured skill targets as missing ([#963](https://github.com/hatayama/unity-cli-loop/issues/963)) ([6921a88](https://github.com/hatayama/unity-cli-loop/commit/6921a88ba416c080ec5626022cbc440f7f57e8ed))
-* Setup now recognizes existing skill folders instead of showing them as missing ([#954](https://github.com/hatayama/unity-cli-loop/issues/954)) ([1860e1d](https://github.com/hatayama/unity-cli-loop/commit/1860e1d3658c2305c6931dee22601914de348d32))
-* setup wizard no longer gets stuck checking skills ([#952](https://github.com/hatayama/unity-cli-loop/issues/952)) ([eedc24c](https://github.com/hatayama/unity-cli-loop/commit/eedc24c38f04bd759f58041eceb8e2ace71237ae))
-* setup wizard no longer reappears or installs skills too eagerly ([#922](https://github.com/hatayama/unity-cli-loop/issues/922)) ([1515486](https://github.com/hatayama/unity-cli-loop/commit/151548673ea20895fb92d45c6153a487d488dd7b))
-* Setup Wizard now shows skill status during CLI updates ([#953](https://github.com/hatayama/unity-cli-loop/issues/953)) ([a861a3b](https://github.com/hatayama/unity-cli-loop/commit/a861a3b973652ab211ab344b604669d7b025e241))
 * show launch progress while Unity is starting ([#955](https://github.com/hatayama/unity-cli-loop/issues/955)) ([9514cc9](https://github.com/hatayama/unity-cli-loop/commit/9514cc90dc1427452ff3f998bb5b1e956901e86d))
 
 ## [1.7.3](https://github.com/hatayama/unity-cli-loop/compare/v1.7.2...v1.7.3) (2026-04-10)
