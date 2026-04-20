@@ -12,7 +12,6 @@
 
 ### Bug Fixes
 
-* AI-generated uloop commands now default to your current Unity project folder ([#929](https://github.com/hatayama/unity-cli-loop/issues/929)) ([be8e350](https://github.com/hatayama/unity-cli-loop/commit/be8e350915fb9c8dc112f195502fbbf2a9c6731a))
 * allow installation without the new Input System package ([#938](https://github.com/hatayama/unity-cli-loop/issues/938)) ([b08d899](https://github.com/hatayama/unity-cli-loop/commit/b08d899856d8c760aae7856b33f6a5bb3cc06d7f))
 * compile and log commands recover the Unity server more reliably ([#925](https://github.com/hatayama/unity-cli-loop/issues/925)) ([0f63ed5](https://github.com/hatayama/unity-cli-loop/commit/0f63ed5fdd9dc20ddc6b005dc1c7a4d9d1900090))
 * Dynamic code commands recover more cleanly after Unity restarts ([#944](https://github.com/hatayama/unity-cli-loop/issues/944)) ([bdbe286](https://github.com/hatayama/unity-cli-loop/commit/bdbe286d710bb2c7415b4f401d3b65e8c98f9e13))
