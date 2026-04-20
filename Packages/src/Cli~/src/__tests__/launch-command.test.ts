@@ -79,7 +79,7 @@ describe('launch command', () => {
     await program.parseAsync(['node', 'uloop', 'launch', '/project']);
 
     expect(mockCreateSpinner).toHaveBeenCalledWith('Launching Unity...');
-    expect(mockSpinnerUpdate).toHaveBeenCalledWith('Waiting for Unity CLI Loop to become ready...');
+    expect(mockSpinnerUpdate).toHaveBeenCalledWith('Preparing Unity tools...');
     expect(mockSpinnerStop).toHaveBeenCalledTimes(1);
     expect(waitForLaunchReadyAfterLaunchMock).toHaveBeenCalledWith('/project');
     expect(waitForDynamicCodeReadyAfterLaunchMock).not.toHaveBeenCalled();
@@ -100,11 +100,8 @@ describe('launch command', () => {
     await program.parseAsync(['node', 'uloop', 'launch', '/project']);
 
     expect(mockCreateSpinner).toHaveBeenCalledWith('Launching Unity...');
-    expect(mockSpinnerUpdate).toHaveBeenNthCalledWith(
-      1,
-      'Waiting for execute-dynamic-code to become ready...',
-    );
-    expect(mockSpinnerUpdate).toHaveBeenNthCalledWith(2, 'Warming up execute-dynamic-code...');
+    expect(mockSpinnerUpdate).toHaveBeenNthCalledWith(1, 'Preparing Unity tools...');
+    expect(mockSpinnerUpdate).toHaveBeenNthCalledWith(2, 'Finalizing Unity startup...');
     expect(mockSpinnerStop).toHaveBeenCalledTimes(1);
     expect(waitForDynamicCodeReadyAfterLaunchMock).toHaveBeenCalledWith('/project');
     expect(prewarmDynamicCodeAfterLaunchMock).toHaveBeenCalledWith({ projectRoot: '/project' });

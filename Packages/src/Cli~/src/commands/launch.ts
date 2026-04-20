@@ -91,14 +91,14 @@ async function runLaunchCommand(
       launchResult.projectPath,
     );
     if (!isDynamicCodeEnabled) {
-      spinner.update('Waiting for Unity CLI Loop to become ready...');
+      spinner.update('Preparing Unity tools...');
       await waitForLaunchReadyAfterLaunch(launchResult.projectPath);
       return;
     }
 
-    spinner.update('Waiting for execute-dynamic-code to become ready...');
+    spinner.update('Preparing Unity tools...');
     await waitForDynamicCodeReadyAfterLaunch(launchResult.projectPath);
-    spinner.update('Warming up execute-dynamic-code...');
+    spinner.update('Finalizing Unity startup...');
     await prewarmDynamicCodeAfterLaunch({ projectRoot: launchResult.projectPath });
   } finally {
     spinner.stop();
