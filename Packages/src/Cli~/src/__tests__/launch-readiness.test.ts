@@ -278,6 +278,61 @@ describe('waitForDynamicCodeReadyAfterLaunch', () => {
     expect(sleepCount).toBe(4);
   });
 
+  it('restarts probe progress when the resolved session changes', async () => {
+    const recordedMethods: string[] = [];
+    const recordedParams: Array<Record<string, unknown>> = [];
+    let sleepCount = 0;
+
+    await waitForDynamicCodeReadyAfterLaunch('/project', {
+      resolveUnityConnectionFn: jest
+        .fn()
+        .mockResolvedValueOnce(createConnection(8711))
+        .mockResolvedValueOnce(
+          createConnection(8712, {
+            requestMetadata: {
+              expectedProjectRoot: '/project',
+              expectedServerSessionId: 'session-2',
+            },
+          }),
+        )
+        .mockResolvedValue(
+          createConnection(8712, {
+            requestMetadata: {
+              expectedProjectRoot: '/project',
+              expectedServerSessionId: 'session-2',
+            },
+          }),
+        ),
+      createClient: () => {
+        const nextResponse = recordedMethods.length < 5 ? { Success: true } : { Success: true };
+        return createMockClient([nextResponse], recordedMethods, recordedParams).client;
+      },
+      sleepFn: jest.fn().mockImplementation((): Promise<void> => {
+        sleepCount++;
+        return Promise.resolve();
+      }),
+      nowFn: (() => {
+        let now = 0;
+        return (): number => {
+          now += 100;
+          return now;
+        };
+      })(),
+    });
+
+    expect(recordedMethods).toEqual([
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+    ]);
+    expect(recordedParams[0]['Code']).toBe(EXPECTED_STABLE_LAUNCH_READINESS_CODE);
+    expect(recordedParams[1]['Code']).toBe(EXPECTED_STABLE_LAUNCH_READINESS_CODE);
+    expect(recordedParams[4]['Code']).toBe(EXPECTED_USER_LIKE_LAUNCH_READINESS_CODE);
+    expect(sleepCount).toBe(4);
+  });
+
   it('does not retry non-transient Unity JSON-RPC errors', async () => {
     const recordedMethods: string[] = [];
 

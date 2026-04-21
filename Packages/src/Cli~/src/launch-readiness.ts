@@ -211,6 +211,7 @@ export async function waitForDynamicCodeReadyAfterLaunch(
   const isProjectBusyFn = dependencies.isProjectBusyFn ?? isProjectBusyByLockFiles;
   let currentProbeStage = 0;
   let firstSuccessfulProbeTime: number | null = null;
+  let probeSessionId: string | null = null;
 
   while (dependencies.nowFn() - startTime < LAUNCH_READINESS_TIMEOUT_MS) {
     let client: DirectUnityClient | null = null;
@@ -221,9 +222,19 @@ export async function waitForDynamicCodeReadyAfterLaunch(
         projectPath,
       );
       if (!hasFastSessionMetadata(connection)) {
+        currentProbeStage = 0;
+        firstSuccessfulProbeTime = null;
+        probeSessionId = null;
         await dependencies.sleepFn(LAUNCH_READINESS_RETRY_MS);
         continue;
       }
+
+      const resolvedSessionId = connection.requestMetadata?.expectedServerSessionId ?? null;
+      if (probeSessionId !== null && probeSessionId !== resolvedSessionId) {
+        currentProbeStage = 0;
+        firstSuccessfulProbeTime = null;
+      }
+      probeSessionId = resolvedSessionId;
 
       client = dependencies.createClient(connection.port);
       await client.connect();
