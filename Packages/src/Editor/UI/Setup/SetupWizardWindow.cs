@@ -78,7 +78,9 @@ namespace io.github.hatayama.uLoopMCP
 
         private static void ShowWindowInternal(bool shouldRecordVersion)
         {
+            string lastSeenSetupWizardVersionBeforeOpen = McpEditorSettings.GetLastSeenSetupWizardVersion();
             SetupWizardWindow window = GetWindow<SetupWizardWindow>(true, "Unity CLI Loop Setup");
+            window._lastSeenSetupWizardVersionBeforeOpen = lastSeenSetupWizardVersionBeforeOpen;
             window.position = CreateCenteredRect(EditorGUIUtility.GetMainWindowPosition(), MinimumWindowSize);
             window.ShowUtility();
             window.ScheduleResizeToContent();
@@ -142,6 +144,7 @@ namespace io.github.hatayama.uLoopMCP
         private bool _isSkillsTargetFieldInitialized;
         private bool _shouldUseFirstInstallSkillsUi;
         private bool _installSkillsFlat;
+        private string _lastSeenSetupWizardVersionBeforeOpen = string.Empty;
         private IVisualElementScheduledItem _initialRefreshScheduledItem;
         private IVisualElementScheduledItem _resizeScheduledItem;
         private CancellationTokenSource _skillInstallStateRefreshCts;
@@ -162,7 +165,8 @@ namespace io.github.hatayama.uLoopMCP
         private void InitializeFirstInstallSkillsUiState()
         {
             _shouldUseFirstInstallSkillsUi = ShouldUseFirstInstallSkillsUi(
-                McpEditorSettings.GetHasShownSetupWizardSkillsSelection());
+                McpEditorSettings.GetHasShownSetupWizardSkillsSelection(),
+                _lastSeenSetupWizardVersionBeforeOpen);
             McpEditorSettings.SetHasShownSetupWizardSkillsSelection(true);
         }
 
@@ -435,9 +439,16 @@ namespace io.github.hatayama.uLoopMCP
                 .ToList();
         }
 
-        internal static bool ShouldUseFirstInstallSkillsUi(bool hasShownSetupWizardSkillsSelection)
+        internal static bool ShouldUseFirstInstallSkillsUi(
+            bool hasShownSetupWizardSkillsSelection,
+            string lastSeenSetupWizardVersion)
         {
-            return !hasShownSetupWizardSkillsSelection;
+            if (hasShownSetupWizardSkillsSelection)
+            {
+                return false;
+            }
+
+            return string.IsNullOrEmpty(lastSeenSetupWizardVersion);
         }
 
         internal static bool CanManageSkills(bool cliInstalled)

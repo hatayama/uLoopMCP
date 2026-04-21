@@ -172,17 +172,31 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
         }
 
         [Test]
-        public void ShouldUseFirstInstallSkillsUi_WhenSelectionHasNotBeenShown_ReturnsTrue()
+        public void ShouldUseFirstInstallSkillsUi_WhenSelectionHasNotBeenShownAndVersionWasNeverSeen_ReturnsTrue()
         {
-            bool shouldUseFirstInstallUi = SetupWizardWindow.ShouldUseFirstInstallSkillsUi(false);
+            bool shouldUseFirstInstallUi = SetupWizardWindow.ShouldUseFirstInstallSkillsUi(
+                hasShownSetupWizardSkillsSelection: false,
+                lastSeenSetupWizardVersion: "");
 
             Assert.That(shouldUseFirstInstallUi, Is.True);
         }
 
         [Test]
+        public void ShouldUseFirstInstallSkillsUi_WhenSelectionHasNotBeenShownButVersionWasSeen_ReturnsFalse()
+        {
+            bool shouldUseFirstInstallUi = SetupWizardWindow.ShouldUseFirstInstallSkillsUi(
+                hasShownSetupWizardSkillsSelection: false,
+                lastSeenSetupWizardVersion: "1.9.0");
+
+            Assert.That(shouldUseFirstInstallUi, Is.False);
+        }
+
+        [Test]
         public void ShouldUseFirstInstallSkillsUi_WhenSelectionHasAlreadyBeenShown_ReturnsFalse()
         {
-            bool shouldUseFirstInstallUi = SetupWizardWindow.ShouldUseFirstInstallSkillsUi(true);
+            bool shouldUseFirstInstallUi = SetupWizardWindow.ShouldUseFirstInstallSkillsUi(
+                hasShownSetupWizardSkillsSelection: true,
+                lastSeenSetupWizardVersion: "");
 
             Assert.That(shouldUseFirstInstallUi, Is.False);
         }
