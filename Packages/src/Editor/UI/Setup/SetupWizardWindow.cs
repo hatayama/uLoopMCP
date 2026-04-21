@@ -79,13 +79,23 @@ namespace io.github.hatayama.uLoopMCP
 
         private static void ShowWindowInternal(bool shouldRecordVersion)
         {
+            string currentVersion = McpConstants.PackageInfo.version;
+            if (TryReuseOpenWindow(
+                HasOpenInstances<SetupWizardWindow>(),
+                shouldRecordVersion,
+                currentVersion,
+                FocusExistingWindow))
+            {
+                return;
+            }
+
             string lastSeenSetupWizardVersionBeforeOpen = McpEditorSettings.GetLastSeenSetupWizardVersion();
             Rect windowPosition = CreateCenteredRect(EditorGUIUtility.GetMainWindowPosition(), MinimumWindowSize);
             SetupWizardWindow window = CreateInstance<SetupWizardWindow>();
             PrepareForOpen(window, WindowTitle, windowPosition, lastSeenSetupWizardVersionBeforeOpen);
             window.ShowUtility();
             window.ScheduleResizeToContent();
-            MaybeRecordLastSeenVersion(shouldRecordVersion, McpConstants.PackageInfo.version);
+            MaybeRecordLastSeenVersion(shouldRecordVersion, currentVersion);
         }
 
         internal static Rect WithContentSize(Rect currentRect, Vector2 contentSize, Vector2 frameSize)
@@ -108,6 +118,21 @@ namespace io.github.hatayama.uLoopMCP
             return McpUIConstants.PROJECT_REPOSITORY_URL;
         }
 
+        internal static bool TryReuseOpenWindow(
+            bool hasOpenWindow,
+            bool shouldRecordVersion,
+            string currentVersion,
+            System.Action focusExistingWindow)
+        {
+            if (!hasOpenWindow) return false;
+
+            Debug.Assert(focusExistingWindow != null, "focusExistingWindow must not be null");
+            Debug.Assert(!string.IsNullOrEmpty(currentVersion), "currentVersion must not be null or empty");
+            focusExistingWindow();
+            MaybeRecordLastSeenVersion(shouldRecordVersion, currentVersion);
+            return true;
+        }
+
         internal static void PrepareForOpen(
             SetupWizardWindow window,
             string title,
@@ -121,6 +146,11 @@ namespace io.github.hatayama.uLoopMCP
             window.position = position;
             window._lastSeenSetupWizardVersionBeforeOpen =
                 lastSeenSetupWizardVersionBeforeOpen ?? string.Empty;
+        }
+
+        private static void FocusExistingWindow()
+        {
+            FocusWindowIfItsOpen<SetupWizardWindow>();
         }
 
         // Prerequisite

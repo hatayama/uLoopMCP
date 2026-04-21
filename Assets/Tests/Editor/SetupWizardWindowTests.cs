@@ -109,6 +109,66 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
         }
 
         [Test]
+        public void TryReuseOpenWindow_WhenExistingWindowAndAutoShow_FocusesWindowAndRecordsVersion()
+        {
+            bool focusedExistingWindow = false;
+            McpEditorSettings.SaveSettings(new McpEditorSettingsData
+            {
+                lastSeenSetupWizardVersion = "1.7.2"
+            });
+
+            bool reused = SetupWizardWindow.TryReuseOpenWindow(
+                hasOpenWindow: true,
+                shouldRecordVersion: true,
+                currentVersion: "1.7.3",
+                focusExistingWindow: () => focusedExistingWindow = true);
+
+            Assert.That(reused, Is.True);
+            Assert.That(focusedExistingWindow, Is.True);
+            Assert.That(McpEditorSettings.GetLastSeenSetupWizardVersion(), Is.EqualTo("1.7.3"));
+        }
+
+        [Test]
+        public void TryReuseOpenWindow_WhenExistingWindowAndManualShow_FocusesWindowWithoutRecordingVersion()
+        {
+            bool focusedExistingWindow = false;
+            McpEditorSettings.SaveSettings(new McpEditorSettingsData
+            {
+                lastSeenSetupWizardVersion = "1.7.2"
+            });
+
+            bool reused = SetupWizardWindow.TryReuseOpenWindow(
+                hasOpenWindow: true,
+                shouldRecordVersion: false,
+                currentVersion: "1.7.3",
+                focusExistingWindow: () => focusedExistingWindow = true);
+
+            Assert.That(reused, Is.True);
+            Assert.That(focusedExistingWindow, Is.True);
+            Assert.That(McpEditorSettings.GetLastSeenSetupWizardVersion(), Is.EqualTo("1.7.2"));
+        }
+
+        [Test]
+        public void TryReuseOpenWindow_WhenNoExistingWindow_DoesNotFocusOrRecordVersion()
+        {
+            bool focusedExistingWindow = false;
+            McpEditorSettings.SaveSettings(new McpEditorSettingsData
+            {
+                lastSeenSetupWizardVersion = "1.7.2"
+            });
+
+            bool reused = SetupWizardWindow.TryReuseOpenWindow(
+                hasOpenWindow: false,
+                shouldRecordVersion: true,
+                currentVersion: "1.7.3",
+                focusExistingWindow: () => focusedExistingWindow = true);
+
+            Assert.That(reused, Is.False);
+            Assert.That(focusedExistingWindow, Is.False);
+            Assert.That(McpEditorSettings.GetLastSeenSetupWizardVersion(), Is.EqualTo("1.7.2"));
+        }
+
+        [Test]
         public void WithContentSize_OverridesSizeAndPreservesCenter()
         {
             Rect initialRect = new(123f, 456f, 789f, 321f);
