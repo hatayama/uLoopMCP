@@ -84,7 +84,7 @@ async function runLaunchCommand(
     return;
   }
 
-  const spinner = createSpinner('Waiting for Unity to finish starting...');
+  const spinner = createSpinner('Waiting for Unity to finish starting...', 'stdout');
   try {
     const isDynamicCodeEnabled: boolean = isToolEnabled(
       'execute-dynamic-code',
