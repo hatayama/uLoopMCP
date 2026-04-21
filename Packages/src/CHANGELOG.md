@@ -19,7 +19,7 @@
 * make MCP deprecation easier to notice in the settings window ([#948](https://github.com/hatayama/unity-cli-loop/issues/948)) ([0ace70d](https://github.com/hatayama/unity-cli-loop/commit/0ace70d944fca67172ce24d3bca84b91a76c36a0))
 * make the setup and settings windows easier to use ([#932](https://github.com/hatayama/unity-cli-loop/issues/932)) ([6d61a7d](https://github.com/hatayama/unity-cli-loop/commit/6d61a7dccc418b2c8a41cab4132accf27780afd9))
 * prevent installation errors when the Unity Test Framework package is missing ([#939](https://github.com/hatayama/unity-cli-loop/issues/939)) ([958e4b5](https://github.com/hatayama/unity-cli-loop/commit/958e4b5050f64a47dff00575c670ebf5a9ad3196))
-* `uloop launch` now shows progress while Unity starts ([#955](https://github.com/hatayama/unity-cli-loop/issues/955)) ([9514cc9](https://github.com/hatayama/unity-cli-loop/commit/9514cc90dc1427452ff3f998bb5b1e956901e86d))
+* `uloop launch` now waits for Unity to finish starting ([#955](https://github.com/hatayama/unity-cli-loop/issues/955)) ([9514cc9](https://github.com/hatayama/unity-cli-loop/commit/9514cc90dc1427452ff3f998bb5b1e956901e86d))
 
 ## [1.7.3](https://github.com/hatayama/unity-cli-loop/compare/v1.7.2...v1.7.3) (2026-04-10)
 
