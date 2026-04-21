@@ -165,9 +165,7 @@ namespace io.github.hatayama.uLoopMCP
         private void InitializeFirstInstallSkillsUiState()
         {
             _shouldUseFirstInstallSkillsUi = ShouldUseFirstInstallSkillsUi(
-                McpEditorSettings.GetHasShownSetupWizardSkillsSelection(),
                 _lastSeenSetupWizardVersionBeforeOpen);
-            McpEditorSettings.SetHasShownSetupWizardSkillsSelection(true);
         }
 
         private void OnDisable()
@@ -439,15 +437,8 @@ namespace io.github.hatayama.uLoopMCP
                 .ToList();
         }
 
-        internal static bool ShouldUseFirstInstallSkillsUi(
-            bool hasShownSetupWizardSkillsSelection,
-            string lastSeenSetupWizardVersion)
+        internal static bool ShouldUseFirstInstallSkillsUi(string lastSeenSetupWizardVersion)
         {
-            if (hasShownSetupWizardSkillsSelection)
-            {
-                return false;
-            }
-
             return string.IsNullOrEmpty(lastSeenSetupWizardVersion);
         }
 
