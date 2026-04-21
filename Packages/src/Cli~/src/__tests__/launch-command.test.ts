@@ -126,6 +126,38 @@ describe('launch command', () => {
     expect(consoleLogSpy).not.toHaveBeenCalledWith('execute-dynamic-code is ready.');
   });
 
+  it('shows startup spinner before orchestrateLaunch resolves', async () => {
+    let resolveLaunch:
+      | ((value: { action: 'focused'; projectPath: string; pid: number }) => void)
+      | undefined;
+    orchestrateLaunchMock.mockReturnValue(
+      new Promise((resolve) => {
+        resolveLaunch = resolve;
+      }),
+    );
+
+    const program = new Command();
+    registerLaunchCommand(program);
+
+    const parsePromise: Promise<Command> = program.parseAsync([
+      'node',
+      'uloop',
+      'launch',
+      '/project',
+    ]);
+    await Promise.resolve();
+
+    expect(mockCreateSpinner).toHaveBeenCalledWith('Waiting for Unity to finish starting...');
+    expect(mockSpinnerStop).not.toHaveBeenCalled();
+
+    resolveLaunch?.({
+      action: 'focused',
+      projectPath: '/project',
+      pid: 4321,
+    });
+    await parsePromise;
+  });
+
   it('stops spinner without readiness waits when Unity is already running', async () => {
     orchestrateLaunchMock.mockResolvedValue({
       action: 'focused',
@@ -138,9 +170,9 @@ describe('launch command', () => {
 
     await program.parseAsync(['node', 'uloop', 'launch', '/project']);
 
-    expect(mockCreateSpinner).not.toHaveBeenCalled();
+    expect(mockCreateSpinner).toHaveBeenCalledWith('Waiting for Unity to finish starting...');
     expect(mockSpinnerUpdate).not.toHaveBeenCalled();
-    expect(mockSpinnerStop).not.toHaveBeenCalled();
+    expect(mockSpinnerStop).toHaveBeenCalledTimes(1);
     expect(waitForLaunchReadyAfterLaunchMock).not.toHaveBeenCalled();
     expect(waitForDynamicCodeReadyAfterLaunchMock).not.toHaveBeenCalled();
     expect(prewarmDynamicCodeAfterLaunchMock).not.toHaveBeenCalled();
