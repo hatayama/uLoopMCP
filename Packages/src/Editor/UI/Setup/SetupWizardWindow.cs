@@ -13,6 +13,7 @@ namespace io.github.hatayama.uLoopMCP
 {
     public class SetupWizardWindow : EditorWindow
     {
+        private const string WindowTitle = "Unity CLI Loop Setup";
         private const string UXML_RELATIVE_PATH = "Editor/UI/Setup/SetupWizardWindow.uxml";
         private const string USS_RELATIVE_PATH = "Editor/UI/Setup/SetupWizardWindow.uss";
         private const string GITHUB_ICON_RELATIVE_PATH = "Editor/UI/Setup/GitHub_Invertocat_White.png";
@@ -79,9 +80,9 @@ namespace io.github.hatayama.uLoopMCP
         private static void ShowWindowInternal(bool shouldRecordVersion)
         {
             string lastSeenSetupWizardVersionBeforeOpen = McpEditorSettings.GetLastSeenSetupWizardVersion();
-            SetupWizardWindow window = GetWindow<SetupWizardWindow>(true, "Unity CLI Loop Setup");
-            window._lastSeenSetupWizardVersionBeforeOpen = lastSeenSetupWizardVersionBeforeOpen;
-            window.position = CreateCenteredRect(EditorGUIUtility.GetMainWindowPosition(), MinimumWindowSize);
+            Rect windowPosition = CreateCenteredRect(EditorGUIUtility.GetMainWindowPosition(), MinimumWindowSize);
+            SetupWizardWindow window = CreateInstance<SetupWizardWindow>();
+            PrepareForOpen(window, WindowTitle, windowPosition, lastSeenSetupWizardVersionBeforeOpen);
             window.ShowUtility();
             window.ScheduleResizeToContent();
             MaybeRecordLastSeenVersion(shouldRecordVersion, McpConstants.PackageInfo.version);
@@ -105,6 +106,21 @@ namespace io.github.hatayama.uLoopMCP
         internal static string GetGitHubRepositoryUrl()
         {
             return McpUIConstants.PROJECT_REPOSITORY_URL;
+        }
+
+        internal static void PrepareForOpen(
+            SetupWizardWindow window,
+            string title,
+            Rect position,
+            string lastSeenSetupWizardVersionBeforeOpen)
+        {
+            Debug.Assert(window != null, "window must not be null");
+            Debug.Assert(!string.IsNullOrEmpty(title), "title must not be null or empty");
+
+            window.titleContent = new GUIContent(title);
+            window.position = position;
+            window._lastSeenSetupWizardVersionBeforeOpen =
+                lastSeenSetupWizardVersionBeforeOpen ?? string.Empty;
         }
 
         // Prerequisite
@@ -144,6 +160,7 @@ namespace io.github.hatayama.uLoopMCP
         private bool _isSkillsTargetFieldInitialized;
         private bool _shouldUseFirstInstallSkillsUi;
         private bool _installSkillsFlat;
+        [SerializeField]
         private string _lastSeenSetupWizardVersionBeforeOpen = string.Empty;
         private IVisualElementScheduledItem _initialRefreshScheduledItem;
         private IVisualElementScheduledItem _resizeScheduledItem;
