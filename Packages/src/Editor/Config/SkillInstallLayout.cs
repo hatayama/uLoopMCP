@@ -283,7 +283,7 @@ namespace io.github.hatayama.uLoopMCP
             Dictionary<string, byte[]> sourceFiles,
             string installedSkillDirectory)
         {
-            Dictionary<string, byte[]> installedFiles = CollectSkillFiles(installedSkillDirectory);
+            Dictionary<string, byte[]> installedFiles = CollectInstalledSkillFiles(installedSkillDirectory);
             if (sourceFiles.Count != installedFiles.Count)
             {
                 return true;
@@ -305,7 +305,7 @@ namespace io.github.hatayama.uLoopMCP
             return false;
         }
 
-        private static Dictionary<string, byte[]> CollectSkillFiles(string skillDirectory)
+        private static Dictionary<string, byte[]> CollectInstalledSkillFiles(string skillDirectory)
         {
             Dictionary<string, byte[]> files = new(StringComparer.Ordinal);
             foreach (string filePath in Directory.EnumerateFiles(skillDirectory, "*", SearchOption.AllDirectories))
@@ -321,6 +321,24 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             return files;
+        }
+
+        private static Dictionary<string, byte[]> CollectSourceSkillFiles(
+            string skillDirectory,
+            string skillFilePath)
+        {
+            Debug.Assert(!string.IsNullOrEmpty(skillDirectory), "skillDirectory must not be null or empty");
+            Debug.Assert(!string.IsNullOrEmpty(skillFilePath), "skillFilePath must not be null or empty");
+
+            if (string.Equals(Path.GetFileName(skillDirectory), "Skill", StringComparison.Ordinal))
+            {
+                return CollectInstalledSkillFiles(skillDirectory);
+            }
+
+            return new Dictionary<string, byte[]>(StringComparer.Ordinal)
+            {
+                [SkillFileName] = File.ReadAllBytes(skillFilePath)
+            };
         }
 
         private static Dictionary<string, SkillSourceDefinition> GetSkillSources(string projectRoot)
@@ -363,7 +381,7 @@ namespace io.github.hatayama.uLoopMCP
                         skillName,
                         ParseToolNameFromFrontmatter(skillContent),
                         skillDirectory,
-                        CollectSkillFiles(skillDirectory));
+                        CollectSourceSkillFiles(skillDirectory, skillFilePath));
                 }
             }
 

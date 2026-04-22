@@ -253,12 +253,13 @@ namespace io.github.hatayama.uLoopMCP
         public async Task InstallSkillFilesAtProjectRoot_WhenFlatLayoutRequested_InstallsProjectLocalCustomSkills()
         {
             string temporaryRoot = CreateTemporaryProjectRoot();
-            CreateFakeProjectLocalSkill(
+            string projectLocalToolDir = CreateFakeProjectLocalSkill(
                 temporaryRoot,
                 "uloop-get-unitask-tracker",
-                "GetUniTaskTracker",
-                "reference.md",
-                "reference");
+                "GetUniTaskTracker");
+            File.WriteAllText(
+                Path.Combine(projectLocalToolDir, "GetUniTaskTrackerTool.cs"),
+                "internal sealed class GetUniTaskTrackerTool {}");
 
             string targetRoot = Path.Combine(temporaryRoot, ".claude");
             string skillsRoot = Path.Combine(targetRoot, SkillInstallLayout.SkillsDirName);
@@ -290,7 +291,7 @@ namespace io.github.hatayama.uLoopMCP
 
             Assert.That(result.IsSuccessful, Is.True);
             Assert.That(File.Exists(Path.Combine(installedSkillDir, SkillInstallLayout.SkillFileName)), Is.True);
-            Assert.That(File.ReadAllText(Path.Combine(installedSkillDir, "reference.md")), Is.EqualTo("reference"));
+            Assert.That(File.Exists(Path.Combine(installedSkillDir, "GetUniTaskTrackerTool.cs")), Is.False);
             Assert.That(Directory.Exists(groupedSkillDir), Is.False);
         }
 
@@ -1110,12 +1111,10 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-        private static void CreateFakeProjectLocalSkill(
+        private static string CreateFakeProjectLocalSkill(
             string projectRoot,
             string skillName,
-            string toolDirectoryName,
-            string additionalFileRelativePath,
-            string additionalFileContent)
+            string toolDirectoryName)
         {
             string skillDir = Path.Combine(
                 projectRoot,
@@ -1128,7 +1127,7 @@ namespace io.github.hatayama.uLoopMCP
             File.WriteAllText(
                 Path.Combine(skillDir, SkillInstallLayout.SkillFileName),
                 $"---\nname: {skillName}\n---\n");
-            File.WriteAllText(Path.Combine(skillDir, additionalFileRelativePath), additionalFileContent);
+            return skillDir;
         }
 
         private static void WriteManifestDependencies(string projectRoot, string dependenciesContent)
