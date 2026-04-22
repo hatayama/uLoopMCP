@@ -7,7 +7,7 @@ import {
   resolveUnityConnection,
   UnityNotRunningError,
 } from './port-resolver.js';
-import { validateConnectedProject } from './project-validator.js';
+import { ProjectMismatchError, validateConnectedProject } from './project-validator.js';
 import { isRetryableFastProjectValidationErrorMessage } from './request-metadata.js';
 
 // Launch readiness lock paths are built from the resolved project root selected by launch.
@@ -132,6 +132,10 @@ function isTransientCompilationProviderUnavailable(errorMessage: string): boolea
 }
 
 function isRetryableLaunchReadinessError(error: unknown): boolean {
+  if (error instanceof ProjectMismatchError) {
+    return true;
+  }
+
   if (error instanceof UnityNotRunningError) {
     return true;
   }

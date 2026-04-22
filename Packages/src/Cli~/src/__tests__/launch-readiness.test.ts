@@ -305,6 +305,68 @@ describe('waitForDynamicCodeReadyAfterLaunch', () => {
     expect(sleepCount).toBe(3);
   });
 
+  it('retries legacy project mismatches until the launched project is selected', async () => {
+    const recordedMethods: string[] = [];
+    const projectRoot = process.cwd();
+    const mismatchedProjectRoot = `${projectRoot}/..`;
+    const responses: Array<MockReadinessResponse | Error> = [
+      { DataPath: `${mismatchedProjectRoot}/Assets` },
+      { DataPath: `${projectRoot}/Assets` },
+      { Success: true },
+      { DataPath: `${projectRoot}/Assets` },
+      { Success: true },
+      { DataPath: `${projectRoot}/Assets` },
+      { Success: true },
+      { DataPath: `${projectRoot}/Assets` },
+      { Success: true },
+    ];
+    let sleepCount = 0;
+
+    await waitForDynamicCodeReadyAfterLaunch('/project', {
+      resolveUnityConnectionFn: jest
+        .fn()
+        .mockResolvedValueOnce(
+          createConnection(8711, {
+            requestMetadata: null,
+            shouldValidateProject: true,
+            projectRoot,
+          }),
+        )
+        .mockResolvedValue(
+          createConnection(8711, {
+            requestMetadata: null,
+            shouldValidateProject: true,
+            projectRoot,
+          }),
+        ),
+      createClient: () => createMockClient(responses, recordedMethods).client,
+      sleepFn: jest.fn().mockImplementation((): Promise<void> => {
+        sleepCount++;
+        return Promise.resolve();
+      }),
+      nowFn: (() => {
+        let now = 0;
+        return (): number => {
+          now += 100;
+          return now;
+        };
+      })(),
+    });
+
+    expect(recordedMethods).toEqual([
+      'get-version',
+      'get-version',
+      'execute-dynamic-code',
+      'get-version',
+      'execute-dynamic-code',
+      'get-version',
+      'execute-dynamic-code',
+      'get-version',
+      'execute-dynamic-code',
+    ]);
+    expect(sleepCount).toBe(4);
+  });
+
   it('restarts probe progress when the resolved session changes', async () => {
     const recordedMethods: string[] = [];
     const recordedParams: Array<Record<string, unknown>> = [];
@@ -1048,6 +1110,52 @@ describe('waitForLaunchReadyAfterLaunch', () => {
     });
 
     expect(recordedMethods).toEqual(['get-version']);
+  });
+
+  it('retries legacy project mismatches until launch readiness finds the launched project', async () => {
+    const recordedMethods: string[] = [];
+    const projectRoot = process.cwd();
+    const mismatchedProjectRoot = `${projectRoot}/..`;
+    const responses: Array<MockReadinessResponse | Error> = [
+      { DataPath: `${mismatchedProjectRoot}/Assets` },
+      { DataPath: `${projectRoot}/Assets` },
+    ];
+    let sleepCount = 0;
+
+    await waitForLaunchReadyAfterLaunch('/project', {
+      resolveUnityConnectionFn: jest
+        .fn()
+        .mockResolvedValueOnce(
+          createConnection(8711, {
+            requestMetadata: null,
+            shouldValidateProject: true,
+            projectRoot,
+          }),
+        )
+        .mockResolvedValue(
+          createConnection(8711, {
+            requestMetadata: null,
+            shouldValidateProject: true,
+            projectRoot,
+          }),
+        ),
+      createClient: () => createMockClient(responses, recordedMethods).client,
+      sleepFn: jest.fn().mockImplementation((): Promise<void> => {
+        sleepCount++;
+        return Promise.resolve();
+      }),
+      nowFn: (() => {
+        let now = 0;
+        return (): number => {
+          now += 100;
+          return now;
+        };
+      })(),
+      isProjectBusyFn: jest.fn().mockReturnValue(false),
+    });
+
+    expect(recordedMethods).toEqual(['get-version', 'get-version']);
+    expect(sleepCount).toBe(1);
   });
 
   it('validates launch identity with ping when fast session metadata is available', async () => {
