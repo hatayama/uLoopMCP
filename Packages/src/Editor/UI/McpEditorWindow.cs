@@ -743,9 +743,7 @@ namespace io.github.hatayama.uLoopMCP
             finally
             {
                 _isInstallingCli = false;
-                RefreshAllSections(
-                    refreshSkillInstallState:
-                    CliInstallRefreshPolicy.ShouldRefreshSkillsAfterCliInstall(wasCliInstalledBeforeInstall));
+                RefreshAllSections(refreshSkillInstallState: true);
             }
         }
 

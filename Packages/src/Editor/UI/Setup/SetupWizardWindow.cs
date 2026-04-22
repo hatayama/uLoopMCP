@@ -840,8 +840,7 @@ namespace io.github.hatayama.uLoopMCP
             finally
             {
                 _isInstallingCli = false;
-                RefreshUI(CliInstallRefreshPolicy.ShouldRefreshSkillsAfterCliInstall(
-                    wasCliInstalledBeforeInstall));
+                RefreshUI(refreshSkillsSection: true);
             }
         }
 
