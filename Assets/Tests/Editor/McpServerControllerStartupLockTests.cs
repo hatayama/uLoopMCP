@@ -10,6 +10,12 @@ namespace io.github.hatayama.uLoopMCP
             McpServerController.ResetConfigAutoUpdateBusyStateForTests();
         }
 
+        [TearDown]
+        public void TearDown()
+        {
+            McpServerController.ResetConfigAutoUpdateBusyStateForTests();
+        }
+
         [Test]
         public void CreateOptionalServerStartingLock_WhenLockCreationSucceeds_ShouldReturnOwnershipToken()
         {
@@ -192,6 +198,27 @@ namespace io.github.hatayama.uLoopMCP
             Assert.That(secondScheduled, Is.True);
             Assert.That(scheduledCount, Is.EqualTo(2));
             Assert.That(deferredAction, Is.Not.Null);
+        }
+
+        [Test]
+        public void ScheduleConfigAutoUpdate_WhenSchedulingThrows_ShouldResetBusyState()
+        {
+            Assert.Throws<System.InvalidOperationException>(() =>
+                McpServerController.ScheduleConfigAutoUpdate(
+                    8901,
+                    _ => throw new System.InvalidOperationException("schedule failed"),
+                    _ => { },
+                    () => { },
+                    () => { }));
+
+            bool scheduled = McpServerController.ScheduleConfigAutoUpdate(
+                8902,
+                _ => { },
+                _ => { },
+                () => { },
+                () => { });
+
+            Assert.That(scheduled, Is.True);
         }
     }
 }

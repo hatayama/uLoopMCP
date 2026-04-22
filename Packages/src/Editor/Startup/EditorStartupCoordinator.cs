@@ -34,7 +34,7 @@ namespace io.github.hatayama.uLoopMCP
             Action scheduleServerRecovery,
             Action<IReadOnlyCollection<string>> logTimingEntries)
         {
-            if (isAssetImportWorkerProcess || isBatchMode)
+            if (isAssetImportWorkerProcess)
             {
                 return false;
             }
@@ -49,7 +49,10 @@ namespace io.github.hatayama.uLoopMCP
             EditorStartupTelemetry.MarkSyncStarted();
             recoverSettings();
             ensureServerControllerInitialized();
-            scheduleSetupWizard();
+            if (!isBatchMode)
+            {
+                scheduleSetupWizard();
+            }
             scheduleServerRecovery();
             EditorStartupTelemetry.MarkSyncCompleted();
 

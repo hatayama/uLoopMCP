@@ -142,7 +142,11 @@ namespace io.github.hatayama.uLoopMCP
 
             if (recoveryBindCompletedTimestamp > 0 && serverReadyTimestamp > 0)
             {
-                entries.Add($"[Perf] RecoveryFinalizeDuration: {ToMilliseconds(recoveryBindCompletedTimestamp, serverReadyTimestamp):F1}ms");
+                long recoveryFinalizeStartedTimestamp = GetRecoveryFinalizeStartedTimestamp(
+                    recoveryBindCompletedTimestamp,
+                    recoveryConfigCompletedTimestamp,
+                    serverReadyTimestamp);
+                entries.Add($"[Perf] RecoveryFinalizeDuration: {ToMilliseconds(recoveryFinalizeStartedTimestamp, serverReadyTimestamp):F1}ms");
             }
 
             if (serverReadyTimestamp > 0 && recoveryConfigCompletedTimestamp > serverReadyTimestamp)
@@ -207,6 +211,20 @@ namespace io.github.hatayama.uLoopMCP
 
                 _prewarmFinishedTimestamp = 0;
             }
+        }
+
+        internal static long GetRecoveryFinalizeStartedTimestamp(
+            long recoveryBindCompletedTimestamp,
+            long recoveryConfigCompletedTimestamp,
+            long serverReadyTimestamp)
+        {
+            if (recoveryConfigCompletedTimestamp > recoveryBindCompletedTimestamp &&
+                recoveryConfigCompletedTimestamp <= serverReadyTimestamp)
+            {
+                return recoveryConfigCompletedTimestamp;
+            }
+
+            return recoveryBindCompletedTimestamp;
         }
 
         private static double ToMilliseconds(long startTimestamp, long endTimestamp)

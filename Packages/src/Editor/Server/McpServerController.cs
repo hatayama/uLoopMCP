@@ -891,41 +891,53 @@ namespace io.github.hatayama.uLoopMCP
             Action markConfigCompleted,
             Action logTimingEntries)
         {
-            scheduleDelayCall(() =>
+            bool schedulingSucceeded = false;
+            try
             {
-                int portToUpdate = TakePendingConfigAutoUpdatePort();
-                bool shouldScheduleNext = false;
-                try
+                scheduleDelayCall(() =>
                 {
-                    updateConfiguredEditors(portToUpdate);
-                }
-                catch (Exception ex)
-                {
-                    VibeLogger.LogWarning("config_auto_update_failed", $"Failed to auto-update configurations: {ex.Message}");
-                    Debug.LogWarning($"[{McpConstants.PROJECT_NAME}] Failed to auto-update configurations: {ex.Message}");
-                }
-                finally
-                {
-                    markConfigCompleted();
-                    logTimingEntries();
-                    shouldScheduleNext = HasPendingConfigAutoUpdatePort();
+                    int portToUpdate = TakePendingConfigAutoUpdatePort();
+                    bool shouldScheduleNext = false;
+                    try
+                    {
+                        updateConfiguredEditors(portToUpdate);
+                    }
+                    catch (Exception ex)
+                    {
+                        VibeLogger.LogWarning("config_auto_update_failed", $"Failed to auto-update configurations: {ex.Message}");
+                        Debug.LogWarning($"[{McpConstants.PROJECT_NAME}] Failed to auto-update configurations: {ex.Message}");
+                    }
+                    finally
+                    {
+                        markConfigCompleted();
+                        logTimingEntries();
+                        shouldScheduleNext = HasPendingConfigAutoUpdatePort();
+                        if (!shouldScheduleNext)
+                        {
+                            ResetConfigAutoUpdateBusyState();
+                        }
+                    }
+
                     if (!shouldScheduleNext)
                     {
-                        ResetConfigAutoUpdateBusyState();
+                        return;
                     }
-                }
 
-                if (!shouldScheduleNext)
+                    SchedulePendingConfigAutoUpdate(
+                        scheduleDelayCall,
+                        updateConfiguredEditors,
+                        markConfigCompleted,
+                        logTimingEntries);
+                });
+                schedulingSucceeded = true;
+            }
+            finally
+            {
+                if (!schedulingSucceeded)
                 {
-                    return;
+                    ResetConfigAutoUpdateBusyState();
                 }
-
-                SchedulePendingConfigAutoUpdate(
-                    scheduleDelayCall,
-                    updateConfiguredEditors,
-                    markConfigCompleted,
-                    logTimingEntries);
-            });
+            }
         }
 
         private static int TakePendingConfigAutoUpdatePort()

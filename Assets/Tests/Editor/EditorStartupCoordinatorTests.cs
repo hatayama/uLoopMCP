@@ -39,22 +39,24 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         [Test]
-        public void InitializeOnEditorLoad_WhenBatchMode_DoesNothing()
+        public void InitializeOnEditorLoad_WhenBatchMode_SkipsSetupWizardOnly()
         {
-            bool actionExecuted = false;
+            List<string> callOrder = new();
 
             bool initialized = EditorStartupCoordinator.InitializeOnEditorLoad(
                 isAssetImportWorkerProcess: false,
                 isBatchMode: true,
-                () => actionExecuted = true,
-                () => actionExecuted = true,
-                () => actionExecuted = true,
-                () => actionExecuted = true,
-                _ => actionExecuted = true);
+                () => callOrder.Add("recover"),
+                () => callOrder.Add("ensure-server"),
+                () => callOrder.Add("schedule-setup"),
+                () => callOrder.Add("schedule-recovery"),
+                _ => callOrder.Add("log"));
 
-            Assert.That(initialized, Is.False);
-            Assert.That(actionExecuted, Is.False);
-            Assert.That(EditorStartupTelemetry.CreateTimingEntries(), Is.Empty);
+            Assert.That(initialized, Is.True);
+            Assert.That(
+                callOrder,
+                Is.EqualTo(new[] { "recover", "ensure-server", "schedule-recovery", "log" }));
+            Assert.That(EditorStartupTelemetry.CreateTimingEntries(), Has.Count.EqualTo(1));
         }
 
         [Test]

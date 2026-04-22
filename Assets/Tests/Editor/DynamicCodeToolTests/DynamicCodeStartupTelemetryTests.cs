@@ -146,5 +146,23 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.That(entries, Has.Some.Contains("[Perf] DeferredConfigUpdateDuration:"));
             Assert.That(entries, Has.None.Contains("[Perf] RecoveryConfigDuration:"));
         }
+
+        [Test]
+        public void GetRecoveryFinalizeStartedTimestamp_WhenConfigCompletedBeforeServerReady_ReturnsConfigTimestamp()
+        {
+            long recoveryFinalizeStartedTimestamp =
+                DynamicCodeStartupTelemetry.GetRecoveryFinalizeStartedTimestamp(10, 20, 30);
+
+            Assert.That(recoveryFinalizeStartedTimestamp, Is.EqualTo(20));
+        }
+
+        [Test]
+        public void GetRecoveryFinalizeStartedTimestamp_WhenConfigCompletedAfterServerReady_ReturnsBindTimestamp()
+        {
+            long recoveryFinalizeStartedTimestamp =
+                DynamicCodeStartupTelemetry.GetRecoveryFinalizeStartedTimestamp(10, 40, 30);
+
+            Assert.That(recoveryFinalizeStartedTimestamp, Is.EqualTo(10));
+        }
     }
 }
