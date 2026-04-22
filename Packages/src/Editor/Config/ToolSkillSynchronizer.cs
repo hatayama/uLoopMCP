@@ -476,6 +476,17 @@ namespace io.github.hatayama.uLoopMCP
                 targetRoot,
                 enabledSkills.Select(skill => skill.Name),
                 groupSkillsUnderUnityCliLoop);
+
+            if (!groupSkillsUnderUnityCliLoop)
+            {
+                DeleteUnexpectedInstalledSkillDirectories(
+                    targetRoot,
+                    enabledSkills.Select(skill => skill.Name),
+                    groupSkillsUnderUnityCliLoop: true);
+                DeleteEmptyManagedSkillsParentDirectoryIfNeeded(
+                    targetRoot,
+                    groupSkillsUnderUnityCliLoop: true);
+            }
         }
 
         private static bool IsSkillDisabled(
