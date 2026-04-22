@@ -20,6 +20,9 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public void CreateTimingEntries_WhenPrewarmCompletes_ShouldReportWarmReady()
         {
+            DynamicCodeStartupTelemetry.MarkRecoveryStarted();
+            DynamicCodeStartupTelemetry.MarkRecoveryBindCompleted();
+            DynamicCodeStartupTelemetry.MarkRecoveryConfigCompleted();
             DynamicCodeStartupTelemetry.MarkServerReady();
             DynamicCodeStartupTelemetry.MarkPrewarmQueued();
             DynamicCodeStartupTelemetry.MarkPrewarmStarted();
@@ -30,6 +33,10 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 
             Assert.That(entries, Has.Member("[Perf] WarmReady: True"));
             Assert.That(entries, Has.Member("[Perf] PrewarmState: Completed"));
+            Assert.That(entries, Has.Some.Contains("[Perf] RecoveryDuration:"));
+            Assert.That(entries, Has.Some.Contains("[Perf] RecoveryBindDuration:"));
+            Assert.That(entries, Has.Some.Contains("[Perf] RecoveryConfigDuration:"));
+            Assert.That(entries, Has.Some.Contains("[Perf] RecoveryFinalizeDuration:"));
             Assert.That(entries, Has.Some.Contains("[Perf] ServerReadyAge:"));
             Assert.That(entries, Has.Some.Contains("[Perf] PrewarmDuration:"));
         }
@@ -101,6 +108,43 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 
             Assert.That(entries, Has.Member("[Perf] PrewarmState: Queued"));
             Assert.That(entries, Has.None.Contains("[Perf] PrewarmDuration:"));
+        }
+
+        [Test]
+        public void Reset_WhenRecoveryWasMeasured_ShouldClearRecoveryEntries()
+        {
+            DynamicCodeStartupTelemetry.MarkRecoveryStarted();
+            DynamicCodeStartupTelemetry.MarkRecoveryBindCompleted();
+            DynamicCodeStartupTelemetry.MarkRecoveryConfigCompleted();
+            DynamicCodeStartupTelemetry.MarkServerReady();
+
+            DynamicCodeStartupTelemetry.Reset();
+
+            System.Collections.Generic.List<string> entries =
+                DynamicCodeStartupTelemetry.CreateTimingEntries();
+
+            Assert.That(entries, Has.None.Contains("[Perf] RecoveryDuration:"));
+            Assert.That(entries, Has.None.Contains("[Perf] RecoveryBindDuration:"));
+            Assert.That(entries, Has.None.Contains("[Perf] RecoveryConfigDuration:"));
+            Assert.That(entries, Has.None.Contains("[Perf] RecoveryFinalizeDuration:"));
+        }
+
+        [Test]
+        public void CreateTimingEntries_WhenConfigUpdateFinishesAfterServerReady_ShouldReportDeferredDuration()
+        {
+            DynamicCodeStartupTelemetry.MarkRecoveryStarted();
+            DynamicCodeStartupTelemetry.MarkRecoveryBindCompleted();
+            DynamicCodeStartupTelemetry.MarkServerReady();
+            DynamicCodeStartupTelemetry.MarkRecoveryConfigCompleted();
+
+            System.Collections.Generic.List<string> entries =
+                DynamicCodeStartupTelemetry.CreateTimingEntries();
+
+            Assert.That(entries, Has.Some.Contains("[Perf] RecoveryDuration:"));
+            Assert.That(entries, Has.Some.Contains("[Perf] RecoveryBindDuration:"));
+            Assert.That(entries, Has.Some.Contains("[Perf] RecoveryFinalizeDuration:"));
+            Assert.That(entries, Has.Some.Contains("[Perf] DeferredConfigUpdateDuration:"));
+            Assert.That(entries, Has.None.Contains("[Perf] RecoveryConfigDuration:"));
         }
     }
 }

@@ -700,6 +700,8 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
+            DynamicCodeStartupTelemetry.MarkRecoveryStarted();
+
             // Ensure stale reload locks are cleaned up before recovery.
             // Why not clear serverstarting.lock here: a previous generation may still be finishing
             // and ownership is now tracked per startup token below.
@@ -785,18 +787,7 @@ namespace io.github.hatayama.uLoopMCP
                     throw new InvalidOperationException($"Failed to bind any recovery port. SavedPort={savedPort}, LastAttemptPort={chosenPort}.");
                 }
 
-                // Auto-update configuration files after startup.
-                // This keeps external editor settings aligned with path updates and recovery port fallback.
-                try
-                {
-                    McpConfigAutoUpdater.UpdateAllConfiguredEditors(chosenPort);
-                }
-                catch (Exception ex)
-                {
-                    VibeLogger.LogWarning("config_auto_update_failed", $"Failed to auto-update configurations: {ex.Message}");
-                    Debug.LogWarning($"[{McpConstants.PROJECT_NAME}] Failed to auto-update configurations: {ex.Message}");
-                    // Continue with running server even if config update fails
-                }
+                DynamicCodeStartupTelemetry.MarkRecoveryBindCompleted();
 
                 // Mark running and update settings
                 SaveRunningServerSession(chosenPort);
@@ -805,6 +796,8 @@ namespace io.github.hatayama.uLoopMCP
                 McpEditorSettings.ClearReconnectingFlags();
                 McpEditorSettings.ClearPostCompileReconnectingUI();
                 DynamicCodeStartupTelemetry.MarkServerReady();
+                LogRecoveryTimingEntries();
+                ScheduleConfigAutoUpdate(chosenPort);
                 CustomToolManager.WarmupRegistry();
                 DynamicCodeServices.ResetServerScopedServices();
                 IPrewarmDynamicCodeUseCase prewarmDynamicCodeUseCase =
@@ -822,6 +815,62 @@ namespace io.github.hatayama.uLoopMCP
             {
                 StartupSemaphore.Release();
             }
+        }
+
+        private static void LogRecoveryTimingEntries()
+        {
+            foreach (string timingEntry in DynamicCodeStartupTelemetry.CreateTimingEntries())
+            {
+                if (!timingEntry.StartsWith("[Perf] Recovery", StringComparison.Ordinal) &&
+                    !timingEntry.StartsWith("[Perf] DeferredConfigUpdate", StringComparison.Ordinal) &&
+                    !timingEntry.StartsWith("[Perf] ServerReadyAge", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                Debug.Log(timingEntry);
+            }
+        }
+
+        private static void ScheduleConfigAutoUpdate(int port)
+        {
+            ScheduleConfigAutoUpdate(
+                port,
+                action => EditorApplication.delayCall += new EditorApplication.CallbackFunction(action.Invoke),
+                McpConfigAutoUpdater.UpdateAllConfiguredEditors,
+                DynamicCodeStartupTelemetry.MarkRecoveryConfigCompleted,
+                LogRecoveryTimingEntries);
+        }
+
+        internal static void ScheduleConfigAutoUpdate(
+            int port,
+            Action<Action> scheduleDelayCall,
+            Action<int> updateConfiguredEditors,
+            Action markConfigCompleted,
+            Action logTimingEntries)
+        {
+            Debug.Assert(scheduleDelayCall != null, "scheduleDelayCall must not be null");
+            Debug.Assert(updateConfiguredEditors != null, "updateConfiguredEditors must not be null");
+            Debug.Assert(markConfigCompleted != null, "markConfigCompleted must not be null");
+            Debug.Assert(logTimingEntries != null, "logTimingEntries must not be null");
+
+            scheduleDelayCall(() =>
+            {
+                try
+                {
+                    updateConfiguredEditors(port);
+                }
+                catch (Exception ex)
+                {
+                    VibeLogger.LogWarning("config_auto_update_failed", $"Failed to auto-update configurations: {ex.Message}");
+                    Debug.LogWarning($"[{McpConstants.PROJECT_NAME}] Failed to auto-update configurations: {ex.Message}");
+                }
+                finally
+                {
+                    markConfigCompleted();
+                    logTimingEntries();
+                }
+            });
         }
 
         private static async Task<bool> TryBindWithWaitAsync(
