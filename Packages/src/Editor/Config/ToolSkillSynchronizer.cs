@@ -712,6 +712,30 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             Directory.Delete(installedSkillDirectory, true);
+            DeleteEmptyManagedSkillsParentDirectoryIfNeeded(targetRoot, groupSkillsUnderUnityCliLoop);
+        }
+
+        private static void DeleteEmptyManagedSkillsParentDirectoryIfNeeded(
+            string targetRoot,
+            bool groupSkillsUnderUnityCliLoop)
+        {
+            if (!groupSkillsUnderUnityCliLoop)
+            {
+                return;
+            }
+
+            string managedSkillsRoot = SkillInstallLayout.GetManagedSkillsRoot(targetRoot);
+            if (!Directory.Exists(managedSkillsRoot))
+            {
+                return;
+            }
+
+            if (Directory.EnumerateFileSystemEntries(managedSkillsRoot).Any())
+            {
+                return;
+            }
+
+            Directory.Delete(managedSkillsRoot);
         }
     }
 }
