@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.0.1](https://github.com/hatayama/unity-cli-loop/compare/v2.0.0...v2.0.1) (2026-04-22)
+
+
+### Bug Fixes
+
+* CLI lint now gets past existing prettier formatting issues ([#967](https://github.com/hatayama/unity-cli-loop/issues/967)) ([b02b05d](https://github.com/hatayama/unity-cli-loop/commit/b02b05d90e5bf8bfba41ecd4340950751f7fb46c))
+* keep launch startup feedback visible while Unity becomes ready ([#975](https://github.com/hatayama/unity-cli-loop/issues/975)) ([fce0d09](https://github.com/hatayama/unity-cli-loop/commit/fce0d090bd7f5c4506325ba4f6ba58803fe68986))
+* Launch now waits cleanly without false startup warnings ([#974](https://github.com/hatayama/unity-cli-loop/issues/974)) ([f873afc](https://github.com/hatayama/unity-cli-loop/commit/f873afcd24ef0fd5c4a061809b2e4b51849377a7))
+* Launch now waits for the correct Unity project after startup ([#965](https://github.com/hatayama/unity-cli-loop/issues/965)) ([1ebbf62](https://github.com/hatayama/unity-cli-loop/commit/1ebbf62dcf0cf5fb1c97b3acb71e80694e004cf4))
+* Launch progress now stays visible without leaving spinner artifacts ([#973](https://github.com/hatayama/unity-cli-loop/issues/973)) ([97b4450](https://github.com/hatayama/unity-cli-loop/commit/97b445066d78ae49efba8e607b10c2f7fa0032f6))
+* Setup and Settings now install skills directly under skills/ ([#977](https://github.com/hatayama/unity-cli-loop/issues/977)) ([65670c5](https://github.com/hatayama/unity-cli-loop/commit/65670c53d0ef050375d1df2bbe1cec13689b7a02))
+* Setup no longer shows first-time install steps after updates ([#968](https://github.com/hatayama/unity-cli-loop/issues/968)) ([348a7d4](https://github.com/hatayama/unity-cli-loop/commit/348a7d40cb23ca03de377911c07d1ea8d1f5b419))
+* Setup updates no longer show the first-run skills screen ([#964](https://github.com/hatayama/unity-cli-loop/issues/964)) ([1ea7733](https://github.com/hatayama/unity-cli-loop/commit/1ea773337b930aac8b9634320f4946dee4f2ed40))
+
 ## [2.0.0](https://github.com/hatayama/unity-cli-loop/compare/v1.7.3...v2.0.0) (2026-04-20)
 
 
