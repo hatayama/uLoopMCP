@@ -4,7 +4,7 @@ namespace io.github.hatayama.uLoopMCP
     {
         internal static bool ShouldRefreshSkillsAfterCliInstall(bool wasCliInstalledBeforeInstall)
         {
-            return !wasCliInstalledBeforeInstall;
+            return true;
         }
     }
 }

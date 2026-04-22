@@ -14,12 +14,12 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
         }
 
         [Test]
-        public void ShouldRefreshSkillsAfterCliInstall_WhenCliWasAlreadyInstalled_ReturnsFalse()
+        public void ShouldRefreshSkillsAfterCliInstall_WhenCliWasAlreadyInstalled_ReturnsTrue()
         {
             bool shouldRefresh = CliInstallRefreshPolicy.ShouldRefreshSkillsAfterCliInstall(
                 wasCliInstalledBeforeInstall: true);
 
-            Assert.That(shouldRefresh, Is.False);
+            Assert.That(shouldRefresh, Is.True);
         }
     }
 }
