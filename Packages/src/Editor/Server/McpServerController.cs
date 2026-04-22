@@ -24,6 +24,7 @@ namespace io.github.hatayama.uLoopMCP
         private static Task _currentRecoveryTask;
         private static bool _isInitialized;
         private static bool _isConfigAutoUpdateBusy;
+        private static int? _pendingConfigAutoUpdatePort;
 
         private static bool IsBackgroundUnityProcess()
         {
@@ -868,17 +869,35 @@ namespace io.github.hatayama.uLoopMCP
             {
                 if (_isConfigAutoUpdateBusy)
                 {
+                    _pendingConfigAutoUpdatePort = port;
                     return false;
                 }
 
                 _isConfigAutoUpdateBusy = true;
+                _pendingConfigAutoUpdatePort = port;
             }
 
+            SchedulePendingConfigAutoUpdate(
+                scheduleDelayCall,
+                updateConfiguredEditors,
+                markConfigCompleted,
+                logTimingEntries);
+            return true;
+        }
+
+        private static void SchedulePendingConfigAutoUpdate(
+            Action<Action> scheduleDelayCall,
+            Action<int> updateConfiguredEditors,
+            Action markConfigCompleted,
+            Action logTimingEntries)
+        {
             scheduleDelayCall(() =>
             {
+                int portToUpdate = TakePendingConfigAutoUpdatePort();
+                bool shouldScheduleNext = false;
                 try
                 {
-                    updateConfiguredEditors(port);
+                    updateConfiguredEditors(portToUpdate);
                 }
                 catch (Exception ex)
                 {
@@ -887,12 +906,47 @@ namespace io.github.hatayama.uLoopMCP
                 }
                 finally
                 {
-                    ResetConfigAutoUpdateBusyState();
                     markConfigCompleted();
                     logTimingEntries();
+                    shouldScheduleNext = HasPendingConfigAutoUpdatePort();
+                    if (!shouldScheduleNext)
+                    {
+                        ResetConfigAutoUpdateBusyState();
+                    }
                 }
+
+                if (!shouldScheduleNext)
+                {
+                    return;
+                }
+
+                SchedulePendingConfigAutoUpdate(
+                    scheduleDelayCall,
+                    updateConfiguredEditors,
+                    markConfigCompleted,
+                    logTimingEntries);
             });
-            return true;
+        }
+
+        private static int TakePendingConfigAutoUpdatePort()
+        {
+            lock (ConfigAutoUpdateSyncRoot)
+            {
+                Debug.Assert(
+                    _pendingConfigAutoUpdatePort.HasValue,
+                    "_pendingConfigAutoUpdatePort must have a value before executing the deferred update");
+                int port = _pendingConfigAutoUpdatePort ?? 0;
+                _pendingConfigAutoUpdatePort = null;
+                return port;
+            }
+        }
+
+        private static bool HasPendingConfigAutoUpdatePort()
+        {
+            lock (ConfigAutoUpdateSyncRoot)
+            {
+                return _pendingConfigAutoUpdatePort.HasValue;
+            }
         }
 
         internal static void ResetConfigAutoUpdateBusyStateForTests()
@@ -905,6 +959,7 @@ namespace io.github.hatayama.uLoopMCP
             lock (ConfigAutoUpdateSyncRoot)
             {
                 _isConfigAutoUpdateBusy = false;
+                _pendingConfigAutoUpdatePort = null;
             }
         }
 

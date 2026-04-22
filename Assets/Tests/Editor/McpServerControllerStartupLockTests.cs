@@ -89,6 +89,45 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         [Test]
+        public void ScheduleConfigAutoUpdate_WhenNewPortArrivesBeforeDeferredRun_UsesLatestPort()
+        {
+            System.Action deferredAction = null;
+            int updatedPort = 0;
+            int scheduledCount = 0;
+
+            bool firstScheduled = McpServerController.ScheduleConfigAutoUpdate(
+                8901,
+                action =>
+                {
+                    scheduledCount++;
+                    deferredAction = action;
+                },
+                port => updatedPort = port,
+                () => { },
+                () => { });
+
+            bool secondScheduled = McpServerController.ScheduleConfigAutoUpdate(
+                8902,
+                action =>
+                {
+                    scheduledCount++;
+                    deferredAction = action;
+                },
+                port => updatedPort = port,
+                () => { },
+                () => { });
+
+            Assert.That(firstScheduled, Is.True);
+            Assert.That(secondScheduled, Is.False);
+            Assert.That(scheduledCount, Is.EqualTo(1));
+            Assert.That(deferredAction, Is.Not.Null);
+
+            deferredAction();
+
+            Assert.That(updatedPort, Is.EqualTo(8902));
+        }
+
+        [Test]
         public void ScheduleConfigAutoUpdate_WhenAlreadyRunning_ShouldReturnFalseUntilCurrentRunCompletes()
         {
             System.Action deferredAction = null;
