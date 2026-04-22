@@ -19,9 +19,11 @@ namespace io.github.hatayama.uLoopMCP
     {
         private static McpBridgeServer mcpServer;
         private static readonly SemaphoreSlim StartupSemaphore = new SemaphoreSlim(1, 1);
+        private static readonly object ConfigAutoUpdateSyncRoot = new();
         private static long startupProtectionUntilTicks = 0; // UTC ticks
         private static Task _currentRecoveryTask;
         private static bool _isInitialized;
+        private static bool _isConfigAutoUpdateBusy;
 
         private static bool IsBackgroundUnityProcess()
         {
@@ -834,15 +836,23 @@ namespace io.github.hatayama.uLoopMCP
 
         private static void ScheduleConfigAutoUpdate(int port)
         {
-            ScheduleConfigAutoUpdate(
+            bool scheduled = ScheduleConfigAutoUpdate(
                 port,
                 action => EditorApplication.delayCall += new EditorApplication.CallbackFunction(action.Invoke),
                 McpConfigAutoUpdater.UpdateAllConfiguredEditors,
                 DynamicCodeStartupTelemetry.MarkRecoveryConfigCompleted,
                 LogRecoveryTimingEntries);
+            if (scheduled)
+            {
+                return;
+            }
+
+            const string message = "Skipped config auto update because another config auto update is already scheduled or running.";
+            VibeLogger.LogWarning("config_auto_update_busy", message);
+            Debug.LogWarning($"[{McpConstants.PROJECT_NAME}] {message}");
         }
 
-        internal static void ScheduleConfigAutoUpdate(
+        internal static bool ScheduleConfigAutoUpdate(
             int port,
             Action<Action> scheduleDelayCall,
             Action<int> updateConfiguredEditors,
@@ -853,6 +863,16 @@ namespace io.github.hatayama.uLoopMCP
             Debug.Assert(updateConfiguredEditors != null, "updateConfiguredEditors must not be null");
             Debug.Assert(markConfigCompleted != null, "markConfigCompleted must not be null");
             Debug.Assert(logTimingEntries != null, "logTimingEntries must not be null");
+
+            lock (ConfigAutoUpdateSyncRoot)
+            {
+                if (_isConfigAutoUpdateBusy)
+                {
+                    return false;
+                }
+
+                _isConfigAutoUpdateBusy = true;
+            }
 
             scheduleDelayCall(() =>
             {
@@ -867,10 +887,25 @@ namespace io.github.hatayama.uLoopMCP
                 }
                 finally
                 {
+                    ResetConfigAutoUpdateBusyState();
                     markConfigCompleted();
                     logTimingEntries();
                 }
             });
+            return true;
+        }
+
+        internal static void ResetConfigAutoUpdateBusyStateForTests()
+        {
+            ResetConfigAutoUpdateBusyState();
+        }
+
+        private static void ResetConfigAutoUpdateBusyState()
+        {
+            lock (ConfigAutoUpdateSyncRoot)
+            {
+                _isConfigAutoUpdateBusy = false;
+            }
         }
 
         private static async Task<bool> TryBindWithWaitAsync(
