@@ -21,19 +21,15 @@ namespace io.github.hatayama.uLoopMCP
         private const bool ForceFlatSkillInstall = true;
         private static readonly Vector2 MinimumWindowSize = new(360f, 380f);
 
-        [InitializeOnLoadMethod]
-        private static void InitializeOnLoad()
-        {
-            if (AssetDatabase.IsAssetImportWorkerProcess()) return;
-            if (Application.isBatchMode) return;
-
-            TryShowOnVersionChange();
-        }
-
         [MenuItem("Window/Unity CLI Loop/Setup Wizard", priority = 3)]
         public static void ShowWindow()
         {
             ShowWindowInternal(false);
+        }
+
+        internal static void ScheduleAutoShowOnEditorLoad()
+        {
+            TryShowOnVersionChange();
         }
 
         internal static bool ShouldAutoShowForVersion(

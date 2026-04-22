@@ -77,17 +77,6 @@ namespace io.github.hatayama.uLoopMCP
             _cachedSettings = null;
         }
 
-        [InitializeOnLoadMethod]
-        private static void RecoverSettingsFileOnEditorLoad()
-        {
-            if (AssetDatabase.IsAssetImportWorkerProcess())
-            {
-                return;
-            }
-
-            RecoverSettingsFileIfNeeded();
-        }
-
         internal static void RecoverSettingsFileIfNeeded()
         {
             if (!IsValidSettingsPath(SettingsFilePath))

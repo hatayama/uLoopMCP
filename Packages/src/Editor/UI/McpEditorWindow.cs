@@ -161,7 +161,7 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            // McpServerController.[InitializeOnLoad] handles automatic server recovery via RestoreServerStateIfNeeded()
+            // Startup recovery is scheduled by the editor startup coordinator before the window reads session state.
         }
 
         private void OnDisable()
