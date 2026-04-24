@@ -98,7 +98,17 @@ namespace io.github.hatayama.uLoopMCP
 
             scheduleDelayCall(() =>
             {
-                Task restoreTask = restoreServerState();
+                Task restoreTask;
+                try
+                {
+                    restoreTask = restoreServerState();
+                }
+                catch (Exception ex)
+                {
+                    CompleteScheduledStartupRecovery(Task.FromException(ex), scheduledRecoveryCompletionSource);
+                    return;
+                }
+
                 if (restoreTask.IsCompleted)
                 {
                     CompleteScheduledStartupRecovery(restoreTask, scheduledRecoveryCompletionSource);

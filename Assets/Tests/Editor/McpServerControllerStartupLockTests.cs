@@ -48,6 +48,22 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         [Test]
+        public void ScheduleStartupRecovery_WhenRecoveryThrowsSynchronously_FaultsTaskAndClearsRecoveryTask()
+        {
+            System.Action scheduledAction = null;
+
+            Task recoveryTask = McpServerController.ScheduleStartupRecovery(
+                action => scheduledAction = action,
+                () => throw new System.InvalidOperationException("restore failed"));
+
+            scheduledAction();
+
+            Assert.That(recoveryTask.IsFaulted, Is.True);
+            Assert.That(McpServerController.RecoveryTask, Is.Null);
+            Assert.ThrowsAsync<System.InvalidOperationException>(async () => await recoveryTask);
+        }
+
+        [Test]
         public async Task ScheduleStartupRecovery_WhenRecoveryIsAsync_KeepsTaskIncompleteUntilRecoveryCompletes()
         {
             System.Action scheduledAction = null;
