@@ -549,6 +549,7 @@ namespace io.github.hatayama.uLoopMCP
                 RedirectStandardError = true,
                 CreateNoWindow = true
             };
+            ConfigureWorkerDotnetRuntimeEnvironment(startInfo);
 
             using Process process = ProcessStartHelper.TryStart(startInfo);
             if (process == null)
