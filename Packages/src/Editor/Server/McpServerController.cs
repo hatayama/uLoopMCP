@@ -51,6 +51,13 @@ namespace io.github.hatayama.uLoopMCP
 
         static McpServerController()
         {
+            InitializeOnLoadTiming.Measure(
+                "McpServerController",
+                InitializeOnLoad);
+        }
+
+        private static void InitializeOnLoad()
+        {
             if (IsBackgroundUnityProcess())
             {
                 VibeLogger.LogInfo("server_controller_background_skip", "Skipping MCP server controller initialization in background Unity process.");

@@ -13,7 +13,9 @@ namespace io.github.hatayama.uLoopMCP
     {
         static ServerBundleCopier()
         {
-            EnsureServerBundleCopied();
+            InitializeOnLoadTiming.Measure(
+                "ServerBundleCopier",
+                EnsureServerBundleCopied);
         }
 
         /// <summary>

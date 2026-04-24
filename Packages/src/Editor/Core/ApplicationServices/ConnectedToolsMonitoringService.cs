@@ -26,7 +26,9 @@ namespace io.github.hatayama.uLoopMCP
 
         static ConnectedToolsMonitoringService()
         {
-            Initialize();
+            InitializeOnLoadTiming.Measure(
+                "ConnectedToolsMonitoringService",
+                Initialize);
         }
 
         /// <summary>
