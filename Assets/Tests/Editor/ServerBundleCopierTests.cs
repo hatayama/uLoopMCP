@@ -42,7 +42,7 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
 
             Assert.That(copied, Is.False);
             Assert.That(File.ReadAllText(destinationPath), Is.EqualTo("same bundle"));
-            Assert.That(File.GetLastWriteTimeUtc(destinationPath), Is.EqualTo(sourceTimestamp));
+            Assert.That(File.GetLastWriteTimeUtc(destinationPath), Is.EqualTo(destinationTimestamp));
         }
 
         [Test]

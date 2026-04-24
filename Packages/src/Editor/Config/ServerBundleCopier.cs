@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -11,8 +12,6 @@ namespace io.github.hatayama.uLoopMCP
     [InitializeOnLoad]
     public static class ServerBundleCopier
     {
-        private const int FileCompareBufferSize = 81920;
-
         static ServerBundleCopier()
         {
             InitializeOnLoadTiming.Measure(
@@ -55,7 +54,6 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             File.Copy(sourcePath, destinationPath, overwrite: true);
-            File.SetLastWriteTimeUtc(destinationPath, File.GetLastWriteTimeUtc(sourcePath));
             return true;
         }
 
@@ -66,59 +64,9 @@ namespace io.github.hatayama.uLoopMCP
                 return true;
             }
 
-            FileInfo sourceInfo = new FileInfo(sourcePath);
-            FileInfo destinationInfo = new FileInfo(destinationPath);
-            if (sourceInfo.Length != destinationInfo.Length)
-            {
-                return true;
-            }
-
-            if (sourceInfo.LastWriteTimeUtc == destinationInfo.LastWriteTimeUtc)
-            {
-                return false;
-            }
-
-            if (!HasSameContent(sourcePath, destinationPath))
-            {
-                return true;
-            }
-
-            File.SetLastWriteTimeUtc(destinationPath, sourceInfo.LastWriteTimeUtc);
-            return false;
-        }
-
-        private static bool HasSameContent(string sourcePath, string destinationPath)
-        {
-            using (FileStream sourceStream = File.OpenRead(sourcePath))
-            using (FileStream destinationStream = File.OpenRead(destinationPath))
-            {
-                byte[] sourceBuffer = new byte[FileCompareBufferSize];
-                byte[] destinationBuffer = new byte[FileCompareBufferSize];
-
-                while (true)
-                {
-                    int sourceRead = sourceStream.Read(sourceBuffer, 0, sourceBuffer.Length);
-                    int destinationRead = destinationStream.Read(destinationBuffer, 0, destinationBuffer.Length);
-
-                    if (sourceRead != destinationRead)
-                    {
-                        return false;
-                    }
-
-                    if (sourceRead == 0)
-                    {
-                        return true;
-                    }
-
-                    for (int i = 0; i < sourceRead; i++)
-                    {
-                        if (sourceBuffer[i] != destinationBuffer[i])
-                        {
-                            return false;
-                        }
-                    }
-                }
-            }
+            byte[] sourceBytes = File.ReadAllBytes(sourcePath);
+            byte[] destinationBytes = File.ReadAllBytes(destinationPath);
+            return !sourceBytes.SequenceEqual(destinationBytes);
         }
 
         /// <summary>
