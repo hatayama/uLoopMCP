@@ -80,13 +80,6 @@ namespace io.github.hatayama.uLoopMCP
         [InitializeOnLoadMethod]
         private static void RecoverSettingsFileOnEditorLoad()
         {
-            InitializeOnLoadTiming.Measure(
-                "McpEditorSettings.RecoverSettingsFileOnEditorLoad",
-                RecoverSettingsFileOnEditorLoadCore);
-        }
-
-        private static void RecoverSettingsFileOnEditorLoadCore()
-        {
             if (AssetDatabase.IsAssetImportWorkerProcess())
             {
                 return;

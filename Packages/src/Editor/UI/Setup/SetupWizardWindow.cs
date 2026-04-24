@@ -24,13 +24,6 @@ namespace io.github.hatayama.uLoopMCP
         [InitializeOnLoadMethod]
         private static void InitializeOnLoad()
         {
-            InitializeOnLoadTiming.Measure(
-                "SetupWizardWindow.InitializeOnLoad",
-                InitializeOnLoadCore);
-        }
-
-        private static void InitializeOnLoadCore()
-        {
             if (AssetDatabase.IsAssetImportWorkerProcess()) return;
             if (Application.isBatchMode) return;
 

@@ -51,9 +51,7 @@ namespace io.github.hatayama.uLoopMCP
 
         static McpServerController()
         {
-            InitializeOnLoadTiming.Measure(
-                "McpServerController",
-                InitializeOnLoad);
+            InitializeOnLoad();
         }
 
         private static void InitializeOnLoad()
