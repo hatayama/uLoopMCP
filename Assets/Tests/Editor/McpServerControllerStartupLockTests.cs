@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using System.Threading.Tasks;
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -18,6 +19,54 @@ namespace io.github.hatayama.uLoopMCP
             string token = McpServerController.CreateOptionalServerStartingLock(() => null);
 
             Assert.That(token, Is.Null);
+        }
+
+        [Test]
+        public void ScheduleStartupRecovery_WhenCalled_ExposesRecoveryTaskBeforeDeferredActionRuns()
+        {
+            System.Action scheduledAction = null;
+            bool recoveryExecuted = false;
+
+            Task recoveryTask = McpServerController.ScheduleStartupRecovery(
+                action => scheduledAction = action,
+                () =>
+                {
+                    recoveryExecuted = true;
+                    return Task.CompletedTask;
+                });
+
+            Assert.That(recoveryExecuted, Is.False);
+            Assert.That(scheduledAction, Is.Not.Null);
+            Assert.That(recoveryTask, Is.SameAs(McpServerController.RecoveryTask));
+            Assert.That(recoveryTask.IsCompleted, Is.False);
+
+            scheduledAction();
+
+            Assert.That(recoveryExecuted, Is.True);
+            Assert.That(recoveryTask.IsCompleted, Is.True);
+            Assert.That(McpServerController.RecoveryTask, Is.Null);
+        }
+
+        [Test]
+        public async Task ScheduleStartupRecovery_WhenRecoveryIsAsync_KeepsTaskIncompleteUntilRecoveryCompletes()
+        {
+            System.Action scheduledAction = null;
+            TaskCompletionSource<bool> recoveryCompletionSource = new TaskCompletionSource<bool>();
+
+            Task recoveryTask = McpServerController.ScheduleStartupRecovery(
+                action => scheduledAction = action,
+                () => recoveryCompletionSource.Task);
+
+            scheduledAction();
+
+            Assert.That(recoveryTask.IsCompleted, Is.False);
+            Assert.That(McpServerController.RecoveryTask, Is.SameAs(recoveryTask));
+
+            recoveryCompletionSource.SetResult(true);
+            await recoveryTask;
+
+            Assert.That(recoveryTask.IsCompleted, Is.True);
+            Assert.That(McpServerController.RecoveryTask, Is.Null);
         }
     }
 }

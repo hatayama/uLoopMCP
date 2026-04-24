@@ -11,6 +11,8 @@ namespace io.github.hatayama.uLoopMCP
     [InitializeOnLoad]
     public static class ServerBundleCopier
     {
+        private const int FileCompareBufferSize = 81920;
+
         static ServerBundleCopier()
         {
             InitializeOnLoadTiming.Measure(
@@ -31,14 +33,92 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             string destPath = GetFixedServerBundlePath();
-            string destDir = Path.GetDirectoryName(destPath);
+            CopyServerBundleWhenChanged(sourcePath, destPath);
+        }
 
-            if (!Directory.Exists(destDir))
+        internal static bool CopyServerBundleWhenChanged(string sourcePath, string destinationPath)
+        {
+            Debug.Assert(!string.IsNullOrWhiteSpace(sourcePath), "sourcePath must not be empty");
+            Debug.Assert(!string.IsNullOrWhiteSpace(destinationPath), "destinationPath must not be empty");
+            Debug.Assert(File.Exists(sourcePath), "sourcePath must exist");
+
+            string destDir = Path.GetDirectoryName(destinationPath);
+
+            if (!string.IsNullOrEmpty(destDir) && !Directory.Exists(destDir))
             {
                 Directory.CreateDirectory(destDir);
             }
 
-            File.Copy(sourcePath, destPath, overwrite: true);
+            if (!ShouldCopyServerBundle(sourcePath, destinationPath))
+            {
+                return false;
+            }
+
+            File.Copy(sourcePath, destinationPath, overwrite: true);
+            File.SetLastWriteTimeUtc(destinationPath, File.GetLastWriteTimeUtc(sourcePath));
+            return true;
+        }
+
+        private static bool ShouldCopyServerBundle(string sourcePath, string destinationPath)
+        {
+            if (!File.Exists(destinationPath))
+            {
+                return true;
+            }
+
+            FileInfo sourceInfo = new FileInfo(sourcePath);
+            FileInfo destinationInfo = new FileInfo(destinationPath);
+            if (sourceInfo.Length != destinationInfo.Length)
+            {
+                return true;
+            }
+
+            if (sourceInfo.LastWriteTimeUtc == destinationInfo.LastWriteTimeUtc)
+            {
+                return false;
+            }
+
+            if (!HasSameContent(sourcePath, destinationPath))
+            {
+                return true;
+            }
+
+            File.SetLastWriteTimeUtc(destinationPath, sourceInfo.LastWriteTimeUtc);
+            return false;
+        }
+
+        private static bool HasSameContent(string sourcePath, string destinationPath)
+        {
+            using (FileStream sourceStream = File.OpenRead(sourcePath))
+            using (FileStream destinationStream = File.OpenRead(destinationPath))
+            {
+                byte[] sourceBuffer = new byte[FileCompareBufferSize];
+                byte[] destinationBuffer = new byte[FileCompareBufferSize];
+
+                while (true)
+                {
+                    int sourceRead = sourceStream.Read(sourceBuffer, 0, sourceBuffer.Length);
+                    int destinationRead = destinationStream.Read(destinationBuffer, 0, destinationBuffer.Length);
+
+                    if (sourceRead != destinationRead)
+                    {
+                        return false;
+                    }
+
+                    if (sourceRead == 0)
+                    {
+                        return true;
+                    }
+
+                    for (int i = 0; i < sourceRead; i++)
+                    {
+                        if (sourceBuffer[i] != destinationBuffer[i])
+                        {
+                            return false;
+                        }
+                    }
+                }
+            }
         }
 
         /// <summary>
