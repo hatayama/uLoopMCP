@@ -1,5 +1,4 @@
 using System.IO;
-using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -54,6 +53,7 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             File.Copy(sourcePath, destinationPath, overwrite: true);
+            File.SetLastWriteTimeUtc(destinationPath, File.GetLastWriteTimeUtc(sourcePath));
             return true;
         }
 
@@ -64,9 +64,14 @@ namespace io.github.hatayama.uLoopMCP
                 return true;
             }
 
-            byte[] sourceBytes = File.ReadAllBytes(sourcePath);
-            byte[] destinationBytes = File.ReadAllBytes(destinationPath);
-            return !sourceBytes.SequenceEqual(destinationBytes);
+            FileInfo sourceInfo = new FileInfo(sourcePath);
+            FileInfo destinationInfo = new FileInfo(destinationPath);
+            if (sourceInfo.Length != destinationInfo.Length)
+            {
+                return true;
+            }
+
+            return sourceInfo.LastWriteTimeUtc != destinationInfo.LastWriteTimeUtc;
         }
 
         /// <summary>
