@@ -414,8 +414,7 @@ namespace io.github.hatayama.uLoopMCP
 
             return string.Equals(first.Name, second.Name, StringComparison.Ordinal)
                 && string.Equals(first.Endpoint, second.Endpoint, StringComparison.Ordinal)
-                && first.Port == second.Port
-                && string.Equals(first.ConnectedAtString, second.ConnectedAtString, StringComparison.Ordinal);
+                && first.Port == second.Port;
         }
 
         internal static void ReplaceConnectedToolsForTests(IReadOnlyCollection<ConnectedClient> connectedClients)

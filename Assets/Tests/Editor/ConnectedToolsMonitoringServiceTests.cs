@@ -121,7 +121,7 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
         }
 
         [Test]
-        public void SaveConnectedToolsWhenChanged_WhenConnectedAtDiffers_PersistsTools()
+        public void SaveConnectedToolsWhenChanged_WhenOnlyConnectedAtDiffers_SkipsPersistedWrite()
         {
             ConnectedLLMToolData[] incomingTools =
             {
@@ -138,8 +138,8 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
                 () => persistedTools,
                 _ => saveCount++);
 
-            Assert.That(saved, Is.True);
-            Assert.That(saveCount, Is.EqualTo(1));
+            Assert.That(saved, Is.False);
+            Assert.That(saveCount, Is.EqualTo(0));
         }
 
         [Test]
