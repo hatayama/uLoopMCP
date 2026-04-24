@@ -47,31 +47,8 @@ namespace io.github.hatayama.uLoopMCP
                 Directory.CreateDirectory(destDir);
             }
 
-            if (!ShouldCopyServerBundle(sourcePath, destinationPath))
-            {
-                return false;
-            }
-
             File.Copy(sourcePath, destinationPath, overwrite: true);
-            File.SetLastWriteTimeUtc(destinationPath, File.GetLastWriteTimeUtc(sourcePath));
             return true;
-        }
-
-        private static bool ShouldCopyServerBundle(string sourcePath, string destinationPath)
-        {
-            if (!File.Exists(destinationPath))
-            {
-                return true;
-            }
-
-            FileInfo sourceInfo = new FileInfo(sourcePath);
-            FileInfo destinationInfo = new FileInfo(destinationPath);
-            if (sourceInfo.Length != destinationInfo.Length)
-            {
-                return true;
-            }
-
-            return sourceInfo.LastWriteTimeUtc != destinationInfo.LastWriteTimeUtc;
         }
 
         /// <summary>
