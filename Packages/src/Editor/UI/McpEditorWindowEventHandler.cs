@@ -194,6 +194,13 @@ namespace io.github.hatayama.uLoopMCP
         {
             return refreshRequested && ShouldRunExpensiveChecks(refreshMode);
         }
+
+        public static bool ShouldKeepToolSettingsCatalogDirty(ToolSettingsSectionData toolSettingsData)
+        {
+            Debug.Assert(toolSettingsData != null, "toolSettingsData must not be null");
+
+            return toolSettingsData.ShowToolSettings && !toolSettingsData.IsRegistryAvailable;
+        }
     }
 
     internal enum McpEditorWindowRefreshMode
