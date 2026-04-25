@@ -12,7 +12,9 @@ namespace io.github.hatayama.uLoopMCP
     {
         private const bool ForceFlatSkillInstall = true;
         private const double DeferredInitialRefreshDelaySeconds = 0.05;
-        private const double ToolSettingsRegistryWarmupDelaySeconds = 0.05;
+        private const double ToolSettingsRegistryWarmupInitialDelaySeconds = 0.05;
+        private const double ToolSettingsRegistryWarmupMaxDelaySeconds = 0.8;
+        private const int ToolSettingsRegistryWarmupMaxAttempts = 5;
 
         private McpConfigServiceFactory _configServiceFactory;
         private McpEditorWindowUI _view;
@@ -30,6 +32,7 @@ namespace io.github.hatayama.uLoopMCP
         private double _deferredInitialRefreshDueTime;
         private bool _isToolSettingsRegistryWarmupScheduled;
         private double _toolSettingsRegistryWarmupDueTime;
+        private int _toolSettingsRegistryWarmupAttemptCount;
         private SkillInstallState _selectedTargetInstallState = SkillInstallState.Missing;
         private CancellationTokenSource _skillInstallStateRefreshCts;
 
@@ -49,6 +52,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             CancelDeferredInitialRefresh();
             CancelToolSettingsRegistryWarmup();
+            ResetToolSettingsRegistryWarmupAttemptCount();
             CancelSkillInstallStateRefresh();
             _view?.Dispose();
             _view = null;
@@ -171,6 +175,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             CancelDeferredInitialRefresh();
             CancelToolSettingsRegistryWarmup();
+            ResetToolSettingsRegistryWarmupAttemptCount();
             CancelSkillInstallStateRefresh();
             CleanupEventHandler();
             SaveSessionState();
@@ -432,12 +437,18 @@ namespace io.github.hatayama.uLoopMCP
 
             if (McpEditorWindowRefreshPolicy.ShouldKeepToolSettingsCatalogDirty(toolSettingsData))
             {
-                _isToolSettingsCatalogDirty = true;
-                ScheduleToolSettingsRegistryWarmup();
+                if (ScheduleToolSettingsRegistryWarmup())
+                {
+                    _isToolSettingsCatalogDirty = true;
+                    return;
+                }
+
+                _isToolSettingsCatalogDirty = false;
                 return;
             }
 
             CancelToolSettingsRegistryWarmup();
+            ResetToolSettingsRegistryWarmupAttemptCount();
             _isToolSettingsCatalogDirty = false;
         }
 
@@ -532,22 +543,33 @@ namespace io.github.hatayama.uLoopMCP
             {
                 _isToolSettingsCatalogDirty = true;
                 CancelToolSettingsRegistryWarmup();
+                ResetToolSettingsRegistryWarmupAttemptCount();
                 return;
             }
 
             RefreshToolSettingsCatalogIfNeeded();
         }
 
-        private void ScheduleToolSettingsRegistryWarmup()
+        private bool ScheduleToolSettingsRegistryWarmup()
         {
-            if (_isToolSettingsRegistryWarmupScheduled)
+            if (McpEditorWindowRefreshPolicy.ShouldStartToolSettingsRegistryWarmup(
+                    _isToolSettingsRegistryWarmupScheduled,
+                    _toolSettingsRegistryWarmupAttemptCount,
+                    ToolSettingsRegistryWarmupMaxAttempts))
             {
-                return;
+                double delaySeconds = McpEditorWindowRefreshPolicy.CalculateToolSettingsRegistryWarmupDelaySeconds(
+                    ToolSettingsRegistryWarmupInitialDelaySeconds,
+                    ToolSettingsRegistryWarmupMaxDelaySeconds,
+                    _toolSettingsRegistryWarmupAttemptCount);
+
+                _isToolSettingsRegistryWarmupScheduled = true;
+                _toolSettingsRegistryWarmupDueTime = EditorApplication.timeSinceStartup + delaySeconds;
+                _toolSettingsRegistryWarmupAttemptCount++;
+                EditorApplication.update += RunToolSettingsRegistryWarmupWhenDue;
+                return true;
             }
 
-            _isToolSettingsRegistryWarmupScheduled = true;
-            _toolSettingsRegistryWarmupDueTime = EditorApplication.timeSinceStartup + ToolSettingsRegistryWarmupDelaySeconds;
-            EditorApplication.update += RunToolSettingsRegistryWarmupWhenDue;
+            return _isToolSettingsRegistryWarmupScheduled;
         }
 
         private void RunToolSettingsRegistryWarmupWhenDue()
@@ -561,6 +583,7 @@ namespace io.github.hatayama.uLoopMCP
 
             if (_view == null || !_model.UI.ShowToolSettings)
             {
+                ResetToolSettingsRegistryWarmupAttemptCount();
                 return;
             }
 
@@ -578,6 +601,11 @@ namespace io.github.hatayama.uLoopMCP
 
             EditorApplication.update -= RunToolSettingsRegistryWarmupWhenDue;
             _isToolSettingsRegistryWarmupScheduled = false;
+        }
+
+        private void ResetToolSettingsRegistryWarmupAttemptCount()
+        {
+            _toolSettingsRegistryWarmupAttemptCount = 0;
         }
 
         private void HandleToolToggled(string toolName, bool enabled)

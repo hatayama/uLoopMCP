@@ -201,6 +201,35 @@ namespace io.github.hatayama.uLoopMCP
 
             return toolSettingsData.ShowToolSettings && !toolSettingsData.IsRegistryAvailable;
         }
+
+        public static bool ShouldStartToolSettingsRegistryWarmup(
+            bool isAlreadyScheduled,
+            int attemptCount,
+            int maxAttempts)
+        {
+            Debug.Assert(attemptCount >= 0, "attemptCount must not be negative");
+            Debug.Assert(maxAttempts > 0, "maxAttempts must be positive");
+
+            return !isAlreadyScheduled && attemptCount < maxAttempts;
+        }
+
+        public static double CalculateToolSettingsRegistryWarmupDelaySeconds(
+            double initialDelaySeconds,
+            double maxDelaySeconds,
+            int attemptCount)
+        {
+            Debug.Assert(initialDelaySeconds > 0.0, "initialDelaySeconds must be positive");
+            Debug.Assert(maxDelaySeconds >= initialDelaySeconds, "maxDelaySeconds must not be smaller than initialDelaySeconds");
+            Debug.Assert(attemptCount >= 0, "attemptCount must not be negative");
+
+            double delaySeconds = initialDelaySeconds;
+            for (int i = 0; i < attemptCount; i++)
+            {
+                delaySeconds *= 2.0;
+            }
+
+            return System.Math.Min(delaySeconds, maxDelaySeconds);
+        }
     }
 
     internal enum McpEditorWindowRefreshMode

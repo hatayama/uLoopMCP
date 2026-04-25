@@ -91,6 +91,57 @@ namespace io.github.hatayama.uLoopMCP
             Assert.That(shouldKeepDirty, Is.False);
         }
 
+        [Test]
+        public void ShouldStartToolSettingsRegistryWarmup_WhenNotScheduledAndBelowMaxAttempts_ReturnsTrue()
+        {
+            bool shouldStart = McpEditorWindowRefreshPolicy.ShouldStartToolSettingsRegistryWarmup(
+                isAlreadyScheduled: false,
+                attemptCount: 4,
+                maxAttempts: 5);
+
+            Assert.That(shouldStart, Is.True);
+        }
+
+        [Test]
+        public void ShouldStartToolSettingsRegistryWarmup_WhenAlreadyScheduled_ReturnsFalse()
+        {
+            bool shouldStart = McpEditorWindowRefreshPolicy.ShouldStartToolSettingsRegistryWarmup(
+                isAlreadyScheduled: true,
+                attemptCount: 0,
+                maxAttempts: 5);
+
+            Assert.That(shouldStart, Is.False);
+        }
+
+        [Test]
+        public void ShouldStartToolSettingsRegistryWarmup_WhenMaxAttemptsReached_ReturnsFalse()
+        {
+            bool shouldStart = McpEditorWindowRefreshPolicy.ShouldStartToolSettingsRegistryWarmup(
+                isAlreadyScheduled: false,
+                attemptCount: 5,
+                maxAttempts: 5);
+
+            Assert.That(shouldStart, Is.False);
+        }
+
+        [TestCase(0, 0.05)]
+        [TestCase(1, 0.1)]
+        [TestCase(2, 0.2)]
+        [TestCase(3, 0.4)]
+        [TestCase(4, 0.8)]
+        [TestCase(5, 0.8)]
+        public void CalculateToolSettingsRegistryWarmupDelaySeconds_UsesExponentialBackoffWithCap(
+            int attemptCount,
+            double expectedDelaySeconds)
+        {
+            double delaySeconds = McpEditorWindowRefreshPolicy.CalculateToolSettingsRegistryWarmupDelaySeconds(
+                initialDelaySeconds: 0.05,
+                maxDelaySeconds: 0.8,
+                attemptCount);
+
+            Assert.That(delaySeconds, Is.EqualTo(expectedDelaySeconds).Within(0.0001));
+        }
+
         private static ToolSettingsSectionData CreateToolSettingsData(
             bool showToolSettings,
             bool isRegistryAvailable)
