@@ -1,6 +1,6 @@
 ---
 name: uloop-compile
-description: "Compile Unity project and report errors/warnings. Use when you need to: (1) Verify code compiles after C# file edits, (2) Check for compile errors before testing, (3) Force full recompilation with Domain Reload. Returns error and warning counts."
+description: "Compile Unity project and report errors/warnings. Use when you need to: (1) Verify code compiles after C# file edits, (2) Check for compile errors before testing, (3) Force full recompilation with Domain Reload. Executes via `uloop compile` CLI invocation; returns error and warning counts."
 ---
 
 # uloop compile
@@ -51,10 +51,20 @@ Returns JSON:
 
 ## Troubleshooting
 
-If CLI hangs or shows "Unity is busy" errors after compilation, stale lock files may be preventing connection. Run the following to clean them up:
+Diagnose the failure mode before retrying.
+
+**Stale lock files** (CLI hangs or shows "Unity is busy" while Unity Editor *is* running):
 
 ```bash
 uloop fix
 ```
 
-This removes any leftover lock files (`compiling.lock`, `domainreload.lock`, `serverstarting.lock`) from the Unity project's Temp directory.
+This removes any leftover lock files (`compiling.lock`, `domainreload.lock`, `serverstarting.lock`) from the Unity project's Temp directory. Then retry `uloop compile`.
+
+**Unity Editor not running** (CLI returns a connection failure and no Unity process is alive):
+
+```bash
+uloop launch -r
+```
+
+`-r` opens the project at the current working directory. After Unity finishes launching, retry `uloop compile`. Do not run `uloop fix` first in this case — `uloop fix` only clears locks; it does not start Unity.
