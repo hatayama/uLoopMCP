@@ -1,6 +1,6 @@
 ---
 name: simulate-mouse-demo
-description: "Run the SimulateMouse demo scenario on SimulateMouseDemoScene. Clicks buttons, long-presses, drags boxes, split-drags through waypoints, and operates the virtual pad. Use when the user asks to run the simulate-mouse demo, test mouse simulation, or exercise the demo scene."
+description: "Run the SimulateMouse demo scenario on SimulateMouseDemoScene end-to-end. Use when you need to: (1) Verify click, long-press, drag, split-drag, and virtual-pad behavior in one pass, (2) Smoke-test mouse simulation after code changes, (3) Exercise the demo scene buttons + boxes + virtual pad as a single scripted sequence. Executes via chained `uloop screenshot` and `uloop simulate-mouse-ui` CLI calls; requires SimulateMouseDemoScene loaded in PlayMode."
 context: fork
 ---
 
