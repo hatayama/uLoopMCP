@@ -64,7 +64,7 @@ This removes any leftover lock files (`compiling.lock`, `domainreload.lock`, `se
 **Unity Editor not running** (CLI returns a connection failure and no Unity process is alive):
 
 ```bash
-uloop launch -r
+uloop launch
 ```
 
-`-r` opens the project at the current working directory. After Unity finishes launching, retry `uloop compile`. Do not run `uloop fix` first in this case — `uloop fix` only clears locks; it does not start Unity.
+`uloop launch` auto-detects the project at the current working directory and opens it in the matching Unity Editor version. After Unity finishes launching, retry `uloop compile`. Do not run `uloop fix` first in this case — `uloop fix` only clears locks; it does not start Unity.
