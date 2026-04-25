@@ -30,3 +30,7 @@ Per the upstream skill, stop when 2 consecutive iters satisfy all of:
 - Step count variation vs previous: within ±10%
 - Duration variation vs previous: within ±15%
 - Hold-out scenario does not drop ≥ 15 points from the recent average
+
+## Rollout priority
+
+`priority-matrix.md` ranks remaining skills for tuning attention based on description compliance, hidden complexity, and downstream-caller risk. Pick the next batch from the top of that ranking; skills below total score 4 are deferred unless a real downstream issue forces a re-evaluation.
