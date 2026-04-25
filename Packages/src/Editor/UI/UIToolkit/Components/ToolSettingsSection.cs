@@ -13,7 +13,7 @@ namespace io.github.hatayama.uLoopMCP
     public class ToolSettingsSection
     {
         private const int ToolListRowHeight = 24;
-        private const int MaxVisibleToolRows = 14;
+        private const int InlineToolRowLimit = 40;
 
         private readonly Foldout _foldout;
         private readonly Toggle _allowThirdPartyToggle;
@@ -500,7 +500,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private void UpdateToolListHeight()
         {
-            int visibleRows = Math.Min(_toolListRows.Count, MaxVisibleToolRows);
+            int visibleRows = Math.Min(_toolListRows.Count, InlineToolRowLimit);
             if (visibleRows <= 0)
             {
                 visibleRows = 1;

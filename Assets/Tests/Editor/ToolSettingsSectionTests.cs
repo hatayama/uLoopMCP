@@ -7,6 +7,8 @@ namespace io.github.hatayama.uLoopMCP
     [TestFixture]
     public class ToolSettingsSectionTests
     {
+        private const int ToolListRowHeight = 24;
+
         [Test]
         public void Update_ClosedWithoutToolListData_DoesNotCreateToolRows()
         {
@@ -66,6 +68,7 @@ namespace io.github.hatayama.uLoopMCP
             Assert.AreEqual(5, items.Count);
             Assert.AreEqual(DisplayStyle.Flex, listView.style.display.value);
             Assert.AreEqual(DisplayStyle.None, statusLabel.style.display.value);
+            Assert.AreEqual((5 * ToolListRowHeight) + 2, listView.style.height.value.value);
         }
 
         [Test]
