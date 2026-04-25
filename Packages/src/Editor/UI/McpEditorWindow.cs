@@ -542,7 +542,7 @@ namespace io.github.hatayama.uLoopMCP
             }
             else
             {
-                await ToolSkillSynchronizer.InstallSkillFiles(!_installSkillsFlat);
+                await ToolSkillSynchronizer.InstallSkillFilesForTool(toolName, !_installSkillsFlat);
 
                 if (!ToolSkillSynchronizer.IsSkillInstalled(toolName))
                 {

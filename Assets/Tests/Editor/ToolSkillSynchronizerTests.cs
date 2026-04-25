@@ -296,6 +296,46 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         [Test]
+        public async Task InstallSkillFilesForToolAtProjectRoot_DoesNotUpdateUnrelatedSkills()
+        {
+            string temporaryRoot = CreateTemporaryProjectRoot();
+            CreateFakeSourceSkill(
+                temporaryRoot,
+                "uloop-enabled-skill",
+                "EnabledTool",
+                "reference.md",
+                "enabled-reference");
+            CreateFakeSourceSkill(
+                temporaryRoot,
+                "uloop-unrelated-skill",
+                "UnrelatedTool",
+                "reference.md",
+                "new-unrelated-reference");
+
+            string targetRoot = Path.Combine(temporaryRoot, ".claude");
+            string skillsRoot = Path.Combine(targetRoot, SkillInstallLayout.SkillsDirName);
+            Directory.CreateDirectory(skillsRoot);
+            string unrelatedSkillDir = Path.Combine(skillsRoot, "uloop-unrelated-skill");
+            WriteSkillFile(unrelatedSkillDir, "---\nname: uloop-unrelated-skill\n---\n");
+            File.WriteAllText(Path.Combine(unrelatedSkillDir, "reference.md"), "old-unrelated-reference");
+
+            ToolSkillSynchronizer.SkillInstallResult result =
+                await ToolSkillSynchronizer.InstallSkillFilesForToolAtProjectRoot(
+                    temporaryRoot,
+                    "enabled-skill",
+                    groupSkillsUnderUnityCliLoop: false);
+
+            string enabledSkillDir = Path.Combine(skillsRoot, "uloop-enabled-skill");
+
+            Assert.That(result.IsSuccessful, Is.True);
+            Assert.That(result.AttemptedTargets, Is.EqualTo(1));
+            Assert.That(File.ReadAllText(Path.Combine(enabledSkillDir, "reference.md")), Is.EqualTo("enabled-reference"));
+            Assert.That(
+                File.ReadAllText(Path.Combine(unrelatedSkillDir, "reference.md")),
+                Is.EqualTo("old-unrelated-reference"));
+        }
+
+        [Test]
         public async Task InstallSkillFilesAtProjectRoot_WhenFlatLayoutRequested_PreservesThirdPartyManagedSkillDirectories()
         {
             string temporaryRoot = CreateTemporaryProjectRoot();
