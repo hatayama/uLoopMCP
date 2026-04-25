@@ -81,6 +81,11 @@ namespace io.github.hatayama.uLoopMCP
             return SharedRegistry;
         }
 
+        internal static UnityToolRegistry TryGetRegistry()
+        {
+            return _sharedRegistry;
+        }
+
         internal static void WarmupRegistry()
         {
             _ = SharedRegistry;

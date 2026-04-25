@@ -23,7 +23,6 @@ namespace io.github.hatayama.uLoopMCP
         private bool _isInstallingSkills;
         private bool _isRefreshingVersion;
         private bool _isToolSettingsCatalogDirty = true;
-        private bool _isToolSettingsRefreshScheduled;
         private SkillInstallState _selectedTargetInstallState = SkillInstallState.Missing;
         private CancellationTokenSource _skillInstallStateRefreshCts;
 
@@ -222,7 +221,7 @@ namespace io.github.hatayama.uLoopMCP
             _view.UpdateEditorConfig(configData);
 
             RefreshToolSettingsHeader();
-            ScheduleToolSettingsCatalogRefreshIfNeeded();
+            RefreshToolSettingsCatalogIfNeeded();
         }
 
         private async void RefreshCliVersionInBackground()
@@ -352,22 +351,14 @@ namespace io.github.hatayama.uLoopMCP
             _isToolSettingsCatalogDirty = false;
         }
 
-        private void ScheduleToolSettingsCatalogRefreshIfNeeded()
+        private void RefreshToolSettingsCatalogIfNeeded()
         {
-            if (!_model.UI.ShowToolSettings || !_isToolSettingsCatalogDirty || _isToolSettingsRefreshScheduled)
+            if (!_model.UI.ShowToolSettings || !_isToolSettingsCatalogDirty)
             {
                 return;
             }
 
-            _isToolSettingsRefreshScheduled = true;
-            EditorApplication.delayCall += RefreshToolSettingsCatalogIfNeeded;
-        }
-
-        private void RefreshToolSettingsCatalogIfNeeded()
-        {
-            _isToolSettingsRefreshScheduled = false;
-
-            if (_view == null || !_model.UI.ShowToolSettings)
+            if (_view == null)
             {
                 return;
             }
@@ -389,7 +380,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private ToolSettingsSectionData CreateToolSettingsData()
         {
-            UnityToolRegistry registry = CustomToolManager.GetRegistry();
+            UnityToolRegistry registry = CustomToolManager.TryGetRegistry();
             if (registry == null)
             {
                 return new ToolSettingsSectionData(
@@ -453,7 +444,7 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            ScheduleToolSettingsCatalogRefreshIfNeeded();
+            RefreshToolSettingsCatalogIfNeeded();
         }
 
         private void HandleToolToggled(string toolName, bool enabled)

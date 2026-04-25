@@ -97,6 +97,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private void OnServerStateChanged()
         {
+            _window.InvalidateToolSettingsCatalog();
             _model.RequestRepaint();
         }
 
