@@ -49,3 +49,5 @@ uloop launch -a
 - Prints project path
 - If Unity is already running, focuses the existing window
 - If launching, opens Unity in background
+
+The command blocks until Unity is ready to accept further `uloop` requests (executes a startup probe internally). When the command returns successfully, you may immediately invoke the next `uloop` command (e.g. `uloop compile`) without polling or sleeping. On timeout the command exits with a non-zero status.
