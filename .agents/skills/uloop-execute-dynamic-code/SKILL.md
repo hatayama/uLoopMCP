@@ -1,6 +1,6 @@
 ---
 name: uloop-execute-dynamic-code
-description: "Execute C# code dynamically in Unity Editor. Use when you need to: (1) Wire prefab/material references and AddComponent operations, (2) Edit SerializedObject properties and reference wiring, (3) Perform scene/hierarchy edits and batch operations, (4) PlayMode automation (click buttons, invoke methods, tweak runtime state), (5) PlayMode UI controls (InputField, Slider, Toggle, Dropdown), (6) PlayMode inspection (scene info, reflection, physics state, raycast checks). NOT for file I/O or script authoring."
+description: "Execute C# code dynamically in Unity Editor. Use when you need to: (1) Wire prefab/material references and AddComponent operations, (2) Edit SerializedObject properties and reference wiring, (3) Perform scene/hierarchy edits and batch operations, (4) PlayMode automation (click buttons, invoke methods, tweak runtime state), (5) PlayMode UI controls (InputField, Slider, Toggle, Dropdown), (6) PlayMode inspection (scene info, reflection, physics state, raycast checks). NOT for file I/O or script authoring. Executes via `uloop execute-dynamic-code` CLI invocation; compiles snippet with Roslyn and runs synchronously inside the Unity Editor process."
 context: fork
 ---
 
@@ -34,6 +34,18 @@ return x;
 ```
 
 **Forbidden** — these will be rejected at compile time: `System.IO.*`, `AssetDatabase.CreateFolder`, creating/editing `.cs`/`.asmdef` files. Use terminal commands for file operations instead.
+
+## Output
+
+Returns JSON:
+- `Success`: boolean — overall execution success
+- `Result`: string — value of the snippet's `return` statement (empty when omitted)
+- `Logs`: string[] — `Debug.Log` / `Debug.LogWarning` / `Debug.LogError` messages emitted during the run
+- `CompilationErrors`: object[] — Roslyn diagnostics with `Message`, `Line`, `Column`, `ErrorCode`, optional `Hint` and `Suggestions`
+- `ErrorMessage`: string — top-level failure summary (empty on success)
+- `UpdatedCode`: string — the wrapped form actually compiled (handy when debugging using-statement reordering)
+
+On `Success: false`, inspect `CompilationErrors` first; if empty, the failure happened at runtime and `ErrorMessage` carries the exception summary. Both EditMode and PlayMode are supported targets — the snippet runs in whichever mode the Editor is currently in.
 
 ## Code Examples by Category
 
