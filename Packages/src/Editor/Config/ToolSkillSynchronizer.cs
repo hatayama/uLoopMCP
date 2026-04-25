@@ -511,8 +511,8 @@ namespace io.github.hatayama.uLoopMCP
                 Directory.CreateDirectory(SkillInstallLayout.GetManagedSkillsRoot(targetRoot));
             }
 
-            DeleteDeprecatedSkillDirectories(targetRoot);
-            DeleteDisabledSkillDirectories(targetRoot, disabledSkills);
+            DeleteDeprecatedSkillDirectoriesFromAllLayouts(targetRoot);
+            DeleteDisabledSkillDirectoriesFromAllLayouts(targetRoot, disabledSkills);
 
             foreach (SkillInstallLayout.SkillSourceInfo skill in enabledSkills)
             {
@@ -559,8 +559,8 @@ namespace io.github.hatayama.uLoopMCP
                 Directory.CreateDirectory(SkillInstallLayout.GetManagedSkillsRoot(targetRoot));
             }
 
-            DeleteDeprecatedSkillDirectories(targetRoot);
-            DeleteDisabledSkillDirectories(targetRoot, disabledSkills);
+            DeleteDeprecatedSkillDirectoriesForLayout(targetRoot, groupSkillsUnderUnityCliLoop);
+            DeleteDisabledSkillDirectoriesForLayout(targetRoot, disabledSkills, groupSkillsUnderUnityCliLoop);
 
             foreach (SkillInstallLayout.SkillSourceInfo skill in skills)
             {
@@ -706,7 +706,7 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-        private static void DeleteDeprecatedSkillDirectories(string targetRoot)
+        private static void DeleteDeprecatedSkillDirectoriesFromAllLayouts(string targetRoot)
         {
             foreach (string deprecatedSkillName in DeprecatedSkillNames)
             {
@@ -715,7 +715,7 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-        private static void DeleteDisabledSkillDirectories(
+        private static void DeleteDisabledSkillDirectoriesFromAllLayouts(
             string targetRoot,
             IReadOnlyCollection<SkillInstallLayout.SkillSourceInfo> disabledSkills)
         {
@@ -723,6 +723,27 @@ namespace io.github.hatayama.uLoopMCP
             {
                 DeleteSkillDirectoryIfExists(targetRoot, skill.Name, groupSkillsUnderUnityCliLoop: true);
                 DeleteSkillDirectoryIfExists(targetRoot, skill.Name, groupSkillsUnderUnityCliLoop: false);
+            }
+        }
+
+        private static void DeleteDeprecatedSkillDirectoriesForLayout(
+            string targetRoot,
+            bool groupSkillsUnderUnityCliLoop)
+        {
+            foreach (string deprecatedSkillName in DeprecatedSkillNames)
+            {
+                DeleteSkillDirectoryIfExists(targetRoot, deprecatedSkillName, groupSkillsUnderUnityCliLoop);
+            }
+        }
+
+        private static void DeleteDisabledSkillDirectoriesForLayout(
+            string targetRoot,
+            IReadOnlyCollection<SkillInstallLayout.SkillSourceInfo> disabledSkills,
+            bool groupSkillsUnderUnityCliLoop)
+        {
+            foreach (SkillInstallLayout.SkillSourceInfo skill in disabledSkills)
+            {
+                DeleteSkillDirectoryIfExists(targetRoot, skill.Name, groupSkillsUnderUnityCliLoop);
             }
         }
 

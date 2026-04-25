@@ -407,6 +407,52 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         [Test]
+        public async Task InstallSkillFilesForToolAtProjectRoot_WhenFlatLayoutRequested_PreservesDisabledAndDeprecatedGroupedSkills()
+        {
+            string temporaryRoot = CreateTemporaryProjectRoot();
+            CreateFakeSourceSkill(
+                temporaryRoot,
+                "uloop-enabled-skill",
+                "EnabledTool",
+                "reference.md",
+                "enabled-reference");
+            CreateFakeSourceSkill(
+                temporaryRoot,
+                "uloop-disabled-skill",
+                "DisabledTool",
+                "reference.md",
+                "disabled-reference");
+            ToolSettings.SaveSettings(new ToolSettingsData
+            {
+                disabledTools = new[] { "disabled-skill" }
+            });
+
+            string targetRoot = Path.Combine(temporaryRoot, ".claude");
+            string skillsRoot = Path.Combine(targetRoot, SkillInstallLayout.SkillsDirName);
+            string managedSkillsRoot = Path.Combine(skillsRoot, SkillInstallLayout.ManagedSkillsDirName);
+            string flatDisabledSkillDir = Path.Combine(skillsRoot, "uloop-disabled-skill");
+            string flatDeprecatedSkillDir = Path.Combine(skillsRoot, "uloop-capture-window");
+            string groupedDisabledSkillDir = Path.Combine(managedSkillsRoot, "uloop-disabled-skill");
+            string groupedDeprecatedSkillDir = Path.Combine(managedSkillsRoot, "uloop-capture-window");
+            WriteSkillFile(flatDisabledSkillDir, "---\nname: uloop-disabled-skill\n---\n");
+            WriteSkillFile(flatDeprecatedSkillDir, "---\nname: uloop-capture-window\n---\n");
+            WriteSkillFile(groupedDisabledSkillDir, "---\nname: uloop-disabled-skill\n---\n");
+            WriteSkillFile(groupedDeprecatedSkillDir, "---\nname: uloop-capture-window\n---\n");
+
+            ToolSkillSynchronizer.SkillInstallResult result =
+                await ToolSkillSynchronizer.InstallSkillFilesForToolAtProjectRoot(
+                    temporaryRoot,
+                    "enabled-skill",
+                    groupSkillsUnderUnityCliLoop: false);
+
+            Assert.That(result.IsSuccessful, Is.True);
+            Assert.That(Directory.Exists(flatDisabledSkillDir), Is.False);
+            Assert.That(Directory.Exists(flatDeprecatedSkillDir), Is.False);
+            Assert.That(Directory.Exists(groupedDisabledSkillDir), Is.True);
+            Assert.That(Directory.Exists(groupedDeprecatedSkillDir), Is.True);
+        }
+
+        [Test]
         public async Task InstallSkillFilesAtProjectRoot_WhenFlatLayoutRequested_PreservesThirdPartyManagedSkillDirectories()
         {
             string temporaryRoot = CreateTemporaryProjectRoot();
