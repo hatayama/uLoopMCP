@@ -182,5 +182,23 @@ namespace io.github.hatayama.uLoopMCP
 
             return runtimeState.NeedsRepaint;
         }
+
+        public static bool ShouldRunExpensiveChecks(McpEditorWindowRefreshMode refreshMode)
+        {
+            return refreshMode == McpEditorWindowRefreshMode.Full;
+        }
+
+        public static bool ShouldRefreshSkillInstallState(
+            McpEditorWindowRefreshMode refreshMode,
+            bool refreshRequested)
+        {
+            return refreshRequested && ShouldRunExpensiveChecks(refreshMode);
+        }
+    }
+
+    internal enum McpEditorWindowRefreshMode
+    {
+        InitialPaint,
+        Full
     }
 }

@@ -25,5 +25,34 @@ namespace io.github.hatayama.uLoopMCP
 
             Assert.That(shouldRefresh, Is.False);
         }
+
+        [Test]
+        public void ShouldRunExpensiveChecks_WhenInitialPaint_ReturnsFalse()
+        {
+            bool shouldRun = McpEditorWindowRefreshPolicy.ShouldRunExpensiveChecks(
+                McpEditorWindowRefreshMode.InitialPaint);
+
+            Assert.That(shouldRun, Is.False);
+        }
+
+        [Test]
+        public void ShouldRefreshSkillInstallState_WhenInitialPaintEvenIfRequested_ReturnsFalse()
+        {
+            bool shouldRefresh = McpEditorWindowRefreshPolicy.ShouldRefreshSkillInstallState(
+                McpEditorWindowRefreshMode.InitialPaint,
+                refreshRequested: true);
+
+            Assert.That(shouldRefresh, Is.False);
+        }
+
+        [Test]
+        public void ShouldRefreshSkillInstallState_WhenFullRefreshRequested_ReturnsTrue()
+        {
+            bool shouldRefresh = McpEditorWindowRefreshPolicy.ShouldRefreshSkillInstallState(
+                McpEditorWindowRefreshMode.Full,
+                refreshRequested: true);
+
+            Assert.That(shouldRefresh, Is.True);
+        }
     }
 }
