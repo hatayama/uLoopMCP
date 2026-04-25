@@ -1,6 +1,6 @@
 ---
 name: uloop-record-input
-description: "Record keyboard and mouse input during PlayMode into a JSON file. Use when you need to: (1) Capture human gameplay input for later replay, (2) Record input sequences for E2E testing, (3) Save input for bug reproduction."
+description: "Record keyboard and mouse input during PlayMode into a JSON file. Use when you need to: (1) Capture human gameplay input for later replay, (2) Record input sequences for E2E testing, (3) Save input for bug reproduction. Routes through uloop CLI to Unity, which captures Input System device-state diffs frame-by-frame in PlayMode and serializes them to JSON when stopped; requires PlayMode and the New Input System."
 ---
 
 # uloop record-input
@@ -58,6 +58,9 @@ Set `Application.targetFrameRate = 60` (or your target) to reduce frame timing v
 Returns JSON with:
 - `Success`: Whether the operation succeeded
 - `Message`: Status message
-- `OutputPath`: Path to saved recording (Stop only)
-- `TotalFrames`: Number of frames recorded (Stop only)
-- `DurationSeconds`: Recording duration in seconds (Stop only)
+- `Action`: Echoes which action was executed (`Start` or `Stop`)
+- `OutputPath`: Path to saved recording (nullable; populated on `Stop` only)
+- `TotalFrames`: Number of frames recorded (nullable int; populated on `Stop` only)
+- `DurationSeconds`: Recording duration in seconds (nullable float; populated on `Stop` only)
+
+These are the only six fields. There is no `RecordingId`, `StartTimestamp`, `KeysCaptured`, or per-frame data in the response — frame data lives only in the JSON file at `OutputPath`.
