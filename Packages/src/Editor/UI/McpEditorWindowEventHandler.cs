@@ -70,6 +70,7 @@ namespace io.github.hatayama.uLoopMCP
             McpBridgeServer.OnServerStarted += OnServerStateChanged;
             McpBridgeServer.OnServerStopping += OnServerStateChanged;
             ConnectedToolsMonitoringService.OnConnectedToolsChanged += OnConnectedToolsChanged;
+            CustomToolManager.OnToolsChanged += OnToolsChanged;
 
             McpBridgeServer currentServer = McpServerController.CurrentServer;
             if (currentServer != null)
@@ -84,6 +85,7 @@ namespace io.github.hatayama.uLoopMCP
             McpBridgeServer.OnServerStarted -= OnServerStateChanged;
             McpBridgeServer.OnServerStopping -= OnServerStateChanged;
             ConnectedToolsMonitoringService.OnConnectedToolsChanged -= OnConnectedToolsChanged;
+            CustomToolManager.OnToolsChanged -= OnToolsChanged;
 
             McpBridgeServer currentServer = McpServerController.CurrentServer;
             if (currentServer != null)
@@ -100,6 +102,12 @@ namespace io.github.hatayama.uLoopMCP
 
         private void OnConnectedToolsChanged()
         {
+            _model.RequestRepaint();
+        }
+
+        private void OnToolsChanged()
+        {
+            _window.InvalidateToolSettingsCatalog();
             _model.RequestRepaint();
         }
 

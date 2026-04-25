@@ -22,6 +22,8 @@ namespace io.github.hatayama.uLoopMCP
         private bool _isInstallingCli;
         private bool _isInstallingSkills;
         private bool _isRefreshingVersion;
+        private bool _isToolSettingsCatalogDirty = true;
+        private bool _isToolSettingsRefreshScheduled;
         private SkillInstallState _selectedTargetInstallState = SkillInstallState.Missing;
         private CancellationTokenSource _skillInstallStateRefreshCts;
 
@@ -41,6 +43,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             CancelSkillInstallStateRefresh();
             _view?.Dispose();
+            _view = null;
         }
 
         private void CreateGUI()
@@ -170,6 +173,7 @@ namespace io.github.hatayama.uLoopMCP
             CleanupEventHandler();
             SaveSessionState();
             _view?.Dispose();
+            _view = null;
         }
 
         private void CleanupEventHandler()
@@ -217,8 +221,8 @@ namespace io.github.hatayama.uLoopMCP
             EditorConfigData configData = CreateEditorConfigData();
             _view.UpdateEditorConfig(configData);
 
-            ToolSettingsSectionData toolSettingsData = CreateToolSettingsData();
-            _view.UpdateToolSettings(toolSettingsData);
+            RefreshToolSettingsHeader();
+            ScheduleToolSettingsCatalogRefreshIfNeeded();
         }
 
         private async void RefreshCliVersionInBackground()
@@ -330,6 +334,59 @@ namespace io.github.hatayama.uLoopMCP
                 _model.UI.ShowRepositoryRootToggle);
         }
 
+        public void InvalidateToolSettingsCatalog()
+        {
+            _isToolSettingsCatalogDirty = true;
+        }
+
+        private void RefreshToolSettingsHeader()
+        {
+            ToolSettingsSectionData toolSettingsData = CreateToolSettingsHeaderData();
+            _view.UpdateToolSettings(toolSettingsData);
+        }
+
+        private void RefreshToolSettingsCatalog()
+        {
+            ToolSettingsSectionData toolSettingsData = CreateToolSettingsData();
+            _view.UpdateToolSettings(toolSettingsData);
+            _isToolSettingsCatalogDirty = false;
+        }
+
+        private void ScheduleToolSettingsCatalogRefreshIfNeeded()
+        {
+            if (!_model.UI.ShowToolSettings || !_isToolSettingsCatalogDirty || _isToolSettingsRefreshScheduled)
+            {
+                return;
+            }
+
+            _isToolSettingsRefreshScheduled = true;
+            EditorApplication.delayCall += RefreshToolSettingsCatalogIfNeeded;
+        }
+
+        private void RefreshToolSettingsCatalogIfNeeded()
+        {
+            _isToolSettingsRefreshScheduled = false;
+
+            if (_view == null || !_model.UI.ShowToolSettings)
+            {
+                return;
+            }
+
+            RefreshToolSettingsCatalog();
+        }
+
+        private ToolSettingsSectionData CreateToolSettingsHeaderData()
+        {
+            return new ToolSettingsSectionData(
+                _model.UI.ShowToolSettings,
+                ULoopSettings.GetAllowThirdPartyTools(),
+                ULoopSettings.GetDynamicCodeSecurityLevel(),
+                System.Array.Empty<ToolToggleItem>(),
+                System.Array.Empty<ToolToggleItem>(),
+                true,
+                false);
+        }
+
         private ToolSettingsSectionData CreateToolSettingsData()
         {
             UnityToolRegistry registry = CustomToolManager.GetRegistry();
@@ -341,24 +398,24 @@ namespace io.github.hatayama.uLoopMCP
                     ULoopSettings.GetDynamicCodeSecurityLevel(),
                     System.Array.Empty<ToolToggleItem>(),
                     System.Array.Empty<ToolToggleItem>(),
-                    false);
+                    false,
+                    true);
             }
 
-            ToolInfo[] allTools = registry.GetAllRegisteredToolInfos();
+            ToolSettingsCatalogItem[] allTools = registry.GetToolSettingsCatalog();
 
             System.Collections.Generic.List<ToolToggleItem> builtIn = new();
             System.Collections.Generic.List<ToolToggleItem> thirdParty = new();
 
-            foreach (ToolInfo tool in allTools)
+            foreach (ToolSettingsCatalogItem tool in allTools)
             {
-                // Internal tools are always enabled and hidden from UI
                 if (tool.DisplayDevelopmentOnly)
                 {
                     continue;
                 }
 
                 bool isEnabled = ToolSettings.IsToolEnabled(tool.Name);
-                bool isThirdPartyTool = registry.IsThirdPartyTool(tool.Name);
+                bool isThirdPartyTool = tool.IsThirdParty;
 
                 ToolToggleItem item = new ToolToggleItem(tool.Name, tool.Description, isEnabled, isThirdPartyTool);
                 if (isThirdPartyTool)
@@ -381,12 +438,22 @@ namespace io.github.hatayama.uLoopMCP
                 ULoopSettings.GetDynamicCodeSecurityLevel(),
                 builtIn.ToArray(),
                 thirdParty.ToArray(),
+                true,
                 true);
         }
 
         private void UpdateShowToolSettings(bool show)
         {
             _model.UpdateShowToolSettings(show);
+            RefreshToolSettingsHeader();
+
+            if (!show)
+            {
+                _isToolSettingsCatalogDirty = true;
+                return;
+            }
+
+            ScheduleToolSettingsCatalogRefreshIfNeeded();
         }
 
         private void HandleToolToggled(string toolName, bool enabled)
@@ -516,7 +583,7 @@ namespace io.github.hatayama.uLoopMCP
         private void UpdateAllowThirdPartyTools(bool allow)
         {
             _model.UpdateAllowThirdPartyTools(allow);
-            RefreshAllSections();
+            RefreshToolSettingsHeader();
         }
 
         private void UpdateAddRepositoryRoot(bool addRepositoryRoot)
