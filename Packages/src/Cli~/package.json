@@ -60,7 +60,6 @@
     "knip": "6.6.2",
     "prettier": "3.8.3",
     "ts-jest": "29.4.9",
-    "tsx": "4.21.0",
     "typescript": "6.0.3",
     "typescript-eslint": "8.59.0"
   },

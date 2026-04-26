@@ -540,6 +540,17 @@ describe('stripInternalFields', () => {
       Success: true,
     });
   });
+
+  it('removes server version from displayed tool outputs', () => {
+    const cleaned = stripInternalFields({
+      Ver: '2.0.4',
+      Success: true,
+    });
+
+    expect(cleaned).toEqual({
+      Success: true,
+    });
+  });
 });
 
 describe('diagnoseRetryableProjectConnectionError', () => {

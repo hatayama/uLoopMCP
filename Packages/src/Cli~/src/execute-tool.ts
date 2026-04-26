@@ -98,6 +98,7 @@ function parseExplicitPort(portText?: string): number | undefined {
 export function stripInternalFields(result: Record<string, unknown>): Record<string, unknown> {
   const cleaned = { ...result };
   delete cleaned['ProjectRoot'];
+  delete cleaned['Ver'];
   return cleaned;
 }
 
