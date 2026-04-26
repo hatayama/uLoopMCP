@@ -86,7 +86,7 @@ namespace io.github.hatayama.uLoopMCP
                 return new SimulateMouseUiResponse
                 {
                     Success = false,
-                    Message = "TargetPath is required when BypassRaycast is true for Click, Drag, or DragStart.",
+                    Message = "TargetPath is required when BypassRaycast is true for Click, LongPress, Drag, or DragStart.",
                     Action = parameters.Action.ToString()
                 };
             }
@@ -338,7 +338,7 @@ namespace io.github.hatayama.uLoopMCP
 
             Vector2 inputPos = new Vector2(parameters.X, parameters.Y);
             Vector2 screenPos = InputToScreen(inputPos);
-            RaycastResult? hit = RaycastUI(screenPos, eventSystem);
+            RaycastResult? hit = parameters.BypassRaycast ? null : RaycastUI(screenPos, eventSystem);
 
             PointerEventData.InputButton inputButton = ToInputButton(parameters.Button);
             PointerEventData pointerData = new PointerEventData(eventSystem)
@@ -349,10 +349,37 @@ namespace io.github.hatayama.uLoopMCP
             };
 
             GameObject? target = null;
+            GameObject? rawTarget = null;
 
-            if (hit != null)
+            if (parameters.BypassRaycast)
             {
-                GameObject rawTarget = hit.Value.gameObject;
+                if (!TryResolveGameObjectPath(
+                    parameters.TargetPath,
+                    "TargetPath",
+                    MouseAction.LongPress,
+                    inputPos,
+                    out rawTarget,
+                    out SimulateMouseUiResponse? failureResponse))
+                {
+                    return failureResponse!;
+                }
+
+                RaycastResult directRaycast = CreateDirectRaycastResult(rawTarget!);
+                pointerData.pointerCurrentRaycast = directRaycast;
+                pointerData.pointerPressRaycast = directRaycast;
+
+                target = ExecuteEvents.GetEventHandler<IPointerDownHandler>(rawTarget!)
+                         ?? ExecuteEvents.GetEventHandler<IPointerClickHandler>(rawTarget!);
+
+                if (target != null)
+                {
+                    pointerData.pointerPress = target;
+                    pointerData.rawPointerPress = rawTarget;
+                }
+            }
+            else if (hit != null)
+            {
+                rawTarget = hit.Value.gameObject;
                 pointerData.pointerCurrentRaycast = hit.Value;
                 pointerData.pointerPressRaycast = hit.Value;
 
@@ -366,16 +393,28 @@ namespace io.github.hatayama.uLoopMCP
                 }
             }
 
+            if (parameters.BypassRaycast && target == null)
+            {
+                return new SimulateMouseUiResponse
+                {
+                    Success = false,
+                    Message = $"TargetPath '{parameters.TargetPath}' has no pointer down or pointer click handler.",
+                    Action = MouseAction.LongPress.ToString(),
+                    PositionX = inputPos.x,
+                    PositionY = inputPos.y
+                };
+            }
+
             SimulateMouseUiOverlayState.Update(
                 MouseAction.LongPress, inputPos, null,
                 target?.name, Handles.GetMainGameViewSize());
 
             await PlayExpandAnimation(ct);
 
-            if (hit != null && target != null)
+            if (rawTarget != null && target != null)
             {
                 ExecuteEvents.ExecuteHierarchy(
-                    hit.Value.gameObject, pointerData, ExecuteEvents.pointerDownHandler);
+                    rawTarget, pointerData, ExecuteEvents.pointerDownHandler);
             }
 
             try
@@ -394,7 +433,7 @@ namespace io.github.hatayama.uLoopMCP
             finally
             {
                 // Ensure pointerUp fires even if the hold loop is cancelled
-                if (hit != null && target != null)
+                if (rawTarget != null && target != null)
                 {
                     ExecuteEvents.Execute(target, pointerData, ExecuteEvents.pointerUpHandler);
                 }
@@ -406,7 +445,9 @@ namespace io.github.hatayama.uLoopMCP
             {
                 Success = true,
                 Message = target != null
-                    ? $"Long-pressed '{target.name}' at ({inputPos.x:F1}, {inputPos.y:F1}) for {parameters.Duration:F1}s"
+                    ? parameters.BypassRaycast
+                        ? $"Bypass-long-pressed '{target.name}' at ({inputPos.x:F1}, {inputPos.y:F1}) via '{parameters.TargetPath}' for {parameters.Duration:F1}s"
+                        : $"Long-pressed '{target.name}' at ({inputPos.x:F1}, {inputPos.y:F1}) for {parameters.Duration:F1}s"
                     : $"Long-pressed at ({inputPos.x:F1}, {inputPos.y:F1}) for {parameters.Duration:F1}s - no UI element hit",
                 Action = MouseAction.LongPress.ToString(),
                 HitGameObjectName = target?.name,
@@ -949,12 +990,15 @@ namespace io.github.hatayama.uLoopMCP
 
         private static bool SupportsBypassRaycast(MouseAction action)
         {
-            return action == MouseAction.Click || IsDragAction(action);
+            return action == MouseAction.Click
+                || action == MouseAction.LongPress
+                || IsDragAction(action);
         }
 
         private static bool RequiresBypassTargetPath(MouseAction action)
         {
             return action == MouseAction.Click
+                || action == MouseAction.LongPress
                 || action == MouseAction.Drag
                 || action == MouseAction.DragStart;
         }

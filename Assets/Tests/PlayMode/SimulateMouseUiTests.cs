@@ -164,6 +164,37 @@ namespace Tests.PlayMode
 
         #endregion
 
+        #region LongPress Tests
+
+        [UnityTest]
+        public IEnumerator LongPress_WithBypassRaycast_Should_HoldTargetBehindBlocker()
+        {
+            ClickTracker tracker = CreateClickableElement("LongPressTarget", Vector2.zero, new Vector2(200f, 100f));
+            GameObject blocker = CreateUIElement("Blocker", Vector2.zero, new Vector2(260f, 160f));
+            blocker.AddComponent<Image>();
+            yield return null;
+
+            Vector2 screenPos = GetScreenPosition(tracker.gameObject);
+
+            yield return RunTool(new JObject
+            {
+                ["action"] = MouseAction.LongPress.ToString(),
+                ["x"] = screenPos.x,
+                ["y"] = screenPos.y,
+                ["duration"] = 0.1f,
+                ["bypassRaycast"] = true,
+                ["targetPath"] = "TestCanvas/LongPressTarget"
+            });
+
+            Assert.IsTrue(lastResponse.Success);
+            Assert.IsTrue(tracker.PointerDownCalled, "PointerDown should be fired");
+            Assert.IsTrue(tracker.PointerUpCalled, "PointerUp should be fired");
+            Assert.IsFalse(tracker.PointerClickCalled, "LongPress should not fire PointerClick");
+            Assert.AreEqual("LongPressTarget", lastResponse.HitGameObjectName);
+        }
+
+        #endregion
+
         #region DragOneShot Tests
 
         [UnityTest]

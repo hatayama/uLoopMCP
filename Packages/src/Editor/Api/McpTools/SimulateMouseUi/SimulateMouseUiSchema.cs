@@ -28,10 +28,10 @@ namespace io.github.hatayama.uLoopMCP
         [Description("Mouse button: Left(0, default), Right(1), Middle(2).")]
         public MouseButton Button { get; set; } = MouseButton.Left;
 
-        [Description("Bypass EventSystem raycast and send click or drag events directly to TargetPath. Useful for interacting with UI behind a raycast-blocking overlay.")]
+        [Description("Bypass EventSystem raycast and send click, long-press, or drag events directly to TargetPath. Useful for interacting with UI behind a raycast-blocking overlay.")]
         public bool BypassRaycast { get; set; } = false;
 
-        [Description("Hierarchy path of the target GameObject used by Click, Drag, and DragStart when BypassRaycast is true, for example Canvas/Panel/Button.")]
+        [Description("Hierarchy path of the target GameObject used by Click, LongPress, Drag, and DragStart when BypassRaycast is true, for example Canvas/Panel/Button.")]
         public string TargetPath { get; set; } = "";
 
         [Description("Optional hierarchy path of the drop target used by Drag and DragEnd, for example Canvas/DropZone.")]
