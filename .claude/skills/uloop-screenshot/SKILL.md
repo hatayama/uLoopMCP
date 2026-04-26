@@ -1,6 +1,6 @@
 ---
 name: uloop-screenshot
-description: "Capture screenshots of Unity Editor windows as PNG files. Use when you need to: (1) Screenshot Game View, Scene View, Console, Inspector, or other windows, (2) Capture current visual state for debugging or documentation, (3) Save editor window appearance as image files, (4) Discover interactive UI element coordinates for `simulate-mouse-ui` workflows. Executes via `uloop screenshot` CLI invocation; writes PNG files under `.uloop/outputs/Screenshots/` (or a custom directory) and returns paths plus optional annotated-element metadata as JSON."
+description: "Capture screenshots of Unity Editor windows as PNG files. Use when you need to: (1) Screenshot Game View, Scene View, Console, Inspector, or other windows, (2) Capture current visual state for debugging or documentation, (3) Save editor window appearance as image files, (4) Discover interactive UI element coordinates for `simulate-mouse-ui` workflows. Writes PNG files under `.uloop/outputs/Screenshots/` (or a custom directory) with optional annotated-element metadata."
 ---
 
 # uloop screenshot

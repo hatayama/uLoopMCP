@@ -12,7 +12,6 @@
     "build": "esbuild src/cli.ts --bundle --platform=node --format=cjs --outfile=dist/cli.bundle.cjs --sourcemap --banner:js=\"#!/usr/bin/env node\" --loader:.md=text",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
-    "lint:skills": "tsx scripts/lint-skills.ts",
     "format": "prettier --write src/**/*.ts",
     "format:check": "prettier --check src/**/*.ts",
     "knip": "knip",

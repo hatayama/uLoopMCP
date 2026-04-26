@@ -1,6 +1,6 @@
 ---
 name: uloop-replay-input
-description: "Replay recorded input during PlayMode with frame-precise injection. Use when you need to: (1) Reproduce recorded gameplay exactly, (2) Run E2E tests from recorded input, (3) Generate demo videos with consistent input. Routes through uloop CLI to Unity, which deserializes the JSON recording and pushes the captured Input System device states back into Mouse.current / Keyboard.current frame-by-frame in PlayMode; requires PlayMode and the New Input System."
+description: "Replay recorded input during PlayMode with frame-precise injection. Use when you need to: (1) Reproduce recorded gameplay exactly, (2) Run E2E tests from recorded input, (3) Generate demo videos with consistent input. Deserializes the JSON recording and pushes captured device states back into Mouse.current / Keyboard.current frame-by-frame in PlayMode. Requires PlayMode and the New Input System."
 ---
 
 # uloop replay-input

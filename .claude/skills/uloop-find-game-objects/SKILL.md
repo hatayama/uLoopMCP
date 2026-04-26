@@ -1,6 +1,6 @@
 ---
 name: uloop-find-game-objects
-description: "Find GameObjects in the active scene by various criteria. Use when you need to: (1) Search for objects by name, regex, or path, (2) Find objects with specific components, tags, or layers, (3) Get currently selected GameObjects in Unity Editor. Executes via `uloop find-game-objects` CLI invocation; returns matching GameObjects with hierarchy paths and components as JSON (or writes to a file when multiple GameObjects are selected)."
+description: "Find GameObjects in the active scene by various criteria. Use when you need to: (1) Search for objects by name, regex, or path, (2) Find objects with specific components, tags, or layers, (3) Get currently selected GameObjects in Unity Editor. Returns matching GameObjects with hierarchy paths and components (or writes to a file when multiple GameObjects are selected)."
 ---
 
 # uloop find-game-objects
