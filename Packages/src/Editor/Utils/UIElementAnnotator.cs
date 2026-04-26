@@ -16,11 +16,20 @@ namespace io.github.hatayama.uLoopMCP
         private const int LABEL_PADDING_H = 4;
         private const int LABEL_PADDING_V = 2;
 
-        private static readonly Color BUTTON_COLOR = new Color(0f, 1f, 0.4f, 0.9f);
-        private static readonly Color DRAGGABLE_COLOR = new Color(1f, 0.6f, 0f, 0.9f);
-        private static readonly Color DROP_TARGET_COLOR = new Color(0f, 0.8f, 1f, 0.9f);
-        private static readonly Color SELECTABLE_COLOR = new Color(1f, 1f, 0f, 0.9f);
         private static readonly Color LABEL_BG_COLOR = new Color(0f, 0f, 0f, 0.75f);
+        // Label-based colors separate dense controls where many elements share the same UI type.
+        private static readonly Color[] ANNOTATION_COLORS =
+        {
+            new Color(1f, 0.35f, 0f, 0.95f),
+            new Color(0f, 0.9f, 1f, 0.95f),
+            new Color(1f, 0.15f, 0.65f, 0.95f),
+            new Color(1f, 0.9f, 0f, 0.95f),
+            new Color(0.2f, 1f, 0.35f, 0.95f),
+            new Color(0.65f, 0.45f, 1f, 0.95f),
+            new Color(1f, 1f, 1f, 0.95f),
+            new Color(0.15f, 0.55f, 1f, 0.95f)
+        };
+        private static readonly Color FALLBACK_COLOR = new Color(1f, 1f, 0f, 0.9f);
 
         public static List<UIElementInfo> CollectInteractiveElements()
         {
@@ -331,7 +340,7 @@ namespace io.github.hatayama.uLoopMCP
             float screenMinY = element.BoundsMinY;
             float screenMaxY = element.BoundsMaxY;
 
-            Color color = GetColorForType(element.Type);
+            Color color = GetAnnotationColorForElement(element);
 
             float boxWidth = screenMaxX - screenMinX;
             float boxHeight = screenMaxY - screenMinY;
@@ -410,18 +419,39 @@ namespace io.github.hatayama.uLoopMCP
             labelText.raycastTarget = false;
         }
 
-        private static Color GetColorForType(string type)
+        internal static Color GetAnnotationColorForElement(UIElementInfo element)
         {
-            return type switch
+            Debug.Assert(element != null, "UIElementInfo must not be null.");
+
+            int labelIndex = GetLabelIndex(element.Label);
+            if (labelIndex < 0)
             {
-                "Button" => BUTTON_COLOR,
-                "Toggle" => BUTTON_COLOR,
-                "Draggable" => DRAGGABLE_COLOR,
-                "DropTarget" => DROP_TARGET_COLOR,
-                "Slider" => DRAGGABLE_COLOR,
-                "Scrollbar" => DRAGGABLE_COLOR,
-                _ => SELECTABLE_COLOR
-            };
+                return FALLBACK_COLOR;
+            }
+
+            return ANNOTATION_COLORS[labelIndex % ANNOTATION_COLORS.Length];
+        }
+
+        private static int GetLabelIndex(string label)
+        {
+            if (string.IsNullOrEmpty(label))
+            {
+                return -1;
+            }
+
+            int index = 0;
+            for (int i = 0; i < label.Length; i++)
+            {
+                char labelCharacter = label[i];
+                if (labelCharacter < 'A' || labelCharacter > 'Z')
+                {
+                    return -1;
+                }
+
+                index = index * 26 + labelCharacter - 'A' + 1;
+            }
+
+            return index - 1;
         }
     }
 }
