@@ -142,7 +142,7 @@ That's it! After installing Skills, LLM tools can automatically handle instructi
 
 
 <details>
-<summary>All 17 Bundled Skills</summary>
+<summary>All 16 Bundled Skills</summary>
 
 - `/uloop-launch` - Launch Unity with correct version
 - `/uloop-compile` - Execute compilation
@@ -151,7 +151,6 @@ That's it! After installing Skills, LLM tools can automatically handle instructi
 - `/uloop-clear-console` - Clear console
 - `/uloop-focus-window` - Bring Unity Editor to front
 - `/uloop-get-hierarchy` - Get scene hierarchy
-- `/uloop-execute-menu-item` - Execute menu item
 - `/uloop-find-game-objects` - Find GameObjects
 - `/uloop-screenshot` - Capture EditorWindow
 - `/uloop-simulate-mouse-ui` - Simulate mouse click, long-press, and drag on PlayMode UI elements
