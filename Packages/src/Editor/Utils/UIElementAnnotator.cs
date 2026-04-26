@@ -11,12 +11,14 @@ namespace io.github.hatayama.uLoopMCP
     public static class UIElementAnnotator
     {
         private const int OVERLAY_SORT_ORDER = 32767;
-        private const int LABEL_FONT_SIZE = 18;
+        private const int LABEL_FONT_SIZE = 20;
         private const float BORDER_THICKNESS = 2f;
-        private const int LABEL_PADDING_H = 4;
-        private const int LABEL_PADDING_V = 2;
+        private const float BORDER_OUTLINE_THICKNESS = 5f;
+        private const float BORDER_OUTLINE_OFFSET = 1.5f;
+        private const int LABEL_PADDING_H = 6;
+        private const int LABEL_PADDING_V = 3;
+        private const float LABEL_DARK_TEXT_LUMINANCE_THRESHOLD = 0.62f;
 
-        private static readonly Color LABEL_BG_COLOR = new Color(0f, 0f, 0f, 0.75f);
         // Label-based colors separate dense controls where many elements share the same UI type.
         private static readonly Color[] ANNOTATION_COLORS =
         {
@@ -27,9 +29,19 @@ namespace io.github.hatayama.uLoopMCP
             new Color(0.2f, 1f, 0.35f, 0.95f),
             new Color(0.65f, 0.45f, 1f, 0.95f),
             new Color(1f, 1f, 1f, 0.95f),
-            new Color(0.15f, 0.55f, 1f, 0.95f)
+            new Color(0.15f, 0.55f, 1f, 0.95f),
+            new Color(1f, 0.55f, 0.75f, 0.95f),
+            new Color(0.45f, 1f, 0.8f, 0.95f),
+            new Color(0.9f, 0.45f, 0.15f, 0.95f),
+            new Color(0.45f, 0.85f, 0.1f, 0.95f),
+            new Color(0.95f, 0.2f, 0.2f, 0.95f),
+            new Color(0.55f, 0.7f, 1f, 0.95f),
+            new Color(0.95f, 0.95f, 0.45f, 0.95f),
+            new Color(0.85f, 0.55f, 1f, 0.95f)
         };
         private static readonly Color FALLBACK_COLOR = new Color(1f, 1f, 0f, 0.9f);
+        private static readonly Color DARK_CONTRAST_COLOR = new Color(0f, 0f, 0f, 0.95f);
+        private static readonly Color LIGHT_CONTRAST_COLOR = new Color(1f, 1f, 1f, 0.95f);
 
         public static List<UIElementInfo> CollectInteractiveElements()
         {
@@ -341,17 +353,35 @@ namespace io.github.hatayama.uLoopMCP
             float screenMaxY = element.BoundsMaxY;
 
             Color color = GetAnnotationColorForElement(element);
+            Color contrastColor = GetContrastingTextColor(color);
 
-            float boxWidth = screenMaxX - screenMinX;
-            float boxHeight = screenMaxY - screenMinY;
-
-            CreateBorderEdge(parent, "Top", screenMinX, screenMaxY, boxWidth, BORDER_THICKNESS, color);
-            CreateBorderEdge(parent, "Bottom", screenMinX, screenMinY, boxWidth, BORDER_THICKNESS, color);
-            CreateBorderEdge(parent, "Left", screenMinX, screenMinY, BORDER_THICKNESS, boxHeight, color);
-            CreateBorderEdge(parent, "Right", screenMaxX - BORDER_THICKNESS, screenMinY, BORDER_THICKNESS, boxHeight, color);
+            CreateBorder(
+                parent,
+                "Outline",
+                screenMinX - BORDER_OUTLINE_OFFSET,
+                screenMinY - BORDER_OUTLINE_OFFSET,
+                screenMaxX + BORDER_OUTLINE_OFFSET,
+                screenMaxY + BORDER_OUTLINE_OFFSET,
+                BORDER_OUTLINE_THICKNESS,
+                contrastColor);
+            CreateBorder(parent, "Color", screenMinX, screenMinY, screenMaxX, screenMaxY, BORDER_THICKNESS, color);
 
             string labelText = element.Label;
-            CreateLabel(parent, labelText, screenMinX, screenMaxY + BORDER_THICKNESS, color, font);
+            CreateLabel(parent, labelText, screenMinX, screenMaxY + BORDER_OUTLINE_THICKNESS, color, contrastColor, font);
+        }
+
+        private static void CreateBorder(
+            Transform parent, string name,
+            float minX, float minY, float maxX, float maxY,
+            float thickness, Color color)
+        {
+            float boxWidth = maxX - minX;
+            float boxHeight = maxY - minY;
+
+            CreateBorderEdge(parent, $"{name}_Top", minX, maxY, boxWidth, thickness, color);
+            CreateBorderEdge(parent, $"{name}_Bottom", minX, minY, boxWidth, thickness, color);
+            CreateBorderEdge(parent, $"{name}_Left", minX, minY, thickness, boxHeight, color);
+            CreateBorderEdge(parent, $"{name}_Right", maxX - thickness, minY, thickness, boxHeight, color);
         }
 
         private static void CreateBorderEdge(
@@ -378,7 +408,7 @@ namespace io.github.hatayama.uLoopMCP
         private static void CreateLabel(
             Transform parent, string text,
             float x, float y,
-            Color textColor, Font font)
+            Color backgroundColor, Color textColor, Font font)
         {
             GameObject bgGo = new GameObject("LabelBg");
             bgGo.hideFlags = HideFlags.HideAndDontSave;
@@ -391,7 +421,7 @@ namespace io.github.hatayama.uLoopMCP
             bgRt.anchoredPosition = new Vector2(x, y);
 
             Image bgImage = bgGo.AddComponent<Image>();
-            bgImage.color = LABEL_BG_COLOR;
+            bgImage.color = backgroundColor;
             bgImage.raycastTarget = false;
 
             ContentSizeFitter fitter = bgGo.AddComponent<ContentSizeFitter>();
@@ -430,6 +460,22 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             return ANNOTATION_COLORS[labelIndex % ANNOTATION_COLORS.Length];
+        }
+
+        internal static Color GetContrastingTextColor(Color backgroundColor)
+        {
+            float luminance = CalculateLuminance(backgroundColor);
+            if (luminance >= LABEL_DARK_TEXT_LUMINANCE_THRESHOLD)
+            {
+                return DARK_CONTRAST_COLOR;
+            }
+
+            return LIGHT_CONTRAST_COLOR;
+        }
+
+        private static float CalculateLuminance(Color color)
+        {
+            return color.r * 0.299f + color.g * 0.587f + color.b * 0.114f;
         }
 
         private static int GetLabelIndex(string label)
