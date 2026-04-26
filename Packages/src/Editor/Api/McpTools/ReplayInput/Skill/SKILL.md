@@ -37,7 +37,7 @@ uloop replay-input --action Stop
 
 ## Deterministic Replay
 
-Replay injects the exact same input frame-by-frame, but the game must also be deterministic to produce identical results. See the **"Design Guidelines for Deterministic Replay"** section in the `record-input` skill for the full list of patterns to avoid (`Time.deltaTime`, `Random.Range`, physics, etc.) and their deterministic alternatives.
+Replay injects the exact same input frame-by-frame, but the game must also be deterministic to produce identical results. If replay output must be compared across runs, read [references/deterministic-replay.md](references/deterministic-replay.md) before interpreting failures.
 
 ## Output
 
