@@ -17,7 +17,8 @@ namespace io.github.hatayama.uLoopMCP
         private const int LABEL_PADDING_H = 6;
         private const int LABEL_PADDING_V = 3;
         private const float LABEL_DARK_TEXT_LUMINANCE_THRESHOLD = 0.62f;
-        private const float LABEL_OUTLINE_DISTANCE = 2f;
+        private const float OUTPUT_LABEL_OUTLINE_DISTANCE = 2f;
+        private const float OUTPUT_LABEL_TO_BORDER_GAP = 4f;
         private const string INTERACTION_CLICK = "Click";
         private const string INTERACTION_DRAG = "Drag";
         private const string INTERACTION_DROP = "Drop";
@@ -392,10 +393,11 @@ namespace io.github.hatayama.uLoopMCP
                 parent,
                 labelText,
                 screenMinX,
-                screenMaxY + borderMetrics.OuterOffset + borderMetrics.NeutralThickness,
+                screenMaxY + borderMetrics.OuterOffset + borderMetrics.LabelOutlineDistance + borderMetrics.LabelToBorderGap,
                 color,
                 contrastColor,
-                font);
+                font,
+                borderMetrics.LabelOutlineDistance);
         }
 
         private static void CreateBorder(
@@ -453,7 +455,7 @@ namespace io.github.hatayama.uLoopMCP
         private static void CreateLabel(
             Transform parent, string text,
             float x, float y,
-            Color backgroundColor, Color textColor, Font font)
+            Color backgroundColor, Color textColor, Font font, float outlineDistance)
         {
             GameObject bgGo = new GameObject("LabelBg");
             bgGo.hideFlags = HideFlags.HideAndDontSave;
@@ -471,7 +473,7 @@ namespace io.github.hatayama.uLoopMCP
 
             Outline bgOutline = bgGo.AddComponent<Outline>();
             bgOutline.effectColor = GetContrastPartnerColor(backgroundColor);
-            bgOutline.effectDistance = new Vector2(LABEL_OUTLINE_DISTANCE, -LABEL_OUTLINE_DISTANCE);
+            bgOutline.effectDistance = new Vector2(outlineDistance, -outlineDistance);
 
             ContentSizeFitter fitter = bgGo.AddComponent<ContentSizeFitter>();
             fitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
@@ -545,12 +547,16 @@ namespace io.github.hatayama.uLoopMCP
 
             float neutralThickness = OUTPUT_BORDER_NEUTRAL_THICKNESS / outputResolutionScale;
             float colorThickness = OUTPUT_BORDER_COLOR_THICKNESS / outputResolutionScale;
+            float labelOutlineDistance = OUTPUT_LABEL_OUTLINE_DISTANCE / outputResolutionScale;
+            float labelToBorderGap = OUTPUT_LABEL_TO_BORDER_GAP / outputResolutionScale;
 
             return new AnnotationBorderMetrics(
                 neutralThickness,
                 colorThickness,
                 colorThickness,
-                colorThickness + neutralThickness);
+                colorThickness + neutralThickness,
+                labelOutlineDistance,
+                labelToBorderGap);
         }
 
         internal static string GetInteractionForType(string type)
@@ -654,17 +660,23 @@ namespace io.github.hatayama.uLoopMCP
             public readonly float ColorThickness;
             public readonly float ColorOffset;
             public readonly float OuterOffset;
+            public readonly float LabelOutlineDistance;
+            public readonly float LabelToBorderGap;
 
             public AnnotationBorderMetrics(
                 float neutralThickness,
                 float colorThickness,
                 float colorOffset,
-                float outerOffset)
+                float outerOffset,
+                float labelOutlineDistance,
+                float labelToBorderGap)
             {
                 NeutralThickness = neutralThickness;
                 ColorThickness = colorThickness;
                 ColorOffset = colorOffset;
                 OuterOffset = outerOffset;
+                LabelOutlineDistance = labelOutlineDistance;
+                LabelToBorderGap = labelToBorderGap;
             }
         }
     }

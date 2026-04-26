@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -130,6 +131,36 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         [Test]
+        public void CreateAnnotationOverlay_WhenElementIsAnnotated_ShouldKeepLabelOutlineAwayFromBorder()
+        {
+            List<UIElementInfo> elements = new List<UIElementInfo>
+            {
+                new UIElementInfo
+                {
+                    Label = "A",
+                    Type = "Button",
+                    Interaction = "Click",
+                    BoundsMinX = 10f,
+                    BoundsMinY = 20f,
+                    BoundsMaxX = 110f,
+                    BoundsMaxY = 70f
+                }
+            };
+            GameObject overlay = UIElementAnnotator.CreateAnnotationOverlay(elements, 1f);
+
+            try
+            {
+                RectTransform label = overlay.transform.Find("LabelBg").GetComponent<RectTransform>();
+
+                Assert.That(label.anchoredPosition.y, Is.EqualTo(82f));
+            }
+            finally
+            {
+                UIElementAnnotator.DestroyAnnotationOverlay(overlay);
+            }
+        }
+
+        [Test]
         public void CreateAnnotationOverlay_WhenResolutionScaleIsHalf_ShouldCompensateBorderThickness()
         {
             List<UIElementInfo> elements = new List<UIElementInfo>
@@ -152,10 +183,14 @@ namespace io.github.hatayama.uLoopMCP
                 RectTransform innerTop = overlay.transform.Find("Border_DarkInner_Top").GetComponent<RectTransform>();
                 RectTransform colorTop = overlay.transform.Find("Border_ColorMiddle_Top").GetComponent<RectTransform>();
                 RectTransform outerTop = overlay.transform.Find("Border_LightOuter_Top").GetComponent<RectTransform>();
+                RectTransform label = overlay.transform.Find("LabelBg").GetComponent<RectTransform>();
+                Outline labelOutline = overlay.transform.Find("LabelBg").GetComponent<Outline>();
 
                 Assert.That(innerTop.sizeDelta.y, Is.EqualTo(4f));
                 Assert.That(colorTop.sizeDelta.y, Is.EqualTo(8f));
                 Assert.That(outerTop.sizeDelta.y, Is.EqualTo(4f));
+                Assert.That(label.anchoredPosition.y, Is.EqualTo(94f));
+                Assert.That(labelOutline.effectDistance, Is.EqualTo(new Vector2(4f, -4f)));
             }
             finally
             {

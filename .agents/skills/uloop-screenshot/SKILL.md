@@ -111,4 +111,4 @@ When multiple windows match (e.g., multiple Inspector windows or when using `con
 - Use `uloop focus-window` first if needed
 - Target window must be open in Unity Editor
 - Window name matching is always case-insensitive
-- Annotated rendering screenshots compensate border thickness for `ResolutionScale`, so saved PNG outlines stay readable after downscaling
+- Annotated rendering screenshots compensate border and label-outline thickness for `ResolutionScale`, with a small gap between labels and element borders
