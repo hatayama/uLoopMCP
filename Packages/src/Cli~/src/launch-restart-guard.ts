@@ -63,7 +63,7 @@ export function beginUnityRestartAttempt(
   dependencies.writeFileSyncFn(guardPath, `${JSON.stringify(record, null, 2)}\n`, 'utf8');
 }
 
-export function assertUnityRestartAllowed(
+function assertUnityRestartAllowed(
   projectPath: string,
   dependencies: UnityRestartGuardDependencies = defaultDependencies,
 ): void {
