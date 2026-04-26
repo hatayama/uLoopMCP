@@ -73,15 +73,15 @@ Returns JSON with:
   - `isActive` (boolean): Active state in hierarchy
   - `tag` (string): GameObject tag
   - `layer` (number): Layer index
-  - `components` (array): Each entry has `type` (short name, e.g., `Rigidbody`), `fullTypeName` (e.g., `UnityEngine.Rigidbody`), and `properties` (array of `{name, type, value}` pairs — only when `--include-inherited-properties` is set; otherwise omitted)
-- `totalFound` (number): Total matches before `--max-results` clipping
+  - `components` (array): Each entry has `type` (short name, e.g., `Rigidbody`), `fullTypeName` (e.g., `UnityEngine.Rigidbody`), and `properties` (array of Inspector-visible `{name, type, value}` pairs)
+- `totalFound` (number): Number of results returned inline, or number exported for multi-selection file output. For search modes, this is after `--max-results` clipping and serialization.
 - `errorMessage` (string): Top-level failure summary (empty on success)
-- `processingErrors` (array): Per-GameObject serialization failures, each `{gameObjectName, gameObjectPath, error}`. Empty on clean runs.
+- `processingErrors` (array): Selected-mode per-GameObject serialization failures, each `{gameObjectName, gameObjectPath, error}`. Omitted/null or empty on clean runs.
 
 ### Multi-selection file export
 
-For `Selected` mode with **multiple** GameObjects, `results` is empty and the data is written to a file instead. Two extra fields appear:
-- `resultsFilePath` (string): Absolute path under `.uloop/outputs/FindGameObjectsResults/`
+For `Selected` mode with **multiple** successfully serialized GameObjects, inline `results` is not populated and the data is written to a file instead. Two extra fields appear:
+- `resultsFilePath` (string): Relative path under `.uloop/outputs/FindGameObjectsResults/`
 - `message` (string): Human-readable summary (e.g., "5 GameObjects exported")
 
 Single-selection and search-mode calls (`Exact`, `Path`, `Regex`, `Contains`) always return inline. No selection (`Selected` mode with empty selection) returns empty `results` plus a `message`.
