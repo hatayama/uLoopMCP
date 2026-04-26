@@ -56,7 +56,3 @@ When writing or updating skill descriptions in `.claude/skills/*/SKILL.md`, foll
 3. **How** (last): Technical implementation details (e.g., "Executes C# code dynamically via uloop CLI")
 
 This structure follows the "inverted pyramid" principle - the most important information comes first, enabling both AI and users to quickly assess skill relevance for a given task.
-
-## Skill Tuning
-
-When you create a new skill or substantially revise an existing one under `.claude/skills/`, run the `empirical-prompt-tuning` skill against it. The per-skill artifacts (scenarios, checklist, ledger, iteration reports) are local working files — keep them in `.claude/skill-tuning/<skill-name>/` (gitignored) and do not commit them.
