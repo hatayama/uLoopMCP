@@ -83,6 +83,18 @@ namespace io.github.hatayama.uLoopMCP
             Assert.That(edgeRects.Right, Is.EqualTo(new Rect(108f, 22f, 2f, 46f)));
         }
 
+        [Test]
+        public void GetAnnotationBorderColors_WhenAnnotationColorIsProvided_ShouldPutAnnotationColorInTheMiddle()
+        {
+            Color annotationColor = new Color(1f, 0.15f, 0.65f, 0.95f);
+            UIElementAnnotator.AnnotationBorderColors borderColors =
+                UIElementAnnotator.GetAnnotationBorderColors(annotationColor);
+
+            Assert.That(borderColors.Inner, Is.EqualTo(new Color(0f, 0f, 0f, 0.95f)));
+            Assert.That(borderColors.Middle, Is.EqualTo(annotationColor));
+            Assert.That(borderColors.Outer, Is.EqualTo(new Color(1f, 1f, 1f, 0.95f)));
+        }
+
         private static string CreateColorKey(Color color)
         {
             return $"{color.r:F3}:{color.g:F3}:{color.b:F3}:{color.a:F3}";

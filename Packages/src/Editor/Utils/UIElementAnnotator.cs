@@ -355,26 +355,27 @@ namespace io.github.hatayama.uLoopMCP
 
             Color color = GetAnnotationColorForElement(element);
             Color contrastColor = GetContrastingTextColor(color);
+            AnnotationBorderColors borderColors = GetAnnotationBorderColors(color);
 
             CreateBorder(
                 parent,
-                "DarkOutline",
+                "LightOuter",
                 screenMinX - BORDER_OUTER_OFFSET,
                 screenMinY - BORDER_OUTER_OFFSET,
                 screenMaxX + BORDER_OUTER_OFFSET,
                 screenMaxY + BORDER_OUTER_OFFSET,
                 BORDER_THICKNESS,
-                DARK_CONTRAST_COLOR);
+                borderColors.Outer);
             CreateBorder(
                 parent,
-                "LightOutline",
+                "ColorMiddle",
                 screenMinX - BORDER_MIDDLE_OFFSET,
                 screenMinY - BORDER_MIDDLE_OFFSET,
                 screenMaxX + BORDER_MIDDLE_OFFSET,
                 screenMaxY + BORDER_MIDDLE_OFFSET,
                 BORDER_THICKNESS,
-                LIGHT_CONTRAST_COLOR);
-            CreateBorder(parent, "Color", screenMinX, screenMinY, screenMaxX, screenMaxY, BORDER_THICKNESS, color);
+                borderColors.Middle);
+            CreateBorder(parent, "DarkInner", screenMinX, screenMinY, screenMaxX, screenMaxY, BORDER_THICKNESS, borderColors.Inner);
 
             string labelText = element.Label;
             CreateLabel(parent, labelText, screenMinX, screenMaxY + BORDER_OUTER_OFFSET + BORDER_THICKNESS, color, contrastColor, font);
@@ -516,6 +517,11 @@ namespace io.github.hatayama.uLoopMCP
             return DARK_CONTRAST_COLOR;
         }
 
+        internal static AnnotationBorderColors GetAnnotationBorderColors(Color annotationColor)
+        {
+            return new AnnotationBorderColors(DARK_CONTRAST_COLOR, annotationColor, LIGHT_CONTRAST_COLOR);
+        }
+
         private static float CalculateLuminance(Color color)
         {
             return color.r * 0.299f + color.g * 0.587f + color.b * 0.114f;
@@ -556,6 +562,20 @@ namespace io.github.hatayama.uLoopMCP
                 Bottom = bottom;
                 Left = left;
                 Right = right;
+            }
+        }
+
+        internal readonly struct AnnotationBorderColors
+        {
+            public readonly Color Inner;
+            public readonly Color Middle;
+            public readonly Color Outer;
+
+            public AnnotationBorderColors(Color inner, Color middle, Color outer)
+            {
+                Inner = inner;
+                Middle = middle;
+                Outer = outer;
             }
         }
     }
