@@ -265,6 +265,64 @@ namespace Tests.PlayMode
             Assert.AreEqual(endScreenPos, tracker.LastDragPosition, "Final drag position should match end position exactly");
         }
 
+        [UnityTest]
+        public IEnumerator DragOneShot_WithBypassRaycast_Should_DragTargetBehindBlocker()
+        {
+            DragTracker tracker = CreateDraggableElement("DragTarget", Vector2.zero, new Vector2(200f, 100f));
+            GameObject blocker = CreateUIElement("Blocker", Vector2.zero, new Vector2(260f, 160f));
+            blocker.AddComponent<Image>();
+            yield return null;
+
+            Vector2 screenPos = GetScreenPosition(tracker.gameObject);
+
+            yield return RunTool(new JObject
+            {
+                ["action"] = MouseAction.Drag.ToString(),
+                ["fromX"] = screenPos.x,
+                ["fromY"] = screenPos.y,
+                ["x"] = screenPos.x + 100f,
+                ["y"] = screenPos.y,
+                ["dragSpeed"] = 0f,
+                ["bypassRaycast"] = true,
+                ["targetPath"] = "TestCanvas/DragTarget"
+            });
+
+            Assert.IsTrue(lastResponse.Success);
+            Assert.IsTrue(tracker.BeginDragCalled, "BeginDrag should be fired");
+            Assert.AreEqual(1, tracker.DragCallCount, "Exactly one drag event should be fired for instant drag");
+            Assert.IsTrue(tracker.EndDragCalled, "EndDrag should be fired");
+            Assert.AreEqual("DragTarget", lastResponse.HitGameObjectName);
+        }
+
+        [UnityTest]
+        public IEnumerator DragOneShot_WithBypassRaycast_Should_DropOnTargetPathBehindBlocker()
+        {
+            DragTracker dragTracker = CreateDraggableElement("DragTarget", new Vector2(-120f, 0f), new Vector2(100f, 80f));
+            DropTracker dropTracker = CreateDropTarget("DropTarget", new Vector2(120f, 0f), new Vector2(120f, 90f));
+            GameObject blocker = CreateUIElement("Blocker", Vector2.zero, new Vector2(400f, 180f));
+            blocker.AddComponent<Image>();
+            yield return null;
+
+            Vector2 startPos = GetScreenPosition(dragTracker.gameObject);
+            Vector2 endPos = GetScreenPosition(dropTracker.gameObject);
+
+            yield return RunTool(new JObject
+            {
+                ["action"] = MouseAction.Drag.ToString(),
+                ["fromX"] = startPos.x,
+                ["fromY"] = startPos.y,
+                ["x"] = endPos.x,
+                ["y"] = endPos.y,
+                ["dragSpeed"] = 0f,
+                ["bypassRaycast"] = true,
+                ["targetPath"] = "TestCanvas/DragTarget",
+                ["dropTargetPath"] = "TestCanvas/DropTarget"
+            });
+
+            Assert.IsTrue(lastResponse.Success);
+            Assert.IsTrue(dropTracker.DropCalled, "Drop should be fired on the explicit drop target");
+        }
+
         #endregion
 
         #region Split Drag Tests
@@ -418,6 +476,33 @@ namespace Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator DragStart_WithBypassRaycast_Should_StartTargetBehindBlocker()
+        {
+            DragTracker tracker = CreateDraggableElement("DragTarget", Vector2.zero, new Vector2(200f, 100f));
+            GameObject blocker = CreateUIElement("Blocker", Vector2.zero, new Vector2(260f, 160f));
+            blocker.AddComponent<Image>();
+            yield return null;
+
+            Vector2 screenPos = GetScreenPosition(tracker.gameObject);
+
+            yield return RunTool(new JObject
+            {
+                ["action"] = MouseAction.DragStart.ToString(),
+                ["x"] = screenPos.x,
+                ["y"] = screenPos.y,
+                ["bypassRaycast"] = true,
+                ["targetPath"] = "TestCanvas/DragTarget"
+            });
+
+            Assert.IsTrue(lastResponse.Success);
+            Assert.IsTrue(tracker.BeginDragCalled, "BeginDrag should be fired");
+            Assert.AreEqual("DragTarget", lastResponse.HitGameObjectName);
+
+            yield return EndDragInstant(screenPos.x + 100f, screenPos.y);
+            Assert.IsTrue(tracker.EndDragCalled, "EndDrag should be fired");
+        }
+
+        [UnityTest]
         public IEnumerator DragStart_AtEmptyPosition_Should_ReturnFailure()
         {
             yield return null;
@@ -466,6 +551,13 @@ namespace Tests.PlayMode
             GameObject go = CreateUIElement(name, anchoredPosition, sizeDelta);
             go.AddComponent<Image>();
             return go.AddComponent<DragTracker>();
+        }
+
+        private DropTracker CreateDropTarget(string name, Vector2 anchoredPosition, Vector2 sizeDelta)
+        {
+            GameObject go = CreateUIElement(name, anchoredPosition, sizeDelta);
+            go.AddComponent<Image>();
+            return go.AddComponent<DropTracker>();
         }
 
         private GameObject CreateUIElement(string name, Vector2 anchoredPosition, Vector2 sizeDelta)
@@ -569,5 +661,12 @@ namespace Tests.PlayMode
         }
 
         public void OnEndDrag(PointerEventData eventData) { EndDragCalled = true; }
+    }
+
+    public class DropTracker : MonoBehaviour, IDropHandler
+    {
+        public bool DropCalled { get; private set; }
+
+        public void OnDrop(PointerEventData eventData) { DropCalled = true; }
     }
 }
