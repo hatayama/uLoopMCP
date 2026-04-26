@@ -69,10 +69,37 @@ namespace io.github.hatayama.uLoopMCP
                 };
             }
 
+            if (parameters.BypassRaycast && parameters.Action != MouseAction.Click)
+            {
+                return new SimulateMouseUiResponse
+                {
+                    Success = false,
+                    Message = "BypassRaycast currently supports Click only.",
+                    Action = parameters.Action.ToString()
+                };
+            }
+
+            if (parameters.BypassRaycast && string.IsNullOrWhiteSpace(parameters.TargetPath))
+            {
+                return new SimulateMouseUiResponse
+                {
+                    Success = false,
+                    Message = "TargetPath is required when BypassRaycast is true.",
+                    Action = parameters.Action.ToString()
+                };
+            }
+
             VibeLogger.LogInfo(
                 "simulate_mouse_start",
                 "Mouse simulation started",
-                new { Action = parameters.Action.ToString(), X = parameters.X, Y = parameters.Y },
+                new
+                {
+                    Action = parameters.Action.ToString(),
+                    X = parameters.X,
+                    Y = parameters.Y,
+                    BypassRaycast = parameters.BypassRaycast,
+                    TargetPath = parameters.TargetPath
+                },
                 correlationId: correlationId
             );
 
@@ -170,7 +197,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             Vector2 inputPos = new Vector2(parameters.X, parameters.Y);
             Vector2 screenPos = InputToScreen(inputPos);
-            RaycastResult? hit = RaycastUI(screenPos, eventSystem);
+            RaycastResult? hit = parameters.BypassRaycast ? null : RaycastUI(screenPos, eventSystem);
 
             PointerEventData.InputButton inputButton = ToInputButton(parameters.Button);
             PointerEventData pointerData = new PointerEventData(eventSystem)
@@ -183,10 +210,45 @@ namespace io.github.hatayama.uLoopMCP
             GameObject? target = null;
             GameObject? pressTarget = null;
             GameObject? clickTarget = null;
+            GameObject? rawTarget = null;
 
-            if (hit != null)
+            if (parameters.BypassRaycast)
             {
-                GameObject rawTarget = hit.Value.gameObject;
+                TargetPathLookupResult lookupResult = FindActiveGameObjectByPath(parameters.TargetPath);
+                rawTarget = lookupResult.Target;
+                if (rawTarget == null)
+                {
+                    string message = lookupResult.MatchCount == 0
+                        ? $"TargetPath '{parameters.TargetPath}' was not found."
+                        : $"TargetPath '{parameters.TargetPath}' matched {lookupResult.MatchCount} active GameObjects. Use a unique hierarchy path.";
+
+                    return new SimulateMouseUiResponse
+                    {
+                        Success = false,
+                        Message = message,
+                        Action = MouseAction.Click.ToString(),
+                        PositionX = inputPos.x,
+                        PositionY = inputPos.y
+                    };
+                }
+
+                RaycastResult directRaycast = CreateDirectRaycastResult(rawTarget);
+                pointerData.pointerCurrentRaycast = directRaycast;
+                pointerData.pointerPressRaycast = directRaycast;
+
+                pressTarget = ExecuteEvents.GetEventHandler<IPointerDownHandler>(rawTarget);
+                clickTarget = ExecuteEvents.GetEventHandler<IPointerClickHandler>(rawTarget);
+                target = pressTarget ?? clickTarget;
+
+                if (target != null)
+                {
+                    pointerData.pointerPress = target;
+                    pointerData.rawPointerPress = rawTarget;
+                }
+            }
+            else if (hit != null)
+            {
+                rawTarget = hit.Value.gameObject;
                 pointerData.pointerCurrentRaycast = hit.Value;
                 pointerData.pointerPressRaycast = hit.Value;
 
@@ -202,6 +264,18 @@ namespace io.github.hatayama.uLoopMCP
                 }
             }
 
+            if (parameters.BypassRaycast && target == null)
+            {
+                return new SimulateMouseUiResponse
+                {
+                    Success = false,
+                    Message = $"TargetPath '{parameters.TargetPath}' has no pointer click or pointer down handler.",
+                    Action = MouseAction.Click.ToString(),
+                    PositionX = inputPos.x,
+                    PositionY = inputPos.y
+                };
+            }
+
             SimulateMouseUiOverlayState.Update(
                 MouseAction.Click, inputPos, null,
                 target?.name, Handles.GetMainGameViewSize());
@@ -209,12 +283,12 @@ namespace io.github.hatayama.uLoopMCP
             await PlayExpandAnimation(ct);
 
             // Fire click events after expand animation so the user sees where the click lands
-            if (hit != null)
+            if (rawTarget != null)
             {
                 if (pressTarget != null)
                 {
                     ExecuteEvents.ExecuteHierarchy(
-                        hit.Value.gameObject, pointerData, ExecuteEvents.pointerDownHandler);
+                        rawTarget, pointerData, ExecuteEvents.pointerDownHandler);
                     ExecuteEvents.Execute(pressTarget, pointerData, ExecuteEvents.pointerUpHandler);
                 }
 
@@ -230,7 +304,9 @@ namespace io.github.hatayama.uLoopMCP
             {
                 Success = true,
                 Message = target != null
-                    ? $"Clicked '{target.name}' at ({inputPos.x:F1}, {inputPos.y:F1})"
+                    ? parameters.BypassRaycast
+                        ? $"Bypass-clicked '{target.name}' at ({inputPos.x:F1}, {inputPos.y:F1}) via '{parameters.TargetPath}'"
+                        : $"Clicked '{target.name}' at ({inputPos.x:F1}, {inputPos.y:F1})"
                     : $"Clicked at ({inputPos.x:F1}, {inputPos.y:F1}) - no UI element hit",
                 Action = MouseAction.Click.ToString(),
                 HitGameObjectName = target?.name,
@@ -780,6 +856,57 @@ namespace io.github.hatayama.uLoopMCP
         private static RaycastResult? RaycastUI(Vector2 screenPosition, EventSystem eventSystem)
         {
             return UiRaycastHelper.RaycastUI(screenPosition, eventSystem);
+        }
+
+        private static TargetPathLookupResult FindActiveGameObjectByPath(string targetPath)
+        {
+            string normalizedPath = targetPath.Trim().Trim('/');
+            if (string.IsNullOrEmpty(normalizedPath))
+            {
+                return new TargetPathLookupResult(null, 0);
+            }
+
+            GameObject[] gameObjects = UnityEngine.Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None);
+            GameObject? matchedTarget = null;
+            int matchCount = 0;
+
+            foreach (GameObject gameObject in gameObjects)
+            {
+                if (!string.Equals(
+                    GameObjectPathUtility.GetFullPath(gameObject),
+                    normalizedPath,
+                    StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                matchCount++;
+                matchedTarget = gameObject;
+            }
+
+            return matchCount == 1
+                ? new TargetPathLookupResult(matchedTarget, matchCount)
+                : new TargetPathLookupResult(null, matchCount);
+        }
+
+        private static RaycastResult CreateDirectRaycastResult(GameObject target)
+        {
+            return new RaycastResult
+            {
+                gameObject = target
+            };
+        }
+
+        private readonly struct TargetPathLookupResult
+        {
+            public TargetPathLookupResult(GameObject? target, int matchCount)
+            {
+                Target = target;
+                MatchCount = matchCount;
+            }
+
+            public GameObject? Target { get; }
+            public int MatchCount { get; }
         }
 
         private static bool IsDragAction(MouseAction action)

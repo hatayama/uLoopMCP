@@ -3,6 +3,7 @@ namespace io.github.hatayama.uLoopMCP
     public class UIElementInfo
     {
         public string Name { get; set; } = "";
+        public string Path { get; set; } = "";
         public string Type { get; set; } = "";
         public string Interaction { get; set; } = "";
         public float SimX { get; set; }

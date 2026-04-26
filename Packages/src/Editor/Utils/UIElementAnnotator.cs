@@ -244,6 +244,7 @@ namespace io.github.hatayama.uLoopMCP
             elements.Add(new UIElementInfo
             {
                 Name = name,
+                Path = GameObjectPathUtility.GetFullPath(go),
                 Type = type,
                 Interaction = GetInteractionForType(type),
                 SimX = centerX,

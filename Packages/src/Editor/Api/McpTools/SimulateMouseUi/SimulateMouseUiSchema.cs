@@ -27,5 +27,11 @@ namespace io.github.hatayama.uLoopMCP
 
         [Description("Mouse button: Left(0, default), Right(1), Middle(2).")]
         public MouseButton Button { get; set; } = MouseButton.Left;
+
+        [Description("Bypass EventSystem raycast and send the click directly to TargetPath. Useful for clicking UI behind a raycast-blocking overlay.")]
+        public bool BypassRaycast { get; set; } = false;
+
+        [Description("Hierarchy path of the target GameObject used when BypassRaycast is true, for example Canvas/Panel/Button.")]
+        public string TargetPath { get; set; } = "";
     }
 }
