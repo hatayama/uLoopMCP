@@ -55,7 +55,7 @@ Set `Application.targetFrameRate = 60` (or your target) to reduce frame timing v
 
 ## Output
 
-Returns JSON with:
+The CLI prints JSON with:
 - `Success`: Whether the operation succeeded
 - `Message`: Status message
 - `Action`: Echoes which action was executed (`Start` or `Stop`)
@@ -63,4 +63,4 @@ Returns JSON with:
 - `TotalFrames`: Number of frames recorded (nullable int; populated on `Stop` only)
 - `DurationSeconds`: Recording duration in seconds (nullable float; populated on `Stop` only)
 
-These are the only six fields. There is no `RecordingId`, `StartTimestamp`, `KeysCaptured`, or per-frame data in the response — frame data lives only in the JSON file at `OutputPath`.
+The CLI output contains only these six payload fields. Internal metadata such as `Ver` is removed before printing. There is no `RecordingId`, `StartTimestamp`, `KeysCaptured`, or per-frame data in the response — frame data lives only in the JSON file at `OutputPath`.
