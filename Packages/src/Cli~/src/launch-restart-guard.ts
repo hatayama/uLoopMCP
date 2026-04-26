@@ -73,7 +73,7 @@ function assertUnityRestartAllowed(
     return;
   }
   const elapsedMilliseconds = dependencies.nowFn() - record.startedAt;
-  if (elapsedMilliseconds >= UNITY_RESTART_GUARD_COOLDOWN_MS) {
+  if (elapsedMilliseconds < 0 || elapsedMilliseconds >= UNITY_RESTART_GUARD_COOLDOWN_MS) {
     return;
   }
 

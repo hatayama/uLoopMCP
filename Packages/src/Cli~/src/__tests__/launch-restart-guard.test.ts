@@ -94,6 +94,27 @@ describe('launch restart guard', () => {
     });
   });
 
+  it('allows a Unity restart attempt when the guard record is future dated', () => {
+    const guardPath: string = getUnityRestartGuardFilePath(projectPath);
+    files.set(
+      guardPath,
+      `${JSON.stringify({
+        projectPath,
+        startedAt: now + 1,
+        pid: 1357,
+      })}\n`,
+    );
+
+    beginUnityRestartAttempt(projectPath, dependencies);
+
+    const record: GuardRecord = readWrittenRecord(guardPath);
+    expect(record).toEqual({
+      projectPath,
+      startedAt: 1000000,
+      pid: 2468,
+    });
+  });
+
   function readExistingFile(path: string): string {
     const content: string | undefined = files.get(path);
     if (content === undefined) {
