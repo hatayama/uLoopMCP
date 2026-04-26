@@ -12,7 +12,7 @@ Simulate mouse interaction on Unity PlayMode UI: $ARGUMENTS
 
 1. Ensure Unity is in PlayMode (use `uloop control-play-mode --action Play` if not)
 2. Get UI element info: `uloop screenshot --capture-mode rendering --annotate-elements --elements-only`
-3. Use the `AnnotatedElements` array to find the target element by `Name` or `Label` (A=frontmost, B=next, ...). Use `SimX`/`SimY` directly as `--x`/`--y` coordinates.
+3. Use the `AnnotatedElements` array to find the target element by `Name` or `Label` (A=frontmost, B=next, ...). Use `Interaction` to distinguish click targets from drag/drop/text targets, then use `SimX`/`SimY` directly as `--x`/`--y` coordinates.
 4. Execute the appropriate `uloop simulate-mouse-ui` command
 5. Take a screenshot to verify the result: `uloop screenshot --capture-mode rendering --annotate-elements`
 6. Report what happened

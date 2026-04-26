@@ -22,7 +22,7 @@ uloop screenshot [--window-name <name>] [--resolution-scale <scale>] [--match-mo
 | `--match-mode` | enum | `exact` | Window name matching mode: `exact`, `prefix`, or `contains`. Ignored when `--capture-mode rendering`. |
 | `--capture-mode` | enum | `window` | `window`=capture EditorWindow including toolbar, `rendering`=capture game rendering only (PlayMode required, coordinates match simulate-mouse) |
 | `--output-directory` | string | `""` | Output directory path for saving screenshots. When empty, uses default path (.uloop/outputs/Screenshots/). Accepts absolute paths. |
-| `--annotate-elements` | boolean | `false` | Annotate interactive UI elements with index labels (A, B, C...) on the screenshot. Only works with `--capture-mode rendering` in PlayMode. |
+| `--annotate-elements` | boolean | `false` | Annotate interactive UI elements with index labels and interaction hints (A CLICK, B DRAG, ...). Only works with `--capture-mode rendering` in PlayMode. |
 | `--elements-only` | boolean | `false` | Return only annotated element JSON without capturing a screenshot image. Requires `--annotate-elements` and `--capture-mode rendering` in PlayMode. |
 
 ## Match Modes
@@ -84,9 +84,10 @@ Returns JSON with:
   - `ResolutionScale`: Resolution scale used for capture
   - `YOffset`: Y offset used in `sim_y = image_y / ResolutionScale + YOffset` when `CoordinateSystem` is `"gameView"`
   - `AnnotatedElements`: Array of annotated UI element metadata. Empty unless `--annotate-elements` is used. Sorted by z-order (frontmost first). Each item contains:
-    - `Label`: Index label shown on the screenshot (`A`=frontmost, `B`=next, ...)
+    - `Label`: Index label in JSON (`A`=frontmost, `B`=next, ...). Screenshot labels also include the interaction hint, such as `A CLICK` or `B DRAG`.
     - `Name`: Element name
     - `Type`: Element type (`Button`, `Toggle`, `Slider`, `Dropdown`, `InputField`, `Scrollbar`, `Draggable`, `DropTarget`, `Selectable`)
+    - `Interaction`: Derived interaction category (`Click`, `Drag`, `Drop`, `Text`). Use this to choose between `simulate-mouse-ui --action Click` and drag actions.
     - `SimX`, `SimY`: Center position in simulate-mouse coordinates (use directly with `--x` and `--y`)
     - `BoundsMinX`, `BoundsMinY`, `BoundsMaxX`, `BoundsMaxY`: Bounding box in simulate-mouse coordinates
     - `SortingOrder`: Canvas sorting order (higher = in front)

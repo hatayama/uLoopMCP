@@ -19,6 +19,10 @@ namespace io.github.hatayama.uLoopMCP
         private const int LABEL_PADDING_V = 3;
         private const float LABEL_DARK_TEXT_LUMINANCE_THRESHOLD = 0.62f;
         private const float LABEL_OUTLINE_DISTANCE = 2f;
+        private const string INTERACTION_CLICK = "Click";
+        private const string INTERACTION_DRAG = "Drag";
+        private const string INTERACTION_DROP = "Drop";
+        private const string INTERACTION_TEXT = "Text";
 
         // Label-based colors separate dense controls where many elements share the same UI type.
         private static readonly Color[] ANNOTATION_COLORS =
@@ -239,6 +243,7 @@ namespace io.github.hatayama.uLoopMCP
             {
                 Name = name,
                 Type = type,
+                Interaction = GetInteractionForType(type),
                 SimX = centerX,
                 SimY = centerY,
                 BoundsMinX = minX,
@@ -377,7 +382,7 @@ namespace io.github.hatayama.uLoopMCP
                 borderColors.Middle);
             CreateBorder(parent, "DarkInner", screenMinX, screenMinY, screenMaxX, screenMaxY, BORDER_THICKNESS, borderColors.Inner);
 
-            string labelText = element.Label;
+            string labelText = CreateDisplayLabel(element);
             CreateLabel(parent, labelText, screenMinX, screenMaxY + BORDER_OUTER_OFFSET + BORDER_THICKNESS, color, contrastColor, font);
         }
 
@@ -520,6 +525,44 @@ namespace io.github.hatayama.uLoopMCP
         internal static AnnotationBorderColors GetAnnotationBorderColors(Color annotationColor)
         {
             return new AnnotationBorderColors(DARK_CONTRAST_COLOR, annotationColor, LIGHT_CONTRAST_COLOR);
+        }
+
+        internal static string GetInteractionForType(string type)
+        {
+            if (type == "Slider" || type == "Scrollbar" || type == "Draggable")
+            {
+                return INTERACTION_DRAG;
+            }
+
+            if (type == "DropTarget")
+            {
+                return INTERACTION_DROP;
+            }
+
+            if (type == "InputField")
+            {
+                return INTERACTION_TEXT;
+            }
+
+            return INTERACTION_CLICK;
+        }
+
+        internal static string CreateDisplayLabel(UIElementInfo element)
+        {
+            Debug.Assert(element != null, "UIElementInfo must not be null.");
+
+            string interaction = element.Interaction;
+            if (string.IsNullOrEmpty(interaction))
+            {
+                interaction = GetInteractionForType(element.Type);
+            }
+
+            if (string.IsNullOrEmpty(element.Label))
+            {
+                return interaction.ToUpperInvariant();
+            }
+
+            return $"{element.Label} {interaction.ToUpperInvariant()}";
         }
 
         private static float CalculateLuminance(Color color)

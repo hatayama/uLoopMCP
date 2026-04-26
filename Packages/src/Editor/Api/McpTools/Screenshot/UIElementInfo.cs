@@ -4,6 +4,7 @@ namespace io.github.hatayama.uLoopMCP
     {
         public string Name { get; set; } = "";
         public string Type { get; set; } = "";
+        public string Interaction { get; set; } = "";
         public float SimX { get; set; }
         public float SimY { get; set; }
         public float BoundsMinX { get; set; }

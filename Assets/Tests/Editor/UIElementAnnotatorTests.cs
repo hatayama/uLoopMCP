@@ -95,6 +95,53 @@ namespace io.github.hatayama.uLoopMCP
             Assert.That(borderColors.Outer, Is.EqualTo(new Color(1f, 1f, 1f, 0.95f)));
         }
 
+        [Test]
+        public void GetInteractionForType_WhenTypeIsButton_ShouldReturnClick()
+        {
+            string interaction = UIElementAnnotator.GetInteractionForType("Button");
+
+            Assert.That(interaction, Is.EqualTo("Click"));
+        }
+
+        [Test]
+        public void GetInteractionForType_WhenTypeIsSlider_ShouldReturnDrag()
+        {
+            string interaction = UIElementAnnotator.GetInteractionForType("Slider");
+
+            Assert.That(interaction, Is.EqualTo("Drag"));
+        }
+
+        [Test]
+        public void GetInteractionForType_WhenTypeIsDraggable_ShouldReturnDrag()
+        {
+            string interaction = UIElementAnnotator.GetInteractionForType("Draggable");
+
+            Assert.That(interaction, Is.EqualTo("Drag"));
+        }
+
+        [Test]
+        public void GetInteractionForType_WhenTypeIsDropTarget_ShouldReturnDrop()
+        {
+            string interaction = UIElementAnnotator.GetInteractionForType("DropTarget");
+
+            Assert.That(interaction, Is.EqualTo("Drop"));
+        }
+
+        [Test]
+        public void CreateDisplayLabel_WhenElementIsDraggable_ShouldAppendInteraction()
+        {
+            UIElementInfo element = new UIElementInfo
+            {
+                Label = "B",
+                Type = "Draggable",
+                Interaction = "Drag"
+            };
+
+            string displayLabel = UIElementAnnotator.CreateDisplayLabel(element);
+
+            Assert.That(displayLabel, Is.EqualTo("B DRAG"));
+        }
+
         private static string CreateColorKey(Color color)
         {
             return $"{color.r:F3}:{color.g:F3}:{color.b:F3}:{color.a:F3}";
