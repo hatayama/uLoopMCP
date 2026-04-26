@@ -139,7 +139,7 @@ namespace io.github.hatayama.uLoopMCP
 
             string displayLabel = UIElementAnnotator.CreateDisplayLabel(element);
 
-            Assert.That(displayLabel, Is.EqualTo("B DRAG"));
+            Assert.That(displayLabel, Is.EqualTo("B / DRAG"));
         }
 
         private static string CreateColorKey(Color color)

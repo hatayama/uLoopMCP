@@ -23,6 +23,7 @@ namespace io.github.hatayama.uLoopMCP
         private const string INTERACTION_DRAG = "Drag";
         private const string INTERACTION_DROP = "Drop";
         private const string INTERACTION_TEXT = "Text";
+        private const string DISPLAY_LABEL_SEPARATOR = " / ";
 
         // Label-based colors separate dense controls where many elements share the same UI type.
         private static readonly Color[] ANNOTATION_COLORS =
@@ -562,7 +563,7 @@ namespace io.github.hatayama.uLoopMCP
                 return interaction.ToUpperInvariant();
             }
 
-            return $"{element.Label} {interaction.ToUpperInvariant()}";
+            return $"{element.Label}{DISPLAY_LABEL_SEPARATOR}{interaction.ToUpperInvariant()}";
         }
 
         private static float CalculateLuminance(Color color)
