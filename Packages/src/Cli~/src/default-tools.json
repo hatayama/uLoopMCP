@@ -383,7 +383,7 @@
           },
           "BypassRaycast": {
             "type": "boolean",
-            "description": "Bypass EventSystem raycast and send click, long-press, or drag events directly to TargetPath. Useful for interacting with UI behind a raycast-blocking overlay.",
+            "description": "Bypass EventSystem raycast and send click, long-press, or drag events directly to TargetPath, or DropTargetPath for DragEnd. Useful for interacting with UI behind a raycast-blocking overlay.",
             "default": false
           },
           "TargetPath": {

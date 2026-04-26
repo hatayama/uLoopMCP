@@ -74,7 +74,7 @@ namespace io.github.hatayama.uLoopMCP
                 return new SimulateMouseUiResponse
                 {
                     Success = false,
-                    Message = "BypassRaycast supports Click and drag actions only.",
+                    Message = "BypassRaycast is not supported for this action.",
                     Action = parameters.Action.ToString()
                 };
             }
