@@ -22,7 +22,7 @@ uloop screenshot [--window-name <name>] [--resolution-scale <scale>] [--match-mo
 | `--match-mode` | enum | `exact` | Window name matching mode: `exact`, `prefix`, or `contains`. Ignored when `--capture-mode rendering`. |
 | `--capture-mode` | enum | `window` | `window`=capture EditorWindow including toolbar, `rendering`=capture game rendering only (PlayMode required, coordinates match simulate-mouse) |
 | `--output-directory` | string | `""` | Output directory path for saving screenshots. When empty, uses default path (.uloop/outputs/Screenshots/). Accepts absolute paths. |
-| `--annotate-elements` | boolean | `false` | Annotate interactive UI elements with index labels and interaction hints (A / CLICK, B / DRAG, ...). Only works with `--capture-mode rendering` in PlayMode. |
+| `--annotate-elements` | boolean | `false` | Annotate interactive UI elements with index labels (A, B, C...) on the screenshot. Only works with `--capture-mode rendering` in PlayMode. |
 | `--elements-only` | boolean | `false` | Return only annotated element JSON without capturing a screenshot image. Requires `--annotate-elements` and `--capture-mode rendering` in PlayMode. |
 
 ## Match Modes
@@ -84,11 +84,9 @@ Returns JSON with:
   - `ResolutionScale`: Resolution scale used for capture
   - `YOffset`: Y offset used in `sim_y = image_y / ResolutionScale + YOffset` when `CoordinateSystem` is `"gameView"`
   - `AnnotatedElements`: Array of annotated UI element metadata. Empty unless `--annotate-elements` is used. Sorted by z-order (frontmost first). Each item contains:
-    - `Label`: Index label in JSON (`A`=frontmost, `B`=next, ...). Screenshot labels also include the interaction hint, such as `A / CLICK` or `B / DRAG`.
+    - `Label`: Index label shown on the screenshot (`A`=frontmost, `B`=next, ...)
     - `Name`: Element name
-    - `Path`: Hierarchy path from the scene root, for example `Canvas/Panel/Button`. Use this as `simulate-mouse-ui --target-path` when bypassing raycast blockers.
     - `Type`: Element type (`Button`, `Toggle`, `Slider`, `Dropdown`, `InputField`, `Scrollbar`, `Draggable`, `DropTarget`, `Selectable`)
-    - `Interaction`: Derived interaction category (`Click`, `Drag`, `Drop`, `Text`). Use this to choose between `simulate-mouse-ui --action Click` and drag actions.
     - `SimX`, `SimY`: Center position in simulate-mouse coordinates (use directly with `--x` and `--y`)
     - `BoundsMinX`, `BoundsMinY`, `BoundsMaxX`, `BoundsMaxY`: Bounding box in simulate-mouse coordinates
     - `SortingOrder`: Canvas sorting order (higher = in front)
@@ -112,4 +110,3 @@ When multiple windows match (e.g., multiple Inspector windows or when using `con
 - Use `uloop focus-window` first if needed
 - Target window must be open in Unity Editor
 - Window name matching is always case-insensitive
-- Annotated rendering screenshots compensate border and label-outline thickness for `ResolutionScale`, with a small gap between labels and element borders
