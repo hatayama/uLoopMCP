@@ -71,6 +71,18 @@ namespace io.github.hatayama.uLoopMCP
             Assert.That(outlineColor, Is.EqualTo(new Color(0f, 0f, 0f, 0.95f)));
         }
 
+        [Test]
+        public void CalculateBorderEdgeRects_WhenBoundsAreProvided_ShouldPlaceEdgesInsideTheBounds()
+        {
+            UIElementAnnotator.BorderEdgeRects edgeRects = UIElementAnnotator.CalculateBorderEdgeRects(
+                10f, 20f, 110f, 70f, 2f);
+
+            Assert.That(edgeRects.Top, Is.EqualTo(new Rect(10f, 68f, 100f, 2f)));
+            Assert.That(edgeRects.Bottom, Is.EqualTo(new Rect(10f, 20f, 100f, 2f)));
+            Assert.That(edgeRects.Left, Is.EqualTo(new Rect(10f, 22f, 2f, 46f)));
+            Assert.That(edgeRects.Right, Is.EqualTo(new Rect(108f, 22f, 2f, 46f)));
+        }
+
         private static string CreateColorKey(Color color)
         {
             return $"{color.r:F3}:{color.g:F3}:{color.b:F3}:{color.a:F3}";

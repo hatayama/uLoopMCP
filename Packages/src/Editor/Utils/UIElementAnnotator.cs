@@ -13,15 +13,12 @@ namespace io.github.hatayama.uLoopMCP
         private const int OVERLAY_SORT_ORDER = 32767;
         private const int LABEL_FONT_SIZE = 20;
         private const float BORDER_THICKNESS = 2f;
-        private const float BORDER_LIGHT_OUTLINE_THICKNESS = 5f;
-        private const float BORDER_DARK_OUTLINE_THICKNESS = 8f;
-        private const float BORDER_LIGHT_OUTLINE_OFFSET = 1.5f;
-        private const float BORDER_DARK_OUTLINE_OFFSET = 3f;
+        private const float BORDER_OUTER_OFFSET = 4f;
+        private const float BORDER_MIDDLE_OFFSET = 2f;
         private const int LABEL_PADDING_H = 6;
         private const int LABEL_PADDING_V = 3;
         private const float LABEL_DARK_TEXT_LUMINANCE_THRESHOLD = 0.62f;
         private const float LABEL_OUTLINE_DISTANCE = 2f;
-        private const float TEXT_OUTLINE_DISTANCE = 1.25f;
 
         // Label-based colors separate dense controls where many elements share the same UI type.
         private static readonly Color[] ANNOTATION_COLORS =
@@ -362,25 +359,25 @@ namespace io.github.hatayama.uLoopMCP
             CreateBorder(
                 parent,
                 "DarkOutline",
-                screenMinX - BORDER_DARK_OUTLINE_OFFSET,
-                screenMinY - BORDER_DARK_OUTLINE_OFFSET,
-                screenMaxX + BORDER_DARK_OUTLINE_OFFSET,
-                screenMaxY + BORDER_DARK_OUTLINE_OFFSET,
-                BORDER_DARK_OUTLINE_THICKNESS,
+                screenMinX - BORDER_OUTER_OFFSET,
+                screenMinY - BORDER_OUTER_OFFSET,
+                screenMaxX + BORDER_OUTER_OFFSET,
+                screenMaxY + BORDER_OUTER_OFFSET,
+                BORDER_THICKNESS,
                 DARK_CONTRAST_COLOR);
             CreateBorder(
                 parent,
                 "LightOutline",
-                screenMinX - BORDER_LIGHT_OUTLINE_OFFSET,
-                screenMinY - BORDER_LIGHT_OUTLINE_OFFSET,
-                screenMaxX + BORDER_LIGHT_OUTLINE_OFFSET,
-                screenMaxY + BORDER_LIGHT_OUTLINE_OFFSET,
-                BORDER_LIGHT_OUTLINE_THICKNESS,
+                screenMinX - BORDER_MIDDLE_OFFSET,
+                screenMinY - BORDER_MIDDLE_OFFSET,
+                screenMaxX + BORDER_MIDDLE_OFFSET,
+                screenMaxY + BORDER_MIDDLE_OFFSET,
+                BORDER_THICKNESS,
                 LIGHT_CONTRAST_COLOR);
             CreateBorder(parent, "Color", screenMinX, screenMinY, screenMaxX, screenMaxY, BORDER_THICKNESS, color);
 
             string labelText = element.Label;
-            CreateLabel(parent, labelText, screenMinX, screenMaxY + BORDER_DARK_OUTLINE_THICKNESS, color, contrastColor, font);
+            CreateLabel(parent, labelText, screenMinX, screenMaxY + BORDER_OUTER_OFFSET + BORDER_THICKNESS, color, contrastColor, font);
         }
 
         private static void CreateBorder(
@@ -388,18 +385,35 @@ namespace io.github.hatayama.uLoopMCP
             float minX, float minY, float maxX, float maxY,
             float thickness, Color color)
         {
+            BorderEdgeRects borderEdgeRects = CalculateBorderEdgeRects(minX, minY, maxX, maxY, thickness);
+
+            CreateBorderEdge(parent, $"{name}_Top", borderEdgeRects.Top, color);
+            CreateBorderEdge(parent, $"{name}_Bottom", borderEdgeRects.Bottom, color);
+            CreateBorderEdge(parent, $"{name}_Left", borderEdgeRects.Left, color);
+            CreateBorderEdge(parent, $"{name}_Right", borderEdgeRects.Right, color);
+        }
+
+        internal static BorderEdgeRects CalculateBorderEdgeRects(
+            float minX, float minY, float maxX, float maxY, float thickness)
+        {
+            Debug.Assert(maxX >= minX, "maxX must not be smaller than minX.");
+            Debug.Assert(maxY >= minY, "maxY must not be smaller than minY.");
+            Debug.Assert(thickness >= 0f, "thickness must not be negative.");
+
             float boxWidth = maxX - minX;
             float boxHeight = maxY - minY;
+            float verticalEdgeHeight = Mathf.Max(0f, boxHeight - thickness * 2f);
 
-            CreateBorderEdge(parent, $"{name}_Top", minX, maxY, boxWidth, thickness, color);
-            CreateBorderEdge(parent, $"{name}_Bottom", minX, minY, boxWidth, thickness, color);
-            CreateBorderEdge(parent, $"{name}_Left", minX, minY, thickness, boxHeight, color);
-            CreateBorderEdge(parent, $"{name}_Right", maxX - thickness, minY, thickness, boxHeight, color);
+            return new BorderEdgeRects(
+                new Rect(minX, maxY - thickness, boxWidth, thickness),
+                new Rect(minX, minY, boxWidth, thickness),
+                new Rect(minX, minY + thickness, thickness, verticalEdgeHeight),
+                new Rect(maxX - thickness, minY + thickness, thickness, verticalEdgeHeight));
         }
 
         private static void CreateBorderEdge(
             Transform parent, string name,
-            float x, float y, float width, float height,
+            Rect rect,
             Color color)
         {
             GameObject edgeGo = new GameObject($"Border_{name}");
@@ -410,8 +424,8 @@ namespace io.github.hatayama.uLoopMCP
             rt.anchorMin = Vector2.zero;
             rt.anchorMax = Vector2.zero;
             rt.pivot = Vector2.zero;
-            rt.anchoredPosition = new Vector2(x, y);
-            rt.sizeDelta = new Vector2(width, height);
+            rt.anchoredPosition = new Vector2(rect.x, rect.y);
+            rt.sizeDelta = new Vector2(rect.width, rect.height);
 
             Image image = edgeGo.AddComponent<Image>();
             image.color = color;
@@ -459,15 +473,12 @@ namespace io.github.hatayama.uLoopMCP
             labelText.text = text;
             labelText.font = font;
             labelText.fontSize = LABEL_FONT_SIZE;
+            labelText.fontStyle = FontStyle.Bold;
             labelText.color = textColor;
             labelText.alignment = TextAnchor.MiddleLeft;
             labelText.horizontalOverflow = HorizontalWrapMode.Overflow;
             labelText.verticalOverflow = VerticalWrapMode.Overflow;
             labelText.raycastTarget = false;
-
-            Outline textOutline = textGo.AddComponent<Outline>();
-            textOutline.effectColor = GetContrastPartnerColor(textColor);
-            textOutline.effectDistance = new Vector2(TEXT_OUTLINE_DISTANCE, -TEXT_OUTLINE_DISTANCE);
         }
 
         internal static Color GetAnnotationColorForElement(UIElementInfo element)
@@ -530,6 +541,22 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             return index - 1;
+        }
+
+        internal readonly struct BorderEdgeRects
+        {
+            public readonly Rect Top;
+            public readonly Rect Bottom;
+            public readonly Rect Left;
+            public readonly Rect Right;
+
+            public BorderEdgeRects(Rect top, Rect bottom, Rect left, Rect right)
+            {
+                Top = top;
+                Bottom = bottom;
+                Left = left;
+                Right = right;
+            }
         }
     }
 }
