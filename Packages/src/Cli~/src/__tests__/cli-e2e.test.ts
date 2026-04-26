@@ -56,10 +56,6 @@ function sleepSync(ms: number): void {
   }
 }
 
-function isDomainReloadError(output: string): boolean {
-  return output.includes('Unity is reloading') || output.includes('Domain Reload');
-}
-
 function isTransientUnityBusyOutput(output: string): boolean {
   return (
     output.includes('Unity is reloading') ||
@@ -100,7 +96,7 @@ function runCliWithRetry(args: string): { stdout: string; stderr: string; exitCo
     const result = runCli(args);
     const output = result.stderr || result.stdout;
 
-    if (result.exitCode === 0 || !isDomainReloadError(output)) {
+    if (result.exitCode === 0 || !isTransientUnityBusyOutput(output)) {
       return result;
     }
 
@@ -122,7 +118,7 @@ function runCliWithRetryParts(args: string[]): {
     const result = runCliParts(args);
     const output = result.stderr || result.stdout;
 
-    if (result.exitCode === 0 || !isDomainReloadError(output)) {
+    if (result.exitCode === 0 || !isTransientUnityBusyOutput(output)) {
       return result;
     }
 
