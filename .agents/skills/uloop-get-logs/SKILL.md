@@ -1,6 +1,6 @@
 ---
 name: uloop-get-logs
-description: "Retrieve logs from Unity Console with filtering and search. Use when you need to: (1) Check for errors or warnings after compilation or play mode, (2) Debug issues by searching log messages, (3) Investigate failures with stack traces. Executes via `uloop get-logs` CLI invocation; returns a JSON array of log entries (filtered by log type, text search, or regex)."
+description: "Retrieve logs from Unity Console with filtering and search. Use when you need to: (1) Check for errors or warnings after compilation or play mode, (2) Debug issues by searching log messages, (3) Investigate failures with stack traces. Executes via `uloop get-logs` CLI invocation; returns a JSON object with summary fields and a `Logs` array (filtered by log type, text search, or regex)."
 ---
 
 # uloop get-logs

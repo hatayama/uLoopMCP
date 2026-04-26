@@ -45,7 +45,7 @@ Returns JSON:
 - `ErrorMessage`: string — top-level failure summary (empty on success)
 - `UpdatedCode`: string — the wrapped form actually compiled (handy when debugging using-statement reordering)
 
-On `Success: false`, inspect `CompilationErrors` first; if empty, the failure happened at runtime and `ErrorMessage` carries the exception summary. Both EditMode and PlayMode are supported targets — the snippet runs in whichever mode the Editor is currently in.
+On `Success: false`, inspect `CompilationErrors` first. If empty, read `ErrorMessage` (and `Logs` for extra context) — the failure may be a runtime exception, security violation, cancellation, or an "execution in progress" rejection, all of which return empty `CompilationErrors`. Both EditMode and PlayMode are supported targets — the snippet runs in whichever mode the Editor is currently in.
 
 ## Code Examples by Category
 
