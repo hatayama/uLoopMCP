@@ -59,4 +59,4 @@ This structure follows the "inverted pyramid" principle - the most important inf
 
 ## Skill Tuning
 
-When you create a new skill or substantially revise an existing one under `.claude/skills/`, run the `empirical-prompt-tuning` skill against it. Store the per-skill artifacts (scenarios, checklist, ledger, iteration reports) under `.claude/skill-tuning/<skill-name>/`. See `.claude/skill-tuning/README.md` for the directory convention and convergence criteria.
+When you create a new skill or substantially revise an existing one under `.claude/skills/`, run the `empirical-prompt-tuning` skill against it. The per-skill artifacts (scenarios, checklist, ledger, iteration reports) are local working files — keep them in `.claude/skill-tuning/<skill-name>/` (gitignored) and do not commit them.

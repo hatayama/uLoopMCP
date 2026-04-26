@@ -3,8 +3,9 @@
  * Static linter for bundled SKILL.md sources.
  *
  * Why this exists:
- * The empirical-prompt-tuning rollout (`.claude/skill-tuning/`) found two
- * recurring gap families that any new bundled skill is likely to repeat:
+ * The empirical-prompt-tuning rollout (run locally via the
+ * empirical-prompt-tuning skill) found two recurring gap families that any
+ * new bundled skill is likely to repeat:
  *  1. description missing a "How" mechanism tail (CLAUDE.md What -> When -> How)
  *  2. body missing or stubbing the `## Output` section, which forces the
  *     closed-book agent to fabricate response fields
