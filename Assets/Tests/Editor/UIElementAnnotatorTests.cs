@@ -55,6 +55,22 @@ namespace io.github.hatayama.uLoopMCP
             Assert.That(textColor, Is.EqualTo(new Color(1f, 1f, 1f, 0.95f)));
         }
 
+        [Test]
+        public void GetContrastPartnerColor_WhenColorIsBright_ShouldReturnLightOutlineForDarkText()
+        {
+            Color outlineColor = UIElementAnnotator.GetContrastPartnerColor(new Color(1f, 0.9f, 0f, 0.95f));
+
+            Assert.That(outlineColor, Is.EqualTo(new Color(1f, 1f, 1f, 0.95f)));
+        }
+
+        [Test]
+        public void GetContrastPartnerColor_WhenColorIsDark_ShouldReturnDarkOutlineForLightText()
+        {
+            Color outlineColor = UIElementAnnotator.GetContrastPartnerColor(new Color(0.15f, 0.55f, 1f, 0.95f));
+
+            Assert.That(outlineColor, Is.EqualTo(new Color(0f, 0f, 0f, 0.95f)));
+        }
+
         private static string CreateColorKey(Color color)
         {
             return $"{color.r:F3}:{color.g:F3}:{color.b:F3}:{color.a:F3}";

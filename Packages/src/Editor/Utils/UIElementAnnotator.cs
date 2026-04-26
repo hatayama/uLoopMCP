@@ -13,11 +13,15 @@ namespace io.github.hatayama.uLoopMCP
         private const int OVERLAY_SORT_ORDER = 32767;
         private const int LABEL_FONT_SIZE = 20;
         private const float BORDER_THICKNESS = 2f;
-        private const float BORDER_OUTLINE_THICKNESS = 5f;
-        private const float BORDER_OUTLINE_OFFSET = 1.5f;
+        private const float BORDER_LIGHT_OUTLINE_THICKNESS = 5f;
+        private const float BORDER_DARK_OUTLINE_THICKNESS = 8f;
+        private const float BORDER_LIGHT_OUTLINE_OFFSET = 1.5f;
+        private const float BORDER_DARK_OUTLINE_OFFSET = 3f;
         private const int LABEL_PADDING_H = 6;
         private const int LABEL_PADDING_V = 3;
         private const float LABEL_DARK_TEXT_LUMINANCE_THRESHOLD = 0.62f;
+        private const float LABEL_OUTLINE_DISTANCE = 2f;
+        private const float TEXT_OUTLINE_DISTANCE = 1.25f;
 
         // Label-based colors separate dense controls where many elements share the same UI type.
         private static readonly Color[] ANNOTATION_COLORS =
@@ -357,17 +361,26 @@ namespace io.github.hatayama.uLoopMCP
 
             CreateBorder(
                 parent,
-                "Outline",
-                screenMinX - BORDER_OUTLINE_OFFSET,
-                screenMinY - BORDER_OUTLINE_OFFSET,
-                screenMaxX + BORDER_OUTLINE_OFFSET,
-                screenMaxY + BORDER_OUTLINE_OFFSET,
-                BORDER_OUTLINE_THICKNESS,
-                contrastColor);
+                "DarkOutline",
+                screenMinX - BORDER_DARK_OUTLINE_OFFSET,
+                screenMinY - BORDER_DARK_OUTLINE_OFFSET,
+                screenMaxX + BORDER_DARK_OUTLINE_OFFSET,
+                screenMaxY + BORDER_DARK_OUTLINE_OFFSET,
+                BORDER_DARK_OUTLINE_THICKNESS,
+                DARK_CONTRAST_COLOR);
+            CreateBorder(
+                parent,
+                "LightOutline",
+                screenMinX - BORDER_LIGHT_OUTLINE_OFFSET,
+                screenMinY - BORDER_LIGHT_OUTLINE_OFFSET,
+                screenMaxX + BORDER_LIGHT_OUTLINE_OFFSET,
+                screenMaxY + BORDER_LIGHT_OUTLINE_OFFSET,
+                BORDER_LIGHT_OUTLINE_THICKNESS,
+                LIGHT_CONTRAST_COLOR);
             CreateBorder(parent, "Color", screenMinX, screenMinY, screenMaxX, screenMaxY, BORDER_THICKNESS, color);
 
             string labelText = element.Label;
-            CreateLabel(parent, labelText, screenMinX, screenMaxY + BORDER_OUTLINE_THICKNESS, color, contrastColor, font);
+            CreateLabel(parent, labelText, screenMinX, screenMaxY + BORDER_DARK_OUTLINE_THICKNESS, color, contrastColor, font);
         }
 
         private static void CreateBorder(
@@ -424,6 +437,10 @@ namespace io.github.hatayama.uLoopMCP
             bgImage.color = backgroundColor;
             bgImage.raycastTarget = false;
 
+            Outline bgOutline = bgGo.AddComponent<Outline>();
+            bgOutline.effectColor = GetContrastPartnerColor(backgroundColor);
+            bgOutline.effectDistance = new Vector2(LABEL_OUTLINE_DISTANCE, -LABEL_OUTLINE_DISTANCE);
+
             ContentSizeFitter fitter = bgGo.AddComponent<ContentSizeFitter>();
             fitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
             fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
@@ -447,6 +464,10 @@ namespace io.github.hatayama.uLoopMCP
             labelText.horizontalOverflow = HorizontalWrapMode.Overflow;
             labelText.verticalOverflow = VerticalWrapMode.Overflow;
             labelText.raycastTarget = false;
+
+            Outline textOutline = textGo.AddComponent<Outline>();
+            textOutline.effectColor = GetContrastPartnerColor(textColor);
+            textOutline.effectDistance = new Vector2(TEXT_OUTLINE_DISTANCE, -TEXT_OUTLINE_DISTANCE);
         }
 
         internal static Color GetAnnotationColorForElement(UIElementInfo element)
@@ -471,6 +492,17 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             return LIGHT_CONTRAST_COLOR;
+        }
+
+        internal static Color GetContrastPartnerColor(Color color)
+        {
+            Color readableColor = GetContrastingTextColor(color);
+            if (readableColor == DARK_CONTRAST_COLOR)
+            {
+                return LIGHT_CONTRAST_COLOR;
+            }
+
+            return DARK_CONTRAST_COLOR;
         }
 
         private static float CalculateLuminance(Color color)
