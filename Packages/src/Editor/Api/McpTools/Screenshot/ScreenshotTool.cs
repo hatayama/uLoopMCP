@@ -79,7 +79,9 @@ namespace io.github.hatayama.uLoopMCP
             {
                 if (parameters.AnnotateElements)
                 {
-                    annotationOverlay = UIElementAnnotator.CreateAnnotationOverlay(annotatedElements);
+                    annotationOverlay = UIElementAnnotator.CreateAnnotationOverlay(
+                        annotatedElements,
+                        parameters.ResolutionScale);
                     Canvas.ForceUpdateCanvases();
                     // Chained CLI calls can read the previous GameView RT before overlay rendering catches up.
                     await EditorDelay.DelayFrame(ANNOTATION_OVERLAY_RENDER_WAIT_FRAMES, ct);

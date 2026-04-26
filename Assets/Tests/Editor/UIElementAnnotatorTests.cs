@@ -96,6 +96,74 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         [Test]
+        public void CreateAnnotationOverlay_WhenElementIsAnnotated_ShouldUseThickerColorBorder()
+        {
+            List<UIElementInfo> elements = new List<UIElementInfo>
+            {
+                new UIElementInfo
+                {
+                    Label = "A",
+                    Type = "Button",
+                    Interaction = "Click",
+                    BoundsMinX = 10f,
+                    BoundsMinY = 20f,
+                    BoundsMaxX = 110f,
+                    BoundsMaxY = 70f
+                }
+            };
+            GameObject overlay = UIElementAnnotator.CreateAnnotationOverlay(elements, 1f);
+
+            try
+            {
+                RectTransform innerTop = overlay.transform.Find("Border_DarkInner_Top").GetComponent<RectTransform>();
+                RectTransform colorTop = overlay.transform.Find("Border_ColorMiddle_Top").GetComponent<RectTransform>();
+                RectTransform outerTop = overlay.transform.Find("Border_LightOuter_Top").GetComponent<RectTransform>();
+
+                Assert.That(innerTop.sizeDelta.y, Is.EqualTo(2f));
+                Assert.That(colorTop.sizeDelta.y, Is.EqualTo(4f));
+                Assert.That(outerTop.sizeDelta.y, Is.EqualTo(2f));
+            }
+            finally
+            {
+                UIElementAnnotator.DestroyAnnotationOverlay(overlay);
+            }
+        }
+
+        [Test]
+        public void CreateAnnotationOverlay_WhenResolutionScaleIsHalf_ShouldCompensateBorderThickness()
+        {
+            List<UIElementInfo> elements = new List<UIElementInfo>
+            {
+                new UIElementInfo
+                {
+                    Label = "A",
+                    Type = "Button",
+                    Interaction = "Click",
+                    BoundsMinX = 10f,
+                    BoundsMinY = 20f,
+                    BoundsMaxX = 110f,
+                    BoundsMaxY = 70f
+                }
+            };
+            GameObject overlay = UIElementAnnotator.CreateAnnotationOverlay(elements, 0.5f);
+
+            try
+            {
+                RectTransform innerTop = overlay.transform.Find("Border_DarkInner_Top").GetComponent<RectTransform>();
+                RectTransform colorTop = overlay.transform.Find("Border_ColorMiddle_Top").GetComponent<RectTransform>();
+                RectTransform outerTop = overlay.transform.Find("Border_LightOuter_Top").GetComponent<RectTransform>();
+
+                Assert.That(innerTop.sizeDelta.y, Is.EqualTo(4f));
+                Assert.That(colorTop.sizeDelta.y, Is.EqualTo(8f));
+                Assert.That(outerTop.sizeDelta.y, Is.EqualTo(4f));
+            }
+            finally
+            {
+                UIElementAnnotator.DestroyAnnotationOverlay(overlay);
+            }
+        }
+
+        [Test]
         public void GetInteractionForType_WhenTypeIsButton_ShouldReturnClick()
         {
             string interaction = UIElementAnnotator.GetInteractionForType("Button");

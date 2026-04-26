@@ -12,9 +12,8 @@ namespace io.github.hatayama.uLoopMCP
     {
         private const int OVERLAY_SORT_ORDER = 32767;
         private const int LABEL_FONT_SIZE = 20;
-        private const float BORDER_THICKNESS = 2f;
-        private const float BORDER_OUTER_OFFSET = 4f;
-        private const float BORDER_MIDDLE_OFFSET = 2f;
+        private const float OUTPUT_BORDER_NEUTRAL_THICKNESS = 2f;
+        private const float OUTPUT_BORDER_COLOR_THICKNESS = 4f;
         private const int LABEL_PADDING_H = 6;
         private const int LABEL_PADDING_V = 3;
         private const float LABEL_DARK_TEXT_LUMINANCE_THRESHOLD = 0.62f;
@@ -101,8 +100,9 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-        public static GameObject CreateAnnotationOverlay(List<UIElementInfo> elements)
+        public static GameObject CreateAnnotationOverlay(List<UIElementInfo> elements, float outputResolutionScale)
         {
+            AnnotationBorderMetrics borderMetrics = CalculateAnnotationBorderMetrics(outputResolutionScale);
             GameObject root = new GameObject("__UIAnnotation__");
             root.hideFlags = HideFlags.HideAndDontSave;
 
@@ -114,7 +114,7 @@ namespace io.github.hatayama.uLoopMCP
 
             foreach (UIElementInfo element in elements)
             {
-                CreateAnnotationForElement(root.transform, element, font);
+                CreateAnnotationForElement(root.transform, element, font, borderMetrics);
             }
 
             return root;
@@ -352,7 +352,11 @@ namespace io.github.hatayama.uLoopMCP
             return true;
         }
 
-        private static void CreateAnnotationForElement(Transform parent, UIElementInfo element, Font font)
+        private static void CreateAnnotationForElement(
+            Transform parent,
+            UIElementInfo element,
+            Font font,
+            AnnotationBorderMetrics borderMetrics)
         {
             float screenMinX = element.BoundsMinX;
             float screenMaxX = element.BoundsMaxX;
@@ -366,25 +370,32 @@ namespace io.github.hatayama.uLoopMCP
             CreateBorder(
                 parent,
                 "LightOuter",
-                screenMinX - BORDER_OUTER_OFFSET,
-                screenMinY - BORDER_OUTER_OFFSET,
-                screenMaxX + BORDER_OUTER_OFFSET,
-                screenMaxY + BORDER_OUTER_OFFSET,
-                BORDER_THICKNESS,
+                screenMinX - borderMetrics.OuterOffset,
+                screenMinY - borderMetrics.OuterOffset,
+                screenMaxX + borderMetrics.OuterOffset,
+                screenMaxY + borderMetrics.OuterOffset,
+                borderMetrics.NeutralThickness,
                 borderColors.Outer);
             CreateBorder(
                 parent,
                 "ColorMiddle",
-                screenMinX - BORDER_MIDDLE_OFFSET,
-                screenMinY - BORDER_MIDDLE_OFFSET,
-                screenMaxX + BORDER_MIDDLE_OFFSET,
-                screenMaxY + BORDER_MIDDLE_OFFSET,
-                BORDER_THICKNESS,
+                screenMinX - borderMetrics.ColorOffset,
+                screenMinY - borderMetrics.ColorOffset,
+                screenMaxX + borderMetrics.ColorOffset,
+                screenMaxY + borderMetrics.ColorOffset,
+                borderMetrics.ColorThickness,
                 borderColors.Middle);
-            CreateBorder(parent, "DarkInner", screenMinX, screenMinY, screenMaxX, screenMaxY, BORDER_THICKNESS, borderColors.Inner);
+            CreateBorder(parent, "DarkInner", screenMinX, screenMinY, screenMaxX, screenMaxY, borderMetrics.NeutralThickness, borderColors.Inner);
 
             string labelText = CreateDisplayLabel(element);
-            CreateLabel(parent, labelText, screenMinX, screenMaxY + BORDER_OUTER_OFFSET + BORDER_THICKNESS, color, contrastColor, font);
+            CreateLabel(
+                parent,
+                labelText,
+                screenMinX,
+                screenMaxY + borderMetrics.OuterOffset + borderMetrics.NeutralThickness,
+                color,
+                contrastColor,
+                font);
         }
 
         private static void CreateBorder(
@@ -528,6 +539,20 @@ namespace io.github.hatayama.uLoopMCP
             return new AnnotationBorderColors(DARK_CONTRAST_COLOR, annotationColor, LIGHT_CONTRAST_COLOR);
         }
 
+        internal static AnnotationBorderMetrics CalculateAnnotationBorderMetrics(float outputResolutionScale)
+        {
+            Debug.Assert(outputResolutionScale > 0f, "Output resolution scale must be positive.");
+
+            float neutralThickness = OUTPUT_BORDER_NEUTRAL_THICKNESS / outputResolutionScale;
+            float colorThickness = OUTPUT_BORDER_COLOR_THICKNESS / outputResolutionScale;
+
+            return new AnnotationBorderMetrics(
+                neutralThickness,
+                colorThickness,
+                colorThickness,
+                colorThickness + neutralThickness);
+        }
+
         internal static string GetInteractionForType(string type)
         {
             if (type == "Slider" || type == "Scrollbar" || type == "Draggable")
@@ -620,6 +645,26 @@ namespace io.github.hatayama.uLoopMCP
                 Inner = inner;
                 Middle = middle;
                 Outer = outer;
+            }
+        }
+
+        internal readonly struct AnnotationBorderMetrics
+        {
+            public readonly float NeutralThickness;
+            public readonly float ColorThickness;
+            public readonly float ColorOffset;
+            public readonly float OuterOffset;
+
+            public AnnotationBorderMetrics(
+                float neutralThickness,
+                float colorThickness,
+                float colorOffset,
+                float outerOffset)
+            {
+                NeutralThickness = neutralThickness;
+                ColorThickness = colorThickness;
+                ColorOffset = colorOffset;
+                OuterOffset = outerOffset;
             }
         }
     }
