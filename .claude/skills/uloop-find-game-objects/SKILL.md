@@ -1,6 +1,6 @@
 ---
 name: uloop-find-game-objects
-description: "Find GameObjects in the active scene by various criteria. Use when you need to: (1) Search for objects by name, regex, or path, (2) Find objects with specific components, tags, or layers, (3) Get currently selected GameObjects in Unity Editor. Returns matching GameObjects with hierarchy paths and components (or writes to a file when multiple GameObjects are selected)."
+description: "Find GameObjects in the active scene by various criteria. Use when you need to: (1) Search for objects by name, regex, or path, (2) Find objects with specific components, tags, or layers, (3) Get currently selected GameObjects in Unity Editor. Returns matching GameObjects with hierarchy paths and components."
 ---
 
 # uloop find-game-objects
@@ -66,22 +66,9 @@ uloop find-game-objects --search-mode Selected --include-inactive
 
 ## Output
 
-Returns JSON with:
-- `results` (array): Matching GameObjects, each containing:
-  - `name` (string): GameObject name
-  - `path` (string): Hierarchy path (e.g., `Canvas/Panel/Button`)
-  - `isActive` (boolean): Active state in hierarchy
-  - `tag` (string): GameObject tag
-  - `layer` (number): Layer index
-  - `components` (array): Each entry has `type` (short name, e.g., `Rigidbody`), `fullTypeName` (e.g., `UnityEngine.Rigidbody`), and `properties` (array of `{name, type, value}` pairs — only when `--include-inherited-properties` is set; otherwise omitted)
-- `totalFound` (number): Total matches before `--max-results` clipping
-- `errorMessage` (string): Top-level failure summary (empty on success)
-- `processingErrors` (array): Per-GameObject serialization failures, each `{gameObjectName, gameObjectPath, error}`. Empty on clean runs.
+Returns JSON with matching GameObjects.
 
-### Multi-selection file export
-
-For `Selected` mode with **multiple** GameObjects, `results` is empty and the data is written to a file instead. Two extra fields appear:
-- `resultsFilePath` (string): Absolute path under `.uloop/outputs/FindGameObjectsResults/`
-- `message` (string): Human-readable summary (e.g., "5 GameObjects exported")
-
-Single-selection and search-mode calls (`Exact`, `Path`, `Regex`, `Contains`) always return inline. No selection (`Selected` mode with empty selection) returns empty `results` plus a `message`.
+For `Selected` mode with multiple objects, results are exported to file:
+- Single selection: JSON response directly
+- Multiple selection: File at `.uloop/outputs/FindGameObjectsResults/`
+- No selection: Empty results with message

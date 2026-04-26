@@ -51,20 +51,10 @@ Returns JSON:
 
 ## Troubleshooting
 
-Diagnose the failure mode before retrying.
-
-**Stale lock files** (CLI hangs or shows "Unity is busy" while Unity Editor *is* running):
+If CLI hangs or shows "Unity is busy" errors after compilation, stale lock files may be preventing connection. Run the following to clean them up:
 
 ```bash
 uloop fix
 ```
 
-This removes any leftover lock files (`compiling.lock`, `domainreload.lock`, `serverstarting.lock`) from the Unity project's Temp directory. Then retry `uloop compile`.
-
-**Unity Editor not running** (CLI returns a connection failure and no Unity process is alive):
-
-```bash
-uloop launch
-```
-
-`uloop launch` auto-detects the project at the current working directory and opens it in the matching Unity Editor version. After Unity finishes launching, retry `uloop compile`. Do not run `uloop fix` first in this case — `uloop fix` only clears locks; it does not start Unity.
+This removes any leftover lock files (`compiling.lock`, `domainreload.lock`, `serverstarting.lock`) from the Unity project's Temp directory.

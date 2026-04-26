@@ -51,9 +51,3 @@ Returns JSON with the current play mode state:
 - Stop action exits play mode and returns to edit mode
 - Pause action pauses the game while remaining in play mode
 - Useful for automated testing workflows
-
-### Asynchronous PlayMode entry
-
-The command returns as soon as the action is dispatched. PlayMode entry itself is asynchronous — Unity transitions on the next editor frame, not before this command returns. The `IsPlaying` value in the response reflects the state *at the moment the response was built* and may still be `false` for a `Play` request even though the request was accepted.
-
-Before invoking PlayMode-dependent commands (`uloop simulate-mouse-input`, `uloop simulate-mouse-ui`, `uloop simulate-keyboard`, `uloop record-input`, `uloop replay-input`), wait for `IsPlaying: true` by re-issuing `uloop control-play-mode --action Play` (it is idempotent) until the response shows `IsPlaying: true`, or insert a brief delay. Those PlayMode-dependent skills also self-check and return a "PlayMode is not active" error if invoked too early — treat that error as "retry after a short wait", not as a permanent failure.

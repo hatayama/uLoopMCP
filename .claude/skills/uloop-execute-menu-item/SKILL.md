@@ -1,6 +1,6 @@
 ---
 name: uloop-execute-menu-item
-description: "Execute Unity Editor menu commands programmatically. Use when you need to: (1) Trigger menu commands like save, build, or refresh, (2) Automate editor actions via menu paths, (3) Run custom menu items defined in project scripts. Routes through Unity's `EditorApplication.ExecuteMenuItem` (with a reflection fallback)."
+description: "Execute Unity Editor menu commands programmatically. Use when you need to: (1) Trigger menu commands like save, build, or refresh, (2) Automate editor actions via menu paths, (3) Run custom menu items defined in project scripts."
 ---
 
 # uloop execute-menu-item
@@ -41,14 +41,7 @@ uloop execute-menu-item --menu-item-path "Edit/Project Settings..."
 
 ## Output
 
-Returns JSON with:
-- `MenuItemPath` (string): The menu item path that was executed
-- `Success` (boolean): Whether the execution succeeded
-- `ExecutionMethod` (string): `"EditorApplication"` (primary path) or `"Reflection"` (fallback path)
-- `MenuItemFound` (boolean): Whether the menu item exists in the system
-- `ErrorMessage` (string): Error text if execution failed; empty on success
-- `Details` (string): Additional information about the execution
-- `WarningMessage` (string): Warning text if there are issues with the menu item (e.g., duplicate attributes); empty when none
+Returns JSON with execution result.
 
 ## Notes
 

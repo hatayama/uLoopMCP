@@ -1,6 +1,6 @@
 ---
 name: uloop-replay-input
-description: "Replay recorded input during PlayMode with frame-precise injection. Use when you need to: (1) Reproduce recorded gameplay exactly, (2) Run E2E tests from recorded input, (3) Generate demo videos with consistent input. Deserializes the JSON recording and pushes captured device states back into Mouse.current / Keyboard.current frame-by-frame in PlayMode. Requires PlayMode and the New Input System."
+description: "Replay recorded input during PlayMode with frame-precise injection. Use when you need to: (1) Reproduce recorded gameplay exactly, (2) Run E2E tests from recorded input, (3) Generate demo videos with consistent input."
 ---
 
 # uloop replay-input
@@ -44,11 +44,8 @@ Replay injects the exact same input frame-by-frame, but the game must also be de
 Returns JSON with:
 - `Success`: Whether the operation succeeded
 - `Message`: Status message
-- `Action`: Echoes which action was executed (`Start`, `Stop`, or `Status`)
-- `InputPath`: Path to recording file (nullable string; populated on `Start` only)
-- `CurrentFrame`: Current replay frame index (nullable int)
-- `TotalFrames`: Total frames in the recording (nullable int)
-- `Progress`: Replay progress (nullable float in 0.0 – 1.0)
-- `IsReplaying`: Whether replay is currently active (nullable bool)
-
-These are the only eight fields. There is no `LoopCount`, `ElapsedSeconds`, `OverlayVisible`, or per-frame inspection data in the response.
+- `InputPath`: Path to recording file (Start only)
+- `CurrentFrame`: Current replay frame
+- `TotalFrames`: Total frames in recording
+- `Progress`: Replay progress (0.0 - 1.0)
+- `IsReplaying`: Whether replay is active

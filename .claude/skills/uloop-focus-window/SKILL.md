@@ -1,6 +1,6 @@
 ---
 name: uloop-focus-window
-description: "Bring Unity Editor window to front via uloop CLI. Use when you need to: (1) Focus Unity Editor before capturing screenshots, (2) Ensure Unity window is visible for visual checks, (3) Bring Unity to foreground for user interaction. Routes through the uloop CLI which calls OS-level focus APIs (osascript on macOS, PowerShell on Windows) via the launch-unity library; bypasses the Unity TCP server so it works even while Unity is compiling or in domain reload."
+description: "Bring Unity Editor window to front via uloop CLI. Use when you need to: (1) Focus Unity Editor before capturing screenshots, (2) Ensure Unity window is visible for visual checks, (3) Bring Unity to foreground for user interaction."
 ---
 
 # uloop focus-window
@@ -32,11 +32,7 @@ uloop focus-window
 
 ## Output
 
-Returns JSON with:
-- `Success`: Whether the focus operation succeeded
-- `Message`: Status message (e.g. `Unity Editor window focused (PID: 12345)`, or the failure reason such as `Unity project not found` / `No running Unity process found for this project` / `Failed to focus Unity window: <reason>`)
-
-These are the only two fields. There is no PID, window-handle, or platform field returned to the caller.
+Returns JSON confirming the window was focused.
 
 ## Notes
 
