@@ -1,4 +1,4 @@
-import type { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import type { readFileSync, writeFileSync } from 'node:fs';
 
 import {
   beginUnityRestartAttempt,
@@ -25,9 +25,8 @@ describe('launch restart guard', () => {
     now = 1000000;
     files = new Map<string, string>();
     dependencies = {
-      existsSyncFn: ((path: string): boolean => files.has(path)) as typeof existsSync,
       mkdirSyncFn: (): undefined => undefined,
-      readFileSyncFn: ((path: string): string => files.get(path) ?? '') as typeof readFileSync,
+      readFileSyncFn: ((path: string): string => readExistingFile(path)) as typeof readFileSync,
       writeFileSyncFn: ((path: string, content: string): void => {
         files.set(path, content);
       }) as typeof writeFileSync,
@@ -68,6 +67,41 @@ describe('launch restart guard', () => {
     const record: GuardRecord = readWrittenRecord(guardPath);
     expect(record.startedAt).toBe(1000000 + UNITY_RESTART_GUARD_COOLDOWN_MS);
   });
+
+  it('allows a Unity restart attempt when the guard file disappears before read', () => {
+    dependencies.readFileSyncFn = ((): string => {
+      throw new Error('missing guard file');
+    }) as unknown as typeof readFileSync;
+
+    beginUnityRestartAttempt(projectPath, dependencies);
+
+    const guardPath: string = getUnityRestartGuardFilePath(projectPath);
+    const record: GuardRecord = readWrittenRecord(guardPath);
+    expect(record.startedAt).toBe(1000000);
+  });
+
+  it('allows a Unity restart attempt when the guard file is corrupt', () => {
+    const guardPath: string = getUnityRestartGuardFilePath(projectPath);
+    files.set(guardPath, '{');
+
+    beginUnityRestartAttempt(projectPath, dependencies);
+
+    const record: GuardRecord = readWrittenRecord(guardPath);
+    expect(record).toEqual({
+      projectPath,
+      startedAt: 1000000,
+      pid: 2468,
+    });
+  });
+
+  function readExistingFile(path: string): string {
+    const content: string | undefined = files.get(path);
+    if (content === undefined) {
+      throw new Error(`Missing file: ${path}`);
+    }
+
+    return content;
+  }
 
   function readWrittenRecord(guardPath: string): GuardRecord {
     const content: string | undefined = files.get(guardPath);

@@ -1,5 +1,5 @@
 import assert from 'node:assert';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 export const UNITY_RESTART_GUARD_COOLDOWN_MS = 120000;
@@ -13,7 +13,6 @@ interface UnityRestartGuardRecord {
 }
 
 export interface UnityRestartGuardDependencies {
-  existsSyncFn: typeof existsSync;
   mkdirSyncFn: typeof mkdirSync;
   readFileSyncFn: typeof readFileSync;
   writeFileSyncFn: typeof writeFileSync;
@@ -22,7 +21,6 @@ export interface UnityRestartGuardDependencies {
 }
 
 const defaultDependencies: UnityRestartGuardDependencies = {
-  existsSyncFn: existsSync,
   mkdirSyncFn: mkdirSync,
   readFileSyncFn: readFileSync,
   writeFileSyncFn: writeFileSync,
@@ -70,11 +68,10 @@ function assertUnityRestartAllowed(
   assert(projectPath.length > 0, 'projectPath must not be empty');
 
   const guardPath = getUnityRestartGuardFilePath(projectPath);
-  if (!dependencies.existsSyncFn(guardPath)) {
+  const record = readGuardRecordOrNull(guardPath, dependencies);
+  if (record === null) {
     return;
   }
-
-  const record = readGuardRecord(guardPath, dependencies);
   const elapsedMilliseconds = dependencies.nowFn() - record.startedAt;
   if (elapsedMilliseconds >= UNITY_RESTART_GUARD_COOLDOWN_MS) {
     return;
@@ -86,18 +83,22 @@ function assertUnityRestartAllowed(
   );
 }
 
-function readGuardRecord(
+function readGuardRecordOrNull(
   guardPath: string,
   dependencies: UnityRestartGuardDependencies,
-): UnityRestartGuardRecord {
-  const content = dependencies.readFileSyncFn(guardPath, 'utf8');
-  const parsed = JSON.parse(content) as Partial<UnityRestartGuardRecord>;
-  assert(typeof parsed.projectPath === 'string', 'restart guard projectPath must be a string');
-  assert(typeof parsed.startedAt === 'number', 'restart guard startedAt must be a number');
-  assert(typeof parsed.pid === 'number', 'restart guard pid must be a number');
-  return {
-    projectPath: parsed.projectPath,
-    startedAt: parsed.startedAt,
-    pid: parsed.pid,
-  };
+): UnityRestartGuardRecord | null {
+  try {
+    const content = dependencies.readFileSyncFn(guardPath, 'utf8');
+    const parsed = JSON.parse(content) as Partial<UnityRestartGuardRecord>;
+    assert(typeof parsed.projectPath === 'string', 'restart guard projectPath must be a string');
+    assert(typeof parsed.startedAt === 'number', 'restart guard startedAt must be a number');
+    assert(typeof parsed.pid === 'number', 'restart guard pid must be a number');
+    return {
+      projectPath: parsed.projectPath,
+      startedAt: parsed.startedAt,
+      pid: parsed.pid,
+    };
+  } catch {
+    return null;
+  }
 }
