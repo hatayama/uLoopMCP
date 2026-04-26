@@ -67,4 +67,4 @@ This removes any leftover lock files (`compiling.lock`, `domainreload.lock`, `se
 uloop launch
 ```
 
-`uloop launch` auto-detects the project at the current working directory and opens it in the matching Unity Editor version. After Unity finishes launching, retry `uloop compile`. Do not run `uloop fix` first in this case — `uloop fix` only clears locks; it does not start Unity.
+`uloop launch` auto-detects the project at the current working directory and opens it in the matching Unity Editor version. After Unity finishes launching, retry `uloop compile`.
