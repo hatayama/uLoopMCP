@@ -23,6 +23,7 @@ namespace io.github.hatayama.uLoopMCP
         private const int WorkerAssemblyBuildTimeoutMilliseconds = 30000;
         internal const string DotnetMultilevelLookupEnvironmentVariableName = "DOTNET_MULTILEVEL_LOOKUP";
         internal const string DotnetMultilevelLookupDisabledValue = "0";
+        internal const string DotnetRootEnvironmentVariableName = "DOTNET_ROOT";
 
         private static readonly object SharedCompilerWorkerLock = new();
         private static Action<string> s_deleteWorkerDirectory = path => Directory.Delete(path, true);
@@ -503,18 +504,25 @@ namespace io.github.hatayama.uLoopMCP
                 CreateNoWindow = true
             };
 
-            ConfigureWorkerDotnetRuntimeEnvironment(startInfo);
+            ConfigureWorkerDotnetRuntimeEnvironment(startInfo, externalCompilerPaths.DotnetHostPath);
             return startInfo;
         }
 
-        internal static void ConfigureWorkerDotnetRuntimeEnvironment(ProcessStartInfo startInfo)
+        internal static void ConfigureWorkerDotnetRuntimeEnvironment(
+            ProcessStartInfo startInfo,
+            string dotnetHostPath)
         {
             Debug.Assert(startInfo != null, "startInfo must not be null");
+            Debug.Assert(!string.IsNullOrEmpty(dotnetHostPath), "dotnetHostPath must not be empty");
 
-            // Why: global probing can select a system .NET 6 runtime while Unity 6000.4 worker
-            // references come from the bundled .NET 8 runtime, which breaks assembly binding.
+            // Why: global probing can select a system .NET runtime while worker references
+            // come from Unity's bundled runtime, which breaks assembly binding.
             startInfo.EnvironmentVariables[DotnetMultilevelLookupEnvironmentVariableName] =
                 DotnetMultilevelLookupDisabledValue;
+
+            string dotnetRootPath = Path.GetDirectoryName(dotnetHostPath);
+            Debug.Assert(!string.IsNullOrEmpty(dotnetRootPath), "dotnetRootPath must not be empty");
+            startInfo.EnvironmentVariables[DotnetRootEnvironmentVariableName] = dotnetRootPath;
         }
 
         private static WorkerAssemblyBuildResult CompileWorkerAssembly(
@@ -549,7 +557,7 @@ namespace io.github.hatayama.uLoopMCP
                 RedirectStandardError = true,
                 CreateNoWindow = true
             };
-            ConfigureWorkerDotnetRuntimeEnvironment(startInfo);
+            ConfigureWorkerDotnetRuntimeEnvironment(startInfo, externalCompilerPaths.DotnetHostPath);
 
             using Process process = ProcessStartHelper.TryStart(startInfo);
             if (process == null)
