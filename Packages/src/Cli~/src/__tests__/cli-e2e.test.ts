@@ -19,6 +19,8 @@ import { join } from 'path';
 const CLI_PATH = join(__dirname, '../..', 'dist/cli.bundle.cjs');
 
 const UNITY_PROJECT_ROOT = join(__dirname, '../../../../..');
+const CUBE_SCENE_PATH = 'Assets/Scenes/SampleScene.unity';
+const RESTART_GUARD_PATH = join(UNITY_PROJECT_ROOT, '.uloop', 'launch-restart-guard.json');
 
 const EXEC_OPTIONS: ExecSyncOptionsWithStringEncoding = {
   encoding: 'utf-8',
@@ -266,6 +268,24 @@ function parseLastJsonObject<T>(stdout: string): T {
 
   const jsonPayload = trimmedOutput.slice(jsonStart, jsonEnd + 1);
   return JSON.parse(jsonPayload) as T;
+}
+
+function openScene(scenePath: string): void {
+  const escapedScenePath = scenePath.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  const code = [
+    'using UnityEditor.SceneManagement;',
+    `var scene = EditorSceneManager.OpenScene("${escapedScenePath}");`,
+    'return scene.name;',
+  ].join(' ');
+  const payload = runExecuteDynamicCodeJsonWithRetry(code);
+  expect(payload.Success).toBe(true);
+  expect(payload.ErrorMessage ?? '').toBe('');
+}
+
+function removeRestartGuardIfPresent(): void {
+  if (existsSync(RESTART_GUARD_PATH)) {
+    unlinkSync(RESTART_GUARD_PATH);
+  }
 }
 
 describe('CLI E2E Tests (requires running Unity)', () => {
@@ -516,8 +536,8 @@ describe('CLI E2E Tests (requires running Unity)', () => {
     });
 
     it('should find Cube game object with default array parameter', () => {
-      // This test verifies that default array values (e.g., RequiredComponents: [])
-      // are correctly handled and don't cause search to fail
+      openScene(CUBE_SCENE_PATH);
+
       const result = runCliJson<{ results: Array<{ name: string }>; totalFound: number }>(
         'find-game-objects --name-pattern "Cube"',
       );
@@ -730,23 +750,14 @@ describe('CLI E2E Tests (requires running Unity)', () => {
       expect(result.Result).toBe('hello');
     });
 
-    it('should recover execute-dynamic-code after Unity restart', async () => {
-      const launchResult = runCli('launch -r');
-
-      expect(launchResult.exitCode).toBe(0);
-
-      const result = await runExecuteDynamicCodeUntilReady('return "after-restart";');
-
-      expect(result.Success).toBe(true);
-      expect(result.Result).toBe('after-restart');
-      expect(result.ErrorMessage ?? '').toBe('');
-    }, 60000);
-
     it('should make the first execute-dynamic-code request succeed immediately after restart', () => {
+      removeRestartGuardIfPresent();
+
       const launchResult = runCli('launch -r');
+
       expect(launchResult.exitCode).toBe(0);
 
-      const result = runCliParts(['execute-dynamic-code', '--code', 'return "immediate";']);
+      const result = runCliParts(['execute-dynamic-code', '--code', 'return "after-restart";']);
       expect(result.exitCode).toBe(0);
 
       const payload = parseLastJsonObject<{
@@ -756,26 +767,30 @@ describe('CLI E2E Tests (requires running Unity)', () => {
       }>(result.stdout);
 
       expect(payload.Success).toBe(true);
-      expect(payload.Result).toBe('immediate');
+      expect(payload.Result).toBe('after-restart');
       expect(payload.ErrorMessage ?? '').toBe('');
     }, 90000);
 
-    it('should keep execute-dynamic-code available across consecutive restarts', async () => {
-      const firstLaunchResult = runCli('launch -r');
-      expect(firstLaunchResult.exitCode).toBe(0);
+    it('should block consecutive restart attempts during the cooldown window', () => {
+      const launchResult = runCli('launch -r');
 
-      const firstResult = await runExecuteDynamicCodeUntilReady('return "restart-1";');
-      expect(firstResult.Success).toBe(true);
-      expect(firstResult.Result).toBe('restart-1');
+      expect(launchResult.exitCode).not.toBe(0);
+      expect(launchResult.stderr || launchResult.stdout).toContain('Refusing to restart Unity');
+    });
 
-      const secondLaunchResult = runCli('launch -r');
-      expect(secondLaunchResult.exitCode).toBe(0);
+    it('should keep execute-dynamic-code available after a guarded restart is blocked', async () => {
+      const blockedLaunchResult = runCli('launch -r');
 
-      const secondResult = await runExecuteDynamicCodeUntilReady('return "restart-2";');
-      expect(secondResult.Success).toBe(true);
-      expect(secondResult.Result).toBe('restart-2');
-      expect(secondResult.ErrorMessage ?? '').toBe('');
-    }, 90000);
+      expect(blockedLaunchResult.exitCode).not.toBe(0);
+      expect(blockedLaunchResult.stderr || blockedLaunchResult.stdout).toContain(
+        'Refusing to restart Unity',
+      );
+
+      const result = await runExecuteDynamicCodeUntilReady('return "guarded-restart";');
+      expect(result.Success).toBe(true);
+      expect(result.Result).toBe('guarded-restart');
+      expect(result.ErrorMessage ?? '').toBe('');
+    });
   });
 
   describe('error handling', () => {
