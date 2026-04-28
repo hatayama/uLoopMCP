@@ -51,5 +51,14 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.That(programSource, Does.Contain("FindWindowsDrivePathIndex"));
             Assert.That(programSource, Does.Not.Contain("Unsupported request path protocol"));
         }
+
+        [Test]
+        public void CreateProgramSource_WhenRequestPathPrefixHasLeadingGarbage_ShouldDecodeEncodedPath()
+        {
+            string programSource = SharedRoslynCompilerWorkerHost.CreateProgramSourceForTests();
+
+            Assert.That(programSource, Does.Contain("IndexOf(RequestPathPrefix"));
+            Assert.That(programSource, Does.Contain("encodedPathIndex + RequestPathPrefix.Length"));
+        }
     }
 }
