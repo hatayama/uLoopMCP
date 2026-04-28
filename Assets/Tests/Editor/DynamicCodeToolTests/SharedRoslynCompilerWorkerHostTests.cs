@@ -53,6 +53,18 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
+        public void CreateProgramSource_WhenTemplateIsLoaded_ShouldReplaceTokens()
+        {
+            string templatePath = SharedRoslynCompilerWorkerHost.GetWorkerProgramTemplatePathForTests();
+            string programSource = SharedRoslynCompilerWorkerHost.CreateProgramSourceForTests();
+
+            Assert.That(File.Exists(templatePath), Is.True);
+            Assert.That(programSource, Does.Contain(SharedRoslynCompilerWorkerHost.CompileRequestPathPrefix));
+            Assert.That(programSource, Does.Contain("__ULOOP_RESULT__"));
+            Assert.That(programSource, Does.Not.Contain("{{"));
+        }
+
+        [Test]
         public void CreateProgramSource_WhenRequestPathPrefixHasLeadingGarbage_ShouldDecodeEncodedPath()
         {
             string programSource = SharedRoslynCompilerWorkerHost.CreateProgramSourceForTests();
