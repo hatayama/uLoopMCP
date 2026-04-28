@@ -41,5 +41,15 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             string decodedPath = Encoding.UTF8.GetString(Convert.FromBase64String(encodedPath));
             Assert.That(decodedPath, Is.EqualTo(Path.GetFullPath(requestFilePath)));
         }
+
+        [Test]
+        public void CreateProgramSource_WhenRequestPathHasNoPrefix_ShouldRecoverRawPath()
+        {
+            string programSource = SharedRoslynCompilerWorkerHost.CreateProgramSourceForTests();
+
+            Assert.That(programSource, Does.Contain("return RecoverRawRequestPath(requestPath);"));
+            Assert.That(programSource, Does.Contain("FindWindowsDrivePathIndex"));
+            Assert.That(programSource, Does.Not.Contain("Unsupported request path protocol"));
+        }
     }
 }

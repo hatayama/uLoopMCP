@@ -384,6 +384,11 @@ namespace io.github.hatayama.uLoopMCP
             return CreateCompileRequestCommand(requestFilePath);
         }
 
+        internal static string CreateProgramSourceForTests()
+        {
+            return CreateProgramSource();
+        }
+
         private static string CreateCompileRequestCommand(string requestFilePath)
         {
             Debug.Assert(!string.IsNullOrEmpty(requestFilePath), "requestFilePath must not be empty");
@@ -1080,14 +1085,35 @@ namespace io.github.hatayama.uLoopMCP
                 + "\n"
                 + "    private static string DecodeRequestPath(string requestPath)\n"
                 + "    {\n"
-                + "        if (!requestPath.StartsWith(RequestPathPrefix, StringComparison.Ordinal))\n"
+                + "        if (requestPath.StartsWith(RequestPathPrefix, StringComparison.Ordinal))\n"
                 + "        {\n"
-                + "            throw new InvalidOperationException(\"Unsupported request path protocol.\");\n"
+                + "            string encodedPath = requestPath.Substring(RequestPathPrefix.Length);\n"
+                + "            byte[] requestPathBytes = Convert.FromBase64String(encodedPath);\n"
+                + "            return Encoding.UTF8.GetString(requestPathBytes);\n"
                 + "        }\n"
                 + "\n"
-                + "        string encodedPath = requestPath.Substring(RequestPathPrefix.Length);\n"
-                + "        byte[] requestPathBytes = Convert.FromBase64String(encodedPath);\n"
-                + "        return Encoding.UTF8.GetString(requestPathBytes);\n"
+                + "        return RecoverRawRequestPath(requestPath);\n"
+                + "    }\n"
+                + "\n"
+                + "    private static string RecoverRawRequestPath(string requestPath)\n"
+                + "    {\n"
+                + "        string trimmedPath = requestPath.TrimStart('\\uFEFF', '\\uFFFD');\n"
+                + "        int drivePathIndex = FindWindowsDrivePathIndex(trimmedPath);\n"
+                + "        return drivePathIndex > 0 ? trimmedPath.Substring(drivePathIndex) : trimmedPath;\n"
+                + "    }\n"
+                + "\n"
+                + "    private static int FindWindowsDrivePathIndex(string value)\n"
+                + "    {\n"
+                + "        for (int i = 0; i <= value.Length - 3; i++)\n"
+                + "        {\n"
+                + "            bool isDriveLetter = (value[i] >= 'A' && value[i] <= 'Z') || (value[i] >= 'a' && value[i] <= 'z');\n"
+                + "            if (isDriveLetter && value[i + 1] == ':' && (value[i + 2] == '\\\\' || value[i + 2] == '/'))\n"
+                + "            {\n"
+                + "                return i;\n"
+                + "            }\n"
+                + "        }\n"
+                + "\n"
+                + "        return -1;\n"
                 + "    }\n"
                 + "\n"
                 + "    private static CompileResponse Compile(string requestPath)\n"
