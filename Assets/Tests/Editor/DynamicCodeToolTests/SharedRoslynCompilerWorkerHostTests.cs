@@ -70,5 +70,16 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.That(programSource, Does.Contain("HasDirectorySeparatorBeforePrefix"));
             Assert.That(programSource, Does.Contain("return HasDirectorySeparatorBeforePrefix(requestPath, encodedPathIndex) ? -1 : encodedPathIndex;"));
         }
+
+        [Test]
+        public void CreateProgramSource_WhenEncodedPayloadIsMalformed_ShouldRecoverRawPath()
+        {
+            string programSource = SharedRoslynCompilerWorkerHost.CreateProgramSourceForTests();
+
+            Assert.That(programSource, Does.Contain("IsBase64Payload"));
+            Assert.That(programSource, Does.Contain("HasValidBase64Padding"));
+            Assert.That(programSource, Does.Contain("return RecoverRawRequestPath(requestPath);"));
+            Assert.That(programSource, Does.Not.Contain("catch (FormatException)"));
+        }
     }
 }
