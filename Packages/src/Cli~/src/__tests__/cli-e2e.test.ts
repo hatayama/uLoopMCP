@@ -750,35 +750,30 @@ describe('CLI E2E Tests (requires running Unity)', () => {
       expect(result.Result).toBe('hello');
     });
 
-    it('should make the first execute-dynamic-code request succeed immediately after restart', () => {
+    it('should keep dynamic code available across restart cooldown handling', async () => {
       removeRestartGuardIfPresent();
 
       const launchResult = runCli('launch -r');
 
       expect(launchResult.exitCode).toBe(0);
 
-      const result = runCliParts(['execute-dynamic-code', '--code', 'return "after-restart";']);
-      expect(result.exitCode).toBe(0);
+      const immediateResult = runCliParts([
+        'execute-dynamic-code',
+        '--code',
+        'return "after-restart";',
+      ]);
+      expect(immediateResult.exitCode).toBe(0);
 
       const payload = parseLastJsonObject<{
         Success: boolean;
         Result?: string;
         ErrorMessage?: string;
-      }>(result.stdout);
+      }>(immediateResult.stdout);
 
       expect(payload.Success).toBe(true);
       expect(payload.Result).toBe('after-restart');
       expect(payload.ErrorMessage ?? '').toBe('');
-    }, 90000);
 
-    it('should block consecutive restart attempts during the cooldown window', () => {
-      const launchResult = runCli('launch -r');
-
-      expect(launchResult.exitCode).not.toBe(0);
-      expect(launchResult.stderr || launchResult.stdout).toContain('Refusing to restart Unity');
-    });
-
-    it('should keep execute-dynamic-code available after a guarded restart is blocked', async () => {
       const blockedLaunchResult = runCli('launch -r');
 
       expect(blockedLaunchResult.exitCode).not.toBe(0);
@@ -786,11 +781,11 @@ describe('CLI E2E Tests (requires running Unity)', () => {
         'Refusing to restart Unity',
       );
 
-      const result = await runExecuteDynamicCodeUntilReady('return "guarded-restart";');
-      expect(result.Success).toBe(true);
-      expect(result.Result).toBe('guarded-restart');
-      expect(result.ErrorMessage ?? '').toBe('');
-    });
+      const guardedResult = await runExecuteDynamicCodeUntilReady('return "guarded-restart";');
+      expect(guardedResult.Success).toBe(true);
+      expect(guardedResult.Result).toBe('guarded-restart');
+      expect(guardedResult.ErrorMessage ?? '').toBe('');
+    }, 90000);
   });
 
   describe('error handling', () => {

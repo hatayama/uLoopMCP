@@ -60,7 +60,12 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 
             Assert.That(File.Exists(templatePath), Is.True);
             Assert.That(programSource, Does.Contain(SharedRoslynCompilerWorkerHost.CompileRequestPathPrefix));
-            Assert.That(programSource, Does.Contain("__ULOOP_RESULT__"));
+            Assert.That(programSource, Does.Contain(
+                SharedRoslynCompilerWorkerHost.GetSharedCompilerWorkerResultPrefixForTests()));
+            Assert.That(programSource, Does.Contain(
+                SharedRoslynCompilerWorkerHost.GetSharedCompilerWorkerEndMarkerForTests()));
+            Assert.That(programSource, Does.Contain(
+                SharedRoslynCompilerWorkerHost.GetSharedCompilerWorkerQuitCommandForTests()));
             Assert.That(programSource, Does.Not.Contain("{{"));
         }
 

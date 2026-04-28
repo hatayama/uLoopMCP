@@ -953,6 +953,21 @@ namespace io.github.hatayama.uLoopMCP
             return GetWorkerProgramTemplatePath();
         }
 
+        internal static string GetSharedCompilerWorkerResultPrefixForTests()
+        {
+            return SharedCompilerWorkerResultPrefix;
+        }
+
+        internal static string GetSharedCompilerWorkerEndMarkerForTests()
+        {
+            return SharedCompilerWorkerEndMarker;
+        }
+
+        internal static string GetSharedCompilerWorkerQuitCommandForTests()
+        {
+            return SharedCompilerWorkerQuitCommand;
+        }
+
         private static string GetWorkerProgramTemplatePath()
         {
             return Path.Combine(McpConstants.PackageResolvedPath, RoslynWorkerProgramTemplateRelativePath);
