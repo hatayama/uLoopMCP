@@ -28,8 +28,6 @@ namespace io.github.hatayama.uLoopMCP
             ExecuteDynamicCodeSchema parameters,
             CancellationToken cancellationToken)
         {
-            using IDisposable diagnosticSourceScope = DynamicCompilationHealthMonitor.UseConsoleDiagnosticSource(
-                parameters.HealthMonitorDiagnosticSource);
             string correlationId = McpConstants.GenerateCorrelationId();
             DynamicCodeSecurityLevel editorLevel = DynamicCodeSecurityLevel.Restricted;
 

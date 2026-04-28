@@ -57,8 +57,18 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         {
             string programSource = SharedRoslynCompilerWorkerHost.CreateProgramSourceForTests();
 
+            Assert.That(programSource, Does.Contain("FindRequestPathPrefixIndex"));
             Assert.That(programSource, Does.Contain("IndexOf(RequestPathPrefix"));
             Assert.That(programSource, Does.Contain("encodedPathIndex + RequestPathPrefix.Length"));
+        }
+
+        [Test]
+        public void CreateProgramSource_WhenRawPathContainsPrefixAfterDirectorySeparator_ShouldRecoverRawPath()
+        {
+            string programSource = SharedRoslynCompilerWorkerHost.CreateProgramSourceForTests();
+
+            Assert.That(programSource, Does.Contain("HasDirectorySeparatorBeforePrefix"));
+            Assert.That(programSource, Does.Contain("return HasDirectorySeparatorBeforePrefix(requestPath, encodedPathIndex) ? -1 : encodedPathIndex;"));
         }
     }
 }
