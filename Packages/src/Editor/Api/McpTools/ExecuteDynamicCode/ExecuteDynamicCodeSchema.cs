@@ -61,5 +61,8 @@ NG:   ""Parameters"": ""{}""")]
 
         [EditorBrowsable(EditorBrowsableState.Advanced)]
         public bool YieldToForegroundRequests { get; set; } = false;
+
+        [EditorBrowsable(EditorBrowsableState.Advanced)]
+        public string HealthMonitorDiagnosticSource { get; set; } = "";
     }
 }

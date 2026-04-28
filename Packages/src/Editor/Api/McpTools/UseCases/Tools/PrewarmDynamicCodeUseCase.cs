@@ -157,7 +157,8 @@ namespace io.github.hatayama.uLoopMCP
                     {
                         Code = autoPrewarmCode,
                         CompileOnly = false,
-                        YieldToForegroundRequests = true
+                        YieldToForegroundRequests = true,
+                        HealthMonitorDiagnosticSource = AutoPrewarmOperation
                     };
 
                     // Why: the remaining domain-reload spike only disappeared when measurements warmed the
