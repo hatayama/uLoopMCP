@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEditor;
@@ -16,6 +17,7 @@ namespace io.github.hatayama.uLoopMCP
         private const string SharedCompilerWorkerResultPrefix = "__ULOOP_RESULT__";
         private const string SharedCompilerWorkerEndMarker = "__ULOOP_END__";
         private const string SharedCompilerWorkerQuitCommand = "__QUIT__";
+        internal const string CompileRequestPathPrefix = "path-base64:";
         private const string RoslynWorkerSourceFileName = "RoslynCompilerWorker.cs";
         private const string RoslynWorkerAssemblyFileName = "RoslynCompilerWorker.dll";
         private const string RoslynWorkerCompileResponseFileName = "RoslynCompilerWorker.rsp";
@@ -372,8 +374,23 @@ namespace io.github.hatayama.uLoopMCP
 
         private static void SendCompileRequestCore(Process workerProcess, string requestFilePath)
         {
-            workerProcess.StandardInput.WriteLine(requestFilePath);
+            string requestCommand = CreateCompileRequestCommand(requestFilePath);
+            workerProcess.StandardInput.WriteLine(requestCommand);
             workerProcess.StandardInput.Flush();
+        }
+
+        internal static string CreateCompileRequestCommandForTests(string requestFilePath)
+        {
+            return CreateCompileRequestCommand(requestFilePath);
+        }
+
+        private static string CreateCompileRequestCommand(string requestFilePath)
+        {
+            Debug.Assert(!string.IsNullOrEmpty(requestFilePath), "requestFilePath must not be empty");
+
+            string fullRequestFilePath = Path.GetFullPath(requestFilePath);
+            byte[] requestPathBytes = Encoding.UTF8.GetBytes(fullRequestFilePath);
+            return CompileRequestPathPrefix + Convert.ToBase64String(requestPathBytes);
         }
 
         private static void AttachWorkerStandardErrorCapture(Process workerProcess)
@@ -1031,6 +1048,7 @@ namespace io.github.hatayama.uLoopMCP
                 + "    private const string ResultPrefix = \"" + SharedCompilerWorkerResultPrefix + "\";\n"
                 + "    private const string EndMarker = \"" + SharedCompilerWorkerEndMarker + "\";\n"
                 + "    private const string QuitCommand = \"" + SharedCompilerWorkerQuitCommand + "\";\n"
+                + "    private const string RequestPathPrefix = \"" + CompileRequestPathPrefix + "\";\n"
                 + "    private const string UnsafePrefix = \"unsafe:\";\n"
                 + "    private const string DefinePrefix = \"define:\";\n"
                 + "    private const string ReferencePrefix = \"ref:\";\n"
@@ -1047,7 +1065,7 @@ namespace io.github.hatayama.uLoopMCP
                 + "                return 0;\n"
                 + "            }\n"
                 + "\n"
-                + "            CompileResponse response = Compile(requestPath);\n"
+                + "            CompileResponse response = Compile(DecodeRequestPath(requestPath));\n"
                 + "            Console.WriteLine(ResultPrefix + \" \" + response.ExitCode);\n"
                 + "            foreach (string diagnosticLine in response.DiagnosticLines)\n"
                 + "            {\n"
@@ -1058,6 +1076,18 @@ namespace io.github.hatayama.uLoopMCP
                 + "        }\n"
                 + "\n"
                 + "        return 0;\n"
+                + "    }\n"
+                + "\n"
+                + "    private static string DecodeRequestPath(string requestPath)\n"
+                + "    {\n"
+                + "        if (!requestPath.StartsWith(RequestPathPrefix, StringComparison.Ordinal))\n"
+                + "        {\n"
+                + "            throw new InvalidOperationException(\"Unsupported request path protocol.\");\n"
+                + "        }\n"
+                + "\n"
+                + "        string encodedPath = requestPath.Substring(RequestPathPrefix.Length);\n"
+                + "        byte[] requestPathBytes = Convert.FromBase64String(encodedPath);\n"
+                + "        return Encoding.UTF8.GetString(requestPathBytes);\n"
                 + "    }\n"
                 + "\n"
                 + "    private static CompileResponse Compile(string requestPath)\n"
