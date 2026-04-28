@@ -23,13 +23,10 @@ namespace io.github.hatayama.uLoopMCP
         private const string RoslynWorkerCompileResponseFileName = "RoslynCompilerWorker.rsp";
         private const int SharedCompilerWorkerResponseTimeoutMilliseconds = 30000;
         private const int WorkerAssemblyBuildTimeoutMilliseconds = 30000;
-        private const int MaxWorkerStandardErrorLineCount = 40;
         internal const string DotnetMultilevelLookupEnvironmentVariableName = "DOTNET_MULTILEVEL_LOOKUP";
         internal const string DotnetMultilevelLookupDisabledValue = "0";
 
         private static readonly object SharedCompilerWorkerLock = new();
-        private static readonly object WorkerStandardErrorLock = new();
-        private static readonly Queue<string> WorkerStandardErrorLines = new Queue<string>();
         private static Action<string> s_deleteWorkerDirectory = path => Directory.Delete(path, true);
         private static Action<Process, string> s_sendCompileRequest = SendCompileRequestCore;
         private static Func<ExternalCompilerPaths, string, string, string, CompilerMessage[]>
@@ -320,7 +317,6 @@ namespace io.github.hatayama.uLoopMCP
                     });
             }
 
-            AttachWorkerStandardErrorCapture(_sharedCompilerWorkerProcess);
             return WorkerStartupResult.Ready();
         }
 
@@ -335,7 +331,7 @@ namespace io.github.hatayama.uLoopMCP
             {
                 return WorkerAttemptResult.RetryableFailure(
                     "worker_process_missing",
-                    CreateWorkerFailureContext(requestFilePath));
+                    new { request_file_path = requestFilePath });
             }
 
             ct.ThrowIfCancellationRequested();
@@ -398,107 +394,6 @@ namespace io.github.hatayama.uLoopMCP
             return CompileRequestPathPrefix + Convert.ToBase64String(requestPathBytes);
         }
 
-        private static void AttachWorkerStandardErrorCapture(Process workerProcess)
-        {
-            Debug.Assert(workerProcess != null, "workerProcess must not be null");
-
-            ClearWorkerStandardErrorLines();
-            workerProcess.ErrorDataReceived += (_, eventArgs) =>
-            {
-                if (eventArgs.Data == null)
-                {
-                    return;
-                }
-
-                AppendWorkerStandardErrorLine(eventArgs.Data);
-            };
-            workerProcess.BeginErrorReadLine();
-        }
-
-        private static void ClearWorkerStandardErrorLines()
-        {
-            lock (WorkerStandardErrorLock)
-            {
-                WorkerStandardErrorLines.Clear();
-            }
-        }
-
-        private static void AppendWorkerStandardErrorLine(string line)
-        {
-            Debug.Assert(line != null, "line must not be null");
-
-            lock (WorkerStandardErrorLock)
-            {
-                WorkerStandardErrorLines.Enqueue(line);
-                while (WorkerStandardErrorLines.Count > MaxWorkerStandardErrorLineCount)
-                {
-                    WorkerStandardErrorLines.Dequeue();
-                }
-            }
-        }
-
-        private static string GetWorkerStandardErrorText()
-        {
-            lock (WorkerStandardErrorLock)
-            {
-                return string.Join("\n", WorkerStandardErrorLines);
-            }
-        }
-
-        private static object CreateWorkerFailureContext(string requestFilePath)
-        {
-            Debug.Assert(!string.IsNullOrEmpty(requestFilePath), "requestFilePath must not be empty");
-
-            Process workerProcess = _sharedCompilerWorkerProcess;
-            string workerStandardError = GetWorkerStandardErrorText();
-            if (workerProcess == null)
-            {
-                return new
-                {
-                    request_file_path = requestFilePath,
-                    worker_standard_error = workerStandardError
-                };
-            }
-
-            bool workerHasExited = workerProcess.HasExited;
-            return new
-            {
-                request_file_path = requestFilePath,
-                worker_has_exited = workerHasExited,
-                worker_exit_code = workerHasExited ? workerProcess.ExitCode : 0,
-                worker_standard_error = workerStandardError
-            };
-        }
-
-        private static object CreateWorkerFailureContext(
-            string requestFilePath,
-            string responseHeader)
-        {
-            Debug.Assert(!string.IsNullOrEmpty(responseHeader), "responseHeader must not be empty");
-
-            Process workerProcess = _sharedCompilerWorkerProcess;
-            string workerStandardError = GetWorkerStandardErrorText();
-            if (workerProcess == null)
-            {
-                return new
-                {
-                    request_file_path = requestFilePath,
-                    header = responseHeader,
-                    worker_standard_error = workerStandardError
-                };
-            }
-
-            bool workerHasExited = workerProcess.HasExited;
-            return new
-            {
-                request_file_path = requestFilePath,
-                header = responseHeader,
-                worker_has_exited = workerHasExited,
-                worker_exit_code = workerHasExited ? workerProcess.ExitCode : 0,
-                worker_standard_error = workerStandardError
-            };
-        }
-
         private static WorkerAttemptResult ReadWorkerResponse(
             string requestFilePath,
             CancellationToken ct)
@@ -510,14 +405,14 @@ namespace io.github.hatayama.uLoopMCP
             {
                 return WorkerAttemptResult.RetryableFailure(
                     "worker_empty_header",
-                    CreateWorkerFailureContext(requestFilePath));
+                    new { request_file_path = requestFilePath });
             }
 
             if (!TryParseResponseHeader(responseHeader, out int exitCode))
             {
                 return WorkerAttemptResult.RetryableFailure(
                     GetResponseHeaderFailureReason(responseHeader),
-                    CreateWorkerFailureContext(requestFilePath, responseHeader));
+                    new { header = responseHeader });
             }
 
             List<string> outputLines = ReadDiagnosticLines(ct);
@@ -525,7 +420,7 @@ namespace io.github.hatayama.uLoopMCP
             {
                 return WorkerAttemptResult.RetryableFailure(
                     "worker_missing_end_marker",
-                    CreateWorkerFailureContext(requestFilePath));
+                    new { request_file_path = requestFilePath });
             }
 
             string combinedOutput = string.Join("\n", outputLines);
@@ -626,7 +521,7 @@ namespace io.github.hatayama.uLoopMCP
                 UseShellExecute = false,
                 RedirectStandardInput = true,
                 RedirectStandardOutput = true,
-                RedirectStandardError = true,
+                RedirectStandardError = false,
                 CreateNoWindow = true
             };
 
@@ -982,8 +877,7 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     request_file_path = requestFilePath,
                     exception_type = ex.GetType().FullName,
-                    exception_message = ex.Message,
-                    worker_standard_error = GetWorkerStandardErrorText()
+                    exception_message = ex.Message
                 });
         }
 
