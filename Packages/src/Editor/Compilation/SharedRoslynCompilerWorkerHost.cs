@@ -19,7 +19,6 @@ namespace io.github.hatayama.uLoopMCP
         private const string RoslynWorkerSourceFileName = "RoslynCompilerWorker.cs";
         private const string RoslynWorkerAssemblyFileName = "RoslynCompilerWorker.dll";
         private const string RoslynWorkerCompileResponseFileName = "RoslynCompilerWorker.rsp";
-        private const string RoslynWorkerRuntimeConfigFileName = "RoslynCompilerWorker.runtimeconfig.json";
         private const int SharedCompilerWorkerResponseTimeoutMilliseconds = 30000;
         private const int WorkerAssemblyBuildTimeoutMilliseconds = 30000;
         internal const string DotnetMultilevelLookupEnvironmentVariableName = "DOTNET_MULTILEVEL_LOOKUP";
@@ -138,20 +137,16 @@ namespace io.github.hatayama.uLoopMCP
 
             public string CompileResponseFilePath { get; }
 
-            public string RuntimeConfigPath { get; }
-
             public WorkerPaths(
                 string directoryPath,
                 string sourcePath,
                 string assemblyPath,
-                string compileResponseFilePath,
-                string runtimeConfigPath)
+                string compileResponseFilePath)
             {
                 DirectoryPath = directoryPath;
                 SourcePath = sourcePath;
                 AssemblyPath = assemblyPath;
                 CompileResponseFilePath = compileResponseFilePath;
-                RuntimeConfigPath = runtimeConfigPath;
             }
         }
 
@@ -256,7 +251,6 @@ namespace io.github.hatayama.uLoopMCP
 
             WorkerPaths workerPaths = CreateWorkerPaths();
             SynchronizeWorkerSource(workerPaths);
-            SynchronizeWorkerRuntimeConfig(externalCompilerPaths, workerPaths);
 
             WorkerStartupResult workerAssemblyResult = EnsureWorkerAssemblyBuilt(
                 externalCompilerPaths,
@@ -465,8 +459,7 @@ namespace io.github.hatayama.uLoopMCP
                 workerDirectoryPath,
                 Path.Combine(workerDirectoryPath, RoslynWorkerSourceFileName),
                 Path.Combine(workerDirectoryPath, RoslynWorkerAssemblyFileName),
-                Path.Combine(workerDirectoryPath, RoslynWorkerCompileResponseFileName),
-                Path.Combine(workerDirectoryPath, RoslynWorkerRuntimeConfigFileName));
+                Path.Combine(workerDirectoryPath, RoslynWorkerCompileResponseFileName));
         }
 
         private static string GetWorkerDirectoryPath()
@@ -492,47 +485,6 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-        private static void SynchronizeWorkerRuntimeConfig(
-            ExternalCompilerPaths externalCompilerPaths,
-            WorkerPaths workerPaths)
-        {
-            string runtimeConfig = CreateWorkerRuntimeConfig(externalCompilerPaths);
-            if (File.Exists(workerPaths.RuntimeConfigPath) && File.ReadAllText(workerPaths.RuntimeConfigPath) == runtimeConfig)
-            {
-                return;
-            }
-
-            File.WriteAllText(workerPaths.RuntimeConfigPath, runtimeConfig);
-        }
-
-        internal static string CreateWorkerRuntimeConfig(ExternalCompilerPaths externalCompilerPaths)
-        {
-            Debug.Assert(externalCompilerPaths != null, "externalCompilerPaths must not be null");
-            Debug.Assert(
-                !string.IsNullOrEmpty(externalCompilerPaths.NetCoreRuntimeSharedDirectoryPath),
-                "NetCoreRuntimeSharedDirectoryPath must not be empty");
-
-            string runtimeVersionText = Path.GetFileName(externalCompilerPaths.NetCoreRuntimeSharedDirectoryPath);
-            Debug.Assert(!string.IsNullOrEmpty(runtimeVersionText), "runtimeVersionText must not be empty");
-            bool isValidVersion = Version.TryParse(runtimeVersionText, out Version runtimeVersion);
-            Debug.Assert(isValidVersion, "runtimeVersionText must be a valid version");
-            string targetFrameworkMoniker = $"net{runtimeVersion.Major}.{runtimeVersion.Minor}";
-
-            return "{\n"
-                + "  \"runtimeOptions\": {\n"
-                + $"    \"tfm\": \"{targetFrameworkMoniker}\",\n"
-                + "    \"framework\": {\n"
-                + "      \"name\": \"Microsoft.NETCore.App\",\n"
-                + $"      \"version\": \"{runtimeVersionText}\"\n"
-                + "    },\n"
-                + "    \"configProperties\": {\n"
-                + "      \"System.GC.Server\": true,\n"
-                + "      \"System.Reflection.Metadata.MetadataUpdater.IsSupported\": false\n"
-                + "    }\n"
-                + "  }\n"
-                + "}\n";
-        }
-
         private static ProcessStartInfo CreateWorkerStartInfo(
             ExternalCompilerPaths externalCompilerPaths,
             WorkerPaths workerPaths)
@@ -541,7 +493,7 @@ namespace io.github.hatayama.uLoopMCP
             {
                 FileName = externalCompilerPaths.DotnetHostPath,
                 Arguments = "exec"
-                    + " --runtimeconfig " + QuoteCommandLineArgument(workerPaths.RuntimeConfigPath)
+                    + " --runtimeconfig " + QuoteCommandLineArgument(externalCompilerPaths.CompilerRuntimeConfigPath)
                     + " --depsfile " + QuoteCommandLineArgument(externalCompilerPaths.CompilerDepsFilePath)
                     + " " + QuoteCommandLineArgument(workerPaths.AssemblyPath),
                 WorkingDirectory = workerPaths.DirectoryPath,
