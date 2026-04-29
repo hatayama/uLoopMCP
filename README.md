@@ -10,9 +10,11 @@
 ![GitHubCopilot](https://img.shields.io/badge/GitHub_Copilot-111?logo=githubcopilot)
 
 <p align="center">
-  <img width="600" alt="logo" src="https://github.com/user-attachments/assets/416c4452-e385-415b-bff0-9399bba3b1e0" /><br>
-  <sub>(Logo inspired by Daft Punk's <i>Discovery</i> album art)</sub>
+    <img height="400" alt="logo-black-bgのコピー" src="https://github.com/user-attachments/assets/14dfc37d-33c9-4ad9-bbf4-ddfbd69b09eb" /><br>
+  <img height="400" alt="logo-highlightのコピー" src="https://github.com/user-attachments/assets/94e39eb5-c57c-41ba-b446-1450f786dac2" />
 
+    <sub align="center">(Logo inspired by Daft Punk's <i>Discovery</i> album art)</sub>  
+</p>
   
 
 Let an AI agent compile, test, and operate your Unity project from popular LLM tools via CLI.
