@@ -1,6 +1,6 @@
 /**
  * CLI entry point for uloop command.
- * Provides direct Unity communication without MCP server.
+ * Provides direct Unity communication through the project-local Unity bridge.
  * Commands are dynamically registered from tools.json cache.
  */
 
@@ -19,7 +19,6 @@ import {
   listAvailableTools,
   GlobalOptions,
   syncTools,
-  isVersionOlder,
 } from './execute-tool.js';
 import {
   loadToolsCache,
@@ -137,7 +136,7 @@ function convertDefaultToString(value: unknown): string {
 
 /**
  * Generate commander.js option string from property info.
- * All types use value format (--option <value>) for consistency with MCP.
+ * All types use value format (--option <value>) for consistency with Unity tool schemas.
  */
 function generateOptionString(propName: string, propInfo: ToolProperty): string {
   const kebabName = pascalToKebabCase(propName);
@@ -266,7 +265,7 @@ function createProgram(): Command {
 
   program
     .name('uloop')
-    .description('Unity MCP CLI - Direct communication with Unity Editor')
+    .description('Unity CLI Loop - Direct communication with Unity Editor')
     .version(VERSION, '-v, --version', 'Output the version number')
     .showHelpAfterError('(run with -h for available options)')
     .configureHelp({
@@ -526,20 +525,22 @@ function isConnectionError(message: string): boolean {
 
 function printToolDisabledError(cmdName: string): void {
   console.error(`\x1b[33mTool '${cmdName}' is disabled.\x1b[0m`);
-  console.error('You can enable it in Unity: Window > uLoop > Tool Settings');
+  console.error('You can enable it in Unity: Window > Unity CLI Loop > Settings > Tool Settings');
 }
 
 function printConnectionError(): void {
   console.error('\x1b[31mError: Cannot connect to Unity.\x1b[0m');
-  console.error(`Make sure Unity Editor is open and ${PRODUCT_DISPLAY_NAME} server is running.`);
+  console.error(
+    `Make sure Unity Editor is open and the ${PRODUCT_DISPLAY_NAME} bridge is running.`,
+  );
   console.error(`You can start the server from: ${MENU_PATH_SERVER}`);
   console.error('');
   console.error('[For AI] Please report the above to the user.');
 }
 
 /**
- * Print version mismatch diagnostic information when errors occur.
- * Only prints if versions are mismatched.
+ * Print project-local CLI mismatch diagnostic information when errors occur.
+ * Only prints if the project-local CLI and Unity package versions are mismatched.
  */
 function printVersionMismatchDiagnostic(): void {
   const serverVersion = getCachedServerVersion();
@@ -551,21 +552,19 @@ function printVersionMismatchDiagnostic(): void {
     return;
   }
 
-  const isCliOlder = isVersionOlder(VERSION, serverVersion);
-  const action = isCliOlder ? 'Update' : 'Downgrade';
-  const updateCommand = `npm install -g uloop-cli@${serverVersion}`;
-
   console.error('');
   console.error('\x1b[33m━━━ Version Mismatch Diagnostic ━━━\x1b[0m');
   console.error('');
-  console.error(`  CLI version:     ${VERSION}`);
+  console.error(`  Project CLI:     ${VERSION}`);
   console.error(`  Unity package:   ${serverVersion}`);
   console.error('  Version mismatch may cause communication errors.');
   console.error('');
-  console.error(`  To fix: ${action} CLI to match Unity package version`);
-  console.error(`    ${updateCommand}`);
+  console.error('  To fix: refresh the project-local CLI from Unity CLI Loop Settings.');
+  console.error('    Window > Unity CLI Loop > Settings > Install CLI');
   console.error('');
-  console.error('[For AI] Please ask the user if they would like to run this command.');
+  console.error(
+    '[For AI] Please report the mismatch and ask the user to refresh the CLI in Unity.',
+  );
   console.error('\x1b[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\x1b[0m');
 }
 
@@ -795,11 +794,11 @@ export function getInstalledVersion(callback: (version: string | null) => void):
 }
 
 /**
- * Update uloop CLI to the latest version using npm.
+ * Update the global uloop dispatcher to the latest version using npm.
  */
 export function updateCli(): void {
   const previousVersion = VERSION;
-  console.log('Updating uloop-cli to the latest version...');
+  console.log('Updating global uloop dispatcher to the latest version...');
 
   const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
   const child = spawn(npmCommand, ['install', '-g', 'uloop-cli@latest'], {
@@ -814,6 +813,7 @@ export function updateCli(): void {
         } else {
           console.log(`\n✅ Already up to date (v${previousVersion})`);
         }
+        console.log('Refresh the project-local CLI from Unity CLI Loop Settings if needed.');
       });
     } else {
       console.error(`\n❌ Update failed with exit code ${code}`);

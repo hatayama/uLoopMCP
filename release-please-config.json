@@ -12,6 +12,16 @@
         },
         {
           "type": "json",
+          "path": "Cli~/package-lock.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "Cli~/package-lock.json",
+          "jsonpath": "$['packages']['']['version']"
+        },
+        {
+          "type": "json",
           "path": "Cli~/src/default-tools.json",
           "jsonpath": "$.version"
         },

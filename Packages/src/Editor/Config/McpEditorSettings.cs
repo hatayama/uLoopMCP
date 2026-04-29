@@ -18,7 +18,7 @@ namespace io.github.hatayama.uLoopMCP
     }
 
     /// <summary>
-    /// Unity MCP Editor settings data.
+    /// Unity CLI Loop Editor settings data.
     /// </summary>
     [Serializable]
     public record McpEditorSettingsData
@@ -56,7 +56,7 @@ namespace io.github.hatayama.uLoopMCP
     }
 
     /// <summary>
-    /// Management class for Unity MCP Editor settings.
+    /// Management class for Unity CLI Loop Editor settings.
     /// Saves as a JSON file in the UserSettings folder.
     /// </summary>
     public static class McpEditorSettings

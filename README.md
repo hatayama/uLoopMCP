@@ -86,6 +86,8 @@ Select Window > Unity CLI Loop > Settings. A dedicated window will open — conf
 Press the **Install CLI** button.  
 <img width="277" height="306" alt="1" src="https://github.com/user-attachments/assets/0e25c327-73bf-4af6-997b-eebb3c26b372" />
 
+This installs the global `uloop` dispatcher and refreshes this project's `.uloop/bin/uloop` CLI bundle.
+
 
 
 If you see the following display, the installation was successful.  
@@ -100,6 +102,8 @@ If you see the following display, the installation was successful.
 ```bash
 npm install -g uloop-cli
 ```
+
+This installs only the global dispatcher. Open Window > Unity CLI Loop > Settings and press **Install CLI** in each Unity project to refresh `.uloop/bin/uloop`.
 
 See [uloop-cli on npm](https://www.npmjs.com/package/uloop-cli) for details.
 </details>
@@ -384,7 +388,7 @@ Async support:
 >
 > To disable `execute-dynamic-code` entirely, turn it off using the tool on/off toggle.
 >
-> Setting changes take effect immediately without server restart.
+> Setting changes take effect immediately without reinstalling the CLI.
 >
 
 ### PlayMode Automated Testing Tools
@@ -466,7 +470,7 @@ The type-safe design allows for reliable custom tool implementation in minimal t
 You can publish your extension tools on GitHub and reuse them across other projects.
 
 > [!TIP]
-> **For AI-assisted development**: Detailed implementation guides are available in [.claude/rules/mcp-tools.md](/.claude/rules/mcp-tools.md) for tool development and [.claude/rules/cli.md](/.claude/rules/cli.md) for CLI/Skills development. These guides are automatically loaded by Claude Code when working in the relevant directories.
+> **For AI-assisted development**: Detailed implementation guides are available in [.claude/rules/cli.md](/.claude/rules/cli.md) for CLI and Skills development. These guides are automatically loaded by Claude Code when working in the relevant directories.
 
 > [!IMPORTANT]
 > **Security Settings**
@@ -521,7 +525,7 @@ public class MyCustomResponse : BaseToolResponse
 using System.Threading;
 using System.Threading.Tasks;
 
-[McpTool(Description = "Description of my custom tool")]  // ← Auto-registered with this attribute
+[McpTool(Description = "Description of my custom tool")]  // Auto-registered; attribute name is historical
 public class MyCustomTool : AbstractUnityTool<MyCustomSchema, MyCustomResponse>
 {
     public override string ToolName => "my-custom-tool";
@@ -609,7 +613,7 @@ See [HelloWorld sample](/Assets/Editor/CustomCommandSamples/HelloWorld/Skill/SKI
 
 ### Unity CLI Loop Files
 
-`UserSettings/UnityMcpSettings.json` stores per-user editor session state and should always remain local-only.
+`UserSettings/UnityMcpSettings.json` stores per-user editor session state and should always remain local-only. The file name is a historical compatibility name.
 
 The `.uloop/` directory at the project root stores CLI cache, tool registry, and runtime outputs. Most of its contents are local-only, but some files can optionally be git-tracked for team sharing.
 

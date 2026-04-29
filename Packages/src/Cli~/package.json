@@ -1,6 +1,6 @@
 {
   "name": "uloop-cli",
-  "version": "2.1.0",
+  "version": "3.0.0",
   "//version": "x-release-please-version",
   "description": "CLI tool for Unity Editor communication via Unity CLI Loop",
   "main": "dist/dispatcher.bundle.cjs",
@@ -42,14 +42,12 @@
   },
   "dependencies": {
     "commander": "14.0.3",
-    "launch-unity": "^0.17.1",
-    "semver": "7.7.4"
+    "launch-unity": "^0.17.1"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
     "@types/jest": "30.0.0",
     "@types/node": "25.6.0",
-    "@types/semver": "7.7.1",
     "esbuild": "0.28.0",
     "eslint": "10.2.1",
     "eslint-config-prettier": "10.1.8",

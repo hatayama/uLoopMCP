@@ -13,7 +13,7 @@ namespace io.github.hatayama.uLoopMCP
     // - McpEditorWindow: The UI for starting and stopping the server.
     // - AssemblyReloadEvents: Used to handle server state across domain reloads.
     /// <summary>
-    /// Manages the state of the MCP Server with SessionState and automatically restores it on assembly reload.
+    /// Manages the Unity CLI bridge server state and restores it after assembly reload.
     /// </summary>
     [InitializeOnLoad]
     public static class McpServerController
@@ -30,7 +30,7 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// The current MCP server instance.
+        /// The current Unity CLI bridge server instance.
         /// </summary>
         public static McpBridgeServer CurrentServer => mcpServer;
 
@@ -58,7 +58,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             if (IsBackgroundUnityProcess())
             {
-                VibeLogger.LogInfo("server_controller_background_skip", "Skipping MCP server controller initialization in background Unity process.");
+                VibeLogger.LogInfo("server_controller_background_skip", "Skipping Unity CLI bridge controller initialization in background Unity process.");
                 return;
             }
 
@@ -671,7 +671,7 @@ namespace io.github.hatayama.uLoopMCP
         private static void ValidateServerConfiguration(int port)
         {
             // Validate port number using shared validator
-            if (!McpPortValidator.ValidatePort(port, "for MCP server"))
+            if (!McpPortValidator.ValidatePort(port, "for Unity CLI bridge"))
             {
                 throw new System.ArgumentOutOfRangeException(nameof(port),
                     $"Port number must be between 1 and 65535. Received: {port}");
@@ -681,7 +681,7 @@ namespace io.github.hatayama.uLoopMCP
             if (EditorApplication.isCompiling)
             {
                 throw new System.InvalidOperationException(
-                    "Cannot start MCP server while Unity is compiling. Please wait for compilation to complete.");
+                    "Cannot start Unity CLI bridge while Unity is compiling. Please wait for compilation to complete.");
             }
 
             // Server configuration validation passed
