@@ -11,7 +11,7 @@
 
 <p align="center">
     <img height="450" alt="logo-black-bg" src="https://github.com/user-attachments/assets/fca3047f-9042-4bf9-83bd-58b03f061082" /><br>
-    <sub align="center">(Logo inspired by Daft Punk's <i>Discovery</i> album art)</sub>  
+    <sub>(Logo inspired by Daft Punk's <i>Discovery</i> album art)</sub>  
 </p>
   
 
