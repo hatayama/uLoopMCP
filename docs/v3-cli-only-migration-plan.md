@@ -162,8 +162,8 @@ In v3 this comparison changes meaning.
 - [x] Decide exact project-local CLI install path and generation flow.
 - [x] Add tests for dispatcher project resolution and argument forwarding.
 - [x] Implement the TypeScript global dispatcher.
-- [ ] Move or package the existing TypeScript CLI as the project-local implementation.
-- [ ] Update Unity-side install/setup flow to install or refresh project-local CLI.
+- [x] Move or package the existing TypeScript CLI as the project-local implementation.
+- [ ] Update Unity-side install/setup flow to install or refresh project-local CLI. (initial install path added; status/detection refresh still pending)
 - [x] Remove MCP server functionality and related setup surfaces. (TypeScript MCP server, config generation, and Settings MCP tab removed first.)
 - [ ] Update command help, README, docs, and diagnostics for CLI-only v3. (in progress)
 - [ ] Update Release Please and publish workflows for `3.0.0`.

@@ -768,6 +768,17 @@ namespace io.github.hatayama.uLoopMCP
                     }
 
                     EditorUtility.DisplayDialog("Installation Failed", message, "OK");
+                    return;
+                }
+
+                CliInstallResult projectLocalResult = ProjectLocalCliInstaller.InstallProjectLocalCli(
+                    UnityMcpPathResolver.GetProjectRoot());
+                if (!projectLocalResult.Success)
+                {
+                    EditorUtility.DisplayDialog(
+                        "Project CLI Installation Failed",
+                        $"Failed to install the project-local uLoop CLI.\n\n{projectLocalResult.ErrorOutput}",
+                        "OK");
                 }
             }
             finally

@@ -839,6 +839,17 @@ namespace io.github.hatayama.uLoopMCP
                         $"Failed to install uloop-cli.\n\n{result.ErrorOutput}\n\n"
                         + $"You can install manually:\n  npm install -g {installTarget}",
                         "OK");
+                    return;
+                }
+
+                CliInstallResult projectLocalResult = ProjectLocalCliInstaller.InstallProjectLocalCli(
+                    UnityMcpPathResolver.GetProjectRoot());
+                if (!projectLocalResult.Success)
+                {
+                    EditorUtility.DisplayDialog(
+                        "Project CLI Installation Failed",
+                        $"Failed to install the project-local uLoop CLI.\n\n{projectLocalResult.ErrorOutput}",
+                        "OK");
                 }
             }
             finally
