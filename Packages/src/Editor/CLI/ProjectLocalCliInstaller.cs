@@ -20,6 +20,15 @@ namespace io.github.hatayama.uLoopMCP
             return InstallProjectLocalCliFromBundle(sourceBundlePath, projectRoot);
         }
 
+        public static bool IsProjectLocalCliVersionCurrent(string projectRoot, string expectedVersion)
+        {
+            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(projectRoot), "projectRoot must not be null or empty");
+            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(expectedVersion), "expectedVersion must not be null or empty");
+
+            string version = DetectProjectLocalCliVersion(projectRoot);
+            return string.Equals(version, expectedVersion, System.StringComparison.Ordinal);
+        }
+
         internal static CliInstallResult InstallProjectLocalCliFromBundle(
             string sourceBundlePath,
             string projectRoot)
@@ -69,6 +78,59 @@ namespace io.github.hatayama.uLoopMCP
             return Path.Combine(
                 GetProjectLocalBinDir(projectRoot),
                 CliConstants.PROJECT_LOCAL_WINDOWS_COMMAND_NAME);
+        }
+
+        internal static string DetectProjectLocalCliVersion(string projectRoot)
+        {
+            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(projectRoot), "projectRoot must not be null or empty");
+
+            string projectLocalCliPath = GetProjectLocalCliPath(projectRoot);
+            if (!File.Exists(projectLocalCliPath))
+            {
+                return null;
+            }
+
+            RuntimePlatform platform = Application.platform;
+            string nodePath = NodeEnvironmentResolver.FindNodePathAtPlatform(platform);
+            string fileName = string.IsNullOrEmpty(nodePath) ? "node" : nodePath;
+
+            ProcessStartInfo startInfo = new ProcessStartInfo
+            {
+                FileName = fileName,
+                Arguments = $"{QuoteProcessArgument(projectLocalCliPath)} {CliConstants.VERSION_FLAG}",
+                WorkingDirectory = projectRoot,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+
+            NodeEnvironmentResolver.SetupEnvironmentPathAtPlatform(startInfo, nodePath, platform);
+
+            Process process = ProcessStartHelper.TryStart(startInfo);
+            if (process == null)
+            {
+                return null;
+            }
+
+            bool exited = process.WaitForExit(CHMOD_TIMEOUT_MS);
+            if (!exited)
+            {
+                if (!process.HasExited)
+                {
+                    process.Kill();
+                }
+
+                process.Dispose();
+                return null;
+            }
+
+            process.WaitForExit();
+            string output = process.StandardOutput.ReadToEnd().Trim().TrimStart('v', 'V');
+            bool failed = process.ExitCode != 0 || string.IsNullOrEmpty(output);
+            process.Dispose();
+
+            return failed ? null : output;
         }
 
         private static string GetProjectLocalBinDir(string projectRoot)

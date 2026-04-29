@@ -377,8 +377,8 @@ namespace io.github.hatayama.uLoopMCP
         private void RefreshSkillsSection()
         {
             string cachedCliVersion = CliInstallationDetector.GetCachedCliVersion();
-            bool cliInstalled = !string.IsNullOrEmpty(cachedCliVersion);
             string projectRoot = UnityMcpPathResolver.GetProjectRoot();
+            bool cliInstalled = IsCliReady(cachedCliVersion, projectRoot);
             List<ToolSkillSynchronizer.SkillTargetInfo> targets = DetectDisplayedSkillTargetsFast(projectRoot);
             bool canManageSkills = CanManageSkills(cliInstalled);
             UpdateSkillsStep(canManageSkills, targets);
@@ -434,8 +434,9 @@ namespace io.github.hatayama.uLoopMCP
 
             await CliInstallationDetector.ForceRefreshCliVersionAsync(CancellationToken.None);
             string cliVersion = CliInstallationDetector.GetCachedCliVersion();
-            bool cliInstalled = cliVersion != null;
-            bool cliVersionMatched = IsCliVersionMatched(cliVersion);
+            string projectRoot = UnityMcpPathResolver.GetProjectRoot();
+            bool cliInstalled = IsCliReady(cliVersion, projectRoot);
+            bool cliVersionMatched = IsCliVersionMatched(cliVersion) && cliInstalled;
 
             UpdateCliStep(cliInstalled, cliVersion, cliVersionMatched);
 
@@ -445,7 +446,6 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            string projectRoot = UnityMcpPathResolver.GetProjectRoot();
             List<ToolSkillSynchronizer.SkillTargetInfo> targets = DetectDisplayedSkillTargetsFast(projectRoot);
             bool canManageSkills = CanManageSkills(cliInstalled);
             UpdateSkillsStep(canManageSkills, targets);
@@ -603,7 +603,15 @@ namespace io.github.hatayama.uLoopMCP
             if (!System.Version.TryParse(normalized, out System.Version installed)) return false;
             if (!System.Version.TryParse(McpConstants.PackageInfo.version, out System.Version required)) return false;
 
-            return installed.CompareTo(required) == 0;
+            return installed.CompareTo(required) >= 0;
+        }
+
+        private static bool IsCliReady(string cliVersion, string projectRoot)
+        {
+            return !string.IsNullOrEmpty(cliVersion)
+                && ProjectLocalCliInstaller.IsProjectLocalCliVersionCurrent(
+                    projectRoot,
+                    McpConstants.PackageInfo.version);
         }
 
         private void UpdateSkillsStep(

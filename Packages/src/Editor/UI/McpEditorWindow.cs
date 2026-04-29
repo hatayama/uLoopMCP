@@ -595,19 +595,21 @@ namespace io.github.hatayama.uLoopMCP
         private CliSetupData CreateCliSetupData(bool includeSkillDirectoryChecks = true)
         {
             string cliVersion = CliInstallationDetector.GetCachedCliVersion();
-            bool isCliInstalled = cliVersion != null;
+            string packageVersion = McpConstants.PackageInfo.version;
+            bool isProjectLocalCliCurrent = ProjectLocalCliInstaller.IsProjectLocalCliVersionCurrent(
+                UnityMcpPathResolver.GetProjectRoot(),
+                packageVersion);
+            bool isCliInstalled = cliVersion != null && isProjectLocalCliCurrent;
             bool isChecking = !CliInstallationDetector.IsCheckCompleted()
                 || _isRefreshingVersion
                 || !includeSkillDirectoryChecks;
-            string packageVersion = McpConstants.PackageInfo.version;
             bool needsUpdate = false;
             bool needsDowngrade = false;
-            if (isCliInstalled)
+            if (cliVersion != null)
             {
                 System.Version cliVer = new System.Version(cliVersion);
                 System.Version pkgVer = new System.Version(packageVersion);
                 needsUpdate = cliVer < pkgVer;
-                needsDowngrade = cliVer > pkgVer;
             }
             bool groupSkillsUnderUnityCliLoop = !_installSkillsFlat;
             SkillInstallState selectedTargetInstallState = includeSkillDirectoryChecks

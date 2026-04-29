@@ -63,5 +63,16 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
             Assert.That(result.Success, Is.False);
             Assert.That(result.ErrorOutput, Does.Contain(missingSourceBundlePath));
         }
+
+        [Test]
+        public void IsProjectLocalCliVersionCurrent_WhenCliIsMissing_ReturnsFalse()
+        {
+            string projectRoot = Path.Combine(_temporaryRoot, "Project");
+            Directory.CreateDirectory(projectRoot);
+
+            bool isCurrent = ProjectLocalCliInstaller.IsProjectLocalCliVersionCurrent(projectRoot, "3.0.0");
+
+            Assert.That(isCurrent, Is.False);
+        }
     }
 }
