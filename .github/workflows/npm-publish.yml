@@ -43,6 +43,17 @@ jobs:
           fi
           echo "version=${CLI_VERSION}" >> "$GITHUB_OUTPUT"
           echo "📋 CLI version: ${CLI_VERSION}"
+          case "${CLI_VERSION}" in
+            *-*)
+              NPM_TAG=${CLI_VERSION#*-}
+              NPM_TAG=${NPM_TAG%%.*}
+              ;;
+            *)
+              NPM_TAG=latest
+              ;;
+          esac
+          echo "npm_tag=${NPM_TAG}" >> "$GITHUB_OUTPUT"
+          echo "📋 npm dist-tag: ${NPM_TAG}"
 
           PUBLISHED=$(npm view uloop-cli versions --json 2>/dev/null || echo '[]')
           if echo "$PUBLISHED" | jq -e ". | index(\"${CLI_VERSION}\")" > /dev/null 2>&1; then
@@ -74,11 +85,11 @@ jobs:
         if: steps.version.outputs.already_published == 'false' && inputs.dry-run != true
         run: |
           cd Packages/src/Cli~
-          npm publish --access public --provenance
-          echo "✅ CLI v${{ steps.version.outputs.version }} published to npm with provenance"
+          npm publish --tag "${{ steps.version.outputs.npm_tag }}" --access public --provenance
+          echo "✅ CLI v${{ steps.version.outputs.version }} published to npm with ${{ steps.version.outputs.npm_tag }} tag and provenance"
 
       - name: 🧪 Dry run - skip publish
         if: inputs.dry-run == true
         run: |
           echo "🧪 Dry run mode - skipping actual publish"
-          echo "Would publish uloop-cli@${{ steps.version.outputs.version }}"
+          echo "Would publish uloop-cli@${{ steps.version.outputs.version }} with ${{ steps.version.outputs.npm_tag }} tag"

@@ -2,6 +2,9 @@
   "packages": {
     "Packages/src": {
       "release-type": "node",
+      "versioning": "prerelease",
+      "prerelease": true,
+      "prerelease-type": "beta",
       "include-v-in-tag": true,
       "include-component-in-tag": false,
       "extra-files": [
