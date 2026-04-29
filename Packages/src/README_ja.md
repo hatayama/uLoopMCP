@@ -229,66 +229,6 @@ uloop compile --project-path /Users/foo/my-unity-project
 uloop compile --project-path ../other-project
 ```
 
-<details>
-<summary>CLIの代わりにMCPを使う場合</summary>
-
-> [!WARNING]
-> MCP接続は将来のリリースでメンテナンスが終了、または廃止される可能性があります。CLIの利用を推奨します。
-
-MCP（Model Context Protocol）経由でも接続できます。MCPの場合、CLIやSkillsのインストールは不要です。
-
-### MCP接続の手順
-
-1. Window > Unity CLI Loop > Settingsを選択します。専用ウィンドウが開くので **MCP** ボタンを押してください。
-<img width="274" height="289" alt="CleanShot 2026-02-26 at 20 37 16" src="https://github.com/user-attachments/assets/5f2fc5db-fd33-4b5d-9f0e-3e2e0d134cf6" />
-
-2. 次に、LLM Tool SettingsセクションでターゲットIDEを選択します。黄色い「Configure {LLM Tool名}」ボタンを押してIDEに自動接続してください。
-<img width="335" alt="image" src="https://github.com/user-attachments/assets/25f1f4f9-e3c8-40a5-a2f3-903f9ed5f45b" />
-
-3. IDE接続確認
-  - 例えばCursorの場合、設定ページのTools & MCPを確認し、uLoopMCPを見つけてください。トグルをクリックしてMCPを有効にします。
-
-<img width="657" height="399" alt="image" src="https://github.com/user-attachments/assets/5137491d-0396-482f-b695-6700043b3f69" />
-
-> [!WARNING]
-> **Windsurfについて**
-> プロジェクト単位の設定ができず、global設定のみとなります。
-
-<details>
-<summary>手動設定（通常は不要）</summary>
-
-> [!NOTE]
-> 通常は自動設定で十分ですが、必要に応じて、設定ファイル（`mcp.jsonなど`）を手動で編集できます：
-
-```json
-{
-  "mcpServers": {
-    "uLoopMCP": {
-      "command": "node",
-      "args": [
-        "[Unity Package Path]/TypeScriptServer~/dist/server.bundle.js"
-      ],
-      "env": {
-        "UNITY_TCP_PORT": "{port}"
-      }
-    }
-  }
-}
-```
-
-**パス例**:
-- **Package Manager経由**: `"/Users/username/UnityProject/Library/PackageCache/io.github.hatayama.uloopmcp@[hash]/TypeScriptServer~/dist/server.bundle.js"`
-> [!NOTE]
-> Package Manager経由でインストールした場合、パッケージはハッシュ化されたディレクトリ名で`Library/PackageCache`に配置されます。「Auto Configure Cursor」ボタンを使用すると、正しいパスが自動的に設定されます。
-
-</details>
-
-### 複数のUnityインスタンスのサポート
-> [!NOTE]
-> ポート番号を変更することで複数のUnityインスタンスをサポートできます。Unity CLI Loop起動時に自動的に使われていないportが割り当てられます。
-
-</details>
-
 # 設計思想
 
 Unity CLI Loop はツールの数を追い求めません。C#コードの動的実行（`execute-dynamic-code`）があれば、Unity Editor上のほとんどの操作はそれ一つで実現できます。
@@ -398,7 +338,7 @@ Unity Editor内で動的にC#コードを実行します。
 - スニペット内で await が利用可能です（Task / ValueTask / UniTask など awaitable 全般）
 - CancellationToken をツールに渡すと、キャンセルが末端まで伝播します
 
-**セキュリティレベル対応**: 2段階のセキュリティ制御を実装し、実行可能なコードを制限。ツール自体を無効化するには、MCPツール設定UIのツールon/offトグルを使用してください。
+**セキュリティレベル対応**: 2段階のセキュリティ制御を実装し、実行可能なコードを制限。ツール自体を無効化するには、Tool Settings UIのツールon/offトグルを使用してください。
 
   - **Level 1 - Restricted（制限付き）**【推奨設定】
     - 基本的に全てのUnity APIと.NET標準ライブラリが利用可能
@@ -431,7 +371,7 @@ Unity Editor内で動的にC#コードを実行します。
 > **セキュリティ設定について**
 >
 > 一部のツールはセキュリティ上の理由でデフォルトで無効化されています。
-> これらのツールを使用するには、uLoopMCPウィンドウの「Security Settings」で該当する項目を有効化してください：
+> これらのツールを使用するには、Unity CLI Loopウィンドウの「Tool Settings」で該当する項目を有効化してください：
 >
 > **基本セキュリティ設定**:
 > - **Allow Tests Execution**: `run-tests`ツールを有効化
@@ -522,7 +462,7 @@ Unity CLI Loopはコアパッケージへの変更を必要とせず、プロジ
 型安全な設計により、信頼性の高いカスタムツールを短時間で実装可能です。
 (AIに依頼すればすぐに作ってくれるはずです✨)
 
-開発した拡張ツールはGitHubで公開し、他のプロジェクトでも再利用できます。公開例は [uLoopMCP-extensions-sample](https://github.com/hatayama/uLoopMCP-extensions-sample) を参照してください。
+開発した拡張ツールはGitHubで公開し、他のプロジェクトでも再利用できます。
 
 > [!TIP]
 > **AI支援開発向け**: 詳細な実装ガイドが [.claude/rules/mcp-tools.md](/.claude/rules/mcp-tools.md)（ツール開発用）と [.claude/rules/cli.md](/.claude/rules/cli.md)（CLI/Skills開発用）に用意されています。これらのガイドは、Claude Codeが該当ディレクトリで作業する際に自動的に読み込まれます。
@@ -530,7 +470,7 @@ Unity CLI Loopはコアパッケージへの変更を必要とせず、プロジ
 > [!IMPORTANT]
 > **セキュリティ設定について**
 >
-> プロジェクト固有に開発したツールは、uLoopMCPウィンドウの「Security Settings」で **Allow Third Party Tools** を有効化する必要があります。
+> プロジェクト固有に開発したツールは、Unity CLI Loopウィンドウの「Tool Settings」で **Allow Third Party Tools** を有効化する必要があります。
 > また、動的コード実行を含むカスタムツールを開発する場合は、**Dynamic Code Security Level**の設定も考慮してください。
 
 <details>
@@ -664,8 +604,6 @@ description: "ツールの説明と使用タイミング"
 
 完全な例は [HelloWorld サンプル](/Assets/Editor/CustomCommandSamples/HelloWorld/Skill/SKILL.md) を参照してください。
 
-より実践的なサンプルプロジェクトは [uLoopMCP-extensions-sample](https://github.com/hatayama/uLoopMCP-extensions-sample) を参照してください。
-
 ## その他
 
 ### Unity CLI Loop 関連ファイル
@@ -678,7 +616,7 @@ description: "ツールの説明と使用タイミング"
 |---------|------|---------|
 | `settings.permissions.json` | チーム共有のセキュリティポリシー（サードパーティツール許可、動的コード実行レベル） | 任意 |
 | `settings.tools.json` | ツールごとの有効・無効設定 | 任意 |
-| `tools.json` | 自動生成されるMCPツールレジストリ | No |
+| `tools.json` | 自動生成されるCLIツールレジストリ | No |
 | `outputs/` | ランタイム出力（テスト結果、スクリーンショット、ヒエラルキーダンプ） | No |
 
 > [!TIP]

@@ -49,40 +49,28 @@ jobs:
 
           echo "new_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
 
-          # Get current versions from both package.json files
           CLI_VERSION=$(node -p "require('./Packages/src/Cli~/package.json').dependencies['launch-unity']")
-          SERVER_VERSION=$(node -p "require('./Packages/src/TypeScriptServer~/package.json').dependencies['launch-unity']")
           echo "cli_version=$CLI_VERSION" >> "$GITHUB_OUTPUT"
-          echo "server_version=$SERVER_VERSION" >> "$GITHUB_OUTPUT"
 
-          echo "📋 Current: Cli~=$CLI_VERSION, Server~=$SERVER_VERSION → Target: $NEW_VERSION"
+          echo "📋 Current: Cli~=$CLI_VERSION → Target: $NEW_VERSION"
 
       - name: ✅ Check if update is needed
         id: check
         env:
           NEW: ${{ steps.version.outputs.new_version }}
           CLI: ${{ steps.version.outputs.cli_version }}
-          SERVER: ${{ steps.version.outputs.server_version }}
         run: |
-          # Skip if both are already up to date
-          if [ "$NEW" = "$CLI" ] && [ "$NEW" = "$SERVER" ]; then
+          if [ "$NEW" = "$CLI" ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
-            echo "Both packages already at $NEW — skipping."
+            echo "Cli~ already at $NEW — skipping."
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
-            echo "Update needed: Cli~=$CLI, Server~=$SERVER → $NEW"
+            echo "Update needed: Cli~=$CLI → $NEW"
           fi
 
       - name: 📦 Update Cli~ dependency
         if: steps.check.outputs.skip == 'false'
         working-directory: Packages/src/Cli~
-        env:
-          TARGET_VERSION: ${{ steps.version.outputs.new_version }}
-        run: npm install "launch-unity@${TARGET_VERSION}" --save-exact
-
-      - name: 📦 Update TypeScriptServer~ dependency
-        if: steps.check.outputs.skip == 'false'
-        working-directory: Packages/src/TypeScriptServer~
         env:
           TARGET_VERSION: ${{ steps.version.outputs.new_version }}
         run: npm install "launch-unity@${TARGET_VERSION}" --save-exact
@@ -118,7 +106,6 @@ jobs:
         env:
           NEW_VERSION: ${{ steps.version.outputs.new_version }}
           CLI_VERSION: ${{ steps.version.outputs.cli_version }}
-          SERVER_VERSION: ${{ steps.version.outputs.server_version }}
         run: |
           {
             echo "Automated update triggered by launch-unity release."
@@ -126,7 +113,6 @@ jobs:
             echo "## Changes"
             echo "- Update \`launch-unity\` to \`${NEW_VERSION}\`"
             echo "- Cli~ was at \`${CLI_VERSION}\`"
-            echo "- TypeScriptServer~ was at \`${SERVER_VERSION}\`"
             echo ""
             echo "## CHANGELOG (launch-unity ${CLI_VERSION} → ${NEW_VERSION})"
             echo ""

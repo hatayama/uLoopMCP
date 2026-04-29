@@ -310,19 +310,6 @@ namespace io.github.hatayama.uLoopMCP
                 }
             }, TaskScheduler.FromCurrentSynchronizationContext());
 
-            // Synchronize MCP editor configurations with current debug symbol state after domain reload
-            // Use delayCall to ensure the editor is fully initialized before file I/O
-            EditorApplication.delayCall += () =>
-            {
-                try
-                {
-                    McpDebugStateUpdater.UpdateAllConfigurationsForDebugState();
-                }
-                catch (System.Exception ex)
-                {
-                    UnityEngine.Debug.LogWarning($"MCP debug-state configuration sync failed: {ex.Message}");
-                }
-            };
         }
 
         /// <summary>
@@ -817,19 +804,6 @@ namespace io.github.hatayama.uLoopMCP
                     McpEditorSettings.ClearReconnectingFlags();
                     Debug.LogError($"[{McpConstants.PROJECT_NAME}] Recovery failed: no available port to bind. SavedPort={savedPort}, LastAttemptPort={chosenPort}");
                     throw new InvalidOperationException($"Failed to bind any recovery port. SavedPort={savedPort}, LastAttemptPort={chosenPort}.");
-                }
-
-                // Auto-update configuration files after startup.
-                // This keeps external editor settings aligned with path updates and recovery port fallback.
-                try
-                {
-                    McpConfigAutoUpdater.UpdateAllConfiguredEditors(chosenPort);
-                }
-                catch (Exception ex)
-                {
-                    VibeLogger.LogWarning("config_auto_update_failed", $"Failed to auto-update configurations: {ex.Message}");
-                    Debug.LogWarning($"[{McpConstants.PROJECT_NAME}] Failed to auto-update configurations: {ex.Message}");
-                    // Continue with running server even if config update fails
                 }
 
                 // Mark running and update settings

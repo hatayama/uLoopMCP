@@ -20,7 +20,6 @@
   "keywords": [
     "cli",
     "unity",
-    "mcp",
     "uloop"
   ],
   "author": "hatayama",
@@ -31,9 +30,9 @@
     "directory": "Packages/src/Cli~"
   },
   "bugs": {
-    "url": "https://github.com/hatayama/uLoopMCP/issues"
+    "url": "https://github.com/hatayama/unity-cli-loop/issues"
   },
-  "homepage": "https://github.com/hatayama/uLoopMCP#readme",
+  "homepage": "https://github.com/hatayama/unity-cli-loop#readme",
   "engines": {
     "node": ">=22.0.0"
   },
