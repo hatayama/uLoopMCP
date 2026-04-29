@@ -10,9 +10,7 @@
 ![GitHubCopilot](https://img.shields.io/badge/GitHub_Copilot-111?logo=githubcopilot)
 
 <p align="center">
-    <img height="400" alt="logo-black-bgのコピー" src="https://github.com/user-attachments/assets/14dfc37d-33c9-4ad9-bbf4-ddfbd69b09eb" /><br>
-  <img height="400" alt="logo-highlightのコピー" src="https://github.com/user-attachments/assets/94e39eb5-c57c-41ba-b446-1450f786dac2" />
-
+    <img height="450" alt="logo-black-bg" src="https://github.com/user-attachments/assets/fca3047f-9042-4bf9-83bd-58b03f061082" /><br>
     <sub align="center">(Logo inspired by Daft Punk's <i>Discovery</i> album art)</sub>  
 </p>
   
