@@ -2,7 +2,7 @@ name: Security Code Scan
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, v3-beta ]
     paths:
       - 'Packages/src/**/*.cs'
       - 'Assets/**/*.cs'
@@ -10,7 +10,7 @@ on:
       - 'Packages/src/Cli~/package.json'
       - 'Packages/src/Cli~/package-lock.json'
   pull_request:
-    branches: [ main ]
+    branches: [ main, v3-beta ]
     paths:
       - 'Packages/src/**/*.cs'
       - 'Assets/**/*.cs'

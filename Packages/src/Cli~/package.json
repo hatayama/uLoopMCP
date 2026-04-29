@@ -3,13 +3,13 @@
   "version": "2.1.0",
   "//version": "x-release-please-version",
   "description": "CLI tool for Unity Editor communication via Unity CLI Loop",
-  "main": "dist/cli.bundle.cjs",
+  "main": "dist/dispatcher.bundle.cjs",
   "bin": {
-    "uloop": "dist/cli.bundle.cjs"
+    "uloop": "dist/dispatcher.bundle.cjs"
   },
   "type": "module",
   "scripts": {
-    "build": "esbuild src/cli.ts --bundle --platform=node --format=cjs --outfile=dist/cli.bundle.cjs --sourcemap --banner:js=\"#!/usr/bin/env node\" --loader:.md=text",
+    "build": "esbuild src/dispatcher.ts --bundle --platform=node --format=cjs --outfile=dist/dispatcher.bundle.cjs --sourcemap --banner:js=\"#!/usr/bin/env node\" && esbuild src/cli.ts --bundle --platform=node --format=cjs --outfile=dist/cli.bundle.cjs --sourcemap --banner:js=\"#!/usr/bin/env node\" --loader:.md=text",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
     "format": "prettier --write src/**/*.ts",

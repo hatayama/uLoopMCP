@@ -65,6 +65,8 @@ jobs:
         run: |
           cd Packages/src/Cli~
           npm pack --dry-run --json > /tmp/pack.json
+          jq -e '.[0].files[] | select(.path=="dist/dispatcher.bundle.cjs")' /tmp/pack.json > /dev/null
+          echo "✅ dist/dispatcher.bundle.cjs found in package"
           jq -e '.[0].files[] | select(.path=="dist/cli.bundle.cjs")' /tmp/pack.json > /dev/null
           echo "✅ dist/cli.bundle.cjs found in package"
 

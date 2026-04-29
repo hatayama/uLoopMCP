@@ -1,0 +1,143 @@
+import { EventEmitter } from 'events';
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
+import { VERSION } from '../version';
+import {
+  runDispatcher,
+  type DispatcherChildProcess,
+  type DispatcherDependencies,
+} from '../dispatcher';
+
+type SpawnCall = {
+  readonly command: string;
+  readonly args: readonly string[];
+  readonly cwd: string;
+};
+
+function createUnityProject(): string {
+  const projectRoot = mkdtempSync(join(tmpdir(), 'uloop-dispatcher-'));
+  mkdirSync(join(projectRoot, 'Assets'));
+  mkdirSync(join(projectRoot, 'ProjectSettings'));
+  return projectRoot;
+}
+
+function installProjectLocalCli(projectRoot: string): string {
+  const binDir = join(projectRoot, '.uloop', 'bin');
+  mkdirSync(binDir, { recursive: true });
+  const cliPath = join(binDir, 'uloop');
+  writeFileSync(cliPath, '#!/usr/bin/env node\n');
+  return cliPath;
+}
+
+function createDependencies(
+  projectRoot: string,
+  args: readonly string[],
+  spawnExitCode = 0,
+): DispatcherDependencies & {
+  readonly spawnCalls: SpawnCall[];
+  readonly stdoutChunks: string[];
+  readonly stderrChunks: string[];
+} {
+  const spawnCalls: SpawnCall[] = [];
+  const stdoutChunks: string[] = [];
+  const stderrChunks: string[] = [];
+
+  return {
+    args,
+    cwd: projectRoot,
+    platform: 'darwin',
+    stdout: { write: (chunk: string): boolean => stdoutChunks.push(chunk) > 0 },
+    stderr: { write: (chunk: string): boolean => stderrChunks.push(chunk) > 0 },
+    spawnFn: (command, forwardedArgs, options): DispatcherChildProcess => {
+      spawnCalls.push({
+        command,
+        args: forwardedArgs,
+        cwd: String(options.cwd),
+      });
+
+      const child = new EventEmitter();
+      process.nextTick(() => child.emit('exit', spawnExitCode, null));
+      return child as DispatcherChildProcess;
+    },
+    spawnCalls,
+    stdoutChunks,
+    stderrChunks,
+  };
+}
+
+describe('dispatcher', () => {
+  const createdProjects: string[] = [];
+
+  afterEach(() => {
+    for (const projectRoot of createdProjects) {
+      rmSync(projectRoot, { recursive: true, force: true });
+    }
+    createdProjects.length = 0;
+  });
+
+  it('forwards arguments to the project-local CLI selected by --project-path', async () => {
+    const projectRoot = createUnityProject();
+    createdProjects.push(projectRoot);
+    const cliPath = installProjectLocalCli(projectRoot);
+    const dependencies = createDependencies('/tmp', [
+      '--project-path',
+      projectRoot,
+      'get-logs',
+      '--json',
+    ]);
+
+    const exitCode = await runDispatcher(dependencies);
+
+    expect(exitCode).toBe(0);
+    expect(dependencies.spawnCalls).toEqual([
+      {
+        command: cliPath,
+        args: ['--project-path', projectRoot, 'get-logs', '--json'],
+        cwd: projectRoot,
+      },
+    ]);
+  });
+
+  it('discovers the Unity project from a nested working directory', async () => {
+    const projectRoot = createUnityProject();
+    createdProjects.push(projectRoot);
+    const cliPath = installProjectLocalCli(projectRoot);
+    const nestedDir = join(projectRoot, 'Assets', 'Scripts');
+    mkdirSync(nestedDir, { recursive: true });
+    const dependencies = createDependencies(nestedDir, ['list']);
+
+    const exitCode = await runDispatcher(dependencies);
+
+    expect(exitCode).toBe(0);
+    expect(dependencies.spawnCalls).toEqual([
+      {
+        command: cliPath,
+        args: ['list'],
+        cwd: projectRoot,
+      },
+    ]);
+  });
+
+  it('returns an actionable error when the project-local CLI is missing', async () => {
+    const projectRoot = createUnityProject();
+    createdProjects.push(projectRoot);
+    const dependencies = createDependencies(projectRoot, ['compile']);
+
+    const exitCode = await runDispatcher(dependencies);
+
+    expect(exitCode).toBe(1);
+    expect(dependencies.spawnCalls).toHaveLength(0);
+    expect(dependencies.stderrChunks.join('')).toContain('.uloop/bin/uloop');
+  });
+
+  it('prints the dispatcher version without requiring a Unity project', async () => {
+    const dependencies = createDependencies('/tmp', ['--version']);
+
+    const exitCode = await runDispatcher(dependencies);
+
+    expect(exitCode).toBe(0);
+    expect(dependencies.spawnCalls).toHaveLength(0);
+    expect(dependencies.stdoutChunks.join('')).toBe(`${VERSION}\n`);
+  });
+});

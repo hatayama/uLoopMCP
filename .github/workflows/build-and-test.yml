@@ -4,7 +4,7 @@ on:
   push:
     tags: [ 'v*' ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, v3-beta ]
   workflow_dispatch:
 
 permissions:
