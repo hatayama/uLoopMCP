@@ -12,7 +12,7 @@
 <p align="center">
   <img width="600" alt="logo" src="https://github.com/user-attachments/assets/416c4452-e385-415b-bff0-9399bba3b1e0" /><br>
   <sub>(Logo inspired by Daft Punk's <i>Discovery</i> album art)</sub>
-</p>
+
   
 
 Let an AI agent compile, test, and operate your Unity project from popular LLM tools via CLI.
