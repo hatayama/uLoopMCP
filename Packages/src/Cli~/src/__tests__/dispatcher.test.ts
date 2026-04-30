@@ -14,6 +14,7 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 import { VERSION } from '../version';
 import {
+  PROJECT_LOCAL_CLI_IN_PROCESS_MARKER,
   runDispatcher,
   type DispatcherChildProcess,
   type DispatcherDependencies,
@@ -27,6 +28,7 @@ type SpawnCall = {
 
 type LoadModuleCall = {
   readonly modulePath: string;
+  readonly args: readonly string[];
   readonly cwd: string;
 };
 
@@ -43,11 +45,14 @@ function createUnityProject(): string {
   return projectRoot;
 }
 
-function installProjectLocalCli(projectRoot: string): string {
+function installProjectLocalCli(
+  projectRoot: string,
+  contents = `#!/usr/bin/env node\n${PROJECT_LOCAL_CLI_IN_PROCESS_MARKER}\n`,
+): string {
   const binDir = join(projectRoot, '.uloop', 'bin');
   mkdirSync(binDir, { recursive: true });
   const cliPath = join(binDir, 'uloop');
-  writeFileSync(cliPath, '#!/usr/bin/env node\n');
+  writeFileSync(cliPath, contents);
   return cliPath;
 }
 
@@ -95,9 +100,10 @@ function createDependencies(
       currentCwd = path;
       chdirCalls.push(path);
     },
-    loadModuleFn: (modulePath): Promise<void> => {
+    loadModuleFn: (modulePath, forwardedArgs): Promise<void> => {
       loadModuleCalls.push({
         modulePath,
+        args: forwardedArgs,
         cwd: currentCwd,
       });
       return Promise.resolve();
@@ -156,6 +162,7 @@ describe('dispatcher', () => {
     expect(dependencies.loadModuleCalls).toEqual([
       {
         modulePath: cliPath,
+        args: ['--project-path', projectRoot, 'get-logs', '--json'],
         cwd: projectRoot,
       },
     ]);
@@ -177,6 +184,7 @@ describe('dispatcher', () => {
     expect(dependencies.loadModuleCalls).toEqual([
       {
         modulePath: cliPath,
+        args: ['list'],
         cwd: projectRoot,
       },
     ]);
@@ -196,6 +204,25 @@ describe('dispatcher', () => {
       {
         command: cliPath,
         args: ['list'],
+        cwd: projectRoot,
+      },
+    ]);
+  });
+
+  it('falls back to spawning an older project-local CLI without the in-process entrypoint', async () => {
+    const projectRoot = createUnityProject();
+    createdProjects.push(projectRoot);
+    const cliPath = installProjectLocalCli(projectRoot, '#!/usr/bin/env node\n');
+    const dependencies = createDependencies(projectRoot, ['compile']);
+
+    const exitCode = await runDispatcher(dependencies);
+
+    expect(exitCode).toBe(0);
+    expect(dependencies.loadModuleCalls).toHaveLength(0);
+    expect(dependencies.spawnCalls).toEqual([
+      {
+        command: cliPath,
+        args: ['compile'],
         cwd: projectRoot,
       },
     ]);

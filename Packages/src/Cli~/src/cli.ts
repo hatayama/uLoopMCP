@@ -51,6 +51,7 @@ interface CliOptions extends GlobalOptions {
 const FOCUS_WINDOW_COMMAND = 'focus-window' as const;
 const LAUNCH_COMMAND = 'launch' as const;
 const UPDATE_COMMAND = 'update' as const;
+export const PROJECT_LOCAL_CLI_IN_PROCESS_MARKER = 'uloop-cli-in-process-entrypoint-v1';
 
 const HELP_GROUP_BUILTIN_TOOLS = 'Built-in Tools:' as const;
 const HELP_GROUP_THIRD_PARTY_TOOLS = 'Third-party Tools:' as const;
@@ -1070,15 +1071,15 @@ function extractSyncGlobalOptions(args: string[]): GlobalOptions {
 /**
  * Main entry point with auto-sync for unknown commands.
  */
-async function main(): Promise<void> {
+async function main(args: string[] = process.argv.slice(2)): Promise<void> {
   if (handleCompletionOptions()) {
     return;
   }
 
   const program = createProgram();
-  const args = process.argv.slice(2);
   const syncGlobalOptions = extractSyncGlobalOptions(args);
   const cmdName = findCommandName(args);
+  const parseArgs = ['node', 'uloop', ...args];
 
   // No command name = no Unity operation; skip project detection
   const NO_PROJECT_COMMANDS = [UPDATE_COMMAND, 'completion'] as const;
@@ -1105,7 +1106,7 @@ async function main(): Promise<void> {
     for (const tool of tools) {
       registerToolCommand(program, tool, getToolHelpGroup(tool.name, defaultToolNames));
     }
-    program.parse();
+    program.parse(parseArgs);
     return;
   }
 
@@ -1173,10 +1174,24 @@ async function main(): Promise<void> {
     }
   }
 
-  program.parse();
+  program.parse(parseArgs);
+}
+
+export async function runCli(args: readonly string[] = process.argv.slice(2)): Promise<void> {
+  const cliArgs = [...args];
+
+  if (await tryHandleFastExecuteDynamicCodeCommand(cliArgs)) {
+    return;
+  }
+
+  await main(cliArgs);
 }
 
 function shouldRunCliEntryPoint(): boolean {
+  if (process.env['ULOOP_DISPATCHER_IN_PROCESS'] === '1') {
+    return false;
+  }
+
   if (process.env.JEST_WORKER_ID === undefined) {
     return true;
   }
@@ -1186,11 +1201,5 @@ function shouldRunCliEntryPoint(): boolean {
 
 if (shouldRunCliEntryPoint()) {
   const args = process.argv.slice(2);
-  void (async (): Promise<void> => {
-    if (await tryHandleFastExecuteDynamicCodeCommand(args)) {
-      return;
-    }
-
-    await main();
-  })();
+  void runCli(args);
 }

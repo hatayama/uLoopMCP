@@ -3,7 +3,7 @@
 
 import assert from 'node:assert';
 import { spawn, type SpawnOptions } from 'child_process';
-import { existsSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { basename, dirname, join, resolve } from 'path';
 import { pathToFileURL } from 'url';
 import { runFocusWindowCommand } from './commands/focus-window.js';
@@ -16,6 +16,8 @@ const VERSION_ARGS = new Set(['--version', '-v']);
 const HELP_ARGS = new Set(['--help', '-h']);
 const DISPATCHER_COMMAND_LAUNCH = 'launch';
 const DISPATCHER_COMMAND_FOCUS_WINDOW = 'focus-window';
+const DISPATCHER_IN_PROCESS_ENV = 'ULOOP_DISPATCHER_IN_PROCESS';
+export const PROJECT_LOCAL_CLI_IN_PROCESS_MARKER = 'uloop-cli-in-process-entrypoint-v1';
 
 type OutputWriter = {
   write(chunk: string): boolean;
@@ -33,7 +35,14 @@ export type DispatcherSpawnFn = (
 ) => DispatcherChildProcess;
 
 export type DispatcherChdirFn = (path: string) => void;
-export type DispatcherLoadModuleFn = (modulePath: string) => Promise<void>;
+export type DispatcherLoadModuleFn = (modulePath: string, args: readonly string[]) => Promise<void>;
+
+type ProjectLocalCliModule = {
+  runCli?: (args: readonly string[]) => Promise<void>;
+  default?: {
+    runCli?: (args: readonly string[]) => Promise<void>;
+  };
+};
 
 export type DispatcherCommandContext = {
   readonly cwd: string;
@@ -84,8 +93,23 @@ function createDefaultDependencies(): DispatcherDependencies {
     chdirFn: (path): void => {
       process.chdir(path);
     },
-    loadModuleFn: async (modulePath): Promise<void> => {
-      await import(pathToFileURL(modulePath).href);
+    loadModuleFn: async (modulePath, args): Promise<void> => {
+      const previousInProcessValue = process.env[DISPATCHER_IN_PROCESS_ENV];
+      process.env[DISPATCHER_IN_PROCESS_ENV] = '1';
+      try {
+        const projectLocalCliModule = (await import(
+          pathToFileURL(modulePath).href
+        )) as ProjectLocalCliModule;
+        const runCli = projectLocalCliModule.runCli ?? projectLocalCliModule.default?.runCli;
+        assert(typeof runCli === 'function', 'project-local CLI bundle must export runCli');
+        await runCli(args);
+      } finally {
+        if (previousInProcessValue === undefined) {
+          delete process.env[DISPATCHER_IN_PROCESS_ENV];
+        } else {
+          process.env[DISPATCHER_IN_PROCESS_ENV] = previousInProcessValue;
+        }
+      }
     },
     launchCommandFn: runDispatcherLaunchCommand,
     focusWindowCommandFn: runDispatcherFocusWindowCommand,
@@ -206,8 +230,15 @@ function findProjectLocalCliPath(projectRoot: string, platform: NodeJS.Platform)
   return candidatePaths.find((candidatePath) => existsSync(candidatePath)) ?? null;
 }
 
-function canLoadProjectLocalCliInProcess(dependencies: DispatcherDependencies): boolean {
-  return dependencies.platform !== 'win32';
+function hasInProcessEntrypoint(localCliPath: string): boolean {
+  return readFileSync(localCliPath, 'utf8').includes(PROJECT_LOCAL_CLI_IN_PROCESS_MARKER);
+}
+
+function canLoadProjectLocalCliInProcess(
+  localCliPath: string,
+  dependencies: DispatcherDependencies,
+): boolean {
+  return dependencies.platform !== 'win32' && hasInProcessEntrypoint(localCliPath);
 }
 
 async function runProjectLocalCli(
@@ -216,9 +247,9 @@ async function runProjectLocalCli(
   projectRoot: string,
   dependencies: DispatcherDependencies,
 ): Promise<number> {
-  if (canLoadProjectLocalCliInProcess(dependencies)) {
+  if (canLoadProjectLocalCliInProcess(localCliPath, dependencies)) {
     dependencies.chdirFn(projectRoot);
-    await dependencies.loadModuleFn(localCliPath);
+    await dependencies.loadModuleFn(localCliPath, args);
     return 0;
   }
 
