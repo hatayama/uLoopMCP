@@ -25,6 +25,11 @@ type SpawnCall = {
   readonly cwd: string;
 };
 
+type LoadModuleCall = {
+  readonly modulePath: string;
+  readonly cwd: string;
+};
+
 type DispatcherCommandCall = {
   readonly projectPath: string | undefined;
   readonly options?: Record<string, unknown>;
@@ -50,23 +55,29 @@ function createDependencies(
   projectRoot: string,
   args: readonly string[],
   spawnExitCode = 0,
+  overrides: Partial<Pick<DispatcherDependencies, 'platform'>> = {},
 ): DispatcherDependencies & {
   readonly spawnCalls: SpawnCall[];
+  readonly loadModuleCalls: LoadModuleCall[];
+  readonly chdirCalls: string[];
   readonly launchCalls: DispatcherCommandCall[];
   readonly focusWindowCalls: DispatcherCommandCall[];
   readonly stdoutChunks: string[];
   readonly stderrChunks: string[];
 } {
   const spawnCalls: SpawnCall[] = [];
+  const loadModuleCalls: LoadModuleCall[] = [];
+  const chdirCalls: string[] = [];
   const launchCalls: DispatcherCommandCall[] = [];
   const focusWindowCalls: DispatcherCommandCall[] = [];
   const stdoutChunks: string[] = [];
   const stderrChunks: string[] = [];
+  let currentCwd = projectRoot;
 
   return {
     args,
     cwd: projectRoot,
-    platform: 'darwin',
+    platform: overrides.platform ?? 'darwin',
     stdout: { write: (chunk: string): boolean => stdoutChunks.push(chunk) > 0 },
     stderr: { write: (chunk: string): boolean => stderrChunks.push(chunk) > 0 },
     spawnFn: (command, forwardedArgs, options): DispatcherChildProcess => {
@@ -79,6 +90,17 @@ function createDependencies(
       const child = new EventEmitter();
       process.nextTick(() => child.emit('exit', spawnExitCode, null));
       return child as DispatcherChildProcess;
+    },
+    chdirFn: (path): void => {
+      currentCwd = path;
+      chdirCalls.push(path);
+    },
+    loadModuleFn: (modulePath): Promise<void> => {
+      loadModuleCalls.push({
+        modulePath,
+        cwd: currentCwd,
+      });
+      return Promise.resolve();
     },
     launchCommandFn: (projectPath, options, context): Promise<number> => {
       launchCalls.push({
@@ -96,6 +118,8 @@ function createDependencies(
       return Promise.resolve(0);
     },
     spawnCalls,
+    loadModuleCalls,
+    chdirCalls,
     launchCalls,
     focusWindowCalls,
     stdoutChunks,
@@ -127,10 +151,11 @@ describe('dispatcher', () => {
     const exitCode = await runDispatcher(dependencies);
 
     expect(exitCode).toBe(0);
-    expect(dependencies.spawnCalls).toEqual([
+    expect(dependencies.spawnCalls).toHaveLength(0);
+    expect(dependencies.chdirCalls).toEqual([projectRoot]);
+    expect(dependencies.loadModuleCalls).toEqual([
       {
-        command: cliPath,
-        args: ['--project-path', projectRoot, 'get-logs', '--json'],
+        modulePath: cliPath,
         cwd: projectRoot,
       },
     ]);
@@ -147,6 +172,26 @@ describe('dispatcher', () => {
     const exitCode = await runDispatcher(dependencies);
 
     expect(exitCode).toBe(0);
+    expect(dependencies.spawnCalls).toHaveLength(0);
+    expect(dependencies.chdirCalls).toEqual([projectRoot]);
+    expect(dependencies.loadModuleCalls).toEqual([
+      {
+        modulePath: cliPath,
+        cwd: projectRoot,
+      },
+    ]);
+  });
+
+  it('falls back to spawning the project-local CLI on Windows', async () => {
+    const projectRoot = createUnityProject();
+    createdProjects.push(projectRoot);
+    const cliPath = installProjectLocalCli(projectRoot);
+    const dependencies = createDependencies(projectRoot, ['list'], 0, { platform: 'win32' });
+
+    const exitCode = await runDispatcher(dependencies);
+
+    expect(exitCode).toBe(0);
+    expect(dependencies.loadModuleCalls).toHaveLength(0);
     expect(dependencies.spawnCalls).toEqual([
       {
         command: cliPath,

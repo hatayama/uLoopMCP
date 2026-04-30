@@ -5,6 +5,7 @@ import assert from 'node:assert';
 import { spawn, type SpawnOptions } from 'child_process';
 import { existsSync } from 'fs';
 import { basename, dirname, join, resolve } from 'path';
+import { pathToFileURL } from 'url';
 import { runFocusWindowCommand } from './commands/focus-window.js';
 import { type LaunchCommandOptions, runLaunchCommand } from './commands/launch.js';
 import { VERSION } from './version.js';
@@ -31,6 +32,9 @@ export type DispatcherSpawnFn = (
   options: SpawnOptions & { cwd: string },
 ) => DispatcherChildProcess;
 
+export type DispatcherChdirFn = (path: string) => void;
+export type DispatcherLoadModuleFn = (modulePath: string) => Promise<void>;
+
 export type DispatcherCommandContext = {
   readonly cwd: string;
   readonly stdout: OutputWriter;
@@ -55,6 +59,8 @@ export type DispatcherDependencies = {
   readonly stdout: OutputWriter;
   readonly stderr: OutputWriter;
   readonly spawnFn: DispatcherSpawnFn;
+  readonly chdirFn: DispatcherChdirFn;
+  readonly loadModuleFn: DispatcherLoadModuleFn;
   readonly launchCommandFn: DispatcherLaunchCommandFn;
   readonly focusWindowCommandFn: DispatcherFocusWindowCommandFn;
 };
@@ -75,6 +81,12 @@ function createDefaultDependencies(): DispatcherDependencies {
     stdout: process.stdout,
     stderr: process.stderr,
     spawnFn: spawn as DispatcherSpawnFn,
+    chdirFn: (path): void => {
+      process.chdir(path);
+    },
+    loadModuleFn: async (modulePath): Promise<void> => {
+      await import(pathToFileURL(modulePath).href);
+    },
     launchCommandFn: runDispatcherLaunchCommand,
     focusWindowCommandFn: runDispatcherFocusWindowCommand,
   };
@@ -194,12 +206,22 @@ function findProjectLocalCliPath(projectRoot: string, platform: NodeJS.Platform)
   return candidatePaths.find((candidatePath) => existsSync(candidatePath)) ?? null;
 }
 
+function canLoadProjectLocalCliInProcess(dependencies: DispatcherDependencies): boolean {
+  return dependencies.platform !== 'win32';
+}
+
 async function runProjectLocalCli(
   localCliPath: string,
   args: readonly string[],
   projectRoot: string,
   dependencies: DispatcherDependencies,
 ): Promise<number> {
+  if (canLoadProjectLocalCliInProcess(dependencies)) {
+    dependencies.chdirFn(projectRoot);
+    await dependencies.loadModuleFn(localCliPath);
+    return 0;
+  }
+
   return new Promise((resolveExitCode) => {
     const child = dependencies.spawnFn(localCliPath, args, {
       cwd: projectRoot,
