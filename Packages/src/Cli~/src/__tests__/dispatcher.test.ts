@@ -20,6 +20,8 @@ import {
   type DispatcherDependencies,
 } from '../dispatcher';
 
+const LEGACY_IN_PROCESS_MARKER = 'uloop-cli-in-process-entrypoint-v1';
+
 type SpawnCall = {
   readonly command: string;
   readonly args: readonly string[];
@@ -223,6 +225,47 @@ describe('dispatcher', () => {
       {
         command: cliPath,
         args: ['compile'],
+        cwd: projectRoot,
+      },
+    ]);
+  });
+
+  it('falls back to spawning a v1 in-process CLI that does not await dynamic commands', async () => {
+    const projectRoot = createUnityProject();
+    createdProjects.push(projectRoot);
+    const cliPath = installProjectLocalCli(
+      projectRoot,
+      `#!/usr/bin/env node\n${LEGACY_IN_PROCESS_MARKER}\n`,
+    );
+    const dependencies = createDependencies(projectRoot, ['get-logs']);
+
+    const exitCode = await runDispatcher(dependencies);
+
+    expect(exitCode).toBe(0);
+    expect(dependencies.loadModuleCalls).toHaveLength(0);
+    expect(dependencies.spawnCalls).toEqual([
+      {
+        command: cliPath,
+        args: ['get-logs'],
+        cwd: projectRoot,
+      },
+    ]);
+  });
+
+  it('loads a v2 project-local CLI in-process', async () => {
+    const projectRoot = createUnityProject();
+    createdProjects.push(projectRoot);
+    const cliPath = installProjectLocalCli(projectRoot);
+    const dependencies = createDependencies(projectRoot, ['get-logs']);
+
+    const exitCode = await runDispatcher(dependencies);
+
+    expect(exitCode).toBe(0);
+    expect(dependencies.spawnCalls).toHaveLength(0);
+    expect(dependencies.loadModuleCalls).toEqual([
+      {
+        modulePath: cliPath,
+        args: ['get-logs'],
         cwd: projectRoot,
       },
     ]);

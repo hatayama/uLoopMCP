@@ -17,7 +17,7 @@ const HELP_ARGS = new Set(['--help', '-h']);
 const DISPATCHER_COMMAND_LAUNCH = 'launch';
 const DISPATCHER_COMMAND_FOCUS_WINDOW = 'focus-window';
 const DISPATCHER_IN_PROCESS_ENV = 'ULOOP_DISPATCHER_IN_PROCESS';
-export const PROJECT_LOCAL_CLI_IN_PROCESS_MARKER = 'uloop-cli-in-process-entrypoint-v1';
+export const PROJECT_LOCAL_CLI_IN_PROCESS_MARKER = 'uloop-cli-in-process-entrypoint-v2';
 
 type OutputWriter = {
   write(chunk: string): boolean;

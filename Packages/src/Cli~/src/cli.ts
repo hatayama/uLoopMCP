@@ -51,7 +51,7 @@ interface CliOptions extends GlobalOptions {
 const FOCUS_WINDOW_COMMAND = 'focus-window' as const;
 const LAUNCH_COMMAND = 'launch' as const;
 const UPDATE_COMMAND = 'update' as const;
-export const PROJECT_LOCAL_CLI_IN_PROCESS_MARKER = 'uloop-cli-in-process-entrypoint-v1';
+export const PROJECT_LOCAL_CLI_IN_PROCESS_MARKER = 'uloop-cli-in-process-entrypoint-v2';
 
 const HELP_GROUP_BUILTIN_TOOLS = 'Built-in Tools:' as const;
 const HELP_GROUP_THIRD_PARTY_TOOLS = 'Third-party Tools:' as const;
@@ -938,8 +938,7 @@ function handleCompletion(install: boolean, shellOverride?: string): void {
 /**
  * Handle --list-commands and --list-options before parsing.
  */
-function handleCompletionOptions(): boolean {
-  const args = process.argv.slice(2);
+function handleCompletionOptions(args: readonly string[] = process.argv.slice(2)): boolean {
   const projectPath: string | undefined = extractSyncGlobalOptions(args).projectPath;
 
   if (args.includes('--list-commands')) {
@@ -1006,7 +1005,7 @@ function commandExists(cmdName: string, projectPath?: string): boolean {
   return filterEnabledTools(tools.tools, projectPath).some((t) => t.name === cmdName);
 }
 
-function shouldSkipAutoSync(cmdName: string | undefined, args: string[]): boolean {
+function shouldSkipAutoSync(cmdName: string | undefined, args: readonly string[]): boolean {
   if (cmdName === LAUNCH_COMMAND || cmdName === UPDATE_COMMAND) {
     return true;
   }
@@ -1033,7 +1032,7 @@ function findCommandName(args: readonly string[]): string | undefined {
   return undefined;
 }
 
-function extractSyncGlobalOptions(args: string[]): GlobalOptions {
+function extractSyncGlobalOptions(args: readonly string[]): GlobalOptions {
   const options: GlobalOptions = {};
 
   for (let i = 0; i < args.length; i++) {
@@ -1072,7 +1071,7 @@ function extractSyncGlobalOptions(args: string[]): GlobalOptions {
  * Main entry point with auto-sync for unknown commands.
  */
 async function main(args: string[] = process.argv.slice(2)): Promise<void> {
-  if (handleCompletionOptions()) {
+  if (handleCompletionOptions(args)) {
     return;
   }
 
@@ -1106,7 +1105,7 @@ async function main(args: string[] = process.argv.slice(2)): Promise<void> {
     for (const tool of tools) {
       registerToolCommand(program, tool, getToolHelpGroup(tool.name, defaultToolNames));
     }
-    program.parse(parseArgs);
+    await program.parseAsync(parseArgs);
     return;
   }
 
@@ -1174,7 +1173,7 @@ async function main(args: string[] = process.argv.slice(2)): Promise<void> {
     }
   }
 
-  program.parse(parseArgs);
+  await program.parseAsync(parseArgs);
 }
 
 export async function runCli(args: readonly string[] = process.argv.slice(2)): Promise<void> {
