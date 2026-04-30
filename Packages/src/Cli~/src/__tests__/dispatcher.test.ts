@@ -1,3 +1,13 @@
+jest.mock(
+  'launch-unity',
+  () => ({
+    orchestrateLaunch: jest.fn(),
+    findRunningUnityProcess: jest.fn(),
+    focusUnityProcess: jest.fn(),
+  }),
+  { virtual: true },
+);
+
 import { EventEmitter } from 'events';
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
@@ -12,6 +22,12 @@ import {
 type SpawnCall = {
   readonly command: string;
   readonly args: readonly string[];
+  readonly cwd: string;
+};
+
+type DispatcherCommandCall = {
+  readonly projectPath: string | undefined;
+  readonly options?: Record<string, unknown>;
   readonly cwd: string;
 };
 
@@ -36,10 +52,14 @@ function createDependencies(
   spawnExitCode = 0,
 ): DispatcherDependencies & {
   readonly spawnCalls: SpawnCall[];
+  readonly launchCalls: DispatcherCommandCall[];
+  readonly focusWindowCalls: DispatcherCommandCall[];
   readonly stdoutChunks: string[];
   readonly stderrChunks: string[];
 } {
   const spawnCalls: SpawnCall[] = [];
+  const launchCalls: DispatcherCommandCall[] = [];
+  const focusWindowCalls: DispatcherCommandCall[] = [];
   const stdoutChunks: string[] = [];
   const stderrChunks: string[] = [];
 
@@ -60,7 +80,24 @@ function createDependencies(
       process.nextTick(() => child.emit('exit', spawnExitCode, null));
       return child as DispatcherChildProcess;
     },
+    launchCommandFn: (projectPath, options, context): Promise<number> => {
+      launchCalls.push({
+        projectPath,
+        options: { ...options },
+        cwd: context.cwd,
+      });
+      return Promise.resolve(0);
+    },
+    focusWindowCommandFn: (projectPath, context): Promise<number> => {
+      focusWindowCalls.push({
+        projectPath,
+        cwd: context.cwd,
+      });
+      return Promise.resolve(0);
+    },
     spawnCalls,
+    launchCalls,
+    focusWindowCalls,
     stdoutChunks,
     stderrChunks,
   };
@@ -139,5 +176,44 @@ describe('dispatcher', () => {
     expect(exitCode).toBe(0);
     expect(dependencies.spawnCalls).toHaveLength(0);
     expect(dependencies.stdoutChunks.join('')).toBe(`${VERSION}\n`);
+  });
+
+  it('runs launch in the dispatcher without requiring a project-local CLI', async () => {
+    const projectRoot = createUnityProject();
+    createdProjects.push(projectRoot);
+    const dependencies = createDependencies('/tmp', ['launch', projectRoot, '--restart']);
+
+    const exitCode = await runDispatcher(dependencies);
+
+    expect(exitCode).toBe(0);
+    expect(dependencies.spawnCalls).toHaveLength(0);
+    expect(dependencies.launchCalls).toEqual([
+      {
+        projectPath: projectRoot,
+        options: { restart: true },
+        cwd: '/tmp',
+      },
+    ]);
+  });
+
+  it('runs focus-window in the dispatcher without requiring a project-local CLI', async () => {
+    const projectRoot = createUnityProject();
+    createdProjects.push(projectRoot);
+    const dependencies = createDependencies('/tmp', [
+      'focus-window',
+      '--project-path',
+      projectRoot,
+    ]);
+
+    const exitCode = await runDispatcher(dependencies);
+
+    expect(exitCode).toBe(0);
+    expect(dependencies.spawnCalls).toHaveLength(0);
+    expect(dependencies.focusWindowCalls).toEqual([
+      {
+        projectPath: projectRoot,
+        cwd: '/tmp',
+      },
+    ]);
   });
 });
