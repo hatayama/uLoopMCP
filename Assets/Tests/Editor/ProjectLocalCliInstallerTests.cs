@@ -74,5 +74,62 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
 
             Assert.That(isCurrent, Is.False);
         }
+
+        [Test]
+        public void EnsureProjectLocalCliCurrentFromBundle_WhenCliIsMissing_CopiesBundle()
+        {
+            string sourceBundlePath = Path.Combine(_temporaryRoot, "source-cli.cjs");
+            File.WriteAllText(sourceBundlePath, BuildVersionScript("3.0.0-beta.0", "source"));
+
+            string projectRoot = Path.Combine(_temporaryRoot, "Project");
+            Directory.CreateDirectory(projectRoot);
+
+            CliInstallResult result = ProjectLocalCliAutoInstaller.EnsureProjectLocalCliCurrentFromBundle(
+                sourceBundlePath,
+                projectRoot,
+                "3.0.0-beta.0");
+
+            string projectLocalCliPath = ProjectLocalCliInstaller.GetProjectLocalCliPath(projectRoot);
+            Assert.That(result.Success, Is.True, result.ErrorOutput);
+            Assert.That(File.Exists(projectLocalCliPath), Is.True);
+            Assert.That(File.ReadAllText(projectLocalCliPath), Is.EqualTo(File.ReadAllText(sourceBundlePath)));
+        }
+
+        [Test]
+        public void EnsureProjectLocalCliCurrentFromBundle_WhenVersionIsCurrent_DoesNotOverwriteBundle()
+        {
+            string currentBundlePath = Path.Combine(_temporaryRoot, "current-cli.cjs");
+            string currentBundleContent = BuildVersionScript("3.0.0-beta.0", "current");
+            File.WriteAllText(currentBundlePath, currentBundleContent);
+
+            string projectRoot = Path.Combine(_temporaryRoot, "Project");
+            Directory.CreateDirectory(projectRoot);
+            CliInstallResult initialResult = ProjectLocalCliInstaller.InstallProjectLocalCliFromBundle(
+                currentBundlePath,
+                projectRoot);
+            Assert.That(initialResult.Success, Is.True, initialResult.ErrorOutput);
+
+            string replacementBundlePath = Path.Combine(_temporaryRoot, "replacement-cli.cjs");
+            File.WriteAllText(replacementBundlePath, BuildVersionScript("3.0.0-beta.0", "replacement"));
+
+            CliInstallResult result = ProjectLocalCliAutoInstaller.EnsureProjectLocalCliCurrentFromBundle(
+                replacementBundlePath,
+                projectRoot,
+                "3.0.0-beta.0");
+
+            string projectLocalCliPath = ProjectLocalCliInstaller.GetProjectLocalCliPath(projectRoot);
+            Assert.That(result.Success, Is.True, result.ErrorOutput);
+            Assert.That(File.ReadAllText(projectLocalCliPath), Is.EqualTo(currentBundleContent));
+        }
+
+        private static string BuildVersionScript(string version, string marker)
+        {
+            return "#!/usr/bin/env node\n"
+                + "if (process.argv.includes('--version')) {\n"
+                + $"  console.log('{version}');\n"
+                + "  process.exit(0);\n"
+                + "}\n"
+                + $"console.log('{marker}');\n";
+        }
     }
 }

@@ -826,7 +826,9 @@ function printVersionWarning(cliVersion: string, serverVersion: string): void {
   console.error('');
   console.error('   This may cause unexpected behavior or errors.');
   console.error('');
-  console.error(`   Refresh the project-local CLI from ${PRODUCT_DISPLAY_NAME} Settings.`);
+  console.error(
+    `   Reopen Unity or reload ${PRODUCT_DISPLAY_NAME} so the package can refresh the project-local CLI.`,
+  );
   console.error('');
 }
 

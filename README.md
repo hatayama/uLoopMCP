@@ -86,7 +86,7 @@ Select Window > Unity CLI Loop > Settings. A dedicated window will open — conf
 Press the **Install CLI** button.  
 <img width="277" height="306" alt="1" src="https://github.com/user-attachments/assets/0e25c327-73bf-4af6-997b-eebb3c26b372" />
 
-This installs the global `uloop` dispatcher and refreshes this project's `.uloop/bin/uloop` CLI bundle.
+This installs the global `uloop` dispatcher. The Unity package refreshes this project's `.uloop/bin/uloop` CLI bundle automatically when it is missing or version-mismatched.
 
 
 
@@ -103,7 +103,7 @@ If you see the following display, the installation was successful.
 npm install -g uloop-cli
 ```
 
-This installs only the global dispatcher. Open Window > Unity CLI Loop > Settings and press **Install CLI** in each Unity project to refresh `.uloop/bin/uloop`.
+This installs the same global dispatcher as the Settings button. The project-local `.uloop/bin/uloop` bundle is managed automatically by the Unity package in each project.
 
 See [uloop-cli on npm](https://www.npmjs.com/package/uloop-cli) for details.
 </details>

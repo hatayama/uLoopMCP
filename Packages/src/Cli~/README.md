@@ -8,7 +8,7 @@
 
 **CLI companion for [Unity CLI Loop](https://github.com/hatayama/unity-cli-loop)** - Let AI agents compile, test, and operate your Unity project.
 
-> **Prerequisites**: This CLI requires [Unity CLI Loop](https://github.com/hatayama/unity-cli-loop) to be installed in your Unity project. Use the Unity settings window to install or refresh the project-local CLI before running `uloop` commands.
+> **Prerequisites**: This CLI requires [Unity CLI Loop](https://github.com/hatayama/unity-cli-loop) to be installed in your Unity project. The Unity package automatically creates or refreshes the project-local CLI bundle when it is missing or version-mismatched.
 
 ## Installation
 
@@ -342,7 +342,7 @@ uloop completion --shell powershell --install  # PowerShell
 
 - **Node.js 22.0 or later**
 - **Unity 2022.3 or later** with [Unity CLI Loop](https://github.com/hatayama/unity-cli-loop) installed
-- Project-local CLI installed from Window > Unity CLI Loop > Settings
+- Project-local CLI automatically created or refreshed by the Unity package
 
 ## Links
 

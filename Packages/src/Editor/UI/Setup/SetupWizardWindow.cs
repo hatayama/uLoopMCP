@@ -378,7 +378,8 @@ namespace io.github.hatayama.uLoopMCP
         {
             string cachedCliVersion = CliInstallationDetector.GetCachedCliVersion();
             string projectRoot = UnityMcpPathResolver.GetProjectRoot();
-            bool cliInstalled = IsCliReady(cachedCliVersion, projectRoot);
+            EnsureProjectLocalCliCurrent(projectRoot);
+            bool cliInstalled = IsCliInstalled(cachedCliVersion);
             List<ToolSkillSynchronizer.SkillTargetInfo> targets = DetectDisplayedSkillTargetsFast(projectRoot);
             bool canManageSkills = CanManageSkills(cliInstalled);
             UpdateSkillsStep(canManageSkills, targets);
@@ -435,7 +436,8 @@ namespace io.github.hatayama.uLoopMCP
             await CliInstallationDetector.ForceRefreshCliVersionAsync(CancellationToken.None);
             string cliVersion = CliInstallationDetector.GetCachedCliVersion();
             string projectRoot = UnityMcpPathResolver.GetProjectRoot();
-            bool cliInstalled = IsCliReady(cliVersion, projectRoot);
+            EnsureProjectLocalCliCurrent(projectRoot);
+            bool cliInstalled = IsCliInstalled(cliVersion);
             bool cliVersionMatched = IsCliVersionMatched(cliVersion) && cliInstalled;
 
             UpdateCliStep(cliInstalled, cliVersion, cliVersionMatched);
@@ -595,23 +597,31 @@ namespace io.github.hatayama.uLoopMCP
             _installCliButton.SetEnabled(!_isInstallingCli);
             _installCliButton.text = _isInstallingCli ? "Installing..." : "Install CLI";
         }
+
         private static bool IsCliVersionMatched(string cliVersion)
         {
             if (string.IsNullOrEmpty(cliVersion)) return false;
 
-            string normalized = cliVersion.Trim().TrimStart('v', 'V');
-            if (!System.Version.TryParse(normalized, out System.Version installed)) return false;
-            if (!System.Version.TryParse(McpConstants.PackageInfo.version, out System.Version required)) return false;
-
-            return installed.CompareTo(required) >= 0;
+            return CliVersionComparer.IsVersionGreaterThanOrEqual(cliVersion, McpConstants.PackageInfo.version);
         }
 
-        private static bool IsCliReady(string cliVersion, string projectRoot)
+        private static bool IsCliInstalled(string cliVersion)
         {
-            return !string.IsNullOrEmpty(cliVersion)
-                && ProjectLocalCliInstaller.IsProjectLocalCliVersionCurrent(
-                    projectRoot,
-                    McpConstants.PackageInfo.version);
+            return !string.IsNullOrEmpty(cliVersion);
+        }
+
+        private static void EnsureProjectLocalCliCurrent(string projectRoot)
+        {
+            CliInstallResult result = ProjectLocalCliAutoInstaller.EnsureProjectLocalCliCurrent(
+                projectRoot,
+                McpConstants.PackageInfo.version);
+            if (result.Success)
+            {
+                return;
+            }
+
+            Debug.LogWarning(
+                $"[{McpConstants.PROJECT_NAME}] Failed to update project-local uLoop CLI: {result.ErrorOutput}");
         }
 
         private void UpdateSkillsStep(
@@ -848,16 +858,6 @@ namespace io.github.hatayama.uLoopMCP
                         + $"You can install manually:\n  npm install -g {installTarget}",
                         "OK");
                     return;
-                }
-
-                CliInstallResult projectLocalResult = ProjectLocalCliInstaller.InstallProjectLocalCli(
-                    UnityMcpPathResolver.GetProjectRoot());
-                if (!projectLocalResult.Success)
-                {
-                    EditorUtility.DisplayDialog(
-                        "Project CLI Installation Failed",
-                        $"Failed to install the project-local uLoop CLI.\n\n{projectLocalResult.ErrorOutput}",
-                        "OK");
                 }
             }
             finally

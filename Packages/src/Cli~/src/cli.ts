@@ -559,8 +559,9 @@ function printVersionMismatchDiagnostic(): void {
   console.error(`  Unity package:   ${serverVersion}`);
   console.error('  Version mismatch may cause communication errors.');
   console.error('');
-  console.error('  To fix: refresh the project-local CLI from Unity CLI Loop Settings.');
-  console.error('    Window > Unity CLI Loop > Settings > Install CLI');
+  console.error(
+    '  To fix: reopen Unity or reload Unity CLI Loop so the package can refresh the project-local CLI.',
+  );
   console.error('');
   console.error(
     '[For AI] Please report the mismatch and ask the user to refresh the CLI in Unity.',
@@ -813,7 +814,9 @@ export function updateCli(): void {
         } else {
           console.log(`\n✅ Already up to date (v${previousVersion})`);
         }
-        console.log('Refresh the project-local CLI from Unity CLI Loop Settings if needed.');
+        console.log(
+          'Unity CLI Loop refreshes the project-local CLI automatically inside each Unity project.',
+        );
       });
     } else {
       console.error(`\n❌ Update failed with exit code ${code}`);

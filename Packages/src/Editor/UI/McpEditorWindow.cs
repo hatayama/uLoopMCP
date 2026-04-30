@@ -596,21 +596,24 @@ namespace io.github.hatayama.uLoopMCP
         {
             string cliVersion = CliInstallationDetector.GetCachedCliVersion();
             string packageVersion = McpConstants.PackageInfo.version;
-            bool isProjectLocalCliCurrent = ProjectLocalCliInstaller.IsProjectLocalCliVersionCurrent(
-                UnityMcpPathResolver.GetProjectRoot(),
+            string projectRoot = UnityMcpPathResolver.GetProjectRoot();
+            CliInstallResult projectLocalResult = ProjectLocalCliAutoInstaller.EnsureProjectLocalCliCurrent(
+                projectRoot,
                 packageVersion);
-            bool isCliInstalled = cliVersion != null && isProjectLocalCliCurrent;
+            if (!projectLocalResult.Success)
+            {
+                Debug.LogWarning(
+                    $"[{McpConstants.PROJECT_NAME}] Failed to update project-local uLoop CLI: {projectLocalResult.ErrorOutput}");
+            }
+
+            bool isCliInstalled = cliVersion != null;
             bool isChecking = !CliInstallationDetector.IsCheckCompleted()
                 || _isRefreshingVersion
                 || !includeSkillDirectoryChecks;
-            bool needsUpdate = false;
-            bool needsDowngrade = false;
-            if (cliVersion != null)
-            {
-                System.Version cliVer = new System.Version(cliVersion);
-                System.Version pkgVer = new System.Version(packageVersion);
-                needsUpdate = cliVer < pkgVer;
-            }
+            bool needsUpdate = cliVersion != null
+                && CliVersionComparer.IsVersionLessThan(cliVersion, packageVersion);
+            bool needsDowngrade = cliVersion != null
+                && CliVersionComparer.IsVersionGreaterThan(cliVersion, packageVersion);
             bool groupSkillsUnderUnityCliLoop = !_installSkillsFlat;
             SkillInstallState selectedTargetInstallState = includeSkillDirectoryChecks
                 ? _selectedTargetInstallState
@@ -771,16 +774,6 @@ namespace io.github.hatayama.uLoopMCP
 
                     EditorUtility.DisplayDialog("Installation Failed", message, "OK");
                     return;
-                }
-
-                CliInstallResult projectLocalResult = ProjectLocalCliInstaller.InstallProjectLocalCli(
-                    UnityMcpPathResolver.GetProjectRoot());
-                if (!projectLocalResult.Success)
-                {
-                    EditorUtility.DisplayDialog(
-                        "Project CLI Installation Failed",
-                        $"Failed to install the project-local uLoop CLI.\n\n{projectLocalResult.ErrorOutput}",
-                        "OK");
                 }
             }
             finally

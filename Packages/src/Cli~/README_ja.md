@@ -8,7 +8,7 @@
 
 **[Unity CLI Loop](https://github.com/hatayama/unity-cli-loop) の CLI コンパニオン** - AIエージェントにUnityプロジェクトのコンパイル、テスト、操作を任せましょう。
 
-> **前提条件**: このCLIを使用するには、Unityプロジェクトに [Unity CLI Loop](https://github.com/hatayama/unity-cli-loop) がインストールされている必要があります。UnityのSettingsウィンドウから project-local CLI をインストールまたは更新してから `uloop` コマンドを実行してください。
+> **前提条件**: このCLIを使用するには、Unityプロジェクトに [Unity CLI Loop](https://github.com/hatayama/unity-cli-loop) がインストールされている必要があります。project-local CLI bundle は、未作成またはバージョン不一致のときに Unity Package が自動作成・自動更新します。
 
 ## インストール
 
@@ -342,7 +342,7 @@ uloop completion --shell powershell --install  # PowerShell
 
 - **Node.js 22.0 以降**
 - **Unity 2022.3 以降**（[Unity CLI Loop](https://github.com/hatayama/unity-cli-loop) がインストール済みであること）
-- Window > Unity CLI Loop > Settings から project-local CLI がインストール済みであること
+- Unity Package により project-local CLI が自動作成・自動更新されていること
 
 ## リンク
 
