@@ -103,6 +103,29 @@ func FindProjectRoot(startPath string) (string, error) {
 	}
 }
 
+func FindUnityProjectRoot(startPath string) (string, error) {
+	currentPath, err := filepath.Abs(startPath)
+	if err != nil {
+		return "", err
+	}
+
+	for {
+		if IsUnityProject(currentPath) {
+			return currentPath, nil
+		}
+
+		if exists(filepath.Join(currentPath, ".git")) {
+			return "", fmt.Errorf("Unity project not found. Use --project-path option to specify the target")
+		}
+
+		parentPath := filepath.Dir(currentPath)
+		if parentPath == currentPath {
+			return "", fmt.Errorf("Unity project not found. Use --project-path option to specify the target")
+		}
+		currentPath = parentPath
+	}
+}
+
 func IsUnityProject(projectPath string) bool {
 	return exists(filepath.Join(projectPath, "Assets")) && exists(filepath.Join(projectPath, "ProjectSettings"))
 }
