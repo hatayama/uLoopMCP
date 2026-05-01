@@ -60,7 +60,7 @@ function installProjectLocalCli(
 ): string {
   const binDir = join(projectRoot, '.uloop', 'bin');
   mkdirSync(binDir, { recursive: true });
-  const cliPath = join(binDir, 'uloop');
+  const cliPath = join(binDir, 'uloop.cjs');
   writeFileSync(cliPath, contents);
   return cliPath;
 }
@@ -68,7 +68,7 @@ function installProjectLocalCli(
 function installWindowsProjectLocalCli(projectRoot: string): string {
   installProjectLocalCli(projectRoot);
   const cliPath = join(projectRoot, '.uloop', 'bin', 'uloop.cmd');
-  writeFileSync(cliPath, '@echo off\r\nnode "%~dp0\\uloop" %*\r\n');
+  writeFileSync(cliPath, '@echo off\r\nnode "%~dp0\\uloop.cjs" %*\r\n');
   return cliPath;
 }
 
@@ -427,7 +427,7 @@ describe('dispatcher', () => {
     ]);
   });
 
-  it('loads an extensionless project-local CommonJS CLI inside ESM Unity projects', async () => {
+  it('loads a project-local CommonJS CLI inside ESM Unity projects', async () => {
     const projectRoot = createUnityProject();
     createdProjects.push(projectRoot);
     writeFileSync(join(projectRoot, 'package.json'), JSON.stringify({ type: 'module' }));
@@ -487,7 +487,7 @@ describe('dispatcher', () => {
 
     expect(exitCode).toBe(1);
     expect(dependencies.spawnCalls).toHaveLength(0);
-    expect(dependencies.stderrChunks.join('')).toContain('.uloop/bin/uloop');
+    expect(dependencies.stderrChunks.join('')).toContain('.uloop/bin/uloop.cjs');
   });
 
   it('prints the dispatcher version without requiring a Unity project', async () => {

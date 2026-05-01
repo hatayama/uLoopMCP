@@ -11,8 +11,8 @@ import { type LaunchCommandOptions, runLaunchCommand } from './commands/launch.j
 import { isToolEnabled } from './tool-settings-loader.js';
 import { VERSION } from './version.js';
 
-const PROJECT_LOCAL_CLI_RELATIVE_PATH = join('.uloop', 'bin', 'uloop');
-const WINDOWS_PROJECT_LOCAL_CLI_RELATIVE_PATH = `${PROJECT_LOCAL_CLI_RELATIVE_PATH}.cmd`;
+const PROJECT_LOCAL_CLI_RELATIVE_PATH = join('.uloop', 'bin', 'uloop.cjs');
+const WINDOWS_PROJECT_LOCAL_CLI_RELATIVE_PATH = join('.uloop', 'bin', 'uloop.cmd');
 const BUNDLED_PROJECT_CLI_FILE_NAME = 'cli.bundle.cjs';
 const VERSION_ARGS = new Set(['--version', '-v']);
 const HELP_ARGS = new Set(['--help', '-h']);
@@ -368,12 +368,12 @@ function getProjectLocalCliCandidatePaths(
   projectRoot: string,
   platform: NodeJS.Platform,
 ): string[] {
-  const unixPath = join(projectRoot, PROJECT_LOCAL_CLI_RELATIVE_PATH);
+  const cliPath = join(projectRoot, PROJECT_LOCAL_CLI_RELATIVE_PATH);
   if (platform !== 'win32') {
-    return [unixPath];
+    return [cliPath];
   }
 
-  return [join(projectRoot, WINDOWS_PROJECT_LOCAL_CLI_RELATIVE_PATH), unixPath];
+  return [join(projectRoot, WINDOWS_PROJECT_LOCAL_CLI_RELATIVE_PATH), cliPath];
 }
 
 function findProjectLocalCliPath(projectRoot: string, platform: NodeJS.Platform): string | null {

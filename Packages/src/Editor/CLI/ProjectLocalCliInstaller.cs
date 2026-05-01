@@ -47,10 +47,13 @@ namespace io.github.hatayama.uLoopMCP
             string projectLocalCliPath = GetProjectLocalCliPath(projectRoot);
             File.Copy(sourceBundlePath, projectLocalCliPath, overwrite: true);
             File.WriteAllText(
+                GetProjectLocalUnixCommandPath(projectRoot),
+                BuildUnixCommandContent());
+            File.WriteAllText(
                 GetProjectLocalWindowsCommandPath(projectRoot),
                 BuildWindowsCommandContent());
 
-            return MakeProjectLocalCliExecutable(projectLocalCliPath);
+            return MakeProjectLocalCliExecutable(GetProjectLocalUnixCommandPath(projectRoot));
         }
 
         internal static string GetProjectCliBundlePath()
@@ -68,7 +71,16 @@ namespace io.github.hatayama.uLoopMCP
 
             return Path.Combine(
                 GetProjectLocalBinDir(projectRoot),
-                CliConstants.PROJECT_LOCAL_EXECUTABLE_NAME);
+                CliConstants.PROJECT_LOCAL_CJS_FILE_NAME);
+        }
+
+        internal static string GetProjectLocalUnixCommandPath(string projectRoot)
+        {
+            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(projectRoot), "projectRoot must not be null or empty");
+
+            return Path.Combine(
+                GetProjectLocalBinDir(projectRoot),
+                CliConstants.PROJECT_LOCAL_UNIX_COMMAND_NAME);
         }
 
         internal static string GetProjectLocalWindowsCommandPath(string projectRoot)
@@ -143,7 +155,14 @@ namespace io.github.hatayama.uLoopMCP
 
         private static string BuildWindowsCommandContent()
         {
-            return "@echo off\r\nnode \"%~dp0\\uloop\" %*\r\n";
+            return $"@echo off\r\nnode \"%~dp0\\{CliConstants.PROJECT_LOCAL_CJS_FILE_NAME}\" %*\r\n";
+        }
+
+        private static string BuildUnixCommandContent()
+        {
+            return "#!/bin/sh\n"
+                + "DIR=$(CDPATH= cd \"$(dirname \"$0\")\" && pwd)\n"
+                + $"exec node \"$DIR/{CliConstants.PROJECT_LOCAL_CJS_FILE_NAME}\" \"$@\"\n";
         }
 
         private static CliInstallResult MakeProjectLocalCliExecutable(string projectLocalCliPath)
