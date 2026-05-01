@@ -4,23 +4,23 @@ on:
   workflow_dispatch:
     inputs:
       ref:
-        description: 'Git ref to publish from (tag, branch, or SHA). Defaults to default branch.'
+        description: "Git ref to publish from (tag, branch, or SHA). Defaults to default branch."
         required: false
-        default: ''
+        default: ""
       dry-run:
-        description: 'Dry run (skip actual publish)'
+        description: "Dry run (skip actual publish)"
         type: boolean
         default: false
 
 permissions:
   contents: read
-  id-token: write  # Required for npm OIDC trusted publishing
+  id-token: write # Required for npm OIDC trusted publishing
 
 jobs:
   publish:
     runs-on: ubuntu-latest
-    # For workflow_dispatch, only allow from main branch
-    if: github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/main'
+    # For workflow_dispatch, only allow release-managed branches
+    if: github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/v3-beta'
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v6
@@ -30,8 +30,8 @@ jobs:
       - name: 🔧 Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '24'
-          registry-url: 'https://registry.npmjs.org'
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
 
       - name: 📋 Check version
         id: version

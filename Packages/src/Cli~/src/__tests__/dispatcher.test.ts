@@ -177,6 +177,7 @@ describe('dispatcher', () => {
     ['--help'],
     ['compile', '--help'],
     ['completion', '--help'],
+    ['skills', 'list', '--claude'],
     ['update', '--help'],
     ['--list-commands'],
     ['--list-options', 'compile'],

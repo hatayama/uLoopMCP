@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - v3-beta
   # Enable manual execution via "Run workflow" button in browser
   workflow_dispatch:
     inputs:
@@ -21,11 +22,25 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       releases_created: ${{ steps.release.outputs.releases_created }}
+      target_branch: ${{ steps.target.outputs.branch }}
+      target_sha: ${{ steps.target.outputs.sha }}
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v6
         with:
+          ref: ${{ github.event.inputs.branch || github.ref_name }}
           fetch-depth: 0 # Required for tag fetching
+
+      - name: 🎯 Resolve target branch
+        id: target
+        env:
+          INPUT_BRANCH: ${{ github.event.inputs.branch }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          TARGET_BRANCH="${INPUT_BRANCH:-${REF_NAME}}"
+          TARGET_SHA="$(git rev-parse HEAD)"
+          echo "branch=${TARGET_BRANCH}" >> "$GITHUB_OUTPUT"
+          echo "sha=${TARGET_SHA}" >> "$GITHUB_OUTPUT"
 
       # ── Debug: Show repository structure ─────────────────────────
       - name: 🕵️ Show file tree
@@ -47,6 +62,7 @@ jobs:
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+          target-branch: ${{ steps.target.outputs.branch }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: 🔧 Setup Node.js
@@ -108,12 +124,14 @@ jobs:
       - name: 🚀 Dispatch npm-publish workflow
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_BRANCH: ${{ needs.release.outputs.target_branch }}
+          TARGET_SHA: ${{ needs.release.outputs.target_sha }}
         run: |
           STARTED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
           gh workflow run npm-publish.yml \
-            --ref main \
-            -f ref="${GITHUB_SHA}" \
+            --ref "${TARGET_BRANCH}" \
+            -f ref="${TARGET_SHA}" \
             -f dry-run=false \
             --repo "${GITHUB_REPOSITORY}"
 
@@ -124,7 +142,7 @@ jobs:
               gh run list \
                 --workflow npm-publish.yml \
                 --event workflow_dispatch \
-                --commit "${GITHUB_SHA}" \
+                --branch "${TARGET_BRANCH}" \
                 --repo "${GITHUB_REPOSITORY}" \
                 --limit 10 \
                 --json databaseId,createdAt \
