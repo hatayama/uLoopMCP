@@ -420,11 +420,17 @@ async function runProjectLocalCli(
       cwd: projectRoot,
       stdio: 'inherit',
     };
+    let command = localCliPath;
+    let forwardedArgs = args;
+
     if (dependencies.platform === 'win32' && localCliPath.endsWith('.cmd')) {
       spawnOptions.shell = true;
+    } else if (localCliPath.endsWith('.cjs')) {
+      command = dependencies.nodePath;
+      forwardedArgs = [localCliPath, ...args];
     }
 
-    const child = dependencies.spawnFn(localCliPath, args, spawnOptions);
+    const child = dependencies.spawnFn(command, forwardedArgs, spawnOptions);
 
     child.on('exit', (code) => {
       resolveExitCode(code ?? 1);

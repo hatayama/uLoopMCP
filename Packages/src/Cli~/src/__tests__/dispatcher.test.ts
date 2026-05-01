@@ -420,8 +420,8 @@ describe('dispatcher', () => {
     expect(dependencies.loadModuleCalls).toHaveLength(0);
     expect(dependencies.spawnCalls).toEqual([
       {
-        command: cliPath,
-        args: ['compile'],
+        command: '/usr/local/bin/node',
+        args: [cliPath, 'compile'],
         cwd: projectRoot,
         shell: undefined,
       },
@@ -443,8 +443,8 @@ describe('dispatcher', () => {
     expect(dependencies.loadModuleCalls).toHaveLength(0);
     expect(dependencies.spawnCalls).toEqual([
       {
-        command: cliPath,
-        args: ['get-logs'],
+        command: '/usr/local/bin/node',
+        args: [cliPath, 'get-logs'],
         cwd: projectRoot,
         shell: undefined,
       },
