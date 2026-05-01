@@ -48,6 +48,9 @@ func RunProjectLocal(ctx context.Context, args []string, stdout io.Writer, stder
 	if handled, code := tryHandleCompletionRequest(args, completionTools, stdout, stderr); handled {
 		return code
 	}
+	if handled, code := tryHandleUpdateRequest(ctx, args, stdout, stderr); handled {
+		return code
+	}
 
 	connection, err := project.ResolveConnection(startPath, projectPath)
 	if err != nil {
@@ -70,7 +73,7 @@ func RunProjectLocal(ctx context.Context, args []string, stdout io.Writer, stder
 		return runFocusWindow(ctx, connection.ProjectRoot, stdout, stderr)
 	case "fix":
 		return runFix(connection.ProjectRoot, stdout, stderr)
-	case "skills", "update", "launch":
+	case "skills", "launch":
 		fmt.Fprintf(stderr, "native %s command is not implemented yet\n", command)
 		return 1
 	default:
@@ -103,6 +106,9 @@ func RunLauncher(ctx context.Context, args []string, stdout io.Writer, stderr io
 		return 0
 	}
 	if handled, code := tryHandleCompletionRequest(args, loadDefaultTools(), stdout, stderr); handled {
+		return code
+	}
+	if handled, code := tryHandleUpdateRequest(ctx, args, stdout, stderr); handled {
 		return code
 	}
 
