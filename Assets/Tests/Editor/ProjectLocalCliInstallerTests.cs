@@ -27,10 +27,10 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
         }
 
         [Test]
-        public void InstallProjectLocalCliFromBundle_CopiesCliAndWindowsShim()
+        public void InstallProjectLocalCliFromBundle_CopiesNativeCli()
         {
-            string sourceBundlePath = Path.Combine(_temporaryRoot, "source-cli.cjs");
-            File.WriteAllText(sourceBundlePath, "#!/usr/bin/env node\nconsole.log('project cli');\n");
+            string sourceBundlePath = Path.Combine(_temporaryRoot, "source-cli");
+            File.WriteAllText(sourceBundlePath, BuildVersionScript("3.0.0-beta.0", "source"));
 
             string projectRoot = Path.Combine(_temporaryRoot, "Project");
             Directory.CreateDirectory(projectRoot);
@@ -40,13 +40,10 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
                 projectRoot);
 
             string projectLocalCliPath = ProjectLocalCliInstaller.GetProjectLocalCliPath(projectRoot);
-            string windowsCommandPath = ProjectLocalCliInstaller.GetProjectLocalWindowsCommandPath(projectRoot);
 
             Assert.That(result.Success, Is.True, result.ErrorOutput);
             Assert.That(File.Exists(projectLocalCliPath), Is.True);
             Assert.That(File.ReadAllText(projectLocalCliPath), Is.EqualTo(File.ReadAllText(sourceBundlePath)));
-            Assert.That(File.Exists(windowsCommandPath), Is.True);
-            Assert.That(File.ReadAllText(windowsCommandPath), Does.Contain("node \"%~dp0\\uloop.cjs\" %*"));
         }
 
         [Test]
@@ -124,12 +121,12 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
 
         private static string BuildVersionScript(string version, string marker)
         {
-            return "#!/usr/bin/env node\n"
-                + "if (process.argv.includes('--version')) {\n"
-                + $"  console.log('{version}');\n"
-                + "  process.exit(0);\n"
-                + "}\n"
-                + $"console.log('{marker}');\n";
+            return "#!/bin/sh\n"
+                + "if [ \"$1\" = \"--version\" ]; then\n"
+                + $"  echo \"{version}\"\n"
+                + "  exit 0\n"
+                + "fi\n"
+                + $"echo \"{marker}\"\n";
         }
     }
 }

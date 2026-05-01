@@ -1,0 +1,43 @@
+package cli
+
+import "testing"
+
+func TestBuildToolParamsConvertsSchemaTypes(t *testing.T) {
+	tool := toolDefinition{
+		Name: "sample-tool",
+		InputSchema: inputSchema{
+			Properties: map[string]toolProperty{
+				"Enabled": {Type: "boolean"},
+				"Count":   {Type: "integer"},
+				"Names":   {Type: "array"},
+			},
+		},
+	}
+
+	params, projectPath, err := buildToolParams(
+		[]string{
+			"--enabled", "true",
+			"--count", "12",
+			"--names", "a,b",
+			"--project-path", "/tmp/project",
+		},
+		tool,
+	)
+	if err != nil {
+		t.Fatalf("buildToolParams failed: %v", err)
+	}
+
+	if projectPath != "/tmp/project" {
+		t.Fatalf("project path mismatch: %s", projectPath)
+	}
+	if params["Enabled"] != true {
+		t.Fatalf("Enabled mismatch: %#v", params["Enabled"])
+	}
+	if params["Count"] != 12 {
+		t.Fatalf("Count mismatch: %#v", params["Count"])
+	}
+	names, ok := params["Names"].([]string)
+	if !ok || len(names) != 2 || names[0] != "a" || names[1] != "b" {
+		t.Fatalf("Names mismatch: %#v", params["Names"])
+	}
+}

@@ -35,6 +35,11 @@
         },
         {
           "type": "generic",
+          "path": "Packages/src/GoCli~/internal/cli/tools.go",
+          "glob": "Packages/src/GoCli~/internal/cli/tools.go"
+        },
+        {
+          "type": "generic",
           "path": "Packages/src/Editor/Config/McpVersion.cs",
           "glob": "Packages/src/Editor/Config/McpVersion.cs"
         }
