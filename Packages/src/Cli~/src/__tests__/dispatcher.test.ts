@@ -316,6 +316,32 @@ describe('dispatcher', () => {
     ]);
   });
 
+  it('falls back to spawning the project-local CLI when marker probing cannot read it', async () => {
+    const projectRoot = createUnityProject();
+    createdProjects.push(projectRoot);
+    const cliPath = installProjectLocalCli(projectRoot);
+    const dependencies = createDependencies(projectRoot, ['get-logs']);
+
+    chmodSync(cliPath, 0o000);
+    try {
+      const exitCode = await runDispatcher(dependencies);
+
+      expect(exitCode).toBe(0);
+      expect(dependencies.loadModuleCalls).toHaveLength(0);
+      expect(dependencies.chdirCalls).toHaveLength(0);
+      expect(dependencies.spawnCalls).toEqual([
+        {
+          command: '/usr/local/bin/node',
+          args: [cliPath, 'get-logs'],
+          cwd: projectRoot,
+          shell: undefined,
+        },
+      ]);
+    } finally {
+      chmodSync(cliPath, 0o700);
+    }
+  });
+
   it('normalizes non-leading project-path arguments before project-local dispatch', async () => {
     const parentRoot = mkdtempSync(join(tmpdir(), 'uloop-dispatcher-relative-project-'));
     createdProjects.push(parentRoot);

@@ -123,6 +123,15 @@ function isSkippableDirectoryReadError(error: unknown): boolean {
   return code === 'EACCES' || code === 'EPERM' || code === 'ENOENT';
 }
 
+function isFileReadProbeError(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null || !('code' in error)) {
+    return false;
+  }
+
+  const code = (error as { readonly code?: unknown }).code;
+  return typeof code === 'string';
+}
+
 function createDefaultDependencies(): DispatcherDependencies {
   return {
     args: process.argv.slice(2),
@@ -393,7 +402,15 @@ function findProjectLocalCliPath(projectRoot: string, platform: NodeJS.Platform)
 }
 
 function hasInProcessEntrypoint(localCliPath: string): boolean {
-  return readFileSync(localCliPath, 'utf8').includes(PROJECT_LOCAL_CLI_IN_PROCESS_MARKER);
+  try {
+    return readFileSync(localCliPath, 'utf8').includes(PROJECT_LOCAL_CLI_IN_PROCESS_MARKER);
+  } catch (error) {
+    if (isFileReadProbeError(error)) {
+      return false;
+    }
+
+    throw error;
+  }
 }
 
 function canLoadProjectLocalCliInProcess(

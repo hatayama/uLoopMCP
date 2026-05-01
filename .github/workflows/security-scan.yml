@@ -7,16 +7,20 @@ on:
       - 'Packages/src/**/*.cs'
       - 'Assets/**/*.cs'
       - 'Packages/src/Cli~/**/*.ts'
+      - 'Packages/src/Cli~/eslint.config.mjs'
       - 'Packages/src/Cli~/package.json'
       - 'Packages/src/Cli~/package-lock.json'
+      - 'Packages/src/Cli~/tsconfig.json'
   pull_request:
     branches: [ main, v3-beta ]
     paths:
       - 'Packages/src/**/*.cs'
       - 'Assets/**/*.cs'
       - 'Packages/src/Cli~/**/*.ts'
+      - 'Packages/src/Cli~/eslint.config.mjs'
       - 'Packages/src/Cli~/package.json'
       - 'Packages/src/Cli~/package-lock.json'
+      - 'Packages/src/Cli~/tsconfig.json'
   workflow_dispatch:
 
 jobs:
