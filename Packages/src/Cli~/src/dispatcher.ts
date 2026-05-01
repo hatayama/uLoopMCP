@@ -179,6 +179,17 @@ function isBundledCliRequest(args: readonly string[]): boolean {
   return BUNDLED_CLI_COMMANDS.has(args[0]);
 }
 
+function isExplicitPortRequest(args: readonly string[]): boolean {
+  const hasProjectPath = args.some(
+    (arg) => arg === '--project-path' || arg.startsWith('--project-path='),
+  );
+  if (hasProjectPath) {
+    return false;
+  }
+
+  return args.some((arg) => arg === '--port' || arg === '-p' || arg.startsWith('--port='));
+}
+
 function findProjectPathArgument(args: readonly string[]): ProjectPathArgument {
   for (let index = 0; index < args.length; index++) {
     const arg = args[index];
@@ -455,6 +466,10 @@ export async function runDispatcher(
   }
 
   if (isBundledCliRequest(dependencies.args)) {
+    return runBundledCli(dependencies.args, dependencies);
+  }
+
+  if (isExplicitPortRequest(dependencies.args)) {
     return runBundledCli(dependencies.args, dependencies);
   }
 

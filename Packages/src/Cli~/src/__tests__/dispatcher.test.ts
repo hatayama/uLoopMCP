@@ -211,6 +211,29 @@ describe('dispatcher', () => {
     expect(dependencies.stderrChunks.join('')).not.toContain('Could not find a Unity project');
   });
 
+  it('runs explicit port tool commands through the bundled CLI without resolving a Unity project', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'uloop-dispatcher-explicit-port-'));
+    createdProjects.push(root);
+    const bundledCliPath = installBundledCli(root);
+    const dependencies = createDependencies(root, ['get-logs', '--port', '56000'], 0, {
+      bundledCliPath,
+    });
+
+    const exitCode = await runDispatcher(dependencies);
+
+    expect(exitCode).toBe(0);
+    expect(dependencies.loadModuleCalls).toHaveLength(0);
+    expect(dependencies.spawnCalls).toEqual([
+      {
+        command: '/usr/local/bin/node',
+        args: [bundledCliPath, 'get-logs', '--port', '56000'],
+        cwd: root,
+        shell: undefined,
+      },
+    ]);
+    expect(dependencies.stderrChunks).toEqual([]);
+  });
+
   it('forwards arguments to the project-local CLI selected by --project-path', async () => {
     const projectRoot = createUnityProject();
     createdProjects.push(projectRoot);

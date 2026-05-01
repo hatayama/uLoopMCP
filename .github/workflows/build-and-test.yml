@@ -2,9 +2,9 @@ name: Build and Test Unity CLI Loop
 
 on:
   push:
-    tags: [ 'v*' ]
+    tags: ["v*"]
   pull_request:
-    branches: [ main, v3-beta ]
+    branches: [main, v3-beta]
   workflow_dispatch:
 
 permissions:
@@ -21,9 +21,9 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: 'Packages/src/Cli~/package-lock.json'
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: "Packages/src/Cli~/package-lock.json"
 
       - name: Install CLI dependencies
         working-directory: Packages/src/Cli~
@@ -40,6 +40,10 @@ jobs:
       - name: Build CLI
         working-directory: Packages/src/Cli~
         run: npm run build
+
+      - name: Verify checked-in project CLI bundle
+        run: |
+          git diff --exit-code -- Packages/src/Cli~/dist/cli.bundle.cjs
 
   test-unity-package:
     runs-on: ubuntu-latest
