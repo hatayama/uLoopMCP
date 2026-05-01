@@ -39,6 +39,14 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public static bool IsServerRunning => mcpServer?.IsRunning ?? false;
 
+        internal static void RegisterRecoveredServer(McpBridgeServer server)
+        {
+            System.Diagnostics.Debug.Assert(server != null, "server must not be null");
+
+            mcpServer = server;
+            SaveRunningServerSession();
+        }
+
         /// <summary>
         /// Current recovery task. Can be awaited by other components to ensure recovery completes first.
         /// </summary>

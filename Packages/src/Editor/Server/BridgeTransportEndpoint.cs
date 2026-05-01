@@ -61,10 +61,10 @@ namespace io.github.hatayama.uLoopMCP
             return Path;
         }
 
-        private static string CanonicalizeProjectRoot(string projectRoot)
+        internal static string CanonicalizeProjectRoot(string projectRoot)
         {
             string fullPath = System.IO.Path.GetFullPath(projectRoot);
-            string trimmedPath = fullPath.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
+            string trimmedPath = TrimTrailingPathSeparators(fullPath);
             if (Application.platform == RuntimePlatform.WindowsEditor)
             {
                 return ResolveWindowsFinalPath(trimmedPath);
@@ -110,7 +110,7 @@ namespace io.github.hatayama.uLoopMCP
             {
                 string realPath = Marshal.PtrToStringAnsi(resolvedPath);
                 Debug.Assert(!string.IsNullOrWhiteSpace(realPath), "realPath must not be empty");
-                return realPath.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
+                return TrimTrailingPathSeparators(realPath);
             }
             finally
             {
@@ -144,17 +144,33 @@ namespace io.github.hatayama.uLoopMCP
             const string uncDevicePrefix = @"\\?\UNC\";
             if (path.StartsWith(uncDevicePrefix, StringComparison.OrdinalIgnoreCase))
             {
-                return @"\\" + path.Substring(uncDevicePrefix.Length)
-                    .TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
+                return TrimTrailingPathSeparators(@"\\" + path.Substring(uncDevicePrefix.Length));
             }
 
             if (path.StartsWith(dosDevicePrefix, StringComparison.OrdinalIgnoreCase))
             {
-                return path.Substring(dosDevicePrefix.Length)
-                    .TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
+                return TrimTrailingPathSeparators(path.Substring(dosDevicePrefix.Length));
             }
 
-            return path.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
+            return TrimTrailingPathSeparators(path);
+        }
+
+        private static string TrimTrailingPathSeparators(string path)
+        {
+            string root = System.IO.Path.GetPathRoot(path);
+            if (!string.IsNullOrEmpty(root) && string.Equals(path, root, StringComparison.OrdinalIgnoreCase))
+            {
+                return root;
+            }
+
+            string trimmedPath = path.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
+            if (!string.IsNullOrEmpty(trimmedPath))
+            {
+                return trimmedPath;
+            }
+
+            Debug.Assert(!string.IsNullOrEmpty(root), "root must be available when trimming returns empty");
+            return root;
         }
 
         [DllImport(KERNEL32, EntryPoint = "CreateFileW", CharSet = CharSet.Unicode, SetLastError = true)]

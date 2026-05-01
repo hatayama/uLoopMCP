@@ -82,6 +82,7 @@ namespace io.github.hatayama.uLoopMCP
 
                 McpBridgeServer newServer = new McpBridgeServer();
                 newServer.StartServer();
+                McpServerController.RegisterRecoveredServer(newServer);
 
                 // Update session state
                 McpEditorSettings.UpdateSettings(s => s with

@@ -775,8 +775,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private static string NormalizeProjectRootPath(string projectRootPath)
         {
-            string fullPath = Path.GetFullPath(projectRootPath);
-            return fullPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            return BridgeTransportEndpoint.CanonicalizeProjectRoot(projectRootPath);
         }
 
         private static void RemoveLegacyPortFieldsIfNeeded(string settingsPath)
@@ -784,6 +783,12 @@ namespace io.github.hatayama.uLoopMCP
             if (!File.Exists(settingsPath))
             {
                 return;
+            }
+
+            FileInfo fileInfo = new FileInfo(settingsPath);
+            if (fileInfo.Length > McpConstants.MAX_SETTINGS_SIZE_BYTES)
+            {
+                throw new SecurityException("Settings file exceeds size limit");
             }
 
             using StreamReader reader = File.OpenText(settingsPath);

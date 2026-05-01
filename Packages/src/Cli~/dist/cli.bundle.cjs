@@ -3709,7 +3709,14 @@ function createProjectEndpointName(canonicalProjectRoot) {
   return `${IPC_ENDPOINT_PREFIX}-${hash}`;
 }
 function trimTrailingPathSeparators(path) {
-  return path.replace(/[\\/]+$/, "");
+  if (/^[a-zA-Z]:[\\/]*$/.test(path)) {
+    return `${path.slice(0, 2)}\\`;
+  }
+  const trimmedPath = path.replace(/[\\/]+$/, "");
+  if (trimmedPath.length > 0) {
+    return trimmedPath;
+  }
+  return path.startsWith("/") ? "/" : path;
 }
 
 // src/project-root.ts

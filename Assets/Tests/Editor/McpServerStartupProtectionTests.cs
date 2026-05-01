@@ -46,12 +46,7 @@ namespace io.github.hatayama.uLoopMCP
             Assert.IsNotNull(method, "OnBeforeAssemblyReload method should exist");
 
             object originalServer = serverField.GetValue(null);
-            bool originalIsServerRunning = McpEditorSettings.GetIsServerRunning();
-            bool originalIsAfterCompile = McpEditorSettings.GetIsAfterCompile();
-            bool originalIsDomainReloadInProgress = McpEditorSettings.GetIsDomainReloadInProgress();
-            bool originalIsReconnecting = McpEditorSettings.GetIsReconnecting();
-            bool originalShowReconnectingUi = McpEditorSettings.GetShowReconnectingUI();
-            bool originalShowPostCompileReconnectingUi = McpEditorSettings.GetShowPostCompileReconnectingUI();
+            McpEditorSettingsData originalSettings = CloneSettings(McpEditorSettings.GetSettings());
 
             try
             {
@@ -71,12 +66,7 @@ namespace io.github.hatayama.uLoopMCP
             finally
             {
                 serverField.SetValue(null, originalServer);
-                McpEditorSettings.SetIsServerRunning(originalIsServerRunning);
-                McpEditorSettings.SetIsAfterCompile(originalIsAfterCompile);
-                McpEditorSettings.SetIsDomainReloadInProgress(originalIsDomainReloadInProgress);
-                McpEditorSettings.SetIsReconnecting(originalIsReconnecting);
-                McpEditorSettings.SetShowReconnectingUI(originalShowReconnectingUi);
-                McpEditorSettings.SetShowPostCompileReconnectingUI(originalShowPostCompileReconnectingUi);
+                McpEditorSettings.SaveSettings(originalSettings);
                 DomainReloadDetectionService.DeleteLockFile();
                 field.SetValue(null, 0L);
             }
@@ -95,12 +85,7 @@ namespace io.github.hatayama.uLoopMCP
             Assert.IsNotNull(method, "StopServerWithUseCaseAsync method should exist");
 
             object originalServer = serverField.GetValue(null);
-            bool originalIsServerRunning = McpEditorSettings.GetIsServerRunning();
-            bool originalIsAfterCompile = McpEditorSettings.GetIsAfterCompile();
-            bool originalIsDomainReloadInProgress = McpEditorSettings.GetIsDomainReloadInProgress();
-            bool originalIsReconnecting = McpEditorSettings.GetIsReconnecting();
-            bool originalShowReconnectingUi = McpEditorSettings.GetShowReconnectingUI();
-            bool originalShowPostCompileReconnectingUi = McpEditorSettings.GetShowPostCompileReconnectingUI();
+            McpEditorSettingsData originalSettings = CloneSettings(McpEditorSettings.GetSettings());
 
             try
             {
@@ -121,14 +106,15 @@ namespace io.github.hatayama.uLoopMCP
             finally
             {
                 serverField.SetValue(null, originalServer);
-                McpEditorSettings.SetIsServerRunning(originalIsServerRunning);
-                McpEditorSettings.SetIsAfterCompile(originalIsAfterCompile);
-                McpEditorSettings.SetIsDomainReloadInProgress(originalIsDomainReloadInProgress);
-                McpEditorSettings.SetIsReconnecting(originalIsReconnecting);
-                McpEditorSettings.SetShowReconnectingUI(originalShowReconnectingUi);
-                McpEditorSettings.SetShowPostCompileReconnectingUI(originalShowPostCompileReconnectingUi);
+                McpEditorSettings.SaveSettings(originalSettings);
                 field.SetValue(null, 0L);
             }
+        }
+
+        private static McpEditorSettingsData CloneSettings(McpEditorSettingsData settings)
+        {
+            string json = UnityEngine.JsonUtility.ToJson(settings);
+            return UnityEngine.JsonUtility.FromJson<McpEditorSettingsData>(json);
         }
     }
 }

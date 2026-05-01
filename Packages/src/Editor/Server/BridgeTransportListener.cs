@@ -79,7 +79,22 @@ namespace io.github.hatayama.uLoopMCP
 
         public BridgeClientConnection AcceptClient(CancellationToken ct)
         {
-            Socket client = _listener.Accept();
+            ct.ThrowIfCancellationRequested();
+            using CancellationTokenRegistration cancellationRegistration = ct.Register(Stop);
+            Socket client;
+            try
+            {
+                client = _listener.Accept();
+            }
+            catch (ObjectDisposedException) when (ct.IsCancellationRequested)
+            {
+                throw new OperationCanceledException(ct);
+            }
+            catch (SocketException) when (ct.IsCancellationRequested)
+            {
+                throw new OperationCanceledException(ct);
+            }
+
             string clientEndpoint = $"{Endpoint.Path}#{Interlocked.Increment(ref _nextClientId)}";
             return new BridgeClientConnection(clientEndpoint, new NetworkStream(client, ownsSocket: true));
         }
@@ -118,6 +133,7 @@ namespace io.github.hatayama.uLoopMCP
 
         public BridgeClientConnection AcceptClient(CancellationToken ct)
         {
+            ct.ThrowIfCancellationRequested();
             NamedPipeServerStream pipe = new NamedPipeServerStream(
                 Endpoint.PipeName,
                 PipeDirection.InOut,
@@ -125,10 +141,39 @@ namespace io.github.hatayama.uLoopMCP
                 PipeTransmissionMode.Byte,
                 PipeOptions.Asynchronous);
             _activePipe = pipe;
-            pipe.WaitForConnection();
-            _activePipe = null;
-            string clientEndpoint = $"{Endpoint.Path}#{Interlocked.Increment(ref _nextClientId)}";
-            return new BridgeClientConnection(clientEndpoint, pipe);
+            using CancellationTokenRegistration cancellationRegistration = ct.Register(DisposeActivePipe);
+            bool connected = false;
+            try
+            {
+                try
+                {
+                    pipe.WaitForConnection();
+                }
+                catch (ObjectDisposedException) when (ct.IsCancellationRequested)
+                {
+                    throw new OperationCanceledException(ct);
+                }
+                catch (IOException) when (ct.IsCancellationRequested)
+                {
+                    throw new OperationCanceledException(ct);
+                }
+
+                connected = true;
+                string clientEndpoint = $"{Endpoint.Path}#{Interlocked.Increment(ref _nextClientId)}";
+                return new BridgeClientConnection(clientEndpoint, pipe);
+            }
+            finally
+            {
+                if (ReferenceEquals(_activePipe, pipe))
+                {
+                    _activePipe = null;
+                }
+
+                if (!connected)
+                {
+                    pipe.Dispose();
+                }
+            }
         }
 
         public void Stop()
@@ -140,6 +185,11 @@ namespace io.github.hatayama.uLoopMCP
         public void Dispose()
         {
             Stop();
+        }
+
+        private void DisposeActivePipe()
+        {
+            _activePipe?.Dispose();
         }
     }
 }

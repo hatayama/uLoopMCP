@@ -50,10 +50,20 @@ describe('canonicalizeProjectRoot', () => {
     const projectRoot = join(tempRoot, 'project');
     const symlinkPath = join(tempRoot, 'project-link');
     mkdirSync(projectRoot);
-    symlinkSync(projectRoot, symlinkPath, 'dir');
+    symlinkSync(projectRoot, symlinkPath, process.platform === 'win32' ? 'junction' : 'dir');
 
     const canonicalProjectRoot = await canonicalizeProjectRoot(`${symlinkPath}/`);
 
     expect(canonicalProjectRoot).toBe(realpathSync(projectRoot));
+  });
+
+  it('preserves the POSIX filesystem root while trimming trailing separators', async () => {
+    if (process.platform === 'win32') {
+      return;
+    }
+
+    const canonicalProjectRoot = await canonicalizeProjectRoot('/');
+
+    expect(canonicalProjectRoot).toBe('/');
   });
 });

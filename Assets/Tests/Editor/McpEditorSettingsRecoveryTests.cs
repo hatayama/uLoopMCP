@@ -1,4 +1,5 @@
 using System.IO;
+using System.Security;
 
 using NUnit.Framework;
 using UnityEngine;
@@ -135,6 +136,14 @@ namespace io.github.hatayama.uLoopMCP
             StringAssert.DoesNotContain("serverPort", recoveredJson);
             StringAssert.DoesNotContain("serverTransportKind", recoveredJson);
             StringAssert.DoesNotContain("\"Port\"", recoveredJson);
+        }
+
+        [Test]
+        public void RecoverSettingsFileIfNeeded_WhenSettingsFileExceedsSizeLimit_ShouldThrowSecurityException()
+        {
+            File.WriteAllText(SettingsFilePath, new string(' ', McpConstants.MAX_SETTINGS_SIZE_BYTES + 1));
+
+            Assert.Throws<SecurityException>(() => McpEditorSettings.RecoverSettingsFileIfNeeded());
         }
 
         [Test]

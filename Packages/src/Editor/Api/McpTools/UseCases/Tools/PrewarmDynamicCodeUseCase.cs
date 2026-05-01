@@ -450,8 +450,11 @@ namespace io.github.hatayama.uLoopMCP
             timeoutCancellationTokenSource.CancelAfter(_timeoutMilliseconds);
             try
             {
-                string responseJson = await _sendRequestAsync(
+                Task<string> responseTask = _sendRequestAsync(
                     requestJson,
+                    timeoutCancellationTokenSource.Token);
+                string responseJson = await AwaitWithCancellationAsync(
+                    responseTask,
                     timeoutCancellationTokenSource.Token);
 
                 ct.ThrowIfCancellationRequested();
@@ -474,14 +477,6 @@ namespace io.github.hatayama.uLoopMCP
                 };
             }
             catch (JsonException) when (!ct.IsCancellationRequested)
-            {
-                return new DynamicCodeAutoPrewarmResult
-                {
-                    Success = false,
-                    ErrorMessage = TransportErrorMessage
-                };
-            }
-            catch (InvalidOperationException) when (!ct.IsCancellationRequested)
             {
                 return new DynamicCodeAutoPrewarmResult
                 {
@@ -514,11 +509,26 @@ namespace io.github.hatayama.uLoopMCP
             return request.ToString(Formatting.None);
         }
 
-        private static Task<string> SendRequestToCurrentBridgeAsync(
+        private static async Task<string> SendRequestToCurrentBridgeAsync(
             string requestJson,
             CancellationToken ct)
         {
-            return JsonRpcProcessor.ProcessRequest(requestJson, "dynamic-code-auto-prewarm");
+            ct.ThrowIfCancellationRequested();
+            return await JsonRpcProcessor.ProcessRequest(requestJson, "dynamic-code-auto-prewarm");
+        }
+
+        private static async Task<T> AwaitWithCancellationAsync<T>(Task<T> task, CancellationToken ct)
+        {
+            System.Diagnostics.Debug.Assert(task != null, "task must not be null");
+
+            Task cancellationTask = Task.Delay(Timeout.Infinite, ct);
+            Task completedTask = await Task.WhenAny(task, cancellationTask);
+            if (completedTask != task)
+            {
+                ct.ThrowIfCancellationRequested();
+            }
+
+            return await task;
         }
 
         private static DynamicCodeAutoPrewarmResult ParseResponse(string responseJson)
