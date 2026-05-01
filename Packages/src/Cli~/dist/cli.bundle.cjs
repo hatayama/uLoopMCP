@@ -800,7 +800,7 @@ ${itemIndentStr}`);
 var require_option = __commonJS({
   "node_modules/commander/lib/option.js"(exports2) {
     var { InvalidArgumentError: InvalidArgumentError2 } = require_error();
-    var Option2 = class {
+    var Option3 = class {
       /**
        * Initialize a new `Option` with the given `flags` and `description`.
        *
@@ -1104,7 +1104,7 @@ var require_option = __commonJS({
         );
       return { shortFlag, longFlag };
     }
-    exports2.Option = Option2;
+    exports2.Option = Option3;
     exports2.DualOptions = DualOptions;
   }
 });
@@ -1200,7 +1200,7 @@ var require_command = __commonJS({
     var { Argument: Argument2, humanReadableArgName } = require_argument();
     var { CommanderError: CommanderError2 } = require_error();
     var { Help: Help2, stripColor } = require_help();
-    var { Option: Option2, DualOptions } = require_option();
+    var { Option: Option3, DualOptions } = require_option();
     var { suggestSimilar } = require_suggestSimilar();
     var Command2 = class _Command extends EventEmitter {
       /**
@@ -1685,7 +1685,7 @@ Expecting one of '${allowedValues.join("', '")}'`);
        * @return {Option} new option
        */
       createOption(flags, description) {
-        return new Option2(flags, description);
+        return new Option3(flags, description);
       }
       /**
        * Wrap parseArgs to catch 'commander.invalidArgument'.
@@ -1810,7 +1810,7 @@ Expecting one of '${allowedValues.join("', '")}'`);
        * @private
        */
       _optionEx(config, flags, description, fn, defaultValue) {
-        if (typeof flags === "object" && flags instanceof Option2) {
+        if (typeof flags === "object" && flags instanceof Option3) {
           throw new Error(
             "To add an Option object use addOption() instead of option() or requiredOption()"
           );
@@ -3442,13 +3442,13 @@ var require_commander = __commonJS({
     var { Command: Command2 } = require_command();
     var { CommanderError: CommanderError2, InvalidArgumentError: InvalidArgumentError2 } = require_error();
     var { Help: Help2 } = require_help();
-    var { Option: Option2 } = require_option();
+    var { Option: Option3 } = require_option();
     exports2.program = new Command2();
     exports2.createCommand = (name) => new Command2(name);
-    exports2.createOption = (flags, description) => new Option2(flags, description);
+    exports2.createOption = (flags, description) => new Option3(flags, description);
     exports2.createArgument = (name, description) => new Argument2(name, description);
     exports2.Command = Command2;
-    exports2.Option = Option2;
+    exports2.Option = Option3;
     exports2.Argument = Argument2;
     exports2.Help = Help2;
     exports2.CommanderError = CommanderError2;
@@ -3565,53 +3565,6 @@ function parseContentLength(headerSection) {
   return -1;
 }
 
-// src/ipc-endpoint.ts
-var import_node_assert = __toESM(require("node:assert"), 1);
-var import_node_crypto = require("node:crypto");
-var import_promises = require("node:fs/promises");
-var import_node_path = require("node:path");
-var IPC_HASH_BYTES_HEX_LENGTH = 16;
-var IPC_UNIX_SOCKET_DIR = "/tmp/uloop";
-var IPC_ENDPOINT_PREFIX = "uLoopMCP";
-var WINDOWS_PIPE_PREFIX = "\\\\.\\pipe\\uloop";
-function createTcpEndpoint(port, host = "127.0.0.1") {
-  (0, import_node_assert.default)(Number.isInteger(port), "port must be an integer");
-  (0, import_node_assert.default)(port > 0 && port <= 65535, "port must be in TCP range");
-  return {
-    kind: "tcp",
-    port,
-    host
-  };
-}
-async function canonicalizeProjectRoot(projectRoot) {
-  (0, import_node_assert.default)(projectRoot.length > 0, "projectRoot must not be empty");
-  const canonicalProjectRoot = await (0, import_promises.realpath)(projectRoot);
-  return trimTrailingPathSeparators(canonicalProjectRoot);
-}
-function createProjectIpcEndpoint(canonicalProjectRoot, platform = process.platform) {
-  (0, import_node_assert.default)(canonicalProjectRoot.length > 0, "canonicalProjectRoot must not be empty");
-  const endpointName = createProjectEndpointName(canonicalProjectRoot);
-  if (platform === "win32") {
-    const pipeName = `uloop-${endpointName}`;
-    return {
-      kind: "windows-pipe",
-      path: `${WINDOWS_PIPE_PREFIX}-${endpointName}`,
-      pipeName
-    };
-  }
-  return {
-    kind: "unix-socket",
-    path: (0, import_node_path.join)(IPC_UNIX_SOCKET_DIR, `${endpointName}.sock`)
-  };
-}
-function createProjectEndpointName(canonicalProjectRoot) {
-  const hash = (0, import_node_crypto.createHash)("sha256").update(canonicalProjectRoot, "utf8").digest("hex").slice(0, IPC_HASH_BYTES_HEX_LENGTH);
-  return `${IPC_ENDPOINT_PREFIX}-${hash}`;
-}
-function trimTrailingPathSeparators(path) {
-  return path.replace(/[\\/]+$/, "");
-}
-
 // src/direct-unity-client.ts
 var JSONRPC_VERSION = "2.0";
 var NETWORK_TIMEOUT_MS = 18e4;
@@ -3621,7 +3574,7 @@ var DirectUnityClient = class {
   receiveBuffer = Buffer.alloc(0);
   endpoint;
   constructor(endpoint) {
-    this.endpoint = typeof endpoint === "number" ? createTcpEndpoint(endpoint) : endpoint;
+    this.endpoint = endpoint;
   }
   async connect() {
     return new Promise((resolve8, reject) => {
@@ -3629,12 +3582,6 @@ var DirectUnityClient = class {
       this.socket.on("error", (error) => {
         reject(new Error(`Connection error: ${error.message}`));
       });
-      if (this.endpoint.kind === "tcp") {
-        this.socket.connect(this.endpoint.port, this.endpoint.host, () => {
-          resolve8();
-        });
-        return;
-      }
       this.socket.connect(this.endpoint.path, () => {
         resolve8();
       });
@@ -3726,6 +3673,44 @@ var DirectUnityClient = class {
 var import_promises2 = require("fs/promises");
 var import_fs2 = require("fs");
 var import_path2 = require("path");
+
+// src/ipc-endpoint.ts
+var import_node_assert = __toESM(require("node:assert"), 1);
+var import_node_crypto = require("node:crypto");
+var import_promises = require("node:fs/promises");
+var import_node_path = require("node:path");
+var IPC_HASH_BYTES_HEX_LENGTH = 16;
+var IPC_UNIX_SOCKET_DIR = "/tmp/uloop";
+var IPC_ENDPOINT_PREFIX = "uLoopMCP";
+var WINDOWS_PIPE_PREFIX = "\\\\.\\pipe\\uloop";
+async function canonicalizeProjectRoot(projectRoot) {
+  (0, import_node_assert.default)(projectRoot.length > 0, "projectRoot must not be empty");
+  const canonicalProjectRoot = await (0, import_promises.realpath)(projectRoot);
+  return trimTrailingPathSeparators(canonicalProjectRoot);
+}
+function createProjectIpcEndpoint(canonicalProjectRoot, platform = process.platform) {
+  (0, import_node_assert.default)(canonicalProjectRoot.length > 0, "canonicalProjectRoot must not be empty");
+  const endpointName = createProjectEndpointName(canonicalProjectRoot);
+  if (platform === "win32") {
+    const pipeName = `uloop-${endpointName}`;
+    return {
+      kind: "windows-pipe",
+      path: `${WINDOWS_PIPE_PREFIX}-${endpointName}`,
+      pipeName
+    };
+  }
+  return {
+    kind: "unix-socket",
+    path: (0, import_node_path.join)(IPC_UNIX_SOCKET_DIR, `${endpointName}.sock`)
+  };
+}
+function createProjectEndpointName(canonicalProjectRoot) {
+  const hash = (0, import_node_crypto.createHash)("sha256").update(canonicalProjectRoot, "utf8").digest("hex").slice(0, IPC_HASH_BYTES_HEX_LENGTH);
+  return `${IPC_ENDPOINT_PREFIX}-${hash}`;
+}
+function trimTrailingPathSeparators(path) {
+  return path.replace(/[\\/]+$/, "");
+}
 
 // src/project-root.ts
 var import_fs = require("fs");
@@ -3969,19 +3954,7 @@ function tryCreateRequestMetadata(settings, projectRoot) {
     expectedServerSessionId: settings.serverSessionId
   };
 }
-async function resolveUnityConnection(explicitPort, projectPath) {
-  if (explicitPort !== void 0 && projectPath !== void 0) {
-    throw new Error("Cannot specify both --port and --project-path. Use one or the other.");
-  }
-  if (explicitPort !== void 0) {
-    return {
-      endpoint: createTcpEndpoint(explicitPort),
-      port: explicitPort,
-      projectRoot: null,
-      requestMetadata: null,
-      shouldValidateProject: false
-    };
-  }
+async function resolveUnityConnection(projectPath) {
   let projectRoot;
   if (projectPath !== void 0) {
     projectRoot = validateProjectPath(projectPath);
@@ -3997,7 +3970,6 @@ async function resolveUnityConnection(explicitPort, projectPath) {
   const requestMetadata = tryCreateRequestMetadata(settings, canonicalProjectRoot);
   return {
     endpoint,
-    port: null,
     projectRoot: canonicalProjectRoot,
     requestMetadata,
     shouldValidateProject: requestMetadata === null
@@ -5045,7 +5017,6 @@ function isWindowsUnityProcessWithCommandLine(processInfo) {
 // src/compile-helpers.ts
 var import_node_assert3 = __toESM(require("node:assert"), 1);
 var import_fs5 = require("fs");
-var net2 = __toESM(require("net"), 1);
 var import_path6 = require("path");
 var SAFE_REQUEST_ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
 var COMPILE_FORCE_RECOMPILE_ARG_KEYS = [
@@ -5061,10 +5032,6 @@ var COMPILE_WAIT_FOR_DOMAIN_RELOAD_ARG_KEYS = [
   "wait-for-domain-reload"
 ];
 var LOCK_GRACE_PERIOD_MS = 500;
-var READINESS_CHECK_TIMEOUT_MS = 3e3;
-var DEFAULT_HOST = "127.0.0.1";
-var CONTENT_LENGTH_HEADER2 = "Content-Length:";
-var HEADER_SEPARATOR2 = "\r\n\r\n";
 function toBoolean(value) {
   if (typeof value === "boolean") {
     return value;
@@ -5139,47 +5106,6 @@ function tryReadCompileResult(projectRoot, requestId) {
     return void 0;
   }
 }
-function canSendRequestToUnity(port) {
-  return new Promise((resolve8) => {
-    const socket = new net2.Socket();
-    const timer = setTimeout(() => {
-      socket.destroy();
-      resolve8(false);
-    }, READINESS_CHECK_TIMEOUT_MS);
-    const cleanup = () => {
-      clearTimeout(timer);
-      socket.destroy();
-    };
-    socket.connect(port, DEFAULT_HOST, () => {
-      const rpcRequest = JSON.stringify({
-        jsonrpc: "2.0",
-        method: "get-tool-details",
-        params: { IncludeDevelopmentOnly: false },
-        id: 0
-      });
-      const contentLength = Buffer.byteLength(rpcRequest, "utf8");
-      const frame = `${CONTENT_LENGTH_HEADER2} ${contentLength}${HEADER_SEPARATOR2}${rpcRequest}`;
-      socket.write(frame);
-    });
-    let buffer = Buffer.alloc(0);
-    socket.on("data", (chunk) => {
-      buffer = Buffer.concat([buffer, chunk]);
-      const sepIndex = buffer.indexOf(HEADER_SEPARATOR2);
-      if (sepIndex !== -1) {
-        cleanup();
-        resolve8(true);
-      }
-    });
-    socket.on("error", () => {
-      cleanup();
-      resolve8(false);
-    });
-    socket.on("close", () => {
-      clearTimeout(timer);
-      resolve8(false);
-    });
-  });
-}
 function sleep(ms) {
   return new Promise((resolve8) => setTimeout(resolve8, ms));
 }
@@ -5196,12 +5122,7 @@ async function waitForCompileCompletion(options) {
       }
       const idleDuration = now - idleSinceTimestamp;
       if (idleDuration >= LOCK_GRACE_PERIOD_MS) {
-        if (options.unityPort !== void 0) {
-          const isReady = await canSendRequestToUnity(options.unityPort);
-          if (isReady) {
-            return { outcome: "completed", result };
-          }
-        } else if (options.isUnityReadyWhenIdle) {
+        if (options.isUnityReadyWhenIdle) {
           const isReady = await options.isUnityReadyWhenIdle();
           if (isReady) {
             return { outcome: "completed", result };
@@ -5221,12 +5142,7 @@ async function waitForCompileCompletion(options) {
     if (isUnityBusyByLockFiles(options.projectRoot)) {
       return { outcome: "timed_out" };
     }
-    if (options.unityPort !== void 0) {
-      const isReady = await canSendRequestToUnity(options.unityPort);
-      if (isReady) {
-        return { outcome: "completed", result: lastResult };
-      }
-    } else if (options.isUnityReadyWhenIdle) {
+    if (options.isUnityReadyWhenIdle) {
       const isReady = await options.isUnityReadyWhenIdle();
       if (isReady) {
         return { outcome: "completed", result: lastResult };
@@ -5263,16 +5179,6 @@ function suppressStdinEcho() {
     process.stdin.pause();
     rl.close();
   };
-}
-function parseExplicitPort(portText) {
-  if (portText === void 0) {
-    return void 0;
-  }
-  const parsed = parseInt(portText, 10);
-  if (isNaN(parsed)) {
-    throw new Error(`Invalid port number: ${portText}`);
-  }
-  return parsed;
 }
 function stripInternalFields(result, options = {}) {
   const cleaned = { ...result };
@@ -5345,7 +5251,7 @@ function isRetryableError(error) {
     return false;
   }
   const message = error.message;
-  return message.includes("ECONNREFUSED") || message.includes("EADDRNOTAVAIL") || message === "UNITY_NO_RESPONSE";
+  return message.includes("ECONNREFUSED") || message.includes("EADDRNOTAVAIL") || message.includes("ENOENT") || message === "UNITY_NO_RESPONSE";
 }
 async function diagnoseRetryableProjectConnectionError(error, projectRoot, shouldDiagnoseProjectState, dependencies = defaultConnectionFailureDiagnosisDependencies) {
   if (!shouldDiagnoseProjectState || projectRoot === null || !isRetryableError(error)) {
@@ -5376,12 +5282,9 @@ function isRetryableProjectRecoveryError(error) {
   }
   return isRetryableFastProjectValidationErrorMessage(error.message);
 }
-async function resolveRecoveryPortOrKeepCurrent(currentConnection, explicitPort, projectPath, resolveUnityConnectionFn = resolveUnityConnection) {
-  if (explicitPort !== void 0) {
-    return currentConnection;
-  }
+async function resolveRecoveryConnectionOrKeepCurrent(currentConnection, projectPath, resolveUnityConnectionFn = resolveUnityConnection) {
   try {
-    return await resolveUnityConnectionFn(void 0, projectPath);
+    return await resolveUnityConnectionFn(projectPath);
   } catch {
     if (currentConnection.requestMetadata === null || currentConnection.projectRoot === null) {
       return currentConnection;
@@ -5429,22 +5332,15 @@ async function shouldPromoteToServerStartingError(error, toolName, projectRoot, 
   }
   return shouldReportServerStarting(projectRoot, shouldDiagnoseProjectState, dependencies);
 }
-async function resolveUnityConnectionWithStartupDiagnosis(toolName, explicitPort, projectPath, dependencies = defaultConnectionFailureDiagnosisDependencies, resolveUnityConnectionFn = resolveUnityConnection) {
+async function resolveUnityConnectionWithStartupDiagnosis(toolName, projectPath, dependencies = defaultConnectionFailureDiagnosisDependencies, resolveUnityConnectionFn = resolveUnityConnection) {
   try {
-    return await resolveUnityConnectionFn(explicitPort, projectPath);
+    return await resolveUnityConnectionFn(projectPath);
   } catch (error) {
     if (!isRetryableProjectRecoveryError(error) && !isSettingsReadError(error)) {
       throw error;
     }
-    const shouldDiagnoseProjectState = explicitPort === void 0;
-    const projectRoot = shouldDiagnoseProjectState && projectPath !== void 0 ? validateProjectPath(projectPath) : shouldDiagnoseProjectState ? findUnityProjectRoot() : null;
-    if (await shouldPromoteToServerStartingError(
-      error,
-      toolName,
-      projectRoot,
-      shouldDiagnoseProjectState,
-      dependencies
-    )) {
+    const projectRoot = projectPath !== void 0 ? validateProjectPath(projectPath) : findUnityProjectRoot();
+    if (await shouldPromoteToServerStartingError(error, toolName, projectRoot, true, dependencies)) {
       throw createServerStartingError(error);
     }
     throw error;
@@ -5576,17 +5472,6 @@ async function prewarmDynamicCodeWithIsolatedCli(target, codes, maxTotalAttemptC
   }
 }
 function createPostCompileDynamicCodePrewarmArgs(target, code) {
-  if (target.port !== void 0) {
-    return [
-      "execute-dynamic-code",
-      "--code",
-      code,
-      "--yield-to-foreground-requests",
-      "true",
-      "--port",
-      target.port.toString()
-    ];
-  }
   if (target.projectRoot !== void 0) {
     return [
       "execute-dynamic-code",
@@ -5598,7 +5483,7 @@ function createPostCompileDynamicCodePrewarmArgs(target, code) {
       target.projectRoot
     ];
   }
-  throw new Error("Post-compile dynamic code prewarm requires a project path or port.");
+  throw new Error("Post-compile dynamic code prewarm requires a project path.");
 }
 function didPostCompileDynamicCodePrewarmSucceed(result) {
   if (result.status !== 0) {
@@ -5769,9 +5654,6 @@ function shouldSkipServerStartingBusyCheck() {
   return process.env[SKIP_SERVER_STARTING_BUSY_CHECK_ENV_KEY] === "1";
 }
 async function checkUnityBusyStateBeforeProjectResolution(toolName, globalOptions) {
-  if (globalOptions.port !== void 0) {
-    return;
-  }
   await checkUnityBusyState(toolName, globalOptions.projectPath);
 }
 function shouldShowInteractiveFeedback(toolName) {
@@ -5789,11 +5671,9 @@ function noop() {
 }
 async function executeToolCommand(toolName, params, globalOptions) {
   const commandStartedAt = Date.now();
-  const portNumber = parseExplicitPort(globalOptions.port);
   await checkUnityBusyStateBeforeProjectResolution(toolName, globalOptions);
   let connection = await resolveUnityConnectionWithStartupDiagnosis(
     toolName,
-    portNumber,
     globalOptions.projectPath
   );
   const compileOptions = getCompileExecutionOptions(toolName, params);
@@ -5867,9 +5747,8 @@ async function executeToolCommand(toolName, params, globalOptions) {
         if (await shouldRetryWhenUnityProcessIsRunning(error, projectRoot, shouldDiagnoseProjectState)) {
           spinner.update("Unity Editor is running, waiting for CLI Loop server to recover...");
           await sleep(RETRY_DELAY_MS);
-          connection = await resolveRecoveryPortOrKeepCurrent(
+          connection = await resolveRecoveryConnectionOrKeepCurrent(
             connection,
-            portNumber,
             globalOptions.projectPath
           );
           continue;
@@ -5919,8 +5798,7 @@ async function executeToolCommand(toolName, params, globalOptions) {
         projectRoot: effectiveProjectRoot,
         requestId: compileRequestId,
         timeoutMs: COMPILE_WAIT_TIMEOUT_MS,
-        pollIntervalMs: COMPILE_WAIT_POLL_INTERVAL_MS,
-        unityPort: connection.port ?? void 0
+        pollIntervalMs: COMPILE_WAIT_POLL_INTERVAL_MS
       });
       if (outcome === "timed_out") {
         lastError = new Error(
@@ -5933,8 +5811,7 @@ async function executeToolCommand(toolName, params, globalOptions) {
             if (isToolEnabled("execute-dynamic-code", effectiveProjectRoot)) {
               spinner.update("Finalizing dynamic code warmup...");
               await prewarmDynamicCodeAfterCompile({
-                projectRoot: portNumber === void 0 ? effectiveProjectRoot : void 0,
-                port: portNumber
+                projectRoot: effectiveProjectRoot
               });
             }
           }
@@ -5967,11 +5844,9 @@ async function executeToolCommand(toolName, params, globalOptions) {
   }
 }
 async function listAvailableTools(globalOptions) {
-  const portNumber = parseExplicitPort(globalOptions.port);
   await checkUnityBusyStateBeforeProjectResolution("get-tool-details", globalOptions);
   let connection = await resolveUnityConnectionWithStartupDiagnosis(
     "get-tool-details",
-    portNumber,
     globalOptions.projectPath
   );
   const restoreStdin = suppressStdinEcho();
@@ -6022,9 +5897,8 @@ async function listAvailableTools(globalOptions) {
         if (await shouldRetryWhenUnityProcessIsRunning(error, projectRoot, shouldDiagnoseProjectState)) {
           spinner.update("Unity Editor is running, waiting for CLI Loop server to recover...");
           await sleep(RETRY_DELAY_MS);
-          connection = await resolveRecoveryPortOrKeepCurrent(
+          connection = await resolveRecoveryConnectionOrKeepCurrent(
             connection,
-            portNumber,
             globalOptions.projectPath
           );
           continue;
@@ -6062,11 +5936,9 @@ function convertProperties(unityProps) {
   return result;
 }
 async function syncTools(globalOptions) {
-  const portNumber = parseExplicitPort(globalOptions.port);
   await checkUnityBusyStateBeforeProjectResolution("sync-tools", globalOptions);
   let connection = await resolveUnityConnectionWithStartupDiagnosis(
     "sync-tools",
-    portNumber,
     globalOptions.projectPath
   );
   const restoreStdin = suppressStdinEcho();
@@ -6134,9 +6006,8 @@ async function syncTools(globalOptions) {
         if (await shouldRetryWhenUnityProcessIsRunning(error, projectRoot, shouldDiagnoseProjectState)) {
           spinner.update("Unity Editor is running, waiting for CLI Loop server to recover...");
           await sleep(RETRY_DELAY_MS);
-          connection = await resolveRecoveryPortOrKeepCurrent(
+          connection = await resolveRecoveryConnectionOrKeepCurrent(
             connection,
-            portNumber,
             globalOptions.projectPath
           );
           continue;
@@ -8358,10 +8229,7 @@ async function waitForDynamicCodeReadyAfterLaunch(projectPath, dependencies = de
   while (dependencies.nowFn() - startTime < LAUNCH_READINESS_TIMEOUT_MS) {
     let client = null;
     try {
-      const connection = await dependencies.resolveUnityConnectionFn(
-        void 0,
-        projectPath
-      );
+      const connection = await dependencies.resolveUnityConnectionFn(projectPath);
       if (!hasFastSessionMetadata(connection)) {
         if (probeSessionId !== null) {
           currentProbeStage = 0;
@@ -8453,10 +8321,7 @@ async function waitForLaunchReadyAfterLaunch(projectPath, dependencies = default
   while (dependencies.nowFn() - startTime < LAUNCH_READINESS_TIMEOUT_MS) {
     let client = null;
     try {
-      const connection = await dependencies.resolveUnityConnectionFn(
-        void 0,
-        projectPath
-      );
+      const connection = await dependencies.resolveUnityConnectionFn(projectPath);
       client = dependencies.createClient(connection.endpoint);
       await client.connect();
       await validateLaunchConnectionIdentity(client, connection);
@@ -8607,8 +8472,7 @@ async function runLaunchCommand(projectPath, options) {
       launchResult.projectPath
     );
     await prewarmDynamicCodeAfterLaunch({
-      projectRoot: readinessConnection.projectRoot ?? launchResult.projectPath,
-      port: readinessConnection.port ?? void 0
+      projectRoot: readinessConnection.projectRoot ?? launchResult.projectPath
     });
   } finally {
     spinner.stop();
@@ -8769,7 +8633,6 @@ function registerToolCommand(program2, tool, helpGroup) {
       cmd.option(optionStr, description);
     }
   }
-  cmd.addOption(createHiddenPortOption());
   cmd.option("--project-path <path>", "Unity project path");
   cmd.action(async (options) => {
     const params = buildParams(options, properties);
@@ -8878,9 +8741,6 @@ function convertValue(value, propInfo) {
 function getToolHelpGroup(toolName, defaultToolNames) {
   return defaultToolNames.has(toolName) ? HELP_GROUP_BUILTIN_TOOLS : HELP_GROUP_THIRD_PARTY_TOOLS;
 }
-function createHiddenPortOption() {
-  return new Option("-p, --port <port>", "Unity TCP port").hideHelp();
-}
 function createProgram() {
   const program2 = new Command();
   program2.name("uloop").description("Unity CLI Loop - Direct communication with Unity Editor").version(VERSION, "-v, --version", "Output the version number").showHelpAfterError("(run with -h for available options)").configureHelp({
@@ -8920,10 +8780,10 @@ function createProgram() {
   program2.option("--list-options <cmd>", "List options for a command (for shell completion)");
   program2.commandsGroup(HELP_GROUP_CLI_COMMANDS);
   program2.helpCommand(true);
-  program2.command("list").description("List all available tools from Unity").addOption(createHiddenPortOption()).option("--project-path <path>", "Unity project path").action(async (options) => {
+  program2.command("list").description("List all available tools from Unity").option("--project-path <path>", "Unity project path").action(async (options) => {
     await runWithErrorHandling(() => listAvailableTools(extractGlobalOptions(options)));
   });
-  program2.command("sync").description("Sync tool definitions from Unity to local cache").addOption(createHiddenPortOption()).option("--project-path <path>", "Unity project path").action(async (options) => {
+  program2.command("sync").description("Sync tool definitions from Unity to local cache").option("--project-path <path>", "Unity project path").action(async (options) => {
     await runWithErrorHandling(() => syncTools(extractGlobalOptions(options)));
   });
   program2.command("completion").description("Setup shell completion").option("--install", "Install completion to shell config file").option("--shell <type>", "Shell type: bash, zsh, or powershell").action((options) => {
@@ -8956,9 +8816,7 @@ var FAST_EXECUTE_DYNAMIC_CODE_OPTIONS = /* @__PURE__ */ new Map([
   ["--parameters", "parameters"],
   ["--compile-only", "compileOnly"],
   ["--yield-to-foreground-requests", "yieldToForegroundRequests"],
-  ["--project-path", "projectPath"],
-  ["--port", "port"],
-  ["-p", "port"]
+  ["--project-path", "projectPath"]
 ]);
 function parseFastOptionValue(arg) {
   const separatorIndex = arg.indexOf("=");
@@ -9024,7 +8882,7 @@ async function tryHandleFastExecuteDynamicCodeCommand(args, dependencies = defau
   if (command === null) {
     return false;
   }
-  const resolvedProjectPath = command.globalOptions.projectPath !== void 0 || command.globalOptions.port !== void 0 ? command.globalOptions.projectPath : dependencies.findUnityProjectRootFn() ?? void 0;
+  const resolvedProjectPath = command.globalOptions.projectPath ?? dependencies.findUnityProjectRootFn() ?? void 0;
   const resolvedGlobalOptions = {
     ...command.globalOptions,
     projectPath: resolvedProjectPath
@@ -9044,7 +8902,6 @@ async function tryHandleFastExecuteDynamicCodeCommand(args, dependencies = defau
 }
 function extractGlobalOptions(options) {
   return {
-    port: options["port"],
     projectPath: options["projectPath"]
   };
 }
@@ -9447,7 +9304,7 @@ function shouldSkipAutoSync(cmdName, args) {
   }
   return args.some((arg) => NO_SYNC_FLAGS.includes(arg));
 }
-var OPTIONS_WITH_VALUE = /* @__PURE__ */ new Set(["--port", "-p", "--project-path"]);
+var OPTIONS_WITH_VALUE = /* @__PURE__ */ new Set(["--project-path"]);
 function findCommandName(args) {
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -9465,17 +9322,6 @@ function extractSyncGlobalOptions(args) {
   const options = {};
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
-    if (arg === "--port" || arg === "-p") {
-      const nextArg = args[i + 1];
-      if (nextArg !== void 0 && !nextArg.startsWith("-")) {
-        options.port = nextArg;
-      }
-      continue;
-    }
-    if (arg.startsWith("--port=")) {
-      options.port = arg.slice("--port=".length);
-      continue;
-    }
     if (arg === "--project-path") {
       const nextArg = args[i + 1];
       if (nextArg !== void 0 && !nextArg.startsWith("-")) {

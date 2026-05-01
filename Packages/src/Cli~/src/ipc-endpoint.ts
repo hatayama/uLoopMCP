@@ -13,11 +13,6 @@ const WINDOWS_PIPE_PREFIX = '\\\\.\\pipe\\uloop';
 
 export type UnityConnectionEndpoint =
   | {
-      kind: 'tcp';
-      port: number;
-      host: string;
-    }
-  | {
       kind: 'unix-socket';
       path: string;
     }
@@ -26,17 +21,6 @@ export type UnityConnectionEndpoint =
       path: string;
       pipeName: string;
     };
-
-export function createTcpEndpoint(port: number, host = '127.0.0.1'): UnityConnectionEndpoint {
-  assert(Number.isInteger(port), 'port must be an integer');
-  assert(port > 0 && port <= 65535, 'port must be in TCP range');
-
-  return {
-    kind: 'tcp',
-    port,
-    host,
-  };
-}
 
 export async function canonicalizeProjectRoot(projectRoot: string): Promise<string> {
   assert(projectRoot.length > 0, 'projectRoot must not be empty');
@@ -69,8 +53,6 @@ export function createProjectIpcEndpoint(
 
 export function describeUnityConnectionEndpoint(endpoint: UnityConnectionEndpoint): string {
   switch (endpoint.kind) {
-    case 'tcp':
-      return `${endpoint.host}:${endpoint.port}`;
     case 'unix-socket':
       return endpoint.path;
     case 'windows-pipe':

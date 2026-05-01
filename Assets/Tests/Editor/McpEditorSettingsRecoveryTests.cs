@@ -55,7 +55,7 @@ namespace io.github.hatayama.uLoopMCP
         [Test]
         public void RecoverSettingsFileIfNeeded_WhenPrimaryMissingAndBackupExists_ShouldRestoreBackup()
         {
-            McpEditorSettingsData backupData = new() { customPort = 18443 };
+            McpEditorSettingsData backupData = new() { showDeveloperTools = true };
             File.WriteAllText(BackupFilePath, JsonUtility.ToJson(backupData, true));
 
             McpEditorSettings.RecoverSettingsFileIfNeeded();
@@ -65,14 +65,14 @@ namespace io.github.hatayama.uLoopMCP
 
             McpEditorSettingsData restored = JsonUtility.FromJson<McpEditorSettingsData>(
                 File.ReadAllText(SettingsFilePath));
-            Assert.AreEqual(backupData.customPort, restored.customPort);
+            Assert.AreEqual(backupData.showDeveloperTools, restored.showDeveloperTools);
         }
 
         [Test]
         public void RecoverSettingsFileIfNeeded_WhenPrimaryMissingAndTempExists_ShouldPromoteTemp()
         {
-            McpEditorSettingsData oldData = new() { customPort = 17400 };
-            McpEditorSettingsData newData = new() { customPort = 18444 };
+            McpEditorSettingsData oldData = new() { showDeveloperTools = false };
+            McpEditorSettingsData newData = new() { showDeveloperTools = true };
             File.WriteAllText(BackupFilePath, JsonUtility.ToJson(oldData, true));
             File.WriteAllText(TempFilePath, JsonUtility.ToJson(newData, true));
 
@@ -84,16 +84,16 @@ namespace io.github.hatayama.uLoopMCP
 
             McpEditorSettingsData restored = JsonUtility.FromJson<McpEditorSettingsData>(
                 File.ReadAllText(SettingsFilePath));
-            Assert.AreEqual(newData.customPort, restored.customPort);
+            Assert.AreEqual(newData.showDeveloperTools, restored.showDeveloperTools);
         }
 
         [Test]
         public void RecoverSettingsFileIfNeeded_WhenPrimaryExists_ShouldCleanStaleSidecars()
         {
-            McpEditorSettingsData primaryData = new() { customPort = 18445 };
+            McpEditorSettingsData primaryData = new() { showDeveloperTools = true };
             File.WriteAllText(SettingsFilePath, JsonUtility.ToJson(primaryData, true));
-            File.WriteAllText(BackupFilePath, JsonUtility.ToJson(new McpEditorSettingsData { customPort = 17401 }, true));
-            File.WriteAllText(TempFilePath, JsonUtility.ToJson(new McpEditorSettingsData { customPort = 19401 }, true));
+            File.WriteAllText(BackupFilePath, JsonUtility.ToJson(new McpEditorSettingsData { showDeveloperTools = false }, true));
+            File.WriteAllText(TempFilePath, JsonUtility.ToJson(new McpEditorSettingsData { showDeveloperTools = false }, true));
 
             McpEditorSettings.RecoverSettingsFileIfNeeded();
 
@@ -102,13 +102,13 @@ namespace io.github.hatayama.uLoopMCP
 
             McpEditorSettingsData restored = JsonUtility.FromJson<McpEditorSettingsData>(
                 File.ReadAllText(SettingsFilePath));
-            Assert.AreEqual(primaryData.customPort, restored.customPort);
+            Assert.AreEqual(primaryData.showDeveloperTools, restored.showDeveloperTools);
         }
 
         [Test]
         public void GetInstallSkillsFlat_WhenMissingFromSettings_DefaultsToTrue()
         {
-            File.WriteAllText(SettingsFilePath, "{\"customPort\":18446}");
+            File.WriteAllText(SettingsFilePath, "{\"showDeveloperTools\":true}");
             McpEditorSettings.InvalidateCache();
 
             bool installSkillsFlat = McpEditorSettings.GetInstallSkillsFlat();
@@ -137,11 +137,9 @@ namespace io.github.hatayama.uLoopMCP
 
             ServiceResult<bool> result = service.UpdateSessionState(
                 true,
-                18447,
                 projectRootPath);
 
             Assert.IsTrue(result.Success, "Session update should succeed");
-            Assert.AreEqual(18447, McpEditorSettings.GetCustomPort(), "customPort should be updated");
             Assert.AreEqual(expectedProjectRootPath, McpEditorSettings.GetProjectRootPath(),
                 "projectRootPath should be persisted for fast project validation");
             Assert.IsFalse(string.IsNullOrWhiteSpace(McpEditorSettings.GetServerSessionId()),

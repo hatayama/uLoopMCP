@@ -55,8 +55,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         /// <param name="correlationId">Tracking ID for related operations</param>
         /// <param name="serverIsRunning">Whether server is running</param>
-        /// <param name="serverPort">TCP server port when the transport uses TCP</param>
-        public static void StartDomainReload(string correlationId, bool serverIsRunning, int? serverPort)
+        public static void StartDomainReload(string correlationId, bool serverIsRunning)
         {
             if (IsBackgroundUnityProcess())
             {
@@ -82,11 +81,6 @@ namespace io.github.hatayama.uLoopMCP
                         showPostCompileReconnectingUI = true
                     };
 
-                    if (serverPort.HasValue && NetworkUtility.IsValidPort(serverPort.Value))
-                    {
-                        updatedSettings = updatedSettings with { customPort = serverPort.Value };
-                    }
-
                     return updatedSettings;
                 });
             }
@@ -103,8 +97,7 @@ namespace io.github.hatayama.uLoopMCP
                 "Domain reload starting",
                 new
                 {
-                    server_running = serverIsRunning,
-                    server_port = serverPort
+                    server_running = serverIsRunning
                 },
                 correlationId
             );
@@ -133,7 +126,7 @@ namespace io.github.hatayama.uLoopMCP
             VibeLogger.LogInfo(
                 "domain_reload_complete",
                 "Domain reload completed - starting server recovery process",
-                new { session_server_port = McpEditorSettings.GetCustomPort() },
+                new { transport = "project_ipc" },
                 correlationId
             );
         }

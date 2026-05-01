@@ -21,31 +21,28 @@ namespace io.github.hatayama.uLoopMCP
         public readonly string Endpoint;
         public readonly string ClientName; 
         public readonly DateTime ConnectedAt;
-        public readonly int Port;
         public readonly Stream Stream;
 
-        public ConnectedClient(string endpoint, Stream stream, int port, string clientName = McpConstants.UNKNOWN_CLIENT_NAME)
+        public ConnectedClient(string endpoint, Stream stream, string clientName = McpConstants.UNKNOWN_CLIENT_NAME)
         {
             Endpoint = endpoint;
             Stream = stream; // Allow null stream for UI display purposes
             ClientName = clientName;
             ConnectedAt = DateTime.Now;
-            Port = port;
         }
         
         // Private constructor for WithClientName to preserve ConnectedAt
-        private ConnectedClient(string endpoint, Stream stream, int port, string clientName, DateTime connectedAt)
+        private ConnectedClient(string endpoint, Stream stream, string clientName, DateTime connectedAt)
         {
             Endpoint = endpoint;
             Stream = stream; // Allow null stream for UI display purposes
             ClientName = clientName;
             ConnectedAt = connectedAt;
-            Port = port;
         }
         
         public ConnectedClient WithClientName(string clientName)
         {
-            return new ConnectedClient(Endpoint, Stream, Port, clientName, ConnectedAt);
+            return new ConnectedClient(Endpoint, Stream, clientName, ConnectedAt);
         }
 
     }
@@ -97,7 +94,6 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public bool IsRunning => _isRunning;
         
-        public int Port { get; private set; } = 0;
         public string Endpoint => _transportListener?.Endpoint.DisplayName() ?? string.Empty;
         
         /// <summary>
@@ -158,22 +154,14 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-        public static bool IsPortInUse(int port)
-        {
-            return NetworkUtility.IsPortInUse(port);
-        }
-
-        public void StartServer(int port = -1, bool clearServerStartingLockWhenReady = true)
+        public void StartServer(bool clearServerStartingLockWhenReady = true)
         {
             if (_isRunning)
             {
                 return;
             }
 
-            BridgeTransportEndpoint endpoint = port == -1
-                ? BridgeTransportEndpoint.CreateProjectIpc(Application.dataPath + "/..")
-                : BridgeTransportEndpoint.CreateTcp(port);
-            Port = endpoint.Port;
+            BridgeTransportEndpoint endpoint = BridgeTransportEndpoint.CreateProjectIpc(Application.dataPath + "/..");
             _cancellationTokenSource = new CancellationTokenSource();
             _unexpectedExitCleanupStarted = 0;
             
@@ -214,7 +202,7 @@ namespace io.github.hatayama.uLoopMCP
             catch (SocketException ex) when (ex.SocketErrorCode == SocketError.AddressAlreadyInUse)
             {
                 _isRunning = false;
-                string errorMessage = $"Port {Port} is already in use. Please choose a different port.";
+                string errorMessage = $"Project IPC endpoint is already in use: {endpoint.DisplayName()}";
                 OnError?.Invoke(errorMessage);
                 throw new InvalidOperationException(errorMessage, ex);
             }
@@ -504,7 +492,7 @@ namespace io.github.hatayama.uLoopMCP
                     }
                     
                     // Add new client to connected clients for notification broadcasting
-                    ConnectedClient connectedClient = new ConnectedClient(clientEndpoint, stream, client.Port);
+                    ConnectedClient connectedClient = new ConnectedClient(clientEndpoint, stream);
                     _connectedClients.TryAdd(clientKey, connectedClient);
                     
                     // Initialize new framing components

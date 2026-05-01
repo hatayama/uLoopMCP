@@ -7,12 +7,12 @@ using NUnit.Framework;
 namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 {
     [TestFixture]
-    public class TcpDynamicCodeAutoPrewarmExecutorTests
+    public class DynamicCodeAutoPrewarmExecutorTests
     {
         [Test]
         public async Task ExecuteAsync_WhenTransportReturnsSuccessfulResult_ShouldReturnSuccess()
         {
-            TcpDynamicCodeAutoPrewarmExecutor executor = new TcpDynamicCodeAutoPrewarmExecutor(
+            DynamicCodeAutoPrewarmExecutor executor = new DynamicCodeAutoPrewarmExecutor(
                 (requestJson, ct) => Task.FromResult(
                     "{\"jsonrpc\":\"2.0\",\"id\":\"dynamic-code-auto-prewarm\",\"result\":{\"success\":true}}"));
 
@@ -27,7 +27,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public async Task ExecuteAsync_WhenTransportReturnsJsonRpcError_ShouldReturnFailure()
         {
-            TcpDynamicCodeAutoPrewarmExecutor executor = new TcpDynamicCodeAutoPrewarmExecutor(
+            DynamicCodeAutoPrewarmExecutor executor = new DynamicCodeAutoPrewarmExecutor(
                 (requestJson, ct) => Task.FromResult(
                     "{\"jsonrpc\":\"2.0\",\"id\":\"dynamic-code-auto-prewarm\",\"error\":{\"message\":\"server session changed\"}}"));
 
@@ -42,7 +42,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public async Task ExecuteAsync_WhenTransportThrowsIOException_ShouldReturnTransportFailure()
         {
-            TcpDynamicCodeAutoPrewarmExecutor executor = new TcpDynamicCodeAutoPrewarmExecutor(
+            DynamicCodeAutoPrewarmExecutor executor = new DynamicCodeAutoPrewarmExecutor(
                 (requestJson, ct) => Task.FromException<string>(new IOException("socket closed")));
 
             DynamicCodeAutoPrewarmResult result = await executor.ExecuteAsync(
@@ -56,7 +56,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public async Task ExecuteAsync_WhenResponseFrameIsIncomplete_ShouldReturnTransportFailure()
         {
-            TcpDynamicCodeAutoPrewarmExecutor executor = new TcpDynamicCodeAutoPrewarmExecutor(
+            DynamicCodeAutoPrewarmExecutor executor = new DynamicCodeAutoPrewarmExecutor(
                 (requestJson, ct) => Task.FromException<string>(new InvalidOperationException("response stream closed before a full frame arrived")));
 
             DynamicCodeAutoPrewarmResult result = await executor.ExecuteAsync(

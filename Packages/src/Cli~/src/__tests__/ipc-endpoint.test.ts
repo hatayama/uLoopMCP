@@ -2,12 +2,7 @@ import { createHash } from 'node:crypto';
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import {
-  canonicalizeProjectRoot,
-  createProjectIpcEndpoint,
-  createTcpEndpoint,
-  describeUnityConnectionEndpoint,
-} from '../ipc-endpoint.js';
+import { canonicalizeProjectRoot, createProjectIpcEndpoint } from '../ipc-endpoint.js';
 
 /* eslint-disable security/detect-non-literal-fs-filename */
 
@@ -60,18 +55,5 @@ describe('canonicalizeProjectRoot', () => {
     const canonicalProjectRoot = await canonicalizeProjectRoot(`${symlinkPath}/`);
 
     expect(canonicalProjectRoot).toBe(realpathSync(projectRoot));
-  });
-});
-
-describe('createTcpEndpoint', () => {
-  it('keeps TCP endpoint available for explicit debug opt-in', () => {
-    const endpoint = createTcpEndpoint(8901);
-
-    expect(endpoint).toEqual({
-      kind: 'tcp',
-      port: 8901,
-      host: '127.0.0.1',
-    });
-    expect(describeUnityConnectionEndpoint(endpoint)).toBe('127.0.0.1:8901');
   });
 });

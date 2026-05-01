@@ -111,7 +111,6 @@ export async function runLaunchCommand(
     );
     await prewarmDynamicCodeAfterLaunch({
       projectRoot: readinessConnection.projectRoot ?? launchResult.projectPath,
-      port: readinessConnection.port ?? undefined,
     });
   } finally {
     spinner.stop();

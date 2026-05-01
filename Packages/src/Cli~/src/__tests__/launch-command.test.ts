@@ -58,7 +58,7 @@ import {
 import { prewarmDynamicCodeAfterLaunch } from '../execute-tool.js';
 import { isToolEnabled } from '../tool-settings-loader.js';
 import { registerLaunchCommand } from '../commands/launch.js';
-import { createTcpEndpoint } from '../ipc-endpoint.js';
+import { createProjectIpcEndpoint } from '../ipc-endpoint.js';
 
 describe('launch command', () => {
   const orchestrateLaunchMock = jest.mocked(orchestrateLaunch);
@@ -97,8 +97,7 @@ describe('launch command', () => {
     });
     isToolEnabledMock.mockReturnValue(false);
     waitForLaunchReadyAfterLaunchMock.mockResolvedValue({
-      endpoint: createTcpEndpoint(8711),
-      port: 8711,
+      endpoint: createProjectIpcEndpoint('/project'),
       projectRoot: '/project',
       requestMetadata: {
         expectedProjectRoot: '/project',
@@ -131,8 +130,7 @@ describe('launch command', () => {
     });
     isToolEnabledMock.mockReturnValue(true);
     waitForDynamicCodeReadyAfterLaunchMock.mockResolvedValue({
-      endpoint: createTcpEndpoint(8711),
-      port: 8711,
+      endpoint: createProjectIpcEndpoint('/project'),
       projectRoot: '/project',
       requestMetadata: {
         expectedProjectRoot: '/project',
@@ -155,7 +153,6 @@ describe('launch command', () => {
     expect(waitForDynamicCodeReadyAfterLaunchMock).toHaveBeenCalledWith('/project');
     expect(prewarmDynamicCodeAfterLaunchMock).toHaveBeenCalledWith({
       projectRoot: '/project',
-      port: 8711,
     });
     expect(consoleLogSpy).not.toHaveBeenCalledWith('Waiting for execute-dynamic-code warmup...');
     expect(consoleLogSpy).not.toHaveBeenCalledWith('execute-dynamic-code is ready.');

@@ -6,7 +6,7 @@ import {
   isSettingsReadError,
   prewarmDynamicCodeAfterCompile,
   stripInternalFields,
-  resolveRecoveryPortOrKeepCurrent,
+  resolveRecoveryConnectionOrKeepCurrent,
   resolveUnityConnectionWithStartupDiagnosis,
   shouldPromoteToServerStartingError,
   shouldReportServerStarting,
@@ -19,7 +19,7 @@ import {
   UnityServerNotRunningError,
 } from '../port-resolver.js';
 import { ProjectMismatchError } from '../project-validator.js';
-import { createTcpEndpoint } from '../ipc-endpoint.js';
+import { createProjectIpcEndpoint } from '../ipc-endpoint.js';
 import type { Stats } from 'fs';
 import { resolve as resolvePath } from 'path';
 
@@ -28,12 +28,11 @@ function createStatResult(mtimeMs: number): Stats {
 }
 
 function createConnection(
-  port: number,
+  endpointId: number,
   overrides?: Partial<ResolvedUnityConnection>,
 ): ResolvedUnityConnection {
   return {
-    endpoint: createTcpEndpoint(port),
-    port,
+    endpoint: createProjectIpcEndpoint(`/project-${endpointId}`),
     projectRoot: '/project',
     requestMetadata: null,
     shouldValidateProject: true,
@@ -408,7 +407,7 @@ describe('prewarmDynamicCodeAfterCompile', () => {
     expect(spawnCliProcess).toHaveBeenCalledTimes(5);
   });
 
-  it('targets the explicit compile port when one was provided', async () => {
+  it('targets the compile project when warming dynamic code', async () => {
     const spawnCliProcess = jest.fn().mockReturnValue({
       status: 0,
       stdout: JSON.stringify({ Success: true }),
@@ -416,7 +415,7 @@ describe('prewarmDynamicCodeAfterCompile', () => {
 
     await expect(
       prewarmDynamicCodeAfterCompile(
-        { port: 8901 },
+        { projectRoot: '/project' },
         {
           spawnCliProcess,
         },
@@ -429,8 +428,8 @@ describe('prewarmDynamicCodeAfterCompile', () => {
       stablePrewarmCode,
       '--yield-to-foreground-requests',
       'true',
-      '--port',
-      '8901',
+      '--project-path',
+      '/project',
     ]);
   });
 
@@ -666,12 +665,11 @@ describe('shouldRetryWhenUnityProcessIsRunning', () => {
   });
 });
 
-describe('resolveRecoveryPortOrKeepCurrent', () => {
-  it('keeps the current port when recovery settings are temporarily unreadable', async () => {
+describe('resolveRecoveryConnectionOrKeepCurrent', () => {
+  it('keeps the current connection when recovery settings are temporarily unreadable', async () => {
     await expect(
-      resolveRecoveryPortOrKeepCurrent(
+      resolveRecoveryConnectionOrKeepCurrent(
         createConnection(8711),
-        undefined,
         '/project',
         jest.fn().mockRejectedValue(new Error('busy')),
       ),
@@ -680,7 +678,7 @@ describe('resolveRecoveryPortOrKeepCurrent', () => {
 
   it('falls back to legacy project validation when recovery settings are temporarily unreadable', async () => {
     await expect(
-      resolveRecoveryPortOrKeepCurrent(
+      resolveRecoveryConnectionOrKeepCurrent(
         createConnection(8711, {
           requestMetadata: {
             expectedProjectRoot: '/project',
@@ -688,7 +686,6 @@ describe('resolveRecoveryPortOrKeepCurrent', () => {
           },
           shouldValidateProject: false,
         }),
-        undefined,
         '/project',
         jest.fn().mockRejectedValue(new Error('busy')),
       ),
@@ -700,11 +697,10 @@ describe('resolveRecoveryPortOrKeepCurrent', () => {
     );
   });
 
-  it('re-resolves the port when recovery settings are available', async () => {
+  it('re-resolves the connection when recovery settings are available', async () => {
     await expect(
-      resolveRecoveryPortOrKeepCurrent(
+      resolveRecoveryConnectionOrKeepCurrent(
         createConnection(8711),
-        undefined,
         '/project',
         jest.fn().mockResolvedValue(
           createConnection(8712, {
@@ -846,7 +842,6 @@ describe('resolveUnityConnectionWithStartupDiagnosis', () => {
     await expect(
       resolveUnityConnectionWithStartupDiagnosis(
         'execute-dynamic-code',
-        undefined,
         projectRoot,
         dependencies,
         jest
@@ -860,18 +855,6 @@ describe('resolveUnityConnectionWithStartupDiagnosis', () => {
     ).rejects.toThrow('UNITY_SERVER_STARTING');
   });
 
-  it('preserves the original usage error when both --port and --project-path are specified', async () => {
-    await expect(
-      resolveUnityConnectionWithStartupDiagnosis(
-        'execute-dynamic-code',
-        8711,
-        '/definitely/missing/project',
-        undefined,
-        jest.fn().mockRejectedValue(new Error('Cannot specify both --port and --project-path')),
-      ),
-    ).rejects.toThrow('Cannot specify both --port and --project-path');
-  });
-
   it('promotes retryable settings-read failures for non-dynamic-code tools when startup lock is fresh', async () => {
     const projectRoot = resolvePath(process.cwd(), '..', '..', '..');
     const dependencies = {
@@ -883,7 +866,6 @@ describe('resolveUnityConnectionWithStartupDiagnosis', () => {
     await expect(
       resolveUnityConnectionWithStartupDiagnosis(
         'get-tool-details',
-        undefined,
         projectRoot,
         dependencies,
         jest

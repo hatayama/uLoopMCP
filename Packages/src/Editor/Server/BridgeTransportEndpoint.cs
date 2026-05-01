@@ -10,7 +10,6 @@ namespace io.github.hatayama.uLoopMCP
 {
     internal enum BridgeTransportKind
     {
-        Tcp,
         UnixDomainSocket,
         WindowsNamedPipe
     }
@@ -26,22 +25,14 @@ namespace io.github.hatayama.uLoopMCP
         private const uint FILE_FLAG_BACKUP_SEMANTICS = 0x02000000;
 
         public BridgeTransportKind Kind { get; }
-        public int Port { get; }
         public string Path { get; }
         public string PipeName { get; }
 
-        private BridgeTransportEndpoint(BridgeTransportKind kind, int port, string path, string pipeName)
+        private BridgeTransportEndpoint(BridgeTransportKind kind, string path, string pipeName)
         {
             Kind = kind;
-            Port = port;
             Path = path;
             PipeName = pipeName;
-        }
-
-        public static BridgeTransportEndpoint CreateTcp(int port)
-        {
-            Debug.Assert(port > 0, "port must be positive");
-            return new BridgeTransportEndpoint(BridgeTransportKind.Tcp, port, string.Empty, string.Empty);
         }
 
         public static BridgeTransportEndpoint CreateProjectIpc(string projectRoot)
@@ -55,21 +46,19 @@ namespace io.github.hatayama.uLoopMCP
                 string pipeName = "uloop-" + endpointName;
                 return new BridgeTransportEndpoint(
                     BridgeTransportKind.WindowsNamedPipe,
-                    0,
                     @"\\.\pipe\" + pipeName,
                     pipeName);
             }
 
             return new BridgeTransportEndpoint(
                 BridgeTransportKind.UnixDomainSocket,
-                0,
                 System.IO.Path.Combine("/tmp/uloop", endpointName + ".sock"),
                 string.Empty);
         }
 
         public string DisplayName()
         {
-            return Kind == BridgeTransportKind.Tcp ? $"127.0.0.1:{Port}" : Path;
+            return Path;
         }
 
         private static string CanonicalizeProjectRoot(string projectRoot)

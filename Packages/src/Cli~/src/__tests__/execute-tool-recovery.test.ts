@@ -1,6 +1,5 @@
 interface MockResolvedUnityConnection {
-  endpoint: { kind: 'tcp'; host: string; port: number };
-  port: number;
+  endpoint: { kind: 'unix-socket'; path: string };
   projectRoot: string | null;
   requestMetadata: { expectedProjectRoot: string; expectedServerSessionId: string } | null;
   shouldValidateProject: boolean;
@@ -8,7 +7,7 @@ interface MockResolvedUnityConnection {
 
 const mockResolveUnityConnection = jest.fn<
   Promise<MockResolvedUnityConnection>,
-  [number | undefined, string | undefined]
+  [string | undefined]
 >();
 const mockValidateProjectPath = jest.fn<string, [string]>();
 const mockFindUnityProjectRoot = jest.fn<string | null, []>();
@@ -21,19 +20,19 @@ const mockSpinnerStop = jest.fn<void, []>();
 const mockConsoleLog = jest.spyOn(console, 'log').mockImplementation(() => {});
 const mockValidateConnectedProject = jest.fn<Promise<void>, [unknown, string]>();
 
-const constructedPorts: number[] = [];
+const constructedEndpoints: string[] = [];
 
 class MockDirectUnityClient {
-  public readonly port: number;
+  public readonly endpointPath: string;
 
-  public constructor(endpoint: { port: number } | number) {
-    this.port = typeof endpoint === 'number' ? endpoint : endpoint.port;
-    constructedPorts.push(this.port);
+  public constructor(endpoint: { path: string }) {
+    this.endpointPath = endpoint.path;
+    constructedEndpoints.push(this.endpointPath);
   }
 
   public connect(): Promise<void> {
-    if (this.port === 8711) {
-      return Promise.reject(new Error('connect ECONNREFUSED 127.0.0.1:8711'));
+    if (this.endpointPath.endsWith('8711.sock')) {
+      return Promise.reject(new Error('connect ENOENT /tmp/uloop-test-8711.sock'));
     }
 
     return Promise.resolve();
@@ -51,10 +50,8 @@ class MockDirectUnityClient {
 }
 
 jest.mock('../port-resolver.js', () => ({
-  resolveUnityConnection: (
-    explicitPort?: number,
-    projectPath?: string,
-  ): Promise<MockResolvedUnityConnection> => mockResolveUnityConnection(explicitPort, projectPath),
+  resolveUnityConnection: (projectPath?: string): Promise<MockResolvedUnityConnection> =>
+    mockResolveUnityConnection(projectPath),
   validateProjectPath: (projectPath: string): string => mockValidateProjectPath(projectPath),
   UnityNotRunningError: class UnityNotRunningError extends Error {},
   UnityServerNotRunningError: class UnityServerNotRunningError extends Error {},
@@ -110,13 +107,12 @@ jest.mock('../direct-unity-client.js', () => ({
 import { executeToolCommand, listAvailableTools, syncTools } from '../execute-tool.js';
 
 function createMockConnection(
-  port: number,
+  endpointId: number,
   requestMetadata: MockResolvedUnityConnection['requestMetadata'] = null,
   shouldValidateProject = true,
 ): MockResolvedUnityConnection {
   return {
-    endpoint: { kind: 'tcp', host: '127.0.0.1', port },
-    port,
+    endpoint: { kind: 'unix-socket', path: `/tmp/uloop-test-${endpointId}.sock` },
     projectRoot: '/project',
     requestMetadata,
     shouldValidateProject,
@@ -153,20 +149,23 @@ describe('executeToolCommand recovery', () => {
     mockValidateConnectedProject.mockResolvedValue();
 
     mockConsoleLog.mockClear();
-    constructedPorts.length = 0;
+    constructedEndpoints.length = 0;
   });
 
   afterAll(() => {
     mockConsoleLog.mockRestore();
   });
 
-  it('re-resolves the Unity port before retrying recovery while Unity is still running', async () => {
+  it('re-resolves the Unity connection before retrying recovery while Unity is still running', async () => {
     await expect(executeToolCommand('get-logs', {}, { projectPath: '/project' })).resolves.toBe(
       undefined,
     );
 
     expect(mockResolveUnityConnection).toHaveBeenCalledTimes(2);
-    expect(constructedPorts).toEqual([8711, 8712]);
+    expect(constructedEndpoints).toEqual([
+      '/tmp/uloop-test-8711.sock',
+      '/tmp/uloop-test-8712.sock',
+    ]);
   });
 
   it('keeps non-dynamic tools running when server startup appears during recovery', async () => {
@@ -186,7 +185,7 @@ describe('executeToolCommand recovery', () => {
     expect(mockSpinnerStop).toHaveBeenCalledTimes(1);
   });
 
-  it('re-resolves the Unity port for command execution when request metadata disables project validation', async () => {
+  it('re-resolves the Unity connection for command execution when request metadata disables project validation', async () => {
     mockResolveUnityConnection.mockReset();
     mockResolveUnityConnection
       .mockResolvedValueOnce(
@@ -209,17 +208,23 @@ describe('executeToolCommand recovery', () => {
     );
 
     expect(mockResolveUnityConnection).toHaveBeenCalledTimes(2);
-    expect(constructedPorts).toEqual([8711, 8712]);
+    expect(constructedEndpoints).toEqual([
+      '/tmp/uloop-test-8711.sock',
+      '/tmp/uloop-test-8712.sock',
+    ]);
   });
 
-  it('re-resolves the Unity port for list while Unity is still running', async () => {
+  it('re-resolves the Unity connection for list while Unity is still running', async () => {
     await expect(listAvailableTools({ projectPath: '/project' })).resolves.toBeUndefined();
 
     expect(mockResolveUnityConnection).toHaveBeenCalledTimes(2);
-    expect(constructedPorts).toEqual([8711, 8712]);
+    expect(constructedEndpoints).toEqual([
+      '/tmp/uloop-test-8711.sock',
+      '/tmp/uloop-test-8712.sock',
+    ]);
   });
 
-  it('re-resolves the Unity port for list when request metadata disables project validation', async () => {
+  it('re-resolves the Unity connection for list when request metadata disables project validation', async () => {
     mockResolveUnityConnection.mockReset();
     mockResolveUnityConnection
       .mockResolvedValueOnce(
@@ -240,17 +245,23 @@ describe('executeToolCommand recovery', () => {
     await expect(listAvailableTools({ projectPath: '/project' })).resolves.toBeUndefined();
 
     expect(mockResolveUnityConnection).toHaveBeenCalledTimes(2);
-    expect(constructedPorts).toEqual([8711, 8712]);
+    expect(constructedEndpoints).toEqual([
+      '/tmp/uloop-test-8711.sock',
+      '/tmp/uloop-test-8712.sock',
+    ]);
   });
 
-  it('re-resolves the Unity port for sync while Unity is still running', async () => {
+  it('re-resolves the Unity connection for sync while Unity is still running', async () => {
     await expect(syncTools({ projectPath: '/project' })).resolves.toBeUndefined();
 
     expect(mockResolveUnityConnection).toHaveBeenCalledTimes(2);
-    expect(constructedPorts).toEqual([8711, 8712]);
+    expect(constructedEndpoints).toEqual([
+      '/tmp/uloop-test-8711.sock',
+      '/tmp/uloop-test-8712.sock',
+    ]);
   });
 
-  it('re-resolves the Unity port for sync when request metadata disables project validation', async () => {
+  it('re-resolves the Unity connection for sync when request metadata disables project validation', async () => {
     mockResolveUnityConnection.mockReset();
     mockResolveUnityConnection
       .mockResolvedValueOnce(
@@ -271,6 +282,9 @@ describe('executeToolCommand recovery', () => {
     await expect(syncTools({ projectPath: '/project' })).resolves.toBeUndefined();
 
     expect(mockResolveUnityConnection).toHaveBeenCalledTimes(2);
-    expect(constructedPorts).toEqual([8711, 8712]);
+    expect(constructedEndpoints).toEqual([
+      '/tmp/uloop-test-8711.sock',
+      '/tmp/uloop-test-8712.sock',
+    ]);
   });
 });

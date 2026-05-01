@@ -23,10 +23,8 @@ namespace io.github.hatayama.uLoopMCP
     [Serializable]
     public record McpEditorSettingsData
     {
-        public int customPort = McpServerConfig.DEFAULT_PORT;
         public string projectRootPath = "";
         public string serverSessionId = "";
-        public string serverTransportKind = McpEditorSettings.SERVER_TRANSPORT_PROJECT_IPC;
         public bool showDeveloperTools = false;
         public bool enableCommunicationLogs = false;
         public string lastSeenSetupWizardVersion = "";
@@ -62,9 +60,6 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public static class McpEditorSettings
     {
-        public const string SERVER_TRANSPORT_TCP = "tcp";
-        public const string SERVER_TRANSPORT_PROJECT_IPC = "projectIpc";
-
         private static string SettingsFilePath => Path.Combine(McpConstants.USER_SETTINGS_FOLDER, McpConstants.SETTINGS_FILE_NAME);
 
         private static McpEditorSettingsData _cachedSettings;
@@ -154,14 +149,6 @@ namespace io.github.hatayama.uLoopMCP
             SaveSettings(updated);
         }
 
-        /// <summary>
-        /// Gets the custom port number.
-        /// </summary>
-        public static int GetCustomPort()
-        {
-            return GetSettings().customPort;
-        }
-
         public static string GetProjectRootPath()
         {
             return GetSettings().projectRootPath ?? string.Empty;
@@ -172,24 +159,8 @@ namespace io.github.hatayama.uLoopMCP
             return GetSettings().serverSessionId ?? string.Empty;
         }
 
-        public static string GetServerTransportKind()
+        public static void SetRunningServerSession(string projectRootPath, string serverSessionId)
         {
-            return GetSettings().serverTransportKind ?? SERVER_TRANSPORT_PROJECT_IPC;
-        }
-
-        /// <summary>
-        /// Saves the custom port number.
-        /// </summary>
-        public static void SetCustomPort(int port)
-        {
-            McpEditorSettingsData settings = GetSettings();
-            McpEditorSettingsData updatedSettings = settings with { customPort = port };
-            SaveSettings(updatedSettings);
-        }
-
-        public static void SetRunningServerSession(int port, string projectRootPath, string serverSessionId)
-        {
-            Debug.Assert(port >= 0, "port must not be negative");
             Debug.Assert(!string.IsNullOrWhiteSpace(projectRootPath), "projectRootPath must not be empty");
             Debug.Assert(!string.IsNullOrWhiteSpace(serverSessionId), "serverSessionId must not be empty");
 
@@ -197,10 +168,8 @@ namespace io.github.hatayama.uLoopMCP
             UpdateSettings(settings => settings with
             {
                 isServerRunning = true,
-                customPort = port > 0 ? port : settings.customPort,
                 projectRootPath = normalizedProjectRootPath,
-                serverSessionId = serverSessionId,
-                serverTransportKind = port > 0 ? SERVER_TRANSPORT_TCP : SERVER_TRANSPORT_PROJECT_IPC
+                serverSessionId = serverSessionId
             });
         }
 
@@ -500,8 +469,7 @@ namespace io.github.hatayama.uLoopMCP
             UpdateSettings(settings => settings with
             {
                 isServerRunning = false,
-                serverSessionId = string.Empty,
-                serverTransportKind = SERVER_TRANSPORT_PROJECT_IPC
+                serverSessionId = string.Empty
             });
         }
 

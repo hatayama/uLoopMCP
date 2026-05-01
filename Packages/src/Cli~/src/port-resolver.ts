@@ -1,6 +1,6 @@
 /**
  * Unity connection resolution utility for CLI.
- * Resolves project-scoped IPC endpoints and explicit debug TCP endpoints.
+ * Resolves project-scoped IPC endpoints.
  */
 
 // File paths are constructed from Unity project root detection, not from user input
@@ -13,7 +13,6 @@ import { join, resolve } from 'path';
 import {
   canonicalizeProjectRoot,
   createProjectIpcEndpoint,
-  createTcpEndpoint,
   type UnityConnectionEndpoint,
 } from './ipc-endpoint.js';
 import {
@@ -38,14 +37,12 @@ export class UnityServerNotRunningError extends Error {
 
 interface UnityMcpSettings {
   isServerRunning?: boolean;
-  customPort?: number;
   projectRootPath?: string;
   serverSessionId?: string;
 }
 
 export interface ResolvedUnityConnection {
   endpoint: UnityConnectionEndpoint;
-  port: number | null;
   projectRoot: string | null;
   requestMetadata: UloopRequestMetadata | null;
   shouldValidateProject: boolean;
@@ -73,18 +70,6 @@ export function validateProjectPath(projectPath: string): string {
 
 function normalizeProjectRootPath(projectRoot: string): string {
   return projectRoot.replace(/\/+$/, '');
-}
-
-export async function resolveUnityPort(
-  explicitPort?: number,
-  projectPath?: string,
-): Promise<number> {
-  const connection = await resolveUnityConnection(explicitPort, projectPath);
-  if (connection.port === null) {
-    throw new Error('Unity connection for a project is no longer represented by a TCP port.');
-  }
-
-  return connection.port;
 }
 
 function createSettingsReadError(projectRoot: string): Error {
@@ -148,23 +133,8 @@ function tryCreateRequestMetadata(
 }
 
 export async function resolveUnityConnection(
-  explicitPort?: number,
   projectPath?: string,
 ): Promise<ResolvedUnityConnection> {
-  if (explicitPort !== undefined && projectPath !== undefined) {
-    throw new Error('Cannot specify both --port and --project-path. Use one or the other.');
-  }
-
-  if (explicitPort !== undefined) {
-    return {
-      endpoint: createTcpEndpoint(explicitPort),
-      port: explicitPort,
-      projectRoot: null,
-      requestMetadata: null,
-      shouldValidateProject: false,
-    };
-  }
-
   let projectRoot: string | null;
   if (projectPath !== undefined) {
     projectRoot = validateProjectPath(projectPath);
@@ -182,7 +152,6 @@ export async function resolveUnityConnection(
 
   return {
     endpoint,
-    port: null,
     projectRoot: canonicalProjectRoot,
     requestMetadata,
     shouldValidateProject: requestMetadata === null,

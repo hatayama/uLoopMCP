@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using System.IO.Pipes;
-using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 
@@ -11,13 +10,11 @@ namespace io.github.hatayama.uLoopMCP
     {
         public string Endpoint { get; }
         public Stream Stream { get; }
-        public int Port { get; }
 
-        public BridgeClientConnection(string endpoint, Stream stream, int port)
+        public BridgeClientConnection(string endpoint, Stream stream)
         {
             Endpoint = endpoint;
             Stream = stream;
-            Port = port;
         }
 
         public void Dispose()
@@ -40,8 +37,6 @@ namespace io.github.hatayama.uLoopMCP
         {
             switch (endpoint.Kind)
             {
-                case BridgeTransportKind.Tcp:
-                    return new TcpBridgeTransportListener(endpoint);
                 case BridgeTransportKind.UnixDomainSocket:
                     return new UnixDomainSocketBridgeTransportListener(endpoint);
                 case BridgeTransportKind.WindowsNamedPipe:
@@ -49,43 +44,6 @@ namespace io.github.hatayama.uLoopMCP
                 default:
                     throw new ArgumentOutOfRangeException(nameof(endpoint));
             }
-        }
-    }
-
-    internal sealed class TcpBridgeTransportListener : IBridgeTransportListener
-    {
-        private TcpListener _listener;
-
-        public BridgeTransportEndpoint Endpoint { get; }
-
-        public TcpBridgeTransportListener(BridgeTransportEndpoint endpoint)
-        {
-            Endpoint = endpoint;
-        }
-
-        public void Start()
-        {
-            _listener = new TcpListener(IPAddress.Loopback, Endpoint.Port);
-            _listener.Start();
-        }
-
-        public BridgeClientConnection AcceptClient(CancellationToken ct)
-        {
-            TcpClient client = _listener.AcceptTcpClient();
-            string clientEndpoint = client.Client.RemoteEndPoint?.ToString() ?? McpServerConfig.UNKNOWN_CLIENT_ENDPOINT;
-            int clientPort = (client.Client.RemoteEndPoint as IPEndPoint)?.Port ?? 0;
-            return new BridgeClientConnection(clientEndpoint, client.GetStream(), clientPort);
-        }
-
-        public void Stop()
-        {
-            _listener?.Stop();
-            _listener = null;
-        }
-
-        public void Dispose()
-        {
-            Stop();
         }
     }
 
@@ -123,7 +81,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             Socket client = _listener.Accept();
             string clientEndpoint = $"{Endpoint.Path}#{Interlocked.Increment(ref _nextClientId)}";
-            return new BridgeClientConnection(clientEndpoint, new NetworkStream(client, ownsSocket: true), 0);
+            return new BridgeClientConnection(clientEndpoint, new NetworkStream(client, ownsSocket: true));
         }
 
         public void Stop()
@@ -170,7 +128,7 @@ namespace io.github.hatayama.uLoopMCP
             pipe.WaitForConnection();
             _activePipe = null;
             string clientEndpoint = $"{Endpoint.Path}#{Interlocked.Increment(ref _nextClientId)}";
-            return new BridgeClientConnection(clientEndpoint, pipe, 0);
+            return new BridgeClientConnection(clientEndpoint, pipe);
         }
 
         public void Stop()

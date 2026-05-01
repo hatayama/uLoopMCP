@@ -251,10 +251,8 @@ export async function waitForDynamicCodeReadyAfterLaunch(
     let client: DirectUnityClient | null = null;
 
     try {
-      const connection: ResolvedUnityConnection = await dependencies.resolveUnityConnectionFn(
-        undefined,
-        projectPath,
-      );
+      const connection: ResolvedUnityConnection =
+        await dependencies.resolveUnityConnectionFn(projectPath);
       if (!hasFastSessionMetadata(connection)) {
         if (probeSessionId !== null) {
           currentProbeStage = 0;
@@ -368,10 +366,8 @@ export async function waitForLaunchReadyAfterLaunch(
     let client: DirectUnityClient | null = null;
 
     try {
-      const connection: ResolvedUnityConnection = await dependencies.resolveUnityConnectionFn(
-        undefined,
-        projectPath,
-      );
+      const connection: ResolvedUnityConnection =
+        await dependencies.resolveUnityConnectionFn(projectPath);
       client = dependencies.createClient(connection.endpoint);
       await client.connect();
       await validateLaunchConnectionIdentity(client, connection);
