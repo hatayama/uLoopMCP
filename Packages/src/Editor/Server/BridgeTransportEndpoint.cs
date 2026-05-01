@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Microsoft.Win32.SafeHandles;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
@@ -17,6 +18,12 @@ namespace io.github.hatayama.uLoopMCP
     internal sealed class BridgeTransportEndpoint
     {
         private const string LIBC = "libc";
+        private const string KERNEL32 = "kernel32.dll";
+        private const uint FILE_SHARE_READ = 0x00000001;
+        private const uint FILE_SHARE_WRITE = 0x00000002;
+        private const uint FILE_SHARE_DELETE = 0x00000004;
+        private const uint OPEN_EXISTING = 3;
+        private const uint FILE_FLAG_BACKUP_SEMANTICS = 0x02000000;
 
         public BridgeTransportKind Kind { get; }
         public int Port { get; }
@@ -71,10 +78,35 @@ namespace io.github.hatayama.uLoopMCP
             string trimmedPath = fullPath.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
             if (Application.platform == RuntimePlatform.WindowsEditor)
             {
-                return trimmedPath;
+                return ResolveWindowsFinalPath(trimmedPath);
             }
 
             return ResolveUnixRealPath(trimmedPath);
+        }
+
+        private static string ResolveWindowsFinalPath(string path)
+        {
+            using SafeFileHandle handle = CreateFile(
+                path,
+                0,
+                FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                IntPtr.Zero,
+                OPEN_EXISTING,
+                FILE_FLAG_BACKUP_SEMANTICS,
+                IntPtr.Zero);
+            if (handle.IsInvalid)
+            {
+                return path;
+            }
+
+            StringBuilder builder = new StringBuilder(1024);
+            uint length = GetFinalPathNameByHandle(handle, builder, builder.Capacity, 0);
+            if (length == 0 || length >= builder.Capacity)
+            {
+                return path;
+            }
+
+            return NormalizeWindowsFinalPath(builder.ToString());
         }
 
         private static string ResolveUnixRealPath(string path)
@@ -116,5 +148,41 @@ namespace io.github.hatayama.uLoopMCP
 
         [DllImport(LIBC, EntryPoint = "free")]
         private static extern void Free(IntPtr pointer);
+
+        private static string NormalizeWindowsFinalPath(string path)
+        {
+            const string dosDevicePrefix = @"\\?\";
+            const string uncDevicePrefix = @"\\?\UNC\";
+            if (path.StartsWith(uncDevicePrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return @"\\" + path.Substring(uncDevicePrefix.Length)
+                    .TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
+            }
+
+            if (path.StartsWith(dosDevicePrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return path.Substring(dosDevicePrefix.Length)
+                    .TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
+            }
+
+            return path.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
+        }
+
+        [DllImport(KERNEL32, EntryPoint = "CreateFileW", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern SafeFileHandle CreateFile(
+            string fileName,
+            uint desiredAccess,
+            uint shareMode,
+            IntPtr securityAttributes,
+            uint creationDisposition,
+            uint flagsAndAttributes,
+            IntPtr templateFile);
+
+        [DllImport(KERNEL32, EntryPoint = "GetFinalPathNameByHandleW", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern uint GetFinalPathNameByHandle(
+            SafeFileHandle fileHandle,
+            StringBuilder filePath,
+            int filePathLength,
+            uint flags);
     }
 }

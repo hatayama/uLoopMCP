@@ -26,6 +26,7 @@ namespace io.github.hatayama.uLoopMCP
         public int customPort = McpServerConfig.DEFAULT_PORT;
         public string projectRootPath = "";
         public string serverSessionId = "";
+        public string serverTransportKind = McpEditorSettings.SERVER_TRANSPORT_PROJECT_IPC;
         public bool showDeveloperTools = false;
         public bool enableCommunicationLogs = false;
         public string lastSeenSetupWizardVersion = "";
@@ -61,6 +62,9 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public static class McpEditorSettings
     {
+        public const string SERVER_TRANSPORT_TCP = "tcp";
+        public const string SERVER_TRANSPORT_PROJECT_IPC = "projectIpc";
+
         private static string SettingsFilePath => Path.Combine(McpConstants.USER_SETTINGS_FOLDER, McpConstants.SETTINGS_FILE_NAME);
 
         private static McpEditorSettingsData _cachedSettings;
@@ -168,6 +172,11 @@ namespace io.github.hatayama.uLoopMCP
             return GetSettings().serverSessionId ?? string.Empty;
         }
 
+        public static string GetServerTransportKind()
+        {
+            return GetSettings().serverTransportKind ?? SERVER_TRANSPORT_PROJECT_IPC;
+        }
+
         /// <summary>
         /// Saves the custom port number.
         /// </summary>
@@ -190,7 +199,8 @@ namespace io.github.hatayama.uLoopMCP
                 isServerRunning = true,
                 customPort = port > 0 ? port : settings.customPort,
                 projectRootPath = normalizedProjectRootPath,
-                serverSessionId = serverSessionId
+                serverSessionId = serverSessionId,
+                serverTransportKind = port > 0 ? SERVER_TRANSPORT_TCP : SERVER_TRANSPORT_PROJECT_IPC
             });
         }
 
@@ -490,7 +500,8 @@ namespace io.github.hatayama.uLoopMCP
             UpdateSettings(settings => settings with
             {
                 isServerRunning = false,
-                serverSessionId = string.Empty
+                serverSessionId = string.Empty,
+                serverTransportKind = SERVER_TRANSPORT_PROJECT_IPC
             });
         }
 

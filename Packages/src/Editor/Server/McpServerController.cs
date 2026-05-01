@@ -342,7 +342,10 @@ namespace io.github.hatayama.uLoopMCP
 
             // Centralized, coalesced startup request
             // Store the task so McpEditorWindow can await it to prevent race conditions
-            return StartRecoveryIfNeededAsync(-1, isAfterCompile, CancellationToken.None);
+            int portToUse = McpEditorSettings.GetServerTransportKind() == McpEditorSettings.SERVER_TRANSPORT_TCP
+                ? McpEditorSettings.GetCustomPort()
+                : -1;
+            return StartRecoveryIfNeededAsync(portToUse, isAfterCompile, CancellationToken.None);
         }
 
         /// <summary>
@@ -363,7 +366,8 @@ namespace io.github.hatayama.uLoopMCP
                 }
 
                 mcpServer = new McpBridgeServer();
-                mcpServer.StartServer(-1);
+                int portToUse = NetworkUtility.IsValidPort(port) ? port : -1;
+                mcpServer.StartServer(portToUse);
                 SaveRunningServerSession(mcpServer.Port);
 
                 // Clear server-side reconnecting flag on successful restoration
@@ -438,6 +442,10 @@ namespace io.github.hatayama.uLoopMCP
                     new { port = mcpServer?.Port }
                 );
 
+                int portToRecover = mcpServer != null && NetworkUtility.IsValidPort(mcpServer.Port)
+                    ? mcpServer.Port
+                    : -1;
+
                 // Resources already cleaned up by CleanupAfterUnexpectedLoopExit — just clear the reference
                 mcpServer = null;
 
@@ -445,7 +453,7 @@ namespace io.github.hatayama.uLoopMCP
                 // within the 5-second protection window after a successful start
                 System.Threading.Volatile.Write(ref startupProtectionUntilTicks, 0L);
 
-                _currentRecoveryTask = StartRecoveryIfNeededAsync(-1, false, CancellationToken.None);
+                _currentRecoveryTask = StartRecoveryIfNeededAsync(portToRecover, false, CancellationToken.None);
                 _ = _currentRecoveryTask.ContinueWith(task =>
                 {
                     if (ReferenceEquals(_currentRecoveryTask, task))
@@ -716,7 +724,8 @@ namespace io.github.hatayama.uLoopMCP
             DomainReloadDetectionService.DeleteLockFile();
             CompilationLockService.DeleteLockFile();
 
-            VibeLogger.LogInfo("startup_request", "transport=project_ipc");
+            int portToUse = NetworkUtility.IsValidPort(savedPort) ? savedPort : -1;
+            VibeLogger.LogInfo("startup_request", portToUse == -1 ? "transport=project_ipc" : $"port={portToUse}");
 
             if (IsStartupProtectionActive())
             {
@@ -731,7 +740,7 @@ namespace io.github.hatayama.uLoopMCP
                 // If any server is already running, ignore this request to prevent double-binding
                 if (mcpServer != null && mcpServer.IsRunning)
                 {
-                    VibeLogger.LogInfo("server_start_ignored", $"already_running port={mcpServer.Port}");
+                    VibeLogger.LogInfo("server_start_ignored", mcpServer.Port > 0 ? $"already_running port={mcpServer.Port}" : $"already_running endpoint={mcpServer.Endpoint}");
                     return;
                 }
 
@@ -756,7 +765,7 @@ namespace io.github.hatayama.uLoopMCP
                 }
 
                 bool started = await TryBindWithWaitAsync(
-                    -1,
+                    portToUse,
                     5000,
                     250,
                     cancellationToken,
@@ -767,8 +776,8 @@ namespace io.github.hatayama.uLoopMCP
                     // Ensure session reflects stopped state on failure
                     McpEditorSettings.ClearServerSession();
                     McpEditorSettings.ClearReconnectingFlags();
-                    Debug.LogError($"[{McpConstants.PROJECT_NAME}] Recovery failed: no project IPC endpoint to bind.");
-                    throw new InvalidOperationException("Failed to bind project IPC endpoint.");
+                    Debug.LogError($"[{McpConstants.PROJECT_NAME}] Recovery failed: no endpoint to bind. RequestedPort={portToUse}");
+                    throw new InvalidOperationException($"Failed to bind recovery endpoint. RequestedPort={portToUse}.");
                 }
 
                 // Mark running and update settings

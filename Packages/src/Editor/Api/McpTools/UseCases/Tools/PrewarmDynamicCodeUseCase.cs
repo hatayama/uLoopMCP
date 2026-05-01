@@ -429,7 +429,7 @@ namespace io.github.hatayama.uLoopMCP
         private readonly int _timeoutMilliseconds;
 
         public TcpDynamicCodeAutoPrewarmExecutor()
-            : this(SendRequestOverLoopbackAsync, LoopbackPrewarmTimeoutMilliseconds)
+            : this(SendRequestToCurrentBridgeAsync, LoopbackPrewarmTimeoutMilliseconds)
         {
         }
 
@@ -448,11 +448,10 @@ namespace io.github.hatayama.uLoopMCP
             ct.ThrowIfCancellationRequested();
 
             string requestJson = CreateRequestJson(parameters);
-            // Why: measurements showed that even the in-process JSON-RPC path left the first
-            // post-reload CLI request around 500ms, while a real loopback TCP request fully
-            // warmed the remaining listener/frame-parser path.
-            // Why not stop at JsonRpcProcessor.ProcessRequest: that bypasses the transport layer
-            // that real Unity CLI Loop requests still have to pay on their first trip after reload.
+            // Why: TCP sessions can still warm the real loopback frame-parser path, but project IPC
+            // sessions no longer have a TCP port to connect to during startup.
+            // Why not always use TCP here: IPC sessions expose port 0, so the old loopback prewarm
+            // failed before reaching dynamic-code warmup at all.
             using CancellationTokenSource timeoutCancellationTokenSource =
                 CancellationTokenSource.CreateLinkedTokenSource(ct);
             timeoutCancellationTokenSource.CancelAfter(_timeoutMilliseconds);
@@ -528,6 +527,18 @@ namespace io.github.hatayama.uLoopMCP
             };
 
             return request.ToString(Formatting.None);
+        }
+
+        private static Task<string> SendRequestToCurrentBridgeAsync(
+            string requestJson,
+            CancellationToken ct)
+        {
+            if (NetworkUtility.IsValidPort(McpServerController.ServerPort))
+            {
+                return SendRequestOverLoopbackAsync(requestJson, ct);
+            }
+
+            return JsonRpcProcessor.ProcessRequest(requestJson, "dynamic-code-auto-prewarm");
         }
 
         private static async Task<string> SendRequestOverLoopbackAsync(

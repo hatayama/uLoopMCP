@@ -51,7 +51,10 @@ namespace io.github.hatayama.uLoopMCP
             // If server was running and is currently stopped, delegate to centralized controller logic
             if (wasRunning && (currentServer == null || !currentServer.IsRunning))
             {
-                _ = McpServerController.StartRecoveryIfNeededAsync(-1, isAfterCompile, CancellationToken.None).ContinueWith(task =>
+                int portToUse = McpEditorSettings.GetServerTransportKind() == McpEditorSettings.SERVER_TRANSPORT_TCP
+                    ? McpEditorSettings.GetCustomPort()
+                    : -1;
+                _ = McpServerController.StartRecoveryIfNeededAsync(portToUse, isAfterCompile, CancellationToken.None).ContinueWith(task =>
                 {
                     if (task.IsFaulted)
                     {
