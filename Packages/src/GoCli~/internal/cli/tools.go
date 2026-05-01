@@ -71,6 +71,19 @@ func loadTools(projectRoot string) (toolsCache, error) {
 	return cache, nil
 }
 
+func loadDefaultTools() toolsCache {
+	content, err := embeddedTools.ReadFile(defaultToolsFile)
+	if err != nil {
+		return toolsCache{}
+	}
+
+	var cache toolsCache
+	if json.Unmarshal(content, &cache) != nil {
+		return toolsCache{}
+	}
+	return cache
+}
+
 func findTool(cache toolsCache, name string) (toolDefinition, bool) {
 	for _, tool := range cache.Tools {
 		if tool.Name == name {

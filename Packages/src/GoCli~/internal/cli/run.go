@@ -43,6 +43,12 @@ func RunProjectLocal(ctx context.Context, args []string, stdout io.Writer, stder
 		fmt.Fprintln(stderr, err.Error())
 		return 1
 	}
+
+	completionTools := loadCompletionTools(startPath, projectPath)
+	if handled, code := tryHandleCompletionRequest(args, completionTools, stdout, stderr); handled {
+		return code
+	}
+
 	connection, err := project.ResolveConnection(startPath, projectPath)
 	if err != nil {
 		fmt.Fprintln(stderr, err.Error())
@@ -60,7 +66,9 @@ func RunProjectLocal(ctx context.Context, args []string, stdout io.Writer, stder
 		return runList(ctx, connection, stdout, stderr)
 	case "sync":
 		return runSync(ctx, connection, stdout, stderr)
-	case "completion", "skills", "update", "fix", "launch", "focus-window":
+	case "focus-window":
+		return runFocusWindow(ctx, connection.ProjectRoot, stdout, stderr)
+	case "skills", "update", "fix", "launch":
 		fmt.Fprintf(stderr, "native %s command is not implemented yet\n", command)
 		return 1
 	default:
@@ -91,6 +99,9 @@ func RunLauncher(ctx context.Context, args []string, stdout io.Writer, stderr io
 	if len(args) == 0 || isHelpRequest(args) {
 		printLauncherHelp(stdout)
 		return 0
+	}
+	if handled, code := tryHandleCompletionRequest(args, loadDefaultTools(), stdout, stderr); handled {
+		return code
 	}
 
 	startPath, err := os.Getwd()
@@ -228,4 +239,16 @@ func printHelp(stdout io.Writer) {
 func printLauncherHelp(stdout io.Writer) {
 	fmt.Fprintf(stdout, "uloop %s\n\nUsage:\n  uloop <command> [options]\n\n", version)
 	fmt.Fprintln(stdout, "Native Go launcher preview. Dispatches to the project-local uloop binary.")
+}
+
+func loadCompletionTools(startPath string, projectPath string) toolsCache {
+	connection, err := project.ResolveConnection(startPath, projectPath)
+	if err != nil {
+		return loadDefaultTools()
+	}
+	cache, err := loadTools(connection.ProjectRoot)
+	if err != nil {
+		return loadDefaultTools()
+	}
+	return cache
 }
