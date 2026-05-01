@@ -1,6 +1,6 @@
 {
   "name": "uloop-cli",
-  "version": "3.0.0-beta.0",
+  "version": "0.45.2",
   "//version": "x-release-please-version",
   "description": "CLI tool for Unity Editor communication via Unity CLI Loop",
   "main": "dist/dispatcher.bundle.cjs",
