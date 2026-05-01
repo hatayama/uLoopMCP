@@ -40,8 +40,6 @@ https://github.com/user-attachments/assets/569a2110-7351-4cf3-8281-3a83fe181817
 > The following software is required
 >
 > - **Unity 2022.3 or later**
-> - **Node.js 22.0 or later** - Required for CLI execution
-> - Install via the [official site](https://nodejs.org/en/download) or your preferred version manager
 
 ## Via Unity Package Manager
 
@@ -81,12 +79,23 @@ Scope(s): io.github.hatayama.uloopmcp
 
 ## Step 1: Install the CLI
 
+Install the global `uloop` launcher from terminal:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/hatayama/unity-cli-loop/main/scripts/install.sh | sh
+```
+
+On Windows PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/hatayama/unity-cli-loop/main/scripts/install.ps1 | iex
+```
+
 Select Window > Unity CLI Loop > Settings. A dedicated window will open — confirm that the **CLI** button is highlighted in blue.
 
-Press the **Install CLI** button.  
 <img width="277" height="306" alt="1" src="https://github.com/user-attachments/assets/0e25c327-73bf-4af6-997b-eebb3c26b372" />
 
-This installs the global `uloop` dispatcher. The Unity package refreshes this project's `.uloop/bin/uloop` CLI bundle automatically when it is missing or version-mismatched.
+The Settings window shows whether the global `uloop` launcher is detected. The Unity package refreshes this project's `.uloop/bin/uloop` CLI bundle automatically when it is missing or version-mismatched.
 
 
 
@@ -103,7 +112,7 @@ If you see the following display, the installation was successful.
 npm install -g uloop-cli
 ```
 
-This installs the same global dispatcher as the Settings button. The project-local `.uloop/bin/uloop` bundle is managed automatically by the Unity package in each project.
+This legacy npm dispatcher remains available during the v3 beta migration. The native installer above is the preferred path for the Go-based CLI.
 
 See [uloop-cli on npm](https://www.npmjs.com/package/uloop-cli) for details.
 </details>
