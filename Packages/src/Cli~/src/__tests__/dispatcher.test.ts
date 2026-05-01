@@ -9,12 +9,13 @@ jest.mock(
 );
 
 import { EventEmitter } from 'events';
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'fs';
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { VERSION } from '../version';
 import {
   PROJECT_LOCAL_CLI_IN_PROCESS_MARKER,
+  loadProjectLocalCliInProcess,
   runDispatcher,
   type DispatcherChildProcess,
   type DispatcherDependencies,
@@ -70,7 +71,9 @@ function createDependencies(
   projectRoot: string,
   args: readonly string[],
   spawnExitCode = 0,
-  overrides: Partial<Pick<DispatcherDependencies, 'platform' | 'bundledCliPath' | 'nodePath'>> = {},
+  overrides: Partial<
+    Pick<DispatcherDependencies, 'platform' | 'bundledCliPath' | 'nodePath' | 'isToolEnabledFn'>
+  > = {},
 ): DispatcherDependencies & {
   readonly spawnCalls: SpawnCall[];
   readonly loadModuleCalls: LoadModuleCall[];
@@ -135,6 +138,7 @@ function createDependencies(
       });
       return Promise.resolve(0);
     },
+    isToolEnabledFn: overrides.isToolEnabledFn ?? ((): boolean => true),
     spawnCalls,
     loadModuleCalls,
     chdirCalls,
@@ -327,6 +331,38 @@ describe('dispatcher', () => {
     ]);
   });
 
+  it('loads an extensionless project-local CommonJS CLI inside ESM Unity projects', async () => {
+    const projectRoot = createUnityProject();
+    createdProjects.push(projectRoot);
+    writeFileSync(join(projectRoot, 'package.json'), JSON.stringify({ type: 'module' }));
+    const resultPath = join(projectRoot, 'loader-result.json');
+    const previousResultPath = process.env['ULOOP_TEST_LOADER_RESULT_PATH'];
+    const cliPath = installProjectLocalCli(
+      projectRoot,
+      [
+        '#!/usr/bin/env node',
+        `const marker = '${PROJECT_LOCAL_CLI_IN_PROCESS_MARKER}';`,
+        'exports.runCli = async (args) => {',
+        "  require('node:fs').writeFileSync(process.env.ULOOP_TEST_LOADER_RESULT_PATH, JSON.stringify(args));",
+        '};',
+        '',
+      ].join('\n'),
+    );
+    process.env['ULOOP_TEST_LOADER_RESULT_PATH'] = resultPath;
+
+    try {
+      await loadProjectLocalCliInProcess(cliPath, ['get-logs']);
+    } finally {
+      if (previousResultPath === undefined) {
+        delete process.env['ULOOP_TEST_LOADER_RESULT_PATH'];
+      } else {
+        process.env['ULOOP_TEST_LOADER_RESULT_PATH'] = previousResultPath;
+      }
+    }
+
+    expect(JSON.parse(readFileSync(resultPath, 'utf-8'))).toEqual(['get-logs']);
+  });
+
   it('loads a v2 project-local CLI in-process', async () => {
     const projectRoot = createUnityProject();
     createdProjects.push(projectRoot);
@@ -421,5 +457,29 @@ describe('dispatcher', () => {
         cwd: '/tmp',
       },
     ]);
+  });
+
+  it('honors disabled focus-window tool settings in the dispatcher', async () => {
+    const projectRoot = createUnityProject();
+    createdProjects.push(projectRoot);
+    mkdirSync(join(projectRoot, '.uloop'), { recursive: true });
+    writeFileSync(
+      join(projectRoot, '.uloop', 'settings.tools.json'),
+      JSON.stringify({ disabledTools: ['focus-window'] }),
+    );
+    const dependencies = createDependencies(
+      '/tmp',
+      ['focus-window', '--project-path', projectRoot],
+      0,
+      {
+        isToolEnabledFn: (): boolean => false,
+      },
+    );
+
+    const exitCode = await runDispatcher(dependencies);
+
+    expect(exitCode).toBe(1);
+    expect(dependencies.focusWindowCalls).toHaveLength(0);
+    expect(dependencies.stderrChunks.join('')).toContain("Tool 'focus-window' is disabled.");
   });
 });

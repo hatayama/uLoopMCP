@@ -4,10 +4,11 @@
 import assert from 'node:assert';
 import { spawn, type SpawnOptions } from 'child_process';
 import { existsSync, readdirSync, readFileSync, type Dirent } from 'fs';
+import { createRequire } from 'module';
 import { basename, dirname, join, resolve } from 'path';
-import { pathToFileURL } from 'url';
 import { runFocusWindowCommand } from './commands/focus-window.js';
 import { type LaunchCommandOptions, runLaunchCommand } from './commands/launch.js';
+import { isToolEnabled } from './tool-settings-loader.js';
 import { VERSION } from './version.js';
 
 const PROJECT_LOCAL_CLI_RELATIVE_PATH = join('.uloop', 'bin', 'uloop');
@@ -19,6 +20,7 @@ const DISPATCHER_COMMAND_LAUNCH = 'launch';
 const DISPATCHER_COMMAND_FOCUS_WINDOW = 'focus-window';
 const BUNDLED_CLI_COMMANDS = new Set(['completion', 'update']);
 const DISPATCHER_IN_PROCESS_ENV = 'ULOOP_DISPATCHER_IN_PROCESS';
+const FOCUS_WINDOW_TOOL_NAME = 'focus-window';
 const CHILD_SEARCH_MAX_DEPTH = 3;
 const EXCLUDED_PROJECT_SEARCH_DIRS = new Set([
   'node_modules',
@@ -74,6 +76,8 @@ export type DispatcherFocusWindowCommandFn = (
   context: DispatcherCommandContext,
 ) => Promise<number>;
 
+export type DispatcherIsToolEnabledFn = (toolName: string, projectPath?: string) => boolean;
+
 export type DispatcherDependencies = {
   readonly args: readonly string[];
   readonly cwd: string;
@@ -87,6 +91,7 @@ export type DispatcherDependencies = {
   readonly loadModuleFn: DispatcherLoadModuleFn;
   readonly launchCommandFn: DispatcherLaunchCommandFn;
   readonly focusWindowCommandFn: DispatcherFocusWindowCommandFn;
+  readonly isToolEnabledFn: DispatcherIsToolEnabledFn;
 };
 
 type ProjectPathArgument =
@@ -110,27 +115,32 @@ function createDefaultDependencies(): DispatcherDependencies {
     chdirFn: (path): void => {
       process.chdir(path);
     },
-    loadModuleFn: async (modulePath, args): Promise<void> => {
-      const previousInProcessValue = process.env[DISPATCHER_IN_PROCESS_ENV];
-      process.env[DISPATCHER_IN_PROCESS_ENV] = '1';
-      try {
-        const projectLocalCliModule = (await import(
-          pathToFileURL(modulePath).href
-        )) as ProjectLocalCliModule;
-        const runCli = projectLocalCliModule.runCli ?? projectLocalCliModule.default?.runCli;
-        assert(typeof runCli === 'function', 'project-local CLI bundle must export runCli');
-        await runCli(args);
-      } finally {
-        if (previousInProcessValue === undefined) {
-          delete process.env[DISPATCHER_IN_PROCESS_ENV];
-        } else {
-          process.env[DISPATCHER_IN_PROCESS_ENV] = previousInProcessValue;
-        }
-      }
-    },
+    loadModuleFn: loadProjectLocalCliInProcess,
     launchCommandFn: runDispatcherLaunchCommand,
     focusWindowCommandFn: runDispatcherFocusWindowCommand,
+    isToolEnabledFn: isToolEnabled,
   };
+}
+
+export async function loadProjectLocalCliInProcess(
+  modulePath: string,
+  args: readonly string[],
+): Promise<void> {
+  const previousInProcessValue = process.env[DISPATCHER_IN_PROCESS_ENV];
+  process.env[DISPATCHER_IN_PROCESS_ENV] = '1';
+  try {
+    const requireProjectLocalCli = createRequire(modulePath);
+    const projectLocalCliModule = requireProjectLocalCli(modulePath) as ProjectLocalCliModule;
+    const runCli = projectLocalCliModule.runCli ?? projectLocalCliModule.default?.runCli;
+    assert(typeof runCli === 'function', 'project-local CLI bundle must export runCli');
+    await runCli(args);
+  } finally {
+    if (previousInProcessValue === undefined) {
+      delete process.env[DISPATCHER_IN_PROCESS_ENV];
+    } else {
+      process.env[DISPATCHER_IN_PROCESS_ENV] = previousInProcessValue;
+    }
+  }
 }
 
 function getDefaultBundledCliPath(): string {
@@ -408,6 +418,7 @@ export async function runDispatcher(
       dependencies.args.slice(1),
       commandContext,
       dependencies.focusWindowCommandFn,
+      dependencies.isToolEnabledFn,
     );
   }
 
@@ -623,6 +634,7 @@ async function runDispatcherFocusWindowRequest(
   args: readonly string[],
   context: DispatcherCommandContext,
   focusWindowCommandFn: DispatcherFocusWindowCommandFn,
+  isToolEnabledFn: DispatcherIsToolEnabledFn,
 ): Promise<number> {
   if (args.length === 1 && HELP_ARGS.has(args[0])) {
     context.stdout.write(getDispatcherFocusWindowHelp());
@@ -635,7 +647,36 @@ async function runDispatcherFocusWindowRequest(
     return 1;
   }
 
+  const settingsProjectRoot = resolveFocusWindowSettingsProjectRoot(
+    parsedArgs.projectPath,
+    context.cwd,
+  );
+  if (
+    settingsProjectRoot !== undefined &&
+    !isToolEnabledFn(FOCUS_WINDOW_TOOL_NAME, settingsProjectRoot)
+  ) {
+    writeToolDisabledError(FOCUS_WINDOW_TOOL_NAME, context.stderr);
+    return 1;
+  }
+
   return focusWindowCommandFn(parsedArgs.projectPath, context);
+}
+
+function resolveFocusWindowSettingsProjectRoot(
+  projectPath: string | undefined,
+  cwd: string,
+): string | undefined {
+  if (projectPath !== undefined) {
+    const resolvedProjectPath = resolve(cwd, projectPath);
+    return isUnityProject(resolvedProjectPath) ? resolvedProjectPath : undefined;
+  }
+
+  return findUnityProjectRoot(cwd) ?? undefined;
+}
+
+function writeToolDisabledError(toolName: string, stderr: OutputWriter): void {
+  stderr.write(`Tool '${toolName}' is disabled.\n`);
+  stderr.write('You can enable it in Unity: Window > Unity CLI Loop > Settings > Tool Settings\n');
 }
 
 async function runDispatcherFocusWindowCommand(
