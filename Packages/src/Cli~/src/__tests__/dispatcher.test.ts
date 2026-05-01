@@ -58,11 +58,19 @@ function installProjectLocalCli(
   return cliPath;
 }
 
+function installBundledCli(root: string): string {
+  const distDir = join(root, 'dist');
+  mkdirSync(distDir, { recursive: true });
+  const bundledCliPath = join(distDir, 'cli.bundle.cjs');
+  writeFileSync(bundledCliPath, `#!/usr/bin/env node\n${PROJECT_LOCAL_CLI_IN_PROCESS_MARKER}\n`);
+  return bundledCliPath;
+}
+
 function createDependencies(
   projectRoot: string,
   args: readonly string[],
   spawnExitCode = 0,
-  overrides: Partial<Pick<DispatcherDependencies, 'platform'>> = {},
+  overrides: Partial<Pick<DispatcherDependencies, 'platform' | 'bundledCliPath' | 'nodePath'>> = {},
 ): DispatcherDependencies & {
   readonly spawnCalls: SpawnCall[];
   readonly loadModuleCalls: LoadModuleCall[];
@@ -87,6 +95,8 @@ function createDependencies(
     platform: overrides.platform ?? 'darwin',
     stdout: { write: (chunk: string): boolean => stdoutChunks.push(chunk) > 0 },
     stderr: { write: (chunk: string): boolean => stderrChunks.push(chunk) > 0 },
+    bundledCliPath: overrides.bundledCliPath ?? join(projectRoot, 'dist', 'cli.bundle.cjs'),
+    nodePath: overrides.nodePath ?? '/usr/local/bin/node',
     spawnFn: (command, forwardedArgs, options): DispatcherChildProcess => {
       spawnCalls.push({
         command,
@@ -143,6 +153,48 @@ describe('dispatcher', () => {
       rmSync(projectRoot, { recursive: true, force: true });
     }
     createdProjects.length = 0;
+  });
+
+  it.each([
+    ['--help'],
+    ['compile', '--help'],
+    ['completion', '--help'],
+    ['update', '--help'],
+    ['--list-commands'],
+    ['--list-options', 'compile'],
+  ])('runs %s through the bundled CLI without resolving a Unity project', async (...args) => {
+    const root = mkdtempSync(join(tmpdir(), 'uloop-dispatcher-no-project-'));
+    createdProjects.push(root);
+    const bundledCliPath = installBundledCli(root);
+    const dependencies = createDependencies(root, args, 0, { bundledCliPath });
+
+    const exitCode = await runDispatcher(dependencies);
+
+    expect(exitCode).toBe(0);
+    expect(dependencies.loadModuleCalls).toHaveLength(0);
+    expect(dependencies.spawnCalls).toEqual([
+      {
+        command: '/usr/local/bin/node',
+        args: [bundledCliPath, ...args],
+        cwd: root,
+      },
+    ]);
+    expect(dependencies.chdirCalls).toHaveLength(0);
+    expect(dependencies.stderrChunks).toEqual([]);
+  });
+
+  it('reports a missing bundled CLI before project resolution for project-independent commands', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'uloop-dispatcher-missing-bundled-'));
+    createdProjects.push(root);
+    const bundledCliPath = join(root, 'dist', 'cli.bundle.cjs');
+    const dependencies = createDependencies(root, ['--help'], 0, { bundledCliPath });
+
+    const exitCode = await runDispatcher(dependencies);
+
+    expect(exitCode).toBe(1);
+    expect(dependencies.loadModuleCalls).toHaveLength(0);
+    expect(dependencies.stderrChunks.join('')).toContain('Bundled uloop CLI was not found');
+    expect(dependencies.stderrChunks.join('')).not.toContain('Could not find a Unity project');
   });
 
   it('forwards arguments to the project-local CLI selected by --project-path', async () => {

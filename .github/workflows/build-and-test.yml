@@ -56,6 +56,7 @@ jobs:
           test -f "Packages/src/package.json" || exit 1
           test -d "Packages/src/Editor" || exit 1
           test -d "Packages/src/Cli~" || exit 1
+          test -f "Packages/src/Cli~/dist/cli.bundle.cjs" || exit 1
 
           echo "✅ Unity Package structure is valid"
 

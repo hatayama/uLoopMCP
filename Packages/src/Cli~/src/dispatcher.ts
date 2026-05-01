@@ -12,10 +12,12 @@ import { VERSION } from './version.js';
 
 const PROJECT_LOCAL_CLI_RELATIVE_PATH = join('.uloop', 'bin', 'uloop');
 const WINDOWS_PROJECT_LOCAL_CLI_RELATIVE_PATH = `${PROJECT_LOCAL_CLI_RELATIVE_PATH}.cmd`;
+const BUNDLED_PROJECT_CLI_FILE_NAME = 'cli.bundle.cjs';
 const VERSION_ARGS = new Set(['--version', '-v']);
 const HELP_ARGS = new Set(['--help', '-h']);
 const DISPATCHER_COMMAND_LAUNCH = 'launch';
 const DISPATCHER_COMMAND_FOCUS_WINDOW = 'focus-window';
+const BUNDLED_CLI_COMMANDS = new Set(['completion', 'update']);
 const DISPATCHER_IN_PROCESS_ENV = 'ULOOP_DISPATCHER_IN_PROCESS';
 export const PROJECT_LOCAL_CLI_IN_PROCESS_MARKER = 'uloop-cli-in-process-entrypoint-v2';
 
@@ -67,6 +69,8 @@ export type DispatcherDependencies = {
   readonly platform: NodeJS.Platform;
   readonly stdout: OutputWriter;
   readonly stderr: OutputWriter;
+  readonly bundledCliPath: string;
+  readonly nodePath: string;
   readonly spawnFn: DispatcherSpawnFn;
   readonly chdirFn: DispatcherChdirFn;
   readonly loadModuleFn: DispatcherLoadModuleFn;
@@ -89,6 +93,8 @@ function createDefaultDependencies(): DispatcherDependencies {
     platform: process.platform,
     stdout: process.stdout,
     stderr: process.stderr,
+    bundledCliPath: getDefaultBundledCliPath(),
+    nodePath: process.execPath,
     spawnFn: spawn,
     chdirFn: (path): void => {
       process.chdir(path);
@@ -116,6 +122,10 @@ function createDefaultDependencies(): DispatcherDependencies {
   };
 }
 
+function getDefaultBundledCliPath(): string {
+  return join(dirname(__filename), BUNDLED_PROJECT_CLI_FILE_NAME);
+}
+
 function isVersionRequest(args: readonly string[]): boolean {
   return args.length === 1 && VERSION_ARGS.has(args[0]);
 }
@@ -126,6 +136,26 @@ function isDispatcherLaunchRequest(args: readonly string[]): boolean {
 
 function isDispatcherFocusWindowRequest(args: readonly string[]): boolean {
   return args[0] === DISPATCHER_COMMAND_FOCUS_WINDOW;
+}
+
+function isBundledCliRequest(args: readonly string[]): boolean {
+  if (args.length === 0) {
+    return true;
+  }
+
+  if (args.some((arg) => HELP_ARGS.has(arg))) {
+    return true;
+  }
+
+  if (args.includes('--list-commands')) {
+    return true;
+  }
+
+  if (args.some((arg) => arg === '--list-options' || arg.startsWith('--list-options='))) {
+    return true;
+  }
+
+  return BUNDLED_CLI_COMMANDS.has(args[0]);
 }
 
 function findProjectPathArgument(args: readonly string[]): ProjectPathArgument {
@@ -270,6 +300,36 @@ async function runProjectLocalCli(
   });
 }
 
+async function runBundledCli(
+  args: readonly string[],
+  dependencies: DispatcherDependencies,
+): Promise<number> {
+  if (!existsSync(dependencies.bundledCliPath)) {
+    dependencies.stderr.write(`Bundled uloop CLI was not found: ${dependencies.bundledCliPath}\n`);
+    return 1;
+  }
+
+  return new Promise((resolveExitCode) => {
+    const child = dependencies.spawnFn(
+      dependencies.nodePath,
+      [dependencies.bundledCliPath, ...args],
+      {
+        cwd: dependencies.cwd,
+        stdio: 'inherit',
+      },
+    );
+
+    child.on('exit', (code) => {
+      resolveExitCode(code ?? 1);
+    });
+
+    child.on('error', (error) => {
+      dependencies.stderr.write(`Failed to start bundled uloop CLI: ${error.message}\n`);
+      resolveExitCode(1);
+    });
+  });
+}
+
 export async function runDispatcher(
   dependencies: DispatcherDependencies = createDefaultDependencies(),
 ): Promise<number> {
@@ -297,6 +357,10 @@ export async function runDispatcher(
       commandContext,
       dependencies.focusWindowCommandFn,
     );
+  }
+
+  if (isBundledCliRequest(dependencies.args)) {
+    return runBundledCli(dependencies.args, dependencies);
   }
 
   const projectResolution = resolveProjectRoot(dependencies.args, dependencies.cwd);
