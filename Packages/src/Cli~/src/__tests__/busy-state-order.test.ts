@@ -99,7 +99,7 @@ describe('busy state detection order', () => {
     mockExistsSync.mockImplementation((path: string) => path.endsWith('serverstarting.lock'));
     mockResolveUnityConnection.mockRejectedValue(
       new Error(
-        'Could not read Unity server port from settings.\n\n  Settings file: /project/UserSettings/UnityMcpSettings.json',
+        'Could not read Unity server session from settings.\n\n  Settings file: /project/UserSettings/UnityMcpSettings.json',
       ),
     );
 
@@ -114,7 +114,7 @@ describe('busy state detection order', () => {
     mockExistsSync.mockImplementation((path: string) => path.endsWith('serverstarting.lock'));
     mockResolveUnityConnection.mockRejectedValue(
       new Error(
-        'Could not read Unity server port from settings.\n\n  Settings file: /project/UserSettings/UnityMcpSettings.json',
+        'Could not read Unity server session from settings.\n\n  Settings file: /project/UserSettings/UnityMcpSettings.json',
       ),
     );
 
@@ -129,7 +129,7 @@ describe('busy state detection order', () => {
     mockExistsSync.mockImplementation((path: string) => path.endsWith('serverstarting.lock'));
     mockResolveUnityConnection.mockRejectedValue(
       new Error(
-        'Could not read Unity server port from settings.\n\n  Settings file: /project/UserSettings/UnityMcpSettings.json',
+        'Could not read Unity server session from settings.\n\n  Settings file: /project/UserSettings/UnityMcpSettings.json',
       ),
     );
 

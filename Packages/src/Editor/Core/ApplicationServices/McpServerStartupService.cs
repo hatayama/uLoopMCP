@@ -73,7 +73,7 @@ namespace io.github.hatayama.uLoopMCP
                 return ServiceResult<bool>.SuccessResult(true);
             }
 
-            if (port > 0 && !string.IsNullOrWhiteSpace(projectRootPath))
+            if (port >= 0 && !string.IsNullOrWhiteSpace(projectRootPath))
             {
                 string serverSessionId = System.Guid.NewGuid().ToString("N");
                 McpEditorSettings.SetRunningServerSession(port, projectRootPath, serverSessionId);

@@ -1,4 +1,5 @@
 interface MockResolvedUnityConnection {
+  endpoint: { kind: 'tcp'; host: string; port: number };
   port: number;
   projectRoot: string | null;
   requestMetadata: { expectedProjectRoot: string; expectedServerSessionId: string } | null;
@@ -25,9 +26,9 @@ const constructedPorts: number[] = [];
 class MockDirectUnityClient {
   public readonly port: number;
 
-  public constructor(port: number) {
-    this.port = port;
-    constructedPorts.push(port);
+  public constructor(endpoint: { port: number } | number) {
+    this.port = typeof endpoint === 'number' ? endpoint : endpoint.port;
+    constructedPorts.push(this.port);
   }
 
   public connect(): Promise<void> {
@@ -108,22 +109,26 @@ jest.mock('../direct-unity-client.js', () => ({
 
 import { executeToolCommand, listAvailableTools, syncTools } from '../execute-tool.js';
 
+function createMockConnection(
+  port: number,
+  requestMetadata: MockResolvedUnityConnection['requestMetadata'] = null,
+  shouldValidateProject = true,
+): MockResolvedUnityConnection {
+  return {
+    endpoint: { kind: 'tcp', host: '127.0.0.1', port },
+    port,
+    projectRoot: '/project',
+    requestMetadata,
+    shouldValidateProject,
+  };
+}
+
 describe('executeToolCommand recovery', () => {
   beforeEach(() => {
     mockResolveUnityConnection.mockReset();
     mockResolveUnityConnection
-      .mockResolvedValueOnce({
-        port: 8711,
-        projectRoot: '/project',
-        requestMetadata: null,
-        shouldValidateProject: true,
-      })
-      .mockResolvedValueOnce({
-        port: 8712,
-        projectRoot: '/project',
-        requestMetadata: null,
-        shouldValidateProject: true,
-      });
+      .mockResolvedValueOnce(createMockConnection(8711))
+      .mockResolvedValueOnce(createMockConnection(8712));
 
     mockValidateProjectPath.mockReset();
     mockValidateProjectPath.mockReturnValue('/project');
@@ -184,18 +189,20 @@ describe('executeToolCommand recovery', () => {
   it('re-resolves the Unity port for command execution when request metadata disables project validation', async () => {
     mockResolveUnityConnection.mockReset();
     mockResolveUnityConnection
-      .mockResolvedValueOnce({
-        port: 8711,
-        projectRoot: '/project',
-        requestMetadata: { expectedProjectRoot: '/project', expectedServerSessionId: 'session-a' },
-        shouldValidateProject: false,
-      })
-      .mockResolvedValueOnce({
-        port: 8712,
-        projectRoot: '/project',
-        requestMetadata: { expectedProjectRoot: '/project', expectedServerSessionId: 'session-b' },
-        shouldValidateProject: false,
-      });
+      .mockResolvedValueOnce(
+        createMockConnection(
+          8711,
+          { expectedProjectRoot: '/project', expectedServerSessionId: 'session-a' },
+          false,
+        ),
+      )
+      .mockResolvedValueOnce(
+        createMockConnection(
+          8712,
+          { expectedProjectRoot: '/project', expectedServerSessionId: 'session-b' },
+          false,
+        ),
+      );
 
     await expect(executeToolCommand('get-logs', {}, { projectPath: '/project' })).resolves.toBe(
       undefined,
@@ -215,18 +222,20 @@ describe('executeToolCommand recovery', () => {
   it('re-resolves the Unity port for list when request metadata disables project validation', async () => {
     mockResolveUnityConnection.mockReset();
     mockResolveUnityConnection
-      .mockResolvedValueOnce({
-        port: 8711,
-        projectRoot: '/project',
-        requestMetadata: { expectedProjectRoot: '/project', expectedServerSessionId: 'session-a' },
-        shouldValidateProject: false,
-      })
-      .mockResolvedValueOnce({
-        port: 8712,
-        projectRoot: '/project',
-        requestMetadata: { expectedProjectRoot: '/project', expectedServerSessionId: 'session-b' },
-        shouldValidateProject: false,
-      });
+      .mockResolvedValueOnce(
+        createMockConnection(
+          8711,
+          { expectedProjectRoot: '/project', expectedServerSessionId: 'session-a' },
+          false,
+        ),
+      )
+      .mockResolvedValueOnce(
+        createMockConnection(
+          8712,
+          { expectedProjectRoot: '/project', expectedServerSessionId: 'session-b' },
+          false,
+        ),
+      );
 
     await expect(listAvailableTools({ projectPath: '/project' })).resolves.toBeUndefined();
 
@@ -244,18 +253,20 @@ describe('executeToolCommand recovery', () => {
   it('re-resolves the Unity port for sync when request metadata disables project validation', async () => {
     mockResolveUnityConnection.mockReset();
     mockResolveUnityConnection
-      .mockResolvedValueOnce({
-        port: 8711,
-        projectRoot: '/project',
-        requestMetadata: { expectedProjectRoot: '/project', expectedServerSessionId: 'session-a' },
-        shouldValidateProject: false,
-      })
-      .mockResolvedValueOnce({
-        port: 8712,
-        projectRoot: '/project',
-        requestMetadata: { expectedProjectRoot: '/project', expectedServerSessionId: 'session-b' },
-        shouldValidateProject: false,
-      });
+      .mockResolvedValueOnce(
+        createMockConnection(
+          8711,
+          { expectedProjectRoot: '/project', expectedServerSessionId: 'session-a' },
+          false,
+        ),
+      )
+      .mockResolvedValueOnce(
+        createMockConnection(
+          8712,
+          { expectedProjectRoot: '/project', expectedServerSessionId: 'session-b' },
+          false,
+        ),
+      );
 
     await expect(syncTools({ projectPath: '/project' })).resolves.toBeUndefined();
 

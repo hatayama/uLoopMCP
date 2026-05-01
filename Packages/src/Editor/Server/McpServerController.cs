@@ -323,7 +323,6 @@ namespace io.github.hatayama.uLoopMCP
                 return Task.CompletedTask;
             }
 
-            int savedPort = McpEditorSettings.GetCustomPort();
             bool isAfterCompile = McpEditorSettings.GetIsAfterCompile();
 
             if (mcpServer?.IsRunning == true)
@@ -341,11 +340,9 @@ namespace io.github.hatayama.uLoopMCP
                 McpEditorSettings.ClearAfterCompileFlag();
             }
 
-            int portToUse = savedPort;
-
             // Centralized, coalesced startup request
             // Store the task so McpEditorWindow can await it to prevent race conditions
-            return StartRecoveryIfNeededAsync(portToUse, isAfterCompile, CancellationToken.None);
+            return StartRecoveryIfNeededAsync(-1, isAfterCompile, CancellationToken.None);
         }
 
         /// <summary>
@@ -365,15 +362,9 @@ namespace io.github.hatayama.uLoopMCP
                     mcpServer = null;
                 }
 
-                // Try to start server on the requested port only
                 mcpServer = new McpBridgeServer();
-                mcpServer.StartServer(port);
-
-                // Update settings with the actual port used (same as requested)
-                if (McpEditorSettings.GetCustomPort() != port)
-                {
-                    McpEditorSettings.SetCustomPort(port);
-                }
+                mcpServer.StartServer(-1);
+                SaveRunningServerSession(mcpServer.Port);
 
                 // Clear server-side reconnecting flag on successful restoration
                 // NOTE: Do NOT clear UI display flag here - let it be cleared by timeout or client connection
@@ -447,8 +438,6 @@ namespace io.github.hatayama.uLoopMCP
                     new { port = mcpServer?.Port }
                 );
 
-                int portToRecover = mcpServer?.Port ?? McpEditorSettings.GetCustomPort();
-
                 // Resources already cleaned up by CleanupAfterUnexpectedLoopExit — just clear the reference
                 mcpServer = null;
 
@@ -456,7 +445,7 @@ namespace io.github.hatayama.uLoopMCP
                 // within the 5-second protection window after a successful start
                 System.Threading.Volatile.Write(ref startupProtectionUntilTicks, 0L);
 
-                _currentRecoveryTask = StartRecoveryIfNeededAsync(portToRecover, false, CancellationToken.None);
+                _currentRecoveryTask = StartRecoveryIfNeededAsync(-1, false, CancellationToken.None);
                 _ = _currentRecoveryTask.ContinueWith(task =>
                 {
                     if (ReferenceEquals(_currentRecoveryTask, task))
@@ -556,10 +545,10 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private static async Task RestoreServerAfterCompileAsync(int port)
         {
-            // Wait a short while for timing adjustment (TCP port release)
+            // Wait a short while for Unity editor state to settle after compilation.
             await EditorDelay.DelayFrame(1);
 
-            TryRestoreServerWithRetry(port, 0);
+            TryRestoreServerWithRetry(-1, 0);
         }
 
         /// <summary>
@@ -569,7 +558,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             // Wait for Unity Editor to be ready before auto-starting
             await EditorDelay.DelayFrame(1);
-            _ = StartRecoveryIfNeededAsync(port, false, CancellationToken.None).ContinueWith(task =>
+            _ = StartRecoveryIfNeededAsync(-1, false, CancellationToken.None).ContinueWith(task =>
             {
                 if (task.IsFaulted)
                 {
@@ -727,7 +716,7 @@ namespace io.github.hatayama.uLoopMCP
             DomainReloadDetectionService.DeleteLockFile();
             CompilationLockService.DeleteLockFile();
 
-            VibeLogger.LogInfo("startup_request", $"port={savedPort}");
+            VibeLogger.LogInfo("startup_request", "transport=project_ipc");
 
             if (IsStartupProtectionActive())
             {
@@ -766,16 +755,8 @@ namespace io.github.hatayama.uLoopMCP
                     }
                 }
 
-                int chosenPort = savedPort;
-                bool savedPortInUse = NetworkUtility.IsPortInUse(savedPort);
-                if (savedPortInUse && TryFindFallbackPort(savedPort, out int preBindFallbackPort))
-                {
-                    chosenPort = preBindFallbackPort;
-                    LogRecoveryFallback(savedPort, chosenPort, "saved_port_in_use_before_bind");
-                }
-
                 bool started = await TryBindWithWaitAsync(
-                    chosenPort,
+                    -1,
                     5000,
                     250,
                     cancellationToken,
@@ -783,31 +764,15 @@ namespace io.github.hatayama.uLoopMCP
 
                 if (!started)
                 {
-                    if (TryFindFallbackPort(chosenPort, out int fallbackPort) && fallbackPort != chosenPort)
-                    {
-                        int previousAttemptPort = chosenPort;
-                        chosenPort = fallbackPort;
-                        LogRecoveryFallback(previousAttemptPort, chosenPort, "bind_retry_timeout");
-                        started = await TryBindWithWaitAsync(
-                            chosenPort,
-                            5000,
-                            250,
-                            cancellationToken,
-                            clearServerStartingLockWhenReady: false);
-                    }
-                }
-
-                if (!started)
-                {
                     // Ensure session reflects stopped state on failure
                     McpEditorSettings.ClearServerSession();
                     McpEditorSettings.ClearReconnectingFlags();
-                    Debug.LogError($"[{McpConstants.PROJECT_NAME}] Recovery failed: no available port to bind. SavedPort={savedPort}, LastAttemptPort={chosenPort}");
-                    throw new InvalidOperationException($"Failed to bind any recovery port. SavedPort={savedPort}, LastAttemptPort={chosenPort}.");
+                    Debug.LogError($"[{McpConstants.PROJECT_NAME}] Recovery failed: no project IPC endpoint to bind.");
+                    throw new InvalidOperationException("Failed to bind project IPC endpoint.");
                 }
 
                 // Mark running and update settings
-                SaveRunningServerSession(chosenPort);
+                SaveRunningServerSession(mcpServer?.Port ?? 0);
 
                 // Clear reconnection-related flags on successful recovery
                 McpEditorSettings.ClearReconnectingFlags();
@@ -842,7 +807,7 @@ namespace io.github.hatayama.uLoopMCP
             int remainingMs = maxWaitMs;
             while (true)
             {
-                VibeLogger.LogInfo("binding_attempt", $"port={port}");
+                VibeLogger.LogInfo("binding_attempt", port == -1 ? "transport=project_ipc" : $"port={port}");
                 McpBridgeServer server = null;
                 try
                 {
@@ -867,7 +832,7 @@ namespace io.github.hatayama.uLoopMCP
                     server = new McpBridgeServer();
                     server.StartServer(port, clearServerStartingLockWhenReady);
                     mcpServer = server;
-                    VibeLogger.LogInfo("binding_success", $"port={port}");
+                    VibeLogger.LogInfo("binding_success", port == -1 ? $"endpoint={server.Endpoint}" : $"port={port}");
                     return true;
                 }
                 catch (Exception ex)
@@ -883,11 +848,11 @@ namespace io.github.hatayama.uLoopMCP
 
                     if (sockEx != null)
                     {
-                        VibeLogger.LogWarning("binding_failed", $"port={port} code={sockEx.SocketErrorCode} hresult={sockEx.HResult} native={sockEx.ErrorCode}");
+                        VibeLogger.LogWarning("binding_failed", $"target={port} code={sockEx.SocketErrorCode} hresult={sockEx.HResult} native={sockEx.ErrorCode}");
                     }
                     else
                     {
-                        VibeLogger.LogWarning("binding_failed", $"port={port} code=Unknown hresult={ex.HResult}");
+                        VibeLogger.LogWarning("binding_failed", $"target={port} code=Unknown hresult={ex.HResult}");
                     }
 
                     if (remainingMs <= 0)

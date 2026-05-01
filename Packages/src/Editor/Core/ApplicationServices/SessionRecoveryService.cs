@@ -21,7 +21,6 @@ namespace io.github.hatayama.uLoopMCP
         public static ValidationResult RestoreServerStateIfNeeded()
         {
             bool wasRunning = McpEditorSettings.GetIsServerRunning();
-            int savedPort = McpEditorSettings.GetCustomPort();
             bool isAfterCompile = McpEditorSettings.GetIsAfterCompile();
 
             // If server is already running
@@ -52,7 +51,7 @@ namespace io.github.hatayama.uLoopMCP
             // If server was running and is currently stopped, delegate to centralized controller logic
             if (wasRunning && (currentServer == null || !currentServer.IsRunning))
             {
-                _ = McpServerController.StartRecoveryIfNeededAsync(savedPort, isAfterCompile, CancellationToken.None).ContinueWith(task =>
+                _ = McpServerController.StartRecoveryIfNeededAsync(-1, isAfterCompile, CancellationToken.None).ContinueWith(task =>
                 {
                     if (task.IsFaulted)
                     {
@@ -82,17 +81,12 @@ namespace io.github.hatayama.uLoopMCP
                     currentServer.Dispose();
                 }
 
-                // Find available port
-                int availablePort = NetworkUtility.FindAvailablePort(port);
-
-                // Start new server
-                var newServer = new McpBridgeServer();
-                newServer.StartServer(availablePort);
+                McpBridgeServer newServer = new McpBridgeServer();
+                newServer.StartServer(-1);
 
                 // Update session state
                 McpEditorSettings.UpdateSettings(s => s with
                 {
-                    customPort = availablePort,
                     isReconnecting = false
                 });
 
@@ -130,7 +124,7 @@ namespace io.github.hatayama.uLoopMCP
         private static async Task RetryServerRestoreAsync(int port, int retryCount)
         {
             await EditorDelay.DelayFrame(5);
-            _ = McpServerController.StartRecoveryIfNeededAsync(port, false, CancellationToken.None).ContinueWith(task =>
+            _ = McpServerController.StartRecoveryIfNeededAsync(-1, false, CancellationToken.None).ContinueWith(task =>
             {
                 if (task.IsFaulted)
                 {

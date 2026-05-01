@@ -51,28 +51,60 @@ namespace io.github.hatayama.uLoopMCP
 
             try
             {
-                // 1. Configuration validation - McpServerConfigurationService
-                var portResult = _configService.ResolvePort(parameters.Port);
-                if (!portResult.Success)
-                {
-                    response.Success = false;
-                    response.Message = portResult.ErrorMessage;
-                    return Task.FromResult(response);
-                }
-                int actualPort = portResult.Data;
+                bool useProjectIpc = parameters.Port == -1;
+                int serverPort = -1;
 
-                var validationResult = _configService.ValidateConfiguration(actualPort);
-                if (!validationResult.Success)
+                if (!useProjectIpc)
                 {
-                    _notificationService.ShowInvalidPortDialog(actualPort);
-                    
-                    response.Success = false;
-                    response.Message = validationResult.ErrorMessage;
-                    return Task.FromResult(response);
+                    ServiceResult<int> portResult = _configService.ResolvePort(parameters.Port);
+                    if (!portResult.Success)
+                    {
+                        response.Success = false;
+                        response.Message = portResult.ErrorMessage;
+                        return Task.FromResult(response);
+                    }
+                    int actualPort = portResult.Data;
+
+                    ServiceResult<bool> validationResult = _configService.ValidateConfiguration(actualPort);
+                    if (!validationResult.Success)
+                    {
+                        _notificationService.ShowInvalidPortDialog(actualPort);
+
+                        response.Success = false;
+                        response.Message = validationResult.ErrorMessage;
+                        return Task.FromResult(response);
+                    }
+
+                    ValidationResult portSecurityValidation = _securityService.ValidatePortSecurity(actualPort);
+                    if (!portSecurityValidation.IsValid)
+                    {
+                        response.Success = false;
+                        response.Message = portSecurityValidation.ErrorMessage;
+                        return Task.FromResult(response);
+                    }
+
+                    ServiceResult<int> availablePortResult = _portService.FindAvailablePort(actualPort);
+                    if (!availablePortResult.Success)
+                    {
+                        response.Success = false;
+                        response.Message = availablePortResult.ErrorMessage;
+                        return Task.FromResult(response);
+                    }
+                    serverPort = availablePortResult.Data;
+
+                    if (serverPort != actualPort)
+                    {
+                        ServiceResult<bool> conflictResult = _portService.HandlePortConflict(actualPort, serverPort);
+                        if (!conflictResult.Success || !conflictResult.Data)
+                        {
+                            response.Success = false;
+                            response.Message = "Port conflict resolution cancelled by user";
+                            return Task.FromResult(response);
+                        }
+                    }
                 }
 
-                // 2. Security validation - SecurityValidationService
-                var editorStateValidation = _securityService.ValidateEditorState();
+                ValidationResult editorStateValidation = _securityService.ValidateEditorState();
                 if (!editorStateValidation.IsValid)
                 {
                     response.Success = false;
@@ -80,39 +112,9 @@ namespace io.github.hatayama.uLoopMCP
                     return Task.FromResult(response);
                 }
 
-                var portSecurityValidation = _securityService.ValidatePortSecurity(actualPort);
-                if (!portSecurityValidation.IsValid)
-                {
-                    response.Success = false;
-                    response.Message = portSecurityValidation.ErrorMessage;
-                    return Task.FromResult(response);
-                }
-
-                // 3. Port allocation - PortAllocationService
-                var availablePortResult = _portService.FindAvailablePort(actualPort);
-                if (!availablePortResult.Success)
-                {
-                    response.Success = false;
-                    response.Message = availablePortResult.ErrorMessage;
-                    return Task.FromResult(response);
-                }
-                int availablePort = availablePortResult.Data;
-
-                // Handle port conflict
-                if (availablePort != actualPort)
-                {
-                    var conflictResult = _portService.HandlePortConflict(actualPort, availablePort);
-                    if (!conflictResult.Success || !conflictResult.Data)
-                    {
-                        response.Success = false;
-                        response.Message = "Port conflict resolution cancelled by user";
-                        return Task.FromResult(response);
-                    }
-                }
-
                 // 4. Server startup - McpServerStartupService
-                var serverResult = _startupService.StartServer(
-                    availablePort,
+                ServiceResult<McpBridgeServer> serverResult = _startupService.StartServer(
+                    serverPort,
                     !parameters.PreserveStartupLockUntilExplicitRelease);
                 if (!serverResult.Success)
                 {
@@ -124,8 +126,8 @@ namespace io.github.hatayama.uLoopMCP
 
                 // 5. Session state update
                 string projectRootPath = UnityMcpPathResolver.GetProjectRoot();
-                var sessionUpdateResult =
-                    _startupService.UpdateSessionState(true, availablePort, projectRootPath);
+                ServiceResult<bool> sessionUpdateResult =
+                    _startupService.UpdateSessionState(true, serverInstance.Port, projectRootPath);
                 if (!sessionUpdateResult.Success)
                 {
                     response.Success = false;
@@ -135,7 +137,7 @@ namespace io.github.hatayama.uLoopMCP
 
                 // Success response
                 response.Success = true;
-                response.ServerPort = availablePort;
+                response.ServerPort = serverInstance.Port;
                 response.IsRunning = true;
                 response.ServerInstance = serverInstance;
                 response.Message = "Server initialization completed successfully";

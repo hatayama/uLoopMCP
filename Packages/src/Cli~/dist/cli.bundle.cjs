@@ -3565,27 +3565,77 @@ function parseContentLength(headerSection) {
   return -1;
 }
 
+// src/ipc-endpoint.ts
+var import_node_assert = __toESM(require("node:assert"), 1);
+var import_node_crypto = require("node:crypto");
+var import_promises = require("node:fs/promises");
+var import_node_path = require("node:path");
+var IPC_HASH_BYTES_HEX_LENGTH = 16;
+var IPC_UNIX_SOCKET_DIR = "/tmp/uloop";
+var IPC_ENDPOINT_PREFIX = "uLoopMCP";
+var WINDOWS_PIPE_PREFIX = "\\\\.\\pipe\\uloop";
+function createTcpEndpoint(port, host = "127.0.0.1") {
+  (0, import_node_assert.default)(Number.isInteger(port), "port must be an integer");
+  (0, import_node_assert.default)(port > 0 && port <= 65535, "port must be in TCP range");
+  return {
+    kind: "tcp",
+    port,
+    host
+  };
+}
+async function canonicalizeProjectRoot(projectRoot) {
+  (0, import_node_assert.default)(projectRoot.length > 0, "projectRoot must not be empty");
+  const canonicalProjectRoot = await (0, import_promises.realpath)(projectRoot);
+  return trimTrailingPathSeparators(canonicalProjectRoot);
+}
+function createProjectIpcEndpoint(canonicalProjectRoot, platform = process.platform) {
+  (0, import_node_assert.default)(canonicalProjectRoot.length > 0, "canonicalProjectRoot must not be empty");
+  const endpointName = createProjectEndpointName(canonicalProjectRoot);
+  if (platform === "win32") {
+    const pipeName = `uloop-${endpointName}`;
+    return {
+      kind: "windows-pipe",
+      path: `${WINDOWS_PIPE_PREFIX}-${endpointName}`,
+      pipeName
+    };
+  }
+  return {
+    kind: "unix-socket",
+    path: (0, import_node_path.join)(IPC_UNIX_SOCKET_DIR, `${endpointName}.sock`)
+  };
+}
+function createProjectEndpointName(canonicalProjectRoot) {
+  const hash = (0, import_node_crypto.createHash)("sha256").update(canonicalProjectRoot, "utf8").digest("hex").slice(0, IPC_HASH_BYTES_HEX_LENGTH);
+  return `${IPC_ENDPOINT_PREFIX}-${hash}`;
+}
+function trimTrailingPathSeparators(path) {
+  return path.replace(/[\\/]+$/, "");
+}
+
 // src/direct-unity-client.ts
 var JSONRPC_VERSION = "2.0";
-var DEFAULT_HOST = "127.0.0.1";
 var NETWORK_TIMEOUT_MS = 18e4;
 var DirectUnityClient = class {
-  constructor(port, host = DEFAULT_HOST) {
-    this.port = port;
-    this.host = host;
-  }
-  port;
-  host;
   socket = null;
   requestId = 0;
   receiveBuffer = Buffer.alloc(0);
+  endpoint;
+  constructor(endpoint) {
+    this.endpoint = typeof endpoint === "number" ? createTcpEndpoint(endpoint) : endpoint;
+  }
   async connect() {
     return new Promise((resolve8, reject) => {
       this.socket = new net.Socket();
       this.socket.on("error", (error) => {
         reject(new Error(`Connection error: ${error.message}`));
       });
-      this.socket.connect(this.port, this.host, () => {
+      if (this.endpoint.kind === "tcp") {
+        this.socket.connect(this.endpoint.port, this.endpoint.host, () => {
+          resolve8();
+        });
+        return;
+      }
+      this.socket.connect(this.endpoint.path, () => {
         resolve8();
       });
     });
@@ -3673,7 +3723,7 @@ var DirectUnityClient = class {
 };
 
 // src/port-resolver.ts
-var import_promises = require("fs/promises");
+var import_promises2 = require("fs/promises");
 var import_fs2 = require("fs");
 var import_path2 = require("path");
 
@@ -3856,25 +3906,6 @@ var UnityServerNotRunningError = class extends Error {
   }
   projectRoot;
 };
-function normalizePort(port) {
-  if (typeof port !== "number") {
-    return null;
-  }
-  if (!Number.isInteger(port)) {
-    return null;
-  }
-  if (port < 1 || port > 65535) {
-    return null;
-  }
-  return port;
-}
-function resolvePortFromUnitySettings(settings) {
-  const customPort = normalizePort(settings.customPort);
-  if (customPort !== null) {
-    return customPort;
-  }
-  return null;
-}
 function validateProjectPath(projectPath) {
   const resolved = (0, import_path2.resolve)(projectPath);
   if (!(0, import_fs2.existsSync)(resolved)) {
@@ -3896,7 +3927,7 @@ function normalizeProjectRootPath(projectRoot) {
 function createSettingsReadError(projectRoot) {
   const settingsPath = (0, import_path2.join)(projectRoot, "UserSettings/UnityMcpSettings.json");
   return new Error(
-    `Could not read Unity server port from settings.
+    `Could not read Unity server session from settings.
 
   Settings file: ${settingsPath}
 
@@ -3907,7 +3938,7 @@ async function readUnitySettingsOrThrow(projectRoot) {
   for (const settingsPath of getUnitySettingsCandidatePaths(projectRoot)) {
     let content;
     try {
-      content = await (0, import_promises.readFile)(settingsPath, "utf-8");
+      content = await (0, import_promises2.readFile)(settingsPath, "utf-8");
     } catch {
       continue;
     }
@@ -3921,13 +3952,6 @@ async function readUnitySettingsOrThrow(projectRoot) {
       continue;
     }
     return parsed;
-  }
-  throw createSettingsReadError(projectRoot);
-}
-function resolvePortFromSettingsOrThrow(settings, projectRoot) {
-  const port = resolvePortFromUnitySettings(settings);
-  if (port !== null) {
-    return port;
   }
   throw createSettingsReadError(projectRoot);
 }
@@ -3951,6 +3975,7 @@ async function resolveUnityConnection(explicitPort, projectPath) {
   }
   if (explicitPort !== void 0) {
     return {
+      endpoint: createTcpEndpoint(explicitPort),
       port: explicitPort,
       projectRoot: null,
       requestMetadata: null,
@@ -3966,20 +3991,22 @@ async function resolveUnityConnection(explicitPort, projectPath) {
       throw new Error("Unity project not found. Use --project-path option to specify the target.");
     }
   }
-  const settings = await readUnitySettingsOrThrow(projectRoot);
-  const port = resolvePortFromSettingsOrThrow(settings, projectRoot);
-  const requestMetadata = tryCreateRequestMetadata(settings, projectRoot);
+  const canonicalProjectRoot = await canonicalizeProjectRoot(projectRoot);
+  const settings = await readUnitySettingsOrThrow(canonicalProjectRoot);
+  const endpoint = createProjectIpcEndpoint(canonicalProjectRoot);
+  const requestMetadata = tryCreateRequestMetadata(settings, canonicalProjectRoot);
   return {
-    port,
-    projectRoot,
+    endpoint,
+    port: null,
+    projectRoot: canonicalProjectRoot,
     requestMetadata,
     shouldValidateProject: requestMetadata === null
   };
 }
 
 // src/project-validator.ts
-var import_node_assert = __toESM(require("node:assert"), 1);
-var import_promises2 = require("fs/promises");
+var import_node_assert2 = __toESM(require("node:assert"), 1);
+var import_promises3 = require("fs/promises");
 var import_path3 = require("path");
 var ProjectMismatchError = class extends Error {
   constructor(expectedProjectRoot, connectedProjectRoot) {
@@ -3992,11 +4019,11 @@ var ProjectMismatchError = class extends Error {
 };
 var JSON_RPC_METHOD_NOT_FOUND = -32601;
 async function normalizePath(path) {
-  const resolved = await (0, import_promises2.realpath)(path);
+  const resolved = await (0, import_promises3.realpath)(path);
   return resolved.replace(/\/+$/, "");
 }
 async function validateConnectedProject(client, expectedProjectRoot) {
-  (0, import_node_assert.default)(client.isConnected(), "client must be connected before validation");
+  (0, import_node_assert2.default)(client.isConnected(), "client must be connected before validation");
   let response;
   try {
     response = await client.sendRequest("get-version", {});
@@ -5016,7 +5043,7 @@ function isWindowsUnityProcessWithCommandLine(processInfo) {
 }
 
 // src/compile-helpers.ts
-var import_node_assert2 = __toESM(require("node:assert"), 1);
+var import_node_assert3 = __toESM(require("node:assert"), 1);
 var import_fs5 = require("fs");
 var net2 = __toESM(require("net"), 1);
 var import_path6 = require("path");
@@ -5035,7 +5062,7 @@ var COMPILE_WAIT_FOR_DOMAIN_RELOAD_ARG_KEYS = [
 ];
 var LOCK_GRACE_PERIOD_MS = 500;
 var READINESS_CHECK_TIMEOUT_MS = 3e3;
-var DEFAULT_HOST2 = "127.0.0.1";
+var DEFAULT_HOST = "127.0.0.1";
 var CONTENT_LENGTH_HEADER2 = "Content-Length:";
 var HEADER_SEPARATOR2 = "\r\n\r\n";
 function toBoolean(value) {
@@ -5079,7 +5106,7 @@ function ensureCompileRequestId(args) {
   return requestId;
 }
 function getCompileResultFilePath(projectRoot, requestId) {
-  (0, import_node_assert2.default)(
+  (0, import_node_assert3.default)(
     SAFE_REQUEST_ID_PATTERN.test(requestId),
     `requestId contains unsafe characters: '${requestId}'`
   );
@@ -5123,7 +5150,7 @@ function canSendRequestToUnity(port) {
       clearTimeout(timer);
       socket.destroy();
     };
-    socket.connect(port, DEFAULT_HOST2, () => {
+    socket.connect(port, DEFAULT_HOST, () => {
       const rpcRequest = JSON.stringify({
         jsonrpc: "2.0",
         method: "get-tool-details",
@@ -5384,7 +5411,7 @@ function isServerStarting(projectRoot, dependencies = defaultConnectionFailureDi
   }
 }
 function isSettingsReadError(error) {
-  return error instanceof Error && error.message.startsWith("Could not read Unity server port from settings.");
+  return error instanceof Error && error.message.startsWith("Could not read Unity server session from settings.");
 }
 async function shouldReportServerStarting(projectRoot, shouldDiagnoseProjectState, dependencies = defaultConnectionFailureDiagnosisDependencies) {
   if (!shouldDiagnoseProjectState || !isServerStarting(projectRoot, dependencies) || projectRoot === null) {
@@ -5797,7 +5824,7 @@ async function executeToolCommand(toolName, params, globalOptions) {
       const shouldDiagnoseProjectState = projectRoot !== null;
       currentProjectRoot = projectRoot;
       currentShouldDiagnoseProjectState = shouldDiagnoseProjectState;
-      const client = new DirectUnityClient(connection.port);
+      const client = new DirectUnityClient(connection.endpoint);
       try {
         await client.connect();
         if (shouldValidateProject) {
@@ -5893,7 +5920,7 @@ async function executeToolCommand(toolName, params, globalOptions) {
         requestId: compileRequestId,
         timeoutMs: COMPILE_WAIT_TIMEOUT_MS,
         pollIntervalMs: COMPILE_WAIT_POLL_INTERVAL_MS,
-        unityPort: connection.port
+        unityPort: connection.port ?? void 0
       });
       if (outcome === "timed_out") {
         lastError = new Error(
@@ -5969,7 +5996,7 @@ async function listAvailableTools(globalOptions) {
       const shouldDiagnoseProjectState = projectRoot !== null;
       currentProjectRoot = projectRoot;
       currentShouldDiagnoseProjectState = shouldDiagnoseProjectState;
-      const client = new DirectUnityClient(connection.port);
+      const client = new DirectUnityClient(connection.endpoint);
       try {
         await client.connect();
         if (shouldValidateProject) {
@@ -6064,7 +6091,7 @@ async function syncTools(globalOptions) {
       const shouldDiagnoseProjectState = projectRoot !== null;
       currentProjectRoot = projectRoot;
       currentShouldDiagnoseProjectState = shouldDiagnoseProjectState;
-      const client = new DirectUnityClient(connection.port);
+      const client = new DirectUnityClient(connection.endpoint);
       try {
         await client.connect();
         if (shouldValidateProject) {
@@ -6142,7 +6169,7 @@ function pascalToKebabCase(pascal) {
 }
 
 // src/skills/skills-manager.ts
-var import_node_assert3 = __toESM(require("node:assert"), 1);
+var import_node_assert4 = __toESM(require("node:assert"), 1);
 var import_fs7 = require("fs");
 var import_path8 = require("path");
 var import_os = require("os");
@@ -6238,7 +6265,7 @@ function isSafeSkillPathComponent(skillDirName) {
   return !skillDirName.includes("/") && !skillDirName.includes("\\") && !skillDirName.includes(import_path8.sep);
 }
 function assertSafeSkillPathComponent(skillDirName) {
-  (0, import_node_assert3.default)(
+  (0, import_node_assert4.default)(
     isSafeSkillPathComponent(skillDirName),
     "skillDirName must be a single safe path component"
   );
@@ -7209,8 +7236,8 @@ var import_path10 = require("path");
 // node_modules/launch-unity/dist/lib.js
 var import_node_child_process2 = require("node:child_process");
 var import_node_fs2 = require("node:fs");
-var import_promises4 = require("node:fs/promises");
-var import_node_path2 = require("node:path");
+var import_promises5 = require("node:fs/promises");
+var import_node_path3 = require("node:path");
 var import_node_util2 = require("node:util");
 
 // node_modules/launch-unity/dist/launchUnityProcess.js
@@ -7246,26 +7273,26 @@ function launchUnityProcess(spawnProcess, unityPath, args, onSpawned) {
 }
 
 // node_modules/launch-unity/dist/unityHub.js
-var import_promises3 = require("node:fs/promises");
+var import_promises4 = require("node:fs/promises");
 var import_node_fs = require("node:fs");
-var import_node_path = require("node:path");
-var import_node_assert4 = __toESM(require("node:assert"), 1);
+var import_node_path2 = require("node:path");
+var import_node_assert5 = __toESM(require("node:assert"), 1);
 var resolveUnityHubProjectFiles = () => {
   if (process.platform === "darwin") {
     const home = process.env.HOME;
     if (!home) {
       return [];
     }
-    const base = (0, import_node_path.join)(home, "Library", "Application Support", "UnityHub");
-    return [(0, import_node_path.join)(base, "projects-v1.json"), (0, import_node_path.join)(base, "projects.json")];
+    const base = (0, import_node_path2.join)(home, "Library", "Application Support", "UnityHub");
+    return [(0, import_node_path2.join)(base, "projects-v1.json"), (0, import_node_path2.join)(base, "projects.json")];
   }
   if (process.platform === "win32") {
     const appData = process.env.APPDATA;
     if (!appData) {
       return [];
     }
-    const base = (0, import_node_path.join)(appData, "UnityHub");
-    return [(0, import_node_path.join)(base, "projects-v1.json"), (0, import_node_path.join)(base, "projects.json")];
+    const base = (0, import_node_path2.join)(appData, "UnityHub");
+    return [(0, import_node_path2.join)(base, "projects-v1.json"), (0, import_node_path2.join)(base, "projects.json")];
   }
   return [];
 };
@@ -7277,7 +7304,7 @@ var removeTrailingSeparators = (target) => {
   return trimmed;
 };
 var normalizePath2 = (target) => {
-  const resolvedPath = (0, import_node_path.resolve)(target);
+  const resolvedPath = (0, import_node_path2.resolve)(target);
   return removeTrailingSeparators(resolvedPath);
 };
 var resolvePathWithActualCase = (target) => {
@@ -7307,8 +7334,8 @@ var logDebug = (message) => {
 };
 var ensureProjectEntryAndUpdate = async (projectPath, version, when, setFavorite = false) => {
   const canonicalProjectPath = resolvePathWithActualCase(projectPath);
-  const projectTitle = (0, import_node_path.basename)(canonicalProjectPath);
-  const containingFolderPath = (0, import_node_path.dirname)(canonicalProjectPath);
+  const projectTitle = (0, import_node_path2.basename)(canonicalProjectPath);
+  const containingFolderPath = (0, import_node_path2.dirname)(canonicalProjectPath);
   const candidates = resolveUnityHubProjectFiles();
   if (candidates.length === 0) {
     logDebug("No Unity Hub project files found.");
@@ -7316,7 +7343,7 @@ var ensureProjectEntryAndUpdate = async (projectPath, version, when, setFavorite
   }
   for (const path of candidates) {
     logDebug(`Trying Unity Hub file: ${path}`);
-    const content = await (0, import_promises3.readFile)(path, "utf8").catch(() => void 0);
+    const content = await (0, import_promises4.readFile)(path, "utf8").catch(() => void 0);
     if (!content) {
       logDebug("Read failed or empty content, skipping.");
       continue;
@@ -7351,7 +7378,7 @@ var ensureProjectEntryAndUpdate = async (projectPath, version, when, setFavorite
       }
     };
     try {
-      await (0, import_promises3.writeFile)(path, JSON.stringify(updatedJson, void 0, 2), "utf8");
+      await (0, import_promises4.writeFile)(path, JSON.stringify(updatedJson, void 0, 2), "utf8");
       logDebug("Write succeeded.");
     } catch (error) {
       logDebug(`Write failed: ${error instanceof Error ? error.message : String(error)}`);
@@ -7368,7 +7395,7 @@ var updateLastModifiedIfExists = async (projectPath, when) => {
     let content;
     let json;
     try {
-      content = await (0, import_promises3.readFile)(path, "utf8");
+      content = await (0, import_promises4.readFile)(path, "utf8");
     } catch {
       continue;
     }
@@ -7396,7 +7423,7 @@ var updateLastModifiedIfExists = async (projectPath, when) => {
       lastModified: when.getTime()
     };
     try {
-      await (0, import_promises3.writeFile)(path, JSON.stringify(json, void 0, 2), "utf8");
+      await (0, import_promises4.writeFile)(path, JSON.stringify(json, void 0, 2), "utf8");
     } catch {
     }
     return;
@@ -7408,19 +7435,19 @@ var resolveUnityHubProjectsInfoFile = () => {
     if (!home) {
       return void 0;
     }
-    return (0, import_node_path.join)(home, "Library", "Application Support", "UnityHub", "projectsInfo.json");
+    return (0, import_node_path2.join)(home, "Library", "Application Support", "UnityHub", "projectsInfo.json");
   }
   if (process.platform === "win32") {
     const appData = process.env.APPDATA;
     if (!appData) {
       return void 0;
     }
-    return (0, import_node_path.join)(appData, "UnityHub", "projectsInfo.json");
+    return (0, import_node_path2.join)(appData, "UnityHub", "projectsInfo.json");
   }
   return void 0;
 };
 var parseCliArgs = (cliArgsString) => {
-  (0, import_node_assert4.default)(cliArgsString !== null && cliArgsString !== void 0, "cliArgsString must not be null");
+  (0, import_node_assert5.default)(cliArgsString !== null && cliArgsString !== void 0, "cliArgsString must not be null");
   const trimmed = cliArgsString.trim();
   if (trimmed.length === 0) {
     return [];
@@ -7476,7 +7503,7 @@ var groupCliArgs = (args) => {
   return groups;
 };
 var getProjectCliArgs = async (projectPath) => {
-  (0, import_node_assert4.default)(projectPath !== null && projectPath !== void 0, "projectPath must not be null");
+  (0, import_node_assert5.default)(projectPath !== null && projectPath !== void 0, "projectPath must not be null");
   const infoFilePath = resolveUnityHubProjectsInfoFile();
   if (!infoFilePath) {
     logDebug("projectsInfo.json path could not be resolved.");
@@ -7485,7 +7512,7 @@ var getProjectCliArgs = async (projectPath) => {
   logDebug(`Reading projectsInfo.json: ${infoFilePath}`);
   let content;
   try {
-    content = await (0, import_promises3.readFile)(infoFilePath, "utf8");
+    content = await (0, import_promises4.readFile)(infoFilePath, "utf8");
   } catch {
     logDebug("projectsInfo.json not found or not readable.");
     return [];
@@ -7528,7 +7555,7 @@ var ASSETS_DIRECTORY_NAME = "Assets";
 var RECOVERY_DIRECTORY_NAME = "_Recovery";
 var UNITY_STARTUP_WAIT_MESSAGE = "Waiting for Unity to finish starting...";
 function getUnityVersion(projectPath) {
-  const versionFile = (0, import_node_path2.join)(projectPath, "ProjectSettings", "ProjectVersion.txt");
+  const versionFile = (0, import_node_path3.join)(projectPath, "ProjectSettings", "ProjectVersion.txt");
   if (!(0, import_node_fs2.existsSync)(versionFile)) {
     throw new Error(`ProjectVersion.txt not found at ${versionFile}. This does not appear to be a Unity project.`);
   }
@@ -7548,18 +7575,18 @@ function getUnityPathWindows(version) {
     if (!base) {
       return;
     }
-    candidates.push((0, import_node_path2.join)(base, "Unity", "Hub", "Editor", version, "Editor", "Unity.exe"));
+    candidates.push((0, import_node_path3.join)(base, "Unity", "Hub", "Editor", version, "Editor", "Unity.exe"));
   };
   addCandidate(programFiles);
   addCandidate(programFilesX86);
   addCandidate(localAppData);
-  candidates.push((0, import_node_path2.join)("C:\\", "Program Files", "Unity", "Hub", "Editor", version, "Editor", "Unity.exe"));
+  candidates.push((0, import_node_path3.join)("C:\\", "Program Files", "Unity", "Hub", "Editor", version, "Editor", "Unity.exe"));
   for (const candidate of candidates) {
     if ((0, import_node_fs2.existsSync)(candidate)) {
       return candidate;
     }
   }
-  return candidates[0] ?? (0, import_node_path2.join)("C:\\", "Program Files", "Unity", "Hub", "Editor", version, "Editor", "Unity.exe");
+  return candidates[0] ?? (0, import_node_path3.join)("C:\\", "Program Files", "Unity", "Hub", "Editor", version, "Editor", "Unity.exe");
 }
 function getUnityPath(version) {
   if (process.platform === "darwin") {
@@ -7578,7 +7605,7 @@ var removeTrailingSeparators2 = (target) => {
   return trimmed;
 };
 var normalizePath3 = (target) => {
-  const resolvedPath = (0, import_node_path2.resolve)(target);
+  const resolvedPath = (0, import_node_path3.resolve)(target);
   const trimmed = removeTrailingSeparators2(resolvedPath);
   return trimmed;
 };
@@ -7838,8 +7865,8 @@ async function isLockfileHeld(lockfilePath) {
   return false;
 }
 async function handleStaleLockfile(projectPath) {
-  const tempDirectoryPath = (0, import_node_path2.join)(projectPath, TEMP_DIRECTORY_NAME);
-  const lockfilePath = (0, import_node_path2.join)(tempDirectoryPath, UNITY_LOCKFILE_NAME);
+  const tempDirectoryPath = (0, import_node_path3.join)(projectPath, TEMP_DIRECTORY_NAME);
+  const lockfilePath = (0, import_node_path3.join)(tempDirectoryPath, UNITY_LOCKFILE_NAME);
   if (!(0, import_node_fs2.existsSync)(lockfilePath)) {
     return;
   }
@@ -7849,14 +7876,14 @@ async function handleStaleLockfile(projectPath) {
   console.log(`UnityLockfile found without active Unity process: ${lockfilePath}`);
   console.log("Assuming previous crash. Cleaning Temp directory and continuing launch.");
   try {
-    await (0, import_promises4.rm)(tempDirectoryPath, { recursive: true, force: true });
+    await (0, import_promises5.rm)(tempDirectoryPath, { recursive: true, force: true });
     console.log("Deleted Temp directory.");
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.warn(`Failed to delete Temp directory: ${message}`);
   }
   try {
-    await (0, import_promises4.rm)(lockfilePath, { force: true });
+    await (0, import_promises5.rm)(lockfilePath, { force: true });
     console.log("Deleted UnityLockfile.");
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -7865,13 +7892,13 @@ async function handleStaleLockfile(projectPath) {
   console.log();
 }
 async function deleteRecoveryDirectory(projectPath) {
-  const recoveryPath = (0, import_node_path2.join)(projectPath, ASSETS_DIRECTORY_NAME, RECOVERY_DIRECTORY_NAME);
+  const recoveryPath = (0, import_node_path3.join)(projectPath, ASSETS_DIRECTORY_NAME, RECOVERY_DIRECTORY_NAME);
   if (!(0, import_node_fs2.existsSync)(recoveryPath)) {
     return;
   }
   console.log(`Deleting recovery directory: ${recoveryPath}`);
   try {
-    await (0, import_promises4.rm)(recoveryPath, { recursive: true, force: true });
+    await (0, import_promises5.rm)(recoveryPath, { recursive: true, force: true });
     console.log("Deleted recovery directory.");
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -8002,7 +8029,7 @@ var EXCLUDED_DIR_NAMES = /* @__PURE__ */ new Set([
   ".vs"
 ]);
 function isUnityProjectRoot(candidateDir) {
-  const versionFile = (0, import_node_path2.join)(candidateDir, "ProjectSettings", "ProjectVersion.txt");
+  const versionFile = (0, import_node_path3.join)(candidateDir, "ProjectSettings", "ProjectVersion.txt");
   return (0, import_node_fs2.existsSync)(versionFile);
 }
 function listSubdirectoriesSorted(dir) {
@@ -8011,7 +8038,7 @@ function listSubdirectoriesSorted(dir) {
     const dirents = (0, import_node_fs2.readdirSync)(dir, { withFileTypes: true });
     const subdirs = dirents.filter((d) => d.isDirectory()).map((d) => d.name).filter((name) => !EXCLUDED_DIR_NAMES.has(name.toLocaleLowerCase()));
     subdirs.sort((a, b) => a.localeCompare(b));
-    entries = subdirs.map((name) => (0, import_node_path2.join)(dir, name));
+    entries = subdirs.map((name) => (0, import_node_path3.join)(dir, name));
   } catch {
     entries = [];
   }
@@ -8066,7 +8093,7 @@ function findUnityProjectBfs(rootDir, maxDepth) {
   return void 0;
 }
 async function waitForLockfile(projectPath) {
-  const lockfilePath = (0, import_node_path2.join)(projectPath, TEMP_DIRECTORY_NAME, UNITY_LOCKFILE_NAME);
+  const lockfilePath = (0, import_node_path3.join)(projectPath, TEMP_DIRECTORY_NAME, UNITY_LOCKFILE_NAME);
   const start = Date.now();
   while (Date.now() - start < LOCKFILE_WAIT_TIMEOUT_MS) {
     if ((0, import_node_fs2.existsSync)(lockfilePath)) {
@@ -8207,7 +8234,7 @@ var TRANSIENT_COMPILATION_PROVIDER_UNAVAILABLE_SUBSTRINGS = ["warming up"];
 var RETRYABLE_UNITY_ERROR_SUBSTRINGS = ["can only be called from the main thread"];
 var defaultDependencies2 = {
   resolveUnityConnectionFn: resolveUnityConnection,
-  createClient: (port) => new DirectUnityClient(port),
+  createClient: (endpoint) => new DirectUnityClient(endpoint),
   sleepFn: sleep,
   nowFn: () => Date.now(),
   isProjectBusyFn: isProjectBusyByLockFiles
@@ -8264,7 +8291,7 @@ function isRetryableLaunchReadinessError(error) {
     return false;
   }
   const message = error.message;
-  return isRetryableFastProjectValidationErrorMessage(message) || message.includes("Could not read Unity server port from settings") || message.includes("ECONNREFUSED") || message.includes("EADDRNOTAVAIL") || message === "UNITY_NO_RESPONSE" || message.startsWith("Connection lost:") || isRetryableUnityStartupError(message);
+  return isRetryableFastProjectValidationErrorMessage(message) || message.includes("Could not read Unity server session from settings") || message.includes("ECONNREFUSED") || message.includes("EADDRNOTAVAIL") || message === "UNITY_NO_RESPONSE" || message.startsWith("Connection lost:") || isRetryableUnityStartupError(message);
 }
 function isRetryableUnityStartupError(message) {
   if (!message.startsWith("Unity error:")) {
@@ -8349,7 +8376,7 @@ async function waitForDynamicCodeReadyAfterLaunch(projectPath, dependencies = de
         }
         probeSessionId = resolvedSessionId;
       }
-      client = dependencies.createClient(connection.port);
+      client = dependencies.createClient(connection.endpoint);
       await client.connect();
       if (!hasFastSessionMetadata(connection) && connection.projectRoot !== null) {
         await validateConnectedProject(client, connection.projectRoot);
@@ -8430,7 +8457,7 @@ async function waitForLaunchReadyAfterLaunch(projectPath, dependencies = default
         void 0,
         projectPath
       );
-      client = dependencies.createClient(connection.port);
+      client = dependencies.createClient(connection.endpoint);
       await client.connect();
       await validateLaunchConnectionIdentity(client, connection);
       if (!isProjectBusyFn(projectPath)) {
@@ -8451,9 +8478,9 @@ async function waitForLaunchReadyAfterLaunch(projectPath, dependencies = default
 }
 
 // src/launch-restart-guard.ts
-var import_node_assert5 = __toESM(require("node:assert"), 1);
+var import_node_assert6 = __toESM(require("node:assert"), 1);
 var import_node_fs3 = require("node:fs");
-var import_node_path3 = require("node:path");
+var import_node_path4 = require("node:path");
 var UNITY_RESTART_GUARD_COOLDOWN_MS = 12e4;
 var UNITY_RESTART_GUARD_DIR = ".uloop";
 var UNITY_RESTART_GUARD_FILE = "launch-restart-guard.json";
@@ -8474,14 +8501,14 @@ var UnityRestartCooldownError = class extends Error {
   }
 };
 function getUnityRestartGuardFilePath(projectPath) {
-  (0, import_node_assert5.default)(projectPath.length > 0, "projectPath must not be empty");
-  return (0, import_node_path3.join)(projectPath, UNITY_RESTART_GUARD_DIR, UNITY_RESTART_GUARD_FILE);
+  (0, import_node_assert6.default)(projectPath.length > 0, "projectPath must not be empty");
+  return (0, import_node_path4.join)(projectPath, UNITY_RESTART_GUARD_DIR, UNITY_RESTART_GUARD_FILE);
 }
 function beginUnityRestartAttempt(projectPath, dependencies = defaultDependencies3) {
-  (0, import_node_assert5.default)(projectPath.length > 0, "projectPath must not be empty");
+  (0, import_node_assert6.default)(projectPath.length > 0, "projectPath must not be empty");
   assertUnityRestartAllowed(projectPath, dependencies);
   const guardPath = getUnityRestartGuardFilePath(projectPath);
-  dependencies.mkdirSyncFn((0, import_node_path3.dirname)(guardPath), { recursive: true });
+  dependencies.mkdirSyncFn((0, import_node_path4.dirname)(guardPath), { recursive: true });
   const record = {
     projectPath,
     startedAt: dependencies.nowFn(),
@@ -8491,7 +8518,7 @@ function beginUnityRestartAttempt(projectPath, dependencies = defaultDependencie
 `, "utf8");
 }
 function assertUnityRestartAllowed(projectPath, dependencies = defaultDependencies3) {
-  (0, import_node_assert5.default)(projectPath.length > 0, "projectPath must not be empty");
+  (0, import_node_assert6.default)(projectPath.length > 0, "projectPath must not be empty");
   const guardPath = getUnityRestartGuardFilePath(projectPath);
   const record = readGuardRecordOrNull(guardPath, dependencies);
   if (record === null) {
@@ -8510,9 +8537,9 @@ function readGuardRecordOrNull(guardPath, dependencies) {
   try {
     const content = dependencies.readFileSyncFn(guardPath, "utf8");
     const parsed = JSON.parse(content);
-    (0, import_node_assert5.default)(typeof parsed.projectPath === "string", "restart guard projectPath must be a string");
-    (0, import_node_assert5.default)(typeof parsed.startedAt === "number", "restart guard startedAt must be a number");
-    (0, import_node_assert5.default)(typeof parsed.pid === "number", "restart guard pid must be a number");
+    (0, import_node_assert6.default)(typeof parsed.projectPath === "string", "restart guard projectPath must be a string");
+    (0, import_node_assert6.default)(typeof parsed.startedAt === "number", "restart guard startedAt must be a number");
+    (0, import_node_assert6.default)(typeof parsed.pid === "number", "restart guard pid must be a number");
     return {
       projectPath: parsed.projectPath,
       startedAt: parsed.startedAt,
@@ -8579,7 +8606,10 @@ async function runLaunchCommand(projectPath, options) {
     const readinessConnection = await waitForDynamicCodeReadyAfterLaunch(
       launchResult.projectPath
     );
-    await prewarmDynamicCodeAfterLaunch({ port: readinessConnection.port });
+    await prewarmDynamicCodeAfterLaunch({
+      projectRoot: readinessConnection.projectRoot ?? launchResult.projectPath,
+      port: readinessConnection.port ?? void 0
+    });
   } finally {
     spinner.stop();
   }

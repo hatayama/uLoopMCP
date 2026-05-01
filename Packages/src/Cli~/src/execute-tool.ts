@@ -336,7 +336,7 @@ function isServerStarting(
 export function isSettingsReadError(error: unknown): boolean {
   return (
     error instanceof Error &&
-    error.message.startsWith('Could not read Unity server port from settings.')
+    error.message.startsWith('Could not read Unity server session from settings.')
   );
 }
 
@@ -976,7 +976,7 @@ export async function executeToolCommand(
       currentProjectRoot = projectRoot;
       currentShouldDiagnoseProjectState = shouldDiagnoseProjectState;
 
-      const client = new DirectUnityClient(connection.port);
+      const client = new DirectUnityClient(connection.endpoint);
       try {
         await client.connect();
 
@@ -1024,7 +1024,7 @@ export async function executeToolCommand(
         // entire function — bypassing waitForCompileCompletion() recovery.
         if (requestDispatched && shouldWaitForDomainReload) {
           if (isTransportDisconnectError(error)) {
-            // Unity may have received the request before the TCP drop.
+            // Unity may have received the request before the connection dropped.
             // Break out of retry loop → proceed to file-based recovery below.
             spinner.update('Connection lost during compile. Waiting for result file...');
             break;
@@ -1068,7 +1068,7 @@ export async function executeToolCommand(
       //  - immediateResult === undefined: no JSON-RPC response was received
       //  - !requestDispatched: no attempt ever successfully connected and called sendRequest()
       // If requestDispatched is true but immediateResult is undefined, the request was sent
-      // but the TCP connection dropped before the response arrived (domain reload scenario).
+      // but the connection dropped before the response arrived (domain reload scenario).
       // In that case, Unity may have already written the result file, so we proceed to
       // file-based polling recovery.
       if (immediateResult === undefined && !requestDispatched) {
@@ -1116,7 +1116,7 @@ export async function executeToolCommand(
         requestId: compileRequestId,
         timeoutMs: COMPILE_WAIT_TIMEOUT_MS,
         pollIntervalMs: COMPILE_WAIT_POLL_INTERVAL_MS,
-        unityPort: connection.port,
+        unityPort: connection.port ?? undefined,
       });
 
       if (outcome === 'timed_out') {
@@ -1209,7 +1209,7 @@ export async function listAvailableTools(globalOptions: GlobalOptions): Promise<
       currentProjectRoot = projectRoot;
       currentShouldDiagnoseProjectState = shouldDiagnoseProjectState;
 
-      const client = new DirectUnityClient(connection.port);
+      const client = new DirectUnityClient(connection.endpoint);
       try {
         await client.connect();
 
@@ -1340,7 +1340,7 @@ export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
       currentProjectRoot = projectRoot;
       currentShouldDiagnoseProjectState = shouldDiagnoseProjectState;
 
-      const client = new DirectUnityClient(connection.port);
+      const client = new DirectUnityClient(connection.endpoint);
       try {
         await client.connect();
 

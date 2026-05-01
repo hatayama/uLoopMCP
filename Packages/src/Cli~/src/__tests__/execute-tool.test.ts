@@ -19,6 +19,7 @@ import {
   UnityServerNotRunningError,
 } from '../port-resolver.js';
 import { ProjectMismatchError } from '../project-validator.js';
+import { createTcpEndpoint } from '../ipc-endpoint.js';
 import type { Stats } from 'fs';
 import { resolve as resolvePath } from 'path';
 
@@ -31,6 +32,7 @@ function createConnection(
   overrides?: Partial<ResolvedUnityConnection>,
 ): ResolvedUnityConnection {
   return {
+    endpoint: createTcpEndpoint(port),
     port,
     projectRoot: '/project',
     requestMetadata: null,
@@ -809,7 +811,7 @@ describe('shouldPromoteToServerStartingError', () => {
     await expect(
       shouldPromoteToServerStartingError(
         new Error(
-          'Could not read Unity server port from settings.\n\n  Settings file: /project/UserSettings/UnityMcpSettings.json',
+          'Could not read Unity server session from settings.\n\n  Settings file: /project/UserSettings/UnityMcpSettings.json',
         ),
         'get-tool-details',
         '/project',
@@ -825,7 +827,7 @@ describe('isSettingsReadError', () => {
     expect(
       isSettingsReadError(
         new Error(
-          'Could not read Unity server port from settings.\n\n  Settings file: /project/UserSettings/UnityMcpSettings.json',
+          'Could not read Unity server session from settings.\n\n  Settings file: /project/UserSettings/UnityMcpSettings.json',
         ),
       ),
     ).toBe(true);
@@ -851,7 +853,7 @@ describe('resolveUnityConnectionWithStartupDiagnosis', () => {
           .fn()
           .mockRejectedValue(
             new Error(
-              `Could not read Unity server port from settings.\n\n  Settings file: ${projectRoot}/UserSettings/UnityMcpSettings.json`,
+              `Could not read Unity server session from settings.\n\n  Settings file: ${projectRoot}/UserSettings/UnityMcpSettings.json`,
             ),
           ),
       ),
@@ -888,7 +890,7 @@ describe('resolveUnityConnectionWithStartupDiagnosis', () => {
           .fn()
           .mockRejectedValue(
             new Error(
-              `Could not read Unity server port from settings.\n\n  Settings file: ${projectRoot}/UserSettings/UnityMcpSettings.json`,
+              `Could not read Unity server session from settings.\n\n  Settings file: ${projectRoot}/UserSettings/UnityMcpSettings.json`,
             ),
           ),
       ),

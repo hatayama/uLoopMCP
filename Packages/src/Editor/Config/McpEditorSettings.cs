@@ -180,7 +180,7 @@ namespace io.github.hatayama.uLoopMCP
 
         public static void SetRunningServerSession(int port, string projectRootPath, string serverSessionId)
         {
-            Debug.Assert(port > 0, "port must be positive");
+            Debug.Assert(port >= 0, "port must not be negative");
             Debug.Assert(!string.IsNullOrWhiteSpace(projectRootPath), "projectRootPath must not be empty");
             Debug.Assert(!string.IsNullOrWhiteSpace(serverSessionId), "serverSessionId must not be empty");
 
@@ -188,7 +188,7 @@ namespace io.github.hatayama.uLoopMCP
             UpdateSettings(settings => settings with
             {
                 isServerRunning = true,
-                customPort = port,
+                customPort = port > 0 ? port : settings.customPort,
                 projectRootPath = normalizedProjectRootPath,
                 serverSessionId = serverSessionId
             });

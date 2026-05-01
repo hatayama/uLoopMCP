@@ -109,7 +109,10 @@ export async function runLaunchCommand(
     const readinessConnection: ResolvedUnityConnection = await waitForDynamicCodeReadyAfterLaunch(
       launchResult.projectPath,
     );
-    await prewarmDynamicCodeAfterLaunch({ port: readinessConnection.port });
+    await prewarmDynamicCodeAfterLaunch({
+      projectRoot: readinessConnection.projectRoot ?? launchResult.projectPath,
+      port: readinessConnection.port ?? undefined,
+    });
   } finally {
     spinner.stop();
   }

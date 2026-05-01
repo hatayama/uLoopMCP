@@ -55,7 +55,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         /// <param name="correlationId">Tracking ID for related operations</param>
         /// <param name="serverIsRunning">Whether server is running</param>
-        /// <param name="serverPort">Server port number</param>
+        /// <param name="serverPort">TCP server port when the transport uses TCP</param>
         public static void StartDomainReload(string correlationId, bool serverIsRunning, int? serverPort)
         {
             if (IsBackgroundUnityProcess())
@@ -68,18 +68,26 @@ namespace io.github.hatayama.uLoopMCP
             CreateLockFile();
 
             // Save session state if server is running
-            if (serverIsRunning && serverPort.HasValue)
+            if (serverIsRunning)
             {
-                int port = serverPort.Value;
-                McpEditorSettings.UpdateSettings(s => s with
+                McpEditorSettings.UpdateSettings(s =>
                 {
-                    isDomainReloadInProgress = true,
-                    isServerRunning = true,
-                    customPort = port,
-                    isAfterCompile = true,
-                    isReconnecting = true,
-                    showReconnectingUI = true,
-                    showPostCompileReconnectingUI = true
+                    McpEditorSettingsData updatedSettings = s with
+                    {
+                        isDomainReloadInProgress = true,
+                        isServerRunning = true,
+                        isAfterCompile = true,
+                        isReconnecting = true,
+                        showReconnectingUI = true,
+                        showPostCompileReconnectingUI = true
+                    };
+
+                    if (serverPort.HasValue && NetworkUtility.IsValidPort(serverPort.Value))
+                    {
+                        updatedSettings = updatedSettings with { customPort = serverPort.Value };
+                    }
+
+                    return updatedSettings;
                 });
             }
             else

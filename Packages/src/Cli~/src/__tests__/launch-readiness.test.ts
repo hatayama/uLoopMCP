@@ -3,6 +3,7 @@ import {
   waitForDynamicCodeReadyAfterLaunch,
   waitForLaunchReadyAfterLaunch,
 } from '../launch-readiness.js';
+import { createTcpEndpoint } from '../ipc-endpoint.js';
 import { type ResolvedUnityConnection } from '../port-resolver.js';
 
 interface MockReadinessResponse {
@@ -52,6 +53,7 @@ function createConnection(
   overrides?: Partial<ResolvedUnityConnection>,
 ): ResolvedUnityConnection {
   return {
+    endpoint: createTcpEndpoint(port),
     port,
     projectRoot: '/project',
     requestMetadata: {
