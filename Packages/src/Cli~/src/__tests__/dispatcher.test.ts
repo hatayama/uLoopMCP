@@ -27,6 +27,7 @@ type SpawnCall = {
   readonly command: string;
   readonly args: readonly string[];
   readonly cwd: string;
+  readonly shell: boolean | string | undefined;
 };
 
 type LoadModuleCall = {
@@ -56,6 +57,13 @@ function installProjectLocalCli(
   mkdirSync(binDir, { recursive: true });
   const cliPath = join(binDir, 'uloop');
   writeFileSync(cliPath, contents);
+  return cliPath;
+}
+
+function installWindowsProjectLocalCli(projectRoot: string): string {
+  installProjectLocalCli(projectRoot);
+  const cliPath = join(projectRoot, '.uloop', 'bin', 'uloop.cmd');
+  writeFileSync(cliPath, '@echo off\r\nnode "%~dp0\\uloop" %*\r\n');
   return cliPath;
 }
 
@@ -105,6 +113,7 @@ function createDependencies(
         command,
         args: forwardedArgs,
         cwd: String(options.cwd),
+        shell: options.shell,
       });
 
       const child = new EventEmitter();
@@ -181,6 +190,7 @@ describe('dispatcher', () => {
         command: '/usr/local/bin/node',
         args: [bundledCliPath, ...args],
         cwd: root,
+        shell: undefined,
       },
     ]);
     expect(dependencies.chdirCalls).toHaveLength(0);
@@ -274,7 +284,7 @@ describe('dispatcher', () => {
   it('falls back to spawning the project-local CLI on Windows', async () => {
     const projectRoot = createUnityProject();
     createdProjects.push(projectRoot);
-    const cliPath = installProjectLocalCli(projectRoot);
+    const cliPath = installWindowsProjectLocalCli(projectRoot);
     const dependencies = createDependencies(projectRoot, ['list'], 0, { platform: 'win32' });
 
     const exitCode = await runDispatcher(dependencies);
@@ -286,6 +296,7 @@ describe('dispatcher', () => {
         command: cliPath,
         args: ['list'],
         cwd: projectRoot,
+        shell: true,
       },
     ]);
   });
@@ -305,6 +316,7 @@ describe('dispatcher', () => {
         command: cliPath,
         args: ['compile'],
         cwd: projectRoot,
+        shell: undefined,
       },
     ]);
   });
@@ -327,6 +339,7 @@ describe('dispatcher', () => {
         command: cliPath,
         args: ['get-logs'],
         cwd: projectRoot,
+        shell: undefined,
       },
     ]);
   });

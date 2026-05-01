@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       branch:
-        description: 'Target branch name (uses current ref if not specified)'
+        description: "Target branch name (uses current ref if not specified)"
         required: false
 
 permissions:
@@ -25,7 +25,7 @@ jobs:
       - name: 📥 Checkout repository
         uses: actions/checkout@v6
         with:
-          fetch-depth: 0      # Required for tag fetching
+          fetch-depth: 0 # Required for tag fetching
 
       # ── Debug: Show repository structure ─────────────────────────
       - name: 🕵️ Show file tree
@@ -48,6 +48,50 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🔧 Setup Node.js
+        if: steps.release.outputs.prs_created == 'true'
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: "Packages/src/Cli~/package-lock.json"
+
+      - name: 📦 Rebuild CLI bundle in release PR
+        if: steps.release.outputs.prs_created == 'true'
+        env:
+          RELEASE_PLEASE_PR: ${{ steps.release.outputs.pr || '' }}
+          RELEASE_PLEASE_PRS: ${{ steps.release.outputs.prs || '' }}
+        run: |
+          PR_DATA="${RELEASE_PLEASE_PRS:-${RELEASE_PLEASE_PR:-}}"
+          RELEASE_BRANCH=$(
+            printf '%s' "${PR_DATA}" \
+              | jq -r 'if type == "array" then .[0] else . end | .headBranchName // .headRefName // .head.ref // empty'
+          )
+
+          if [ -z "${RELEASE_BRANCH}" ]; then
+            echo "Release Please did not report a release PR branch." >&2
+            exit 1
+          fi
+
+          git fetch origin "${RELEASE_BRANCH}"
+          git checkout "${RELEASE_BRANCH}"
+
+          cd Packages/src/Cli~
+          npm ci
+          npm run build
+          cd ../../..
+
+          if git diff --quiet -- Packages/src/Cli~/dist/cli.bundle.cjs; then
+            echo "Project-local CLI bundle is already current."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Packages/src/Cli~/dist/cli.bundle.cjs
+          git commit -m "chore: rebuild project CLI bundle"
+          git push origin "HEAD:${RELEASE_BRANCH}"
 
   # ── Dispatch npm-publish when release is created ────────────
   # Keep npm-publish.yml as the single trusted publisher entrypoint.

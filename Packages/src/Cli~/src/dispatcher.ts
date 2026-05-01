@@ -346,10 +346,15 @@ async function runProjectLocalCli(
   }
 
   return new Promise((resolveExitCode) => {
-    const child = dependencies.spawnFn(localCliPath, args, {
+    const spawnOptions: SpawnOptions & { cwd: string } = {
       cwd: projectRoot,
       stdio: 'inherit',
-    });
+    };
+    if (dependencies.platform === 'win32' && localCliPath.endsWith('.cmd')) {
+      spawnOptions.shell = true;
+    }
+
+    const child = dependencies.spawnFn(localCliPath, args, spawnOptions);
 
     child.on('exit', (code) => {
       resolveExitCode(code ?? 1);
