@@ -9,7 +9,7 @@ jest.mock(
 );
 
 import { EventEmitter } from 'events';
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
+import { chmodSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { VERSION } from '../version';
@@ -44,9 +44,14 @@ type DispatcherCommandCall = {
 
 function createUnityProject(): string {
   const projectRoot = mkdtempSync(join(tmpdir(), 'uloop-dispatcher-'));
+  createUnityProjectAt(projectRoot);
+  return projectRoot;
+}
+
+function createUnityProjectAt(projectRoot: string): void {
+  mkdirSync(projectRoot, { recursive: true });
   mkdirSync(join(projectRoot, 'Assets'));
   mkdirSync(join(projectRoot, 'ProjectSettings'));
-  return projectRoot;
 }
 
 function installProjectLocalCli(
@@ -232,6 +237,34 @@ describe('dispatcher', () => {
       },
     ]);
     expect(dependencies.stderrChunks).toEqual([]);
+  });
+
+  it('skips unreadable child directories while discovering Unity projects', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'uloop-dispatcher-unreadable-dir-'));
+    createdProjects.push(root);
+    const unreadableDir = join(root, 'unreadable');
+    const projectRoot = join(root, 'NestedUnityProject');
+    mkdirSync(unreadableDir);
+    createUnityProjectAt(projectRoot);
+    const cliPath = installProjectLocalCli(projectRoot);
+    const dependencies = createDependencies(root, ['compile']);
+
+    chmodSync(unreadableDir, 0o000);
+    try {
+      const exitCode = await runDispatcher(dependencies);
+
+      expect(exitCode).toBe(0);
+      expect(dependencies.loadModuleCalls).toEqual([
+        {
+          modulePath: cliPath,
+          args: ['compile'],
+          cwd: projectRoot,
+        },
+      ]);
+      expect(dependencies.stderrChunks).toEqual([]);
+    } finally {
+      chmodSync(unreadableDir, 0o700);
+    }
   });
 
   it('forwards arguments to the project-local CLI selected by --project-path', async () => {

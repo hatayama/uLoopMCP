@@ -102,6 +102,27 @@ type ProjectRootResolution =
   | { readonly projectRoot: string; readonly error: null }
   | { readonly projectRoot: null; readonly error: string };
 
+function readDirectoryEntriesOrEmpty(path: string): Dirent[] {
+  try {
+    return readdirSync(path, { withFileTypes: true });
+  } catch (error) {
+    if (isSkippableDirectoryReadError(error)) {
+      return [];
+    }
+
+    throw error;
+  }
+}
+
+function isSkippableDirectoryReadError(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null || !('code' in error)) {
+    return false;
+  }
+
+  const code = (error as { readonly code?: unknown }).code;
+  return code === 'EACCES' || code === 'EPERM' || code === 'ENOENT';
+}
+
 function createDefaultDependencies(): DispatcherDependencies {
   return {
     args: process.argv.slice(2),
@@ -283,7 +304,7 @@ function findUnityProjectsInChildren(startPath: string): string[] {
       return;
     }
 
-    const entries: Dirent[] = readdirSync(currentPath, { withFileTypes: true });
+    const entries: Dirent[] = readDirectoryEntriesOrEmpty(currentPath);
     for (const entry of entries) {
       if (!entry.isDirectory() || EXCLUDED_PROJECT_SEARCH_DIRS.has(entry.name)) {
         continue;

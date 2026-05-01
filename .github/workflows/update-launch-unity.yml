@@ -6,9 +6,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Target version of launch-unity (empty = latest from npm)'
+        description: "Target version of launch-unity (empty = latest from npm)"
         required: false
-        default: ''
+        default: ""
 
 permissions:
   contents: write
@@ -24,7 +24,7 @@ jobs:
       - name: 🔧 Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '22'
+          node-version: "22"
 
       - name: 🔍 Resolve versions
         id: version
@@ -74,6 +74,11 @@ jobs:
         env:
           TARGET_VERSION: ${{ steps.version.outputs.new_version }}
         run: npm install "launch-unity@${TARGET_VERSION}" --save-exact
+
+      - name: 🧱 Rebuild project CLI bundle
+        if: steps.check.outputs.skip == 'false'
+        working-directory: Packages/src/Cli~
+        run: npm run build
 
       - name: 📝 Fetch CHANGELOG diff
         if: steps.check.outputs.skip == 'false'
