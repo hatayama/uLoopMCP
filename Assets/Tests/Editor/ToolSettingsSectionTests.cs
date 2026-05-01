@@ -83,7 +83,6 @@ namespace io.github.hatayama.uLoopMCP
             ToolSettingsSectionData headerOnlyData = CreateData(
                 compileEnabled: false,
                 includeGetLogs: false,
-                allowThirdPartyTools: false,
                 includeThirdPartyTool: true,
                 hasToolListData: false);
 
@@ -208,7 +207,6 @@ namespace io.github.hatayama.uLoopMCP
             bool compileEnabled,
             bool includeGetLogs,
             bool showToolSettings = true,
-            bool allowThirdPartyTools = true,
             bool includeThirdPartyTool = false,
             bool hasToolListData = true,
             DynamicCodeSecurityLevel dynamicCodeSecurityLevel = DynamicCodeSecurityLevel.Restricted)
@@ -246,7 +244,6 @@ namespace io.github.hatayama.uLoopMCP
 
             return new ToolSettingsSectionData(
                 showToolSettings: showToolSettings,
-                allowThirdPartyTools: allowThirdPartyTools,
                 dynamicCodeSecurityLevel: dynamicCodeSecurityLevel,
                 builtInTools: builtInTools,
                 thirdPartyTools: thirdPartyTools,

@@ -381,7 +381,6 @@ namespace io.github.hatayama.uLoopMCP
         {
             return new ToolSettingsSectionData(
                 _model.UI.ShowToolSettings,
-                ULoopSettings.GetAllowThirdPartyTools(),
                 ULoopSettings.GetDynamicCodeSecurityLevel(),
                 System.Array.Empty<ToolToggleItem>(),
                 System.Array.Empty<ToolToggleItem>(),
@@ -396,7 +395,6 @@ namespace io.github.hatayama.uLoopMCP
             {
                 return new ToolSettingsSectionData(
                     _model.UI.ShowToolSettings,
-                    ULoopSettings.GetAllowThirdPartyTools(),
                     ULoopSettings.GetDynamicCodeSecurityLevel(),
                     System.Array.Empty<ToolToggleItem>(),
                     System.Array.Empty<ToolToggleItem>(),
@@ -436,7 +434,6 @@ namespace io.github.hatayama.uLoopMCP
 
             return new ToolSettingsSectionData(
                 _model.UI.ShowToolSettings,
-                ULoopSettings.GetAllowThirdPartyTools(),
                 ULoopSettings.GetDynamicCodeSecurityLevel(),
                 builtIn.ToArray(),
                 thirdParty.ToArray(),
