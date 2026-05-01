@@ -142,7 +142,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             ULoopSettingsData written = new ULoopSettingsData
             {
-                allowThirdPartyTools = true,
+                allowThirdPartyTools = false,
                 dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.Restricted
             };
             ULoopSettings.SaveSettings(written);
@@ -150,8 +150,23 @@ namespace io.github.hatayama.uLoopMCP
 
             ULoopSettingsData readBack = ULoopSettings.GetSettings();
 
-            Assert.AreEqual(written.allowThirdPartyTools, readBack.allowThirdPartyTools);
+            Assert.IsTrue(readBack.allowThirdPartyTools);
             Assert.AreEqual(written.dynamicCodeSecurityLevel, readBack.dynamicCodeSecurityLevel);
+        }
+
+        [Test]
+        public void SetAllowThirdPartyTools_WhenFalse_ShouldKeepThirdPartyToolsAllowed()
+        {
+            ULoopSettings.SaveSettings(new ULoopSettingsData
+            {
+                allowThirdPartyTools = true,
+                dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.Restricted
+            });
+
+            ULoopSettings.SetAllowThirdPartyTools(false);
+
+            Assert.IsTrue(ULoopSettings.GetAllowThirdPartyTools());
+            Assert.IsTrue(ULoopSettings.GetSettings().allowThirdPartyTools);
         }
 
         [Test]
@@ -189,7 +204,7 @@ namespace io.github.hatayama.uLoopMCP
 
             ULoopSettingsData result = ULoopSettings.GetSettings();
 
-            Assert.IsFalse(result.allowThirdPartyTools);
+            Assert.IsTrue(result.allowThirdPartyTools);
             Assert.AreEqual((int)DynamicCodeSecurityLevel.Restricted, result.dynamicCodeSecurityLevel);
             Assert.IsFalse(File.Exists(LegacySettingsFilePath),
                 "Legacy file should not be created when both files are absent");
@@ -211,7 +226,7 @@ namespace io.github.hatayama.uLoopMCP
             ULoopSettingsData result = ULoopSettings.GetSettings();
 
             Assert.IsTrue(File.Exists(SettingsFilePath), $"{SettingsFilePath} should be recovered from .bak");
-            Assert.IsFalse(result.allowThirdPartyTools);
+            Assert.IsTrue(result.allowThirdPartyTools);
             Assert.AreEqual((int)DynamicCodeSecurityLevel.FullAccess, result.dynamicCodeSecurityLevel);
             Assert.IsFalse(File.Exists(SettingsBackupPath), ".bak should be consumed by recovery");
         }
@@ -234,7 +249,7 @@ namespace io.github.hatayama.uLoopMCP
 
             Assert.IsTrue(File.Exists(SettingsFilePath), "New settings file should exist after rename");
             Assert.IsFalse(File.Exists(OldSettingsFilePath), "Old settings file should be removed after rename");
-            Assert.IsFalse(result.allowThirdPartyTools);
+            Assert.IsTrue(result.allowThirdPartyTools);
             Assert.AreEqual((int)DynamicCodeSecurityLevel.Restricted, result.dynamicCodeSecurityLevel);
         }
 

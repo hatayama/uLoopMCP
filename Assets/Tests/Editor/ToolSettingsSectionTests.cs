@@ -177,14 +177,6 @@ namespace io.github.hatayama.uLoopMCP
             {
                 name = "cli-reference-link"
             };
-            Toggle allowThirdPartyToggle = new Toggle
-            {
-                name = "allow-third-party-toggle"
-            };
-            Label allowThirdPartyLabel = new Label
-            {
-                name = "allow-third-party-label"
-            };
             Button securityLevelRestrictedButton = new Button
             {
                 name = "security-level-restricted-button"
@@ -202,8 +194,6 @@ namespace io.github.hatayama.uLoopMCP
                 name = "tool-settings-info-container"
             };
 
-            foldout.Add(allowThirdPartyToggle);
-            foldout.Add(allowThirdPartyLabel);
             foldout.Add(securityLevelRestrictedButton);
             foldout.Add(securityLevelFullAccessButton);
             foldout.Add(securityLevelDescription);

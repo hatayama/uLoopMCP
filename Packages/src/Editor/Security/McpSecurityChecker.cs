@@ -153,7 +153,7 @@ namespace io.github.hatayama.uLoopMCP
                 case SecuritySettings.None:
                     if (IsThirdPartyTool(toolName))
                     {
-                        return "Third party tools execution is disabled. Enable 'Allow Third Party Tools' in uLoopMCP Security Settings.";
+                        return $"Tool '{toolName}' is not allowed by security policy.";
                     }
                     return $"Tool '{toolName}' is not allowed by security policy.";
                     

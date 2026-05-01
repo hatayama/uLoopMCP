@@ -16,8 +16,6 @@ namespace io.github.hatayama.uLoopMCP
         private const int InlineToolRowLimit = 40;
 
         private readonly Foldout _foldout;
-        private readonly Toggle _allowThirdPartyToggle;
-        private readonly Label _allowThirdPartyLabel;
         private readonly Button _securityLevelRestrictedButton;
         private readonly Button _securityLevelFullAccessButton;
         private readonly Label _securityLevelDescription;
@@ -35,14 +33,11 @@ namespace io.github.hatayama.uLoopMCP
 
         public event Action<bool> OnFoldoutChanged;
         public event Action<string, bool> OnToolToggled;
-        public event Action<bool> OnAllowThirdPartyChanged;
         public event Action<DynamicCodeSecurityLevel> OnSecurityLevelChanged;
 
         public ToolSettingsSection(VisualElement root)
         {
             _foldout = root.Q<Foldout>("tool-settings-foldout");
-            _allowThirdPartyToggle = root.Q<Toggle>("allow-third-party-toggle");
-            _allowThirdPartyLabel = root.Q<Label>("allow-third-party-label");
             _securityLevelRestrictedButton = root.Q<Button>("security-level-restricted-button");
             _securityLevelFullAccessButton = root.Q<Button>("security-level-full-access-button");
             _securityLevelDescription = root.Q<Label>("security-level-description");
@@ -69,30 +64,15 @@ namespace io.github.hatayama.uLoopMCP
         {
             _foldout.RegisterValueChangedCallback(evt => OnFoldoutChanged?.Invoke(evt.newValue));
 
-            _allowThirdPartyToggle.RegisterValueChangedCallback(evt =>
-            {
-                evt.StopPropagation();
-                OnAllowThirdPartyChanged?.Invoke(evt.newValue);
-            });
-
-            _allowThirdPartyLabel.RegisterCallback<ClickEvent>(evt =>
-            {
-                evt.StopPropagation();
-                bool newValue = !_allowThirdPartyToggle.value;
-                _allowThirdPartyToggle.SetValueWithoutNotify(newValue);
-                OnAllowThirdPartyChanged?.Invoke(newValue);
-            });
-
             _securityLevelRestrictedButton.clicked += () => UpdateSecurityLevel(DynamicCodeSecurityLevel.Restricted);
             _securityLevelFullAccessButton.clicked += () => UpdateSecurityLevel(DynamicCodeSecurityLevel.FullAccess);
         }
 
         public void Update(ToolSettingsSectionData data)
         {
-            _allowThirdPartyTools = data.AllowThirdPartyTools;
+            _allowThirdPartyTools = true;
 
             ViewDataBinder.UpdateFoldout(_foldout, data.ShowToolSettings);
-            ViewDataBinder.UpdateToggle(_allowThirdPartyToggle, data.AllowThirdPartyTools);
             UpdateSecurityLevelSelection(data.DynamicCodeSecurityLevel);
             UpdateSecurityLevelDescription(data.DynamicCodeSecurityLevel);
 
@@ -143,7 +123,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             if (_toolListRows.Count > 0 || _isUnavailableStateShown)
             {
-                UpdateThirdPartyGroupState(_allowThirdPartyTools);
+                UpdateThirdPartyGroupState();
                 return;
             }
 
@@ -234,7 +214,7 @@ namespace io.github.hatayama.uLoopMCP
             ViewDataBinder.SetVisible(_toolListStatusLabel, false);
             ViewDataBinder.SetVisible(_toolListView, true);
             SetToolSettingsInfoVisible(true);
-            UpdateThirdPartyGroupState(data.AllowThirdPartyTools);
+            UpdateThirdPartyGroupState();
 
             _isRegistryAvailable = true;
             _isUnavailableStateShown = false;
@@ -354,9 +334,9 @@ namespace io.github.hatayama.uLoopMCP
             builder.Append(';');
         }
 
-        private void UpdateThirdPartyGroupState(bool allowThirdPartyTools)
+        private void UpdateThirdPartyGroupState()
         {
-            _allowThirdPartyTools = allowThirdPartyTools;
+            _allowThirdPartyTools = true;
             RefreshToolListView();
         }
 
