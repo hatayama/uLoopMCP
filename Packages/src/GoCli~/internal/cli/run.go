@@ -68,7 +68,9 @@ func RunProjectLocal(ctx context.Context, args []string, stdout io.Writer, stder
 		return runSync(ctx, connection, stdout, stderr)
 	case "focus-window":
 		return runFocusWindow(ctx, connection.ProjectRoot, stdout, stderr)
-	case "skills", "update", "fix", "launch":
+	case "fix":
+		return runFix(connection.ProjectRoot, stdout, stderr)
+	case "skills", "update", "launch":
 		fmt.Fprintf(stderr, "native %s command is not implemented yet\n", command)
 		return 1
 	default:
