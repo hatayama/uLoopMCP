@@ -3,9 +3,7 @@ namespace io.github.hatayama.uLoopMCP
     public static class CliConstants
     {
         public const string EXECUTABLE_NAME = "uloop";
-        public const string NPM_PACKAGE_NAME = "uloop-cli";
         public const string VERSION_FLAG = "--version";
-        public const int NPM_INSTALL_TIMEOUT_MS = 30000;
         public const int GLOBAL_INSTALL_TIMEOUT_MS = 30000;
         public const string POSIX_INSTALL_SCRIPT_URL = "https://raw.githubusercontent.com/hatayama/unity-cli-loop/main/scripts/install.sh";
         public const string WINDOWS_INSTALL_SCRIPT_URL = "https://raw.githubusercontent.com/hatayama/unity-cli-loop/main/scripts/install.ps1";
