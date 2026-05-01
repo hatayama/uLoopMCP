@@ -614,7 +614,7 @@ The `.uloop/` directory at the project root stores CLI cache, tool registry, and
 
 | File | Purpose | Git-track? |
 |------|---------|------------|
-| `settings.permissions.json` | Team-wide security policy (third-party tool access, dynamic code security level) | Optional |
+| `settings.permissions.json` | Team-wide security policy (dynamic code security level) | Optional |
 | `settings.tools.json` | Per-tool enable/disable preferences | Optional |
 | `tools.json` | Auto-generated CLI tool registry | No |
 | `outputs/` | Runtime outputs (test results, screenshots, hierarchy dumps) | No |

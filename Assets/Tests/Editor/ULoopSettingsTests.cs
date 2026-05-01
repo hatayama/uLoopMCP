@@ -108,9 +108,10 @@ namespace io.github.hatayama.uLoopMCP
 
             ULoopSettingsData result = ULoopSettings.GetSettings();
 
-            Assert.IsTrue(result.allowThirdPartyTools);
             Assert.AreEqual((int)DynamicCodeSecurityLevel.Restricted, result.dynamicCodeSecurityLevel);
             Assert.IsTrue(File.Exists(SettingsFilePath), $"{SettingsFilePath} should be created by migration");
+            string updatedJson = File.ReadAllText(SettingsFilePath);
+            StringAssert.DoesNotContain("\"allowThirdPartyTools\"", updatedJson);
         }
 
         [Test]
@@ -118,7 +119,6 @@ namespace io.github.hatayama.uLoopMCP
         {
             ULoopSettingsData newSettings = new ULoopSettingsData
             {
-                allowThirdPartyTools = true,
                 dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.FullAccess
             };
             File.WriteAllText(SettingsFilePath, JsonUtility.ToJson(newSettings, true));
@@ -133,7 +133,6 @@ namespace io.github.hatayama.uLoopMCP
 
             ULoopSettingsData result = ULoopSettings.GetSettings();
 
-            Assert.IsTrue(result.allowThirdPartyTools);
             Assert.AreEqual((int)DynamicCodeSecurityLevel.FullAccess, result.dynamicCodeSecurityLevel);
         }
 
@@ -142,7 +141,6 @@ namespace io.github.hatayama.uLoopMCP
         {
             ULoopSettingsData written = new ULoopSettingsData
             {
-                allowThirdPartyTools = false,
                 dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.Restricted
             };
             ULoopSettings.SaveSettings(written);
@@ -150,23 +148,7 @@ namespace io.github.hatayama.uLoopMCP
 
             ULoopSettingsData readBack = ULoopSettings.GetSettings();
 
-            Assert.IsTrue(readBack.allowThirdPartyTools);
             Assert.AreEqual(written.dynamicCodeSecurityLevel, readBack.dynamicCodeSecurityLevel);
-        }
-
-        [Test]
-        public void SetAllowThirdPartyTools_WhenFalse_ShouldKeepThirdPartyToolsAllowed()
-        {
-            ULoopSettings.SaveSettings(new ULoopSettingsData
-            {
-                allowThirdPartyTools = true,
-                dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.Restricted
-            });
-
-            ULoopSettings.SetAllowThirdPartyTools(false);
-
-            Assert.IsTrue(ULoopSettings.GetAllowThirdPartyTools());
-            Assert.IsTrue(ULoopSettings.GetSettings().allowThirdPartyTools);
         }
 
         [Test]
@@ -204,7 +186,6 @@ namespace io.github.hatayama.uLoopMCP
 
             ULoopSettingsData result = ULoopSettings.GetSettings();
 
-            Assert.IsTrue(result.allowThirdPartyTools);
             Assert.AreEqual((int)DynamicCodeSecurityLevel.Restricted, result.dynamicCodeSecurityLevel);
             Assert.IsFalse(File.Exists(LegacySettingsFilePath),
                 "Legacy file should not be created when both files are absent");
@@ -215,7 +196,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             DeleteIfExists(SettingsFilePath);
 
-            ULoopSettingsData backupData = new ULoopSettingsData
+            SettingsFileFixture backupData = new SettingsFileFixture
             {
                 allowThirdPartyTools = false,
                 dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.FullAccess
@@ -226,9 +207,10 @@ namespace io.github.hatayama.uLoopMCP
             ULoopSettingsData result = ULoopSettings.GetSettings();
 
             Assert.IsTrue(File.Exists(SettingsFilePath), $"{SettingsFilePath} should be recovered from .bak");
-            Assert.IsTrue(result.allowThirdPartyTools);
             Assert.AreEqual((int)DynamicCodeSecurityLevel.FullAccess, result.dynamicCodeSecurityLevel);
             Assert.IsFalse(File.Exists(SettingsBackupPath), ".bak should be consumed by recovery");
+            string updatedJson = File.ReadAllText(SettingsFilePath);
+            StringAssert.DoesNotContain("\"allowThirdPartyTools\"", updatedJson);
         }
 
         [Test]
@@ -237,7 +219,7 @@ namespace io.github.hatayama.uLoopMCP
             DeleteIfExists(SettingsFilePath);
             DeleteIfExists(LegacySettingsFilePath);
 
-            ULoopSettingsData oldData = new ULoopSettingsData
+            SettingsFileFixture oldData = new SettingsFileFixture
             {
                 allowThirdPartyTools = false,
                 dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.Restricted
@@ -249,8 +231,9 @@ namespace io.github.hatayama.uLoopMCP
 
             Assert.IsTrue(File.Exists(SettingsFilePath), "New settings file should exist after rename");
             Assert.IsFalse(File.Exists(OldSettingsFilePath), "Old settings file should be removed after rename");
-            Assert.IsTrue(result.allowThirdPartyTools);
             Assert.AreEqual((int)DynamicCodeSecurityLevel.Restricted, result.dynamicCodeSecurityLevel);
+            string updatedJson = File.ReadAllText(SettingsFilePath);
+            StringAssert.DoesNotContain("\"allowThirdPartyTools\"", updatedJson);
         }
 
         [Test]
@@ -268,8 +251,9 @@ namespace io.github.hatayama.uLoopMCP
 
             ULoopSettingsData result = ULoopSettings.GetSettings();
 
-            Assert.IsTrue(result.allowThirdPartyTools);
             Assert.AreEqual((int)DynamicCodeSecurityLevel.FullAccess, result.dynamicCodeSecurityLevel);
+            string updatedJson = File.ReadAllText(SettingsFilePath);
+            StringAssert.DoesNotContain("\"allowThirdPartyTools\"", updatedJson);
         }
 
         [Test]
@@ -359,7 +343,7 @@ namespace io.github.hatayama.uLoopMCP
 
             StringAssert.DoesNotContain("\"enableTestsExecution\"", updatedJson);
             StringAssert.DoesNotContain("\"allowMenuItemExecution\"", updatedJson);
-            StringAssert.Contains("\"allowThirdPartyTools\"", updatedJson);
+            StringAssert.DoesNotContain("\"allowThirdPartyTools\"", updatedJson);
             StringAssert.Contains("\"dynamicCodeSecurityLevel\"", updatedJson);
         }
 

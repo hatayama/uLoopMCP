@@ -16,6 +16,8 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public static class ULoopSettings
     {
+        private const string LEGACY_ALLOW_THIRD_PARTY_TOOLS_FIELD = "allowThirdPartyTools";
+
         private static string SettingsFilePath =>
             Path.Combine(McpConstants.ULOOP_DIR, McpConstants.ULOOP_SETTINGS_FILE_NAME);
 
@@ -36,7 +38,6 @@ namespace io.github.hatayama.uLoopMCP
         public static void SaveSettings(ULoopSettingsData settings)
         {
             Debug.Assert(settings != null, "settings must not be null");
-            settings = settings with { allowThirdPartyTools = true };
 
             string directory = Path.GetDirectoryName(SettingsFilePath);
             if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
@@ -61,18 +62,6 @@ namespace io.github.hatayama.uLoopMCP
 
             ULoopSettingsData current = GetSettings();
             ULoopSettingsData updated = transform(current);
-            SaveSettings(updated);
-        }
-
-        public static bool GetAllowThirdPartyTools()
-        {
-            return true;
-        }
-
-        public static void SetAllowThirdPartyTools(bool value)
-        {
-            ULoopSettingsData settings = GetSettings();
-            ULoopSettingsData updated = settings with { allowThirdPartyTools = true };
             SaveSettings(updated);
         }
 
@@ -160,8 +149,8 @@ namespace io.github.hatayama.uLoopMCP
                 _cachedSettings = JsonUtility.FromJson<ULoopSettingsData>(json);
                 bool migratedToolToggles = ApplyLegacyToolToggleMigrations(json);
                 bool normalizedDynamicCode = NormalizeLegacyDisabledDynamicCode();
-                bool normalizedThirdPartyTools = NormalizeThirdPartyToolsAllowed();
-                if (migratedToolToggles || normalizedDynamicCode || normalizedThirdPartyTools)
+                bool removedThirdPartyToolsField = json.Contains($"\"{LEGACY_ALLOW_THIRD_PARTY_TOOLS_FIELD}\"");
+                if (migratedToolToggles || normalizedDynamicCode || removedThirdPartyToolsField)
                 {
                     SaveSettings(_cachedSettings);
                 }
@@ -180,7 +169,7 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             string json = File.ReadAllText(LegacySettingsFilePath);
-            return json.Contains($"\"{nameof(LegacySecuritySettingsProbe.allowThirdPartyTools)}\"")
+            return json.Contains($"\"{LEGACY_ALLOW_THIRD_PARTY_TOOLS_FIELD}\"")
                 || json.Contains($"\"{nameof(LegacySecuritySettingsProbe.dynamicCodeSecurityLevel)}\"");
         }
 
@@ -201,7 +190,6 @@ namespace io.github.hatayama.uLoopMCP
         {
             public bool enableTestsExecution = true;
             public bool allowMenuItemExecution = true;
-            public bool allowThirdPartyTools = false;
             public int dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.Restricted;
         }
 
@@ -229,13 +217,11 @@ namespace io.github.hatayama.uLoopMCP
 
             _cachedSettings = new ULoopSettingsData
             {
-                allowThirdPartyTools = true,
                 dynamicCodeSecurityLevel = probe.dynamicCodeSecurityLevel
             };
 
             ApplyLegacyToolToggleMigrations(legacyJson);
             NormalizeLegacyDisabledDynamicCode();
-            NormalizeThirdPartyToolsAllowed();
             SaveSettings(_cachedSettings);
 
             // Re-save legacy file to purge security fields that are no longer in
@@ -258,19 +244,6 @@ namespace io.github.hatayama.uLoopMCP
             {
                 dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.Restricted
             };
-            return true;
-        }
-
-        private static bool NormalizeThirdPartyToolsAllowed()
-        {
-            Debug.Assert(_cachedSettings != null, "_cachedSettings must not be null");
-
-            if (_cachedSettings.allowThirdPartyTools)
-            {
-                return false;
-            }
-
-            _cachedSettings = _cachedSettings with { allowThirdPartyTools = true };
             return true;
         }
 

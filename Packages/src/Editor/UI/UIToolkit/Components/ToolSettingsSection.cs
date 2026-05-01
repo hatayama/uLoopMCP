@@ -261,13 +261,13 @@ namespace io.github.hatayama.uLoopMCP
 
             if (data.BuiltInTools.Length > 0)
             {
-                _toolListRows.Add(ToolListRowData.CreateHeader("Built-in Tools", false));
+                _toolListRows.Add(ToolListRowData.CreateHeader("Built-in Tools"));
                 AddToolRows(data.BuiltInTools);
             }
 
             if (data.ThirdPartyTools.Length > 0)
             {
-                _toolListRows.Add(ToolListRowData.CreateHeader("Third Party Tools", true));
+                _toolListRows.Add(ToolListRowData.CreateHeader("Third Party Tools"));
                 AddToolRows(data.ThirdPartyTools);
             }
 
@@ -482,7 +482,6 @@ namespace io.github.hatayama.uLoopMCP
             public readonly string ToolName;
             public readonly string Label;
             public readonly string Description;
-            public readonly bool IsThirdParty;
             public bool IsEnabled;
             public ToolSettingsSection Owner;
 
@@ -491,26 +490,23 @@ namespace io.github.hatayama.uLoopMCP
                 string toolName,
                 string label,
                 string description,
-                bool isEnabled,
-                bool isThirdParty)
+                bool isEnabled)
             {
                 IsHeader = isHeader;
                 ToolName = toolName;
                 Label = label;
                 Description = description;
                 IsEnabled = isEnabled;
-                IsThirdParty = isThirdParty;
             }
 
-            public static ToolListRowData CreateHeader(string label, bool isThirdParty)
+            public static ToolListRowData CreateHeader(string label)
             {
                 return new ToolListRowData(
                     true,
                     string.Empty,
                     label,
                     string.Empty,
-                    true,
-                    isThirdParty);
+                    true);
             }
 
             public static ToolListRowData CreateTool(ToolToggleItem item)
@@ -520,8 +516,7 @@ namespace io.github.hatayama.uLoopMCP
                     item.ToolName,
                     item.ToolName,
                     item.Description,
-                    item.IsEnabled,
-                    item.IsThirdParty);
+                    item.IsEnabled);
             }
         }
     }
