@@ -74,8 +74,8 @@ jobs:
             exit 1
           fi
 
-          git fetch origin "${RELEASE_BRANCH}"
-          git checkout "${RELEASE_BRANCH}"
+          git fetch origin "${RELEASE_BRANCH}:refs/remotes/origin/${RELEASE_BRANCH}"
+          git checkout -B "${RELEASE_BRANCH}" "origin/${RELEASE_BRANCH}"
 
           cd Packages/src/Cli~
           npm ci
