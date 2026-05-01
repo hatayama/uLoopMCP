@@ -268,6 +268,29 @@ describe('dispatcher', () => {
     }
   });
 
+  it('prefers discovered child Unity projects that already have a project-local CLI', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'uloop-dispatcher-child-cli-'));
+    createdProjects.push(root);
+    const projectWithoutCli = join(root, 'AProjectWithoutCli');
+    const projectWithCli = join(root, 'BProjectWithCli');
+    createUnityProjectAt(projectWithoutCli);
+    createUnityProjectAt(projectWithCli);
+    const cliPath = installProjectLocalCli(projectWithCli);
+    const dependencies = createDependencies(root, ['compile']);
+
+    const exitCode = await runDispatcher(dependencies);
+
+    expect(exitCode).toBe(0);
+    expect(dependencies.loadModuleCalls).toEqual([
+      {
+        modulePath: cliPath,
+        args: ['compile'],
+        cwd: projectWithCli,
+      },
+    ]);
+    expect(dependencies.stderrChunks).toEqual([]);
+  });
+
   it('forwards arguments to the project-local CLI selected by --project-path', async () => {
     const projectRoot = createUnityProject();
     createdProjects.push(projectRoot);

@@ -318,7 +318,10 @@ function findUnityProjectsInChildren(startPath: string): string[] {
   return projects.sort();
 }
 
-function findUnityProjectRoot(startPath: string): string | null {
+function findUnityProjectRoot(
+  startPath: string,
+  platform: NodeJS.Platform = process.platform,
+): string | null {
   const currentProjectRoot = resolve(startPath);
   if (isUnityProject(currentProjectRoot)) {
     return currentProjectRoot;
@@ -326,13 +329,21 @@ function findUnityProjectRoot(startPath: string): string | null {
 
   const childProjectRoots = findUnityProjectsInChildren(currentProjectRoot);
   if (childProjectRoots.length > 0) {
-    return childProjectRoots[0];
+    return (
+      childProjectRoots.find(
+        (childProjectRoot) => findProjectLocalCliPath(childProjectRoot, platform) !== null,
+      ) ?? childProjectRoots[0]
+    );
   }
 
   return findUnityProjectInParents(currentProjectRoot);
 }
 
-function resolveProjectRoot(args: readonly string[], cwd: string): ProjectRootResolution {
+function resolveProjectRoot(
+  args: readonly string[],
+  cwd: string,
+  platform: NodeJS.Platform,
+): ProjectRootResolution {
   assert(cwd.length > 0, 'cwd must not be empty');
 
   const projectPathArgument = findProjectPathArgument(args);
@@ -352,7 +363,7 @@ function resolveProjectRoot(args: readonly string[], cwd: string): ProjectRootRe
     return { projectRoot: explicitProjectRoot, error: null };
   }
 
-  const discoveredProjectRoot = findUnityProjectRoot(cwd);
+  const discoveredProjectRoot = findUnityProjectRoot(cwd, platform);
   if (discoveredProjectRoot === null) {
     return {
       projectRoot: null,
@@ -494,7 +505,11 @@ export async function runDispatcher(
     return runBundledCli(dependencies.args, dependencies);
   }
 
-  const projectResolution = resolveProjectRoot(dependencies.args, dependencies.cwd);
+  const projectResolution = resolveProjectRoot(
+    dependencies.args,
+    dependencies.cwd,
+    dependencies.platform,
+  );
   if (projectResolution.error !== null) {
     dependencies.stderr.write(`${projectResolution.error}\n`);
     return 1;
