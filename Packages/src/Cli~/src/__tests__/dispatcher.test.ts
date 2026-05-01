@@ -244,6 +244,29 @@ describe('dispatcher', () => {
     ]);
   });
 
+  it('discovers the Unity project from a parent working directory', async () => {
+    const parentRoot = mkdtempSync(join(tmpdir(), 'uloop-dispatcher-parent-'));
+    createdProjects.push(parentRoot);
+    const projectRoot = join(parentRoot, 'UnityProject');
+    mkdirSync(join(projectRoot, 'Assets'), { recursive: true });
+    mkdirSync(join(projectRoot, 'ProjectSettings'), { recursive: true });
+    const cliPath = installProjectLocalCli(projectRoot);
+    const dependencies = createDependencies(parentRoot, ['compile']);
+
+    const exitCode = await runDispatcher(dependencies);
+
+    expect(exitCode).toBe(0);
+    expect(dependencies.spawnCalls).toHaveLength(0);
+    expect(dependencies.chdirCalls).toEqual([projectRoot]);
+    expect(dependencies.loadModuleCalls).toEqual([
+      {
+        modulePath: cliPath,
+        args: ['compile'],
+        cwd: projectRoot,
+      },
+    ]);
+  });
+
   it('falls back to spawning the project-local CLI on Windows', async () => {
     const projectRoot = createUnityProject();
     createdProjects.push(projectRoot);
@@ -358,6 +381,22 @@ describe('dispatcher', () => {
       {
         projectPath: projectRoot,
         options: { restart: true },
+        cwd: '/tmp',
+      },
+    ]);
+  });
+
+  it('allows launch to use negative max-depth values', async () => {
+    const dependencies = createDependencies('/tmp', ['launch', '--max-depth', '-1']);
+
+    const exitCode = await runDispatcher(dependencies);
+
+    expect(exitCode).toBe(0);
+    expect(dependencies.stderrChunks).toEqual([]);
+    expect(dependencies.launchCalls).toEqual([
+      {
+        projectPath: undefined,
+        options: { maxDepth: '-1' },
         cwd: '/tmp',
       },
     ]);

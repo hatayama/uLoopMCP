@@ -3,7 +3,7 @@
 
 import assert from 'node:assert';
 import { spawn, type SpawnOptions } from 'child_process';
-import { existsSync, readFileSync } from 'fs';
+import { existsSync, readdirSync, readFileSync, type Dirent } from 'fs';
 import { basename, dirname, join, resolve } from 'path';
 import { pathToFileURL } from 'url';
 import { runFocusWindowCommand } from './commands/focus-window.js';
@@ -19,6 +19,17 @@ const DISPATCHER_COMMAND_LAUNCH = 'launch';
 const DISPATCHER_COMMAND_FOCUS_WINDOW = 'focus-window';
 const BUNDLED_CLI_COMMANDS = new Set(['completion', 'update']);
 const DISPATCHER_IN_PROCESS_ENV = 'ULOOP_DISPATCHER_IN_PROCESS';
+const CHILD_SEARCH_MAX_DEPTH = 3;
+const EXCLUDED_PROJECT_SEARCH_DIRS = new Set([
+  'node_modules',
+  '.git',
+  'Temp',
+  'obj',
+  'Build',
+  'Builds',
+  'Logs',
+  'Library',
+]);
 export const PROJECT_LOCAL_CLI_IN_PROCESS_MARKER = 'uloop-cli-in-process-entrypoint-v2';
 
 type OutputWriter = {
@@ -211,6 +222,47 @@ function findUnityProjectInParents(startPath: string): string | null {
   }
 }
 
+function findUnityProjectsInChildren(startPath: string): string[] {
+  const projects: string[] = [];
+
+  function scan(currentPath: string, depth: number): void {
+    if (depth > CHILD_SEARCH_MAX_DEPTH || !existsSync(currentPath)) {
+      return;
+    }
+
+    if (isUnityProject(currentPath)) {
+      projects.push(currentPath);
+      return;
+    }
+
+    const entries: Dirent[] = readdirSync(currentPath, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isDirectory() || EXCLUDED_PROJECT_SEARCH_DIRS.has(entry.name)) {
+        continue;
+      }
+
+      scan(join(currentPath, entry.name), depth + 1);
+    }
+  }
+
+  scan(resolve(startPath), 0);
+  return projects.sort();
+}
+
+function findUnityProjectRoot(startPath: string): string | null {
+  const currentProjectRoot = resolve(startPath);
+  if (isUnityProject(currentProjectRoot)) {
+    return currentProjectRoot;
+  }
+
+  const childProjectRoots = findUnityProjectsInChildren(currentProjectRoot);
+  if (childProjectRoots.length > 0) {
+    return childProjectRoots[0];
+  }
+
+  return findUnityProjectInParents(currentProjectRoot);
+}
+
 function resolveProjectRoot(args: readonly string[], cwd: string): ProjectRootResolution {
   assert(cwd.length > 0, 'cwd must not be empty');
 
@@ -231,7 +283,7 @@ function resolveProjectRoot(args: readonly string[], cwd: string): ProjectRootRe
     return { projectRoot: explicitProjectRoot, error: null };
   }
 
-  const discoveredProjectRoot = findUnityProjectInParents(cwd);
+  const discoveredProjectRoot = findUnityProjectRoot(cwd);
   if (discoveredProjectRoot === null) {
     return {
       projectRoot: null,
@@ -490,7 +542,7 @@ function parseDispatcherLaunchArgs(args: readonly string[]): DispatcherLaunchPar
     }
 
     if (arg === '--max-depth') {
-      const valueResult = takeRequiredOptionValue('--max-depth', remainingArgs);
+      const valueResult = takeRequiredIntegerOptionValue('--max-depth', remainingArgs);
       if (valueResult.error !== null) {
         return { projectPath: null, options: null, message: valueResult.error };
       }
@@ -615,6 +667,18 @@ function takeRequiredOptionValue(
 ): RequiredOptionValueResult {
   const value = remainingArgs.shift();
   if (value === undefined || value.startsWith('-')) {
+    return { value: null, error: `${optionName} requires a value.` };
+  }
+
+  return { value, error: null };
+}
+
+function takeRequiredIntegerOptionValue(
+  optionName: string,
+  remainingArgs: string[],
+): RequiredOptionValueResult {
+  const value = remainingArgs.shift();
+  if (value === undefined || (value.startsWith('-') && !/^-?\d+$/.test(value))) {
     return { value: null, error: `${optionName} requires a value.` };
   }
 
