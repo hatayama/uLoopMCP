@@ -1,0 +1,30 @@
+using NUnit.Framework;
+using UnityEngine;
+
+namespace io.github.hatayama.uLoopMCP.Tests
+{
+    public class NativeCliInstallerTests
+    {
+        [Test]
+        public void GetInstallCommand_OnMacUsesDirectInstallScriptWithoutNpm()
+        {
+            NativeCliInstallCommand command = NativeCliInstaller.GetInstallCommand(RuntimePlatform.OSXEditor);
+
+            Assert.That(command.FileName, Is.EqualTo("/bin/sh"));
+            Assert.That(command.Arguments, Does.Contain(CliConstants.POSIX_INSTALL_SCRIPT_URL));
+            Assert.That(command.ManualCommand, Does.Contain("curl -fsSL"));
+            Assert.That(command.ManualCommand, Does.Not.Contain("npm"));
+        }
+
+        [Test]
+        public void GetInstallCommand_OnWindowsUsesPowerShellInstallScriptWithoutNpm()
+        {
+            NativeCliInstallCommand command = NativeCliInstaller.GetInstallCommand(RuntimePlatform.WindowsEditor);
+
+            Assert.That(command.FileName, Is.EqualTo("powershell"));
+            Assert.That(command.Arguments, Does.Contain(CliConstants.WINDOWS_INSTALL_SCRIPT_URL));
+            Assert.That(command.ManualCommand, Does.Contain("irm"));
+            Assert.That(command.ManualCommand, Does.Not.Contain("npm"));
+        }
+    }
+}
