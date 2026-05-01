@@ -237,6 +237,27 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         [Test]
+        public void GetSettings_WhenOldSecurityJsonExistsAndLegacyDisablesRunTests_ShouldPreferLegacyToolToggle()
+        {
+            DeleteIfExists(SettingsFilePath);
+            DeleteIfExists(ToolSettingsFilePath);
+
+            ULoopSettingsData oldData = new ULoopSettingsData
+            {
+                dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.Restricted
+            };
+            File.WriteAllText(OldSettingsFilePath, JsonUtility.ToJson(oldData, true));
+            File.WriteAllText(LegacySettingsFilePath, "{ \"enableTestsExecution\": false, \"showDeveloperTools\": true }");
+            InvalidateBothCaches();
+
+            ULoopSettingsData result = ULoopSettings.GetSettings();
+
+            Assert.AreEqual((int)DynamicCodeSecurityLevel.Restricted, result.dynamicCodeSecurityLevel);
+            Assert.IsFalse(ToolSettings.IsToolEnabled(McpConstants.TOOL_NAME_RUN_TESTS));
+            Assert.IsFalse(File.Exists(OldSettingsFilePath), "Old settings file should be removed after legacy migration");
+        }
+
+        [Test]
         public void GetSettings_WhenJsonContainsRemovedFields_ShouldIgnoreThem()
         {
             string settingsJson = JsonUtility.ToJson(new SettingsFileFixture

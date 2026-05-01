@@ -170,6 +170,8 @@ namespace io.github.hatayama.uLoopMCP
 
             string json = File.ReadAllText(LegacySettingsFilePath);
             return json.Contains($"\"{LEGACY_ALLOW_THIRD_PARTY_TOOLS_FIELD}\"")
+                || json.Contains($"\"{nameof(LegacySecuritySettingsProbe.enableTestsExecution)}\"")
+                || json.Contains($"\"{nameof(LegacySecuritySettingsProbe.allowMenuItemExecution)}\"")
                 || json.Contains($"\"{nameof(LegacySecuritySettingsProbe.dynamicCodeSecurityLevel)}\"");
         }
 
