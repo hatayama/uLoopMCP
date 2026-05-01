@@ -3,14 +3,14 @@ name: release-please
 on:
   push:
     branches:
-      - main
       - v3-beta
   # Enable manual execution via "Run workflow" button in browser
   workflow_dispatch:
     inputs:
       branch:
-        description: "Target branch name (uses current ref if not specified)"
+        description: "Target beta branch name"
         required: false
+        default: "v3-beta"
 
 permissions:
   contents: write
@@ -35,9 +35,13 @@ jobs:
         id: target
         env:
           INPUT_BRANCH: ${{ github.event.inputs.branch }}
-          REF_NAME: ${{ github.ref_name }}
         run: |
-          TARGET_BRANCH="${INPUT_BRANCH:-${REF_NAME}}"
+          TARGET_BRANCH="${INPUT_BRANCH:-v3-beta}"
+          if [ "${TARGET_BRANCH}" != "v3-beta" ]; then
+            echo "This prerelease workflow only supports v3-beta." >&2
+            exit 1
+          fi
+
           TARGET_SHA="$(git rev-parse HEAD)"
           echo "branch=${TARGET_BRANCH}" >> "$GITHUB_OUTPUT"
           echo "sha=${TARGET_SHA}" >> "$GITHUB_OUTPUT"
