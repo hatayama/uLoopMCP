@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using UnityEngine;
@@ -15,6 +16,8 @@ namespace io.github.hatayama.uLoopMCP
 
     internal sealed class BridgeTransportEndpoint
     {
+        private const string LIBC = "libc";
+
         public BridgeTransportKind Kind { get; }
         public int Port { get; }
         public string Path { get; }
@@ -65,7 +68,33 @@ namespace io.github.hatayama.uLoopMCP
         private static string CanonicalizeProjectRoot(string projectRoot)
         {
             string fullPath = System.IO.Path.GetFullPath(projectRoot);
-            return fullPath.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
+            string trimmedPath = fullPath.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
+            if (Application.platform == RuntimePlatform.WindowsEditor)
+            {
+                return trimmedPath;
+            }
+
+            return ResolveUnixRealPath(trimmedPath);
+        }
+
+        private static string ResolveUnixRealPath(string path)
+        {
+            IntPtr resolvedPath = RealPath(path, IntPtr.Zero);
+            if (resolvedPath == IntPtr.Zero)
+            {
+                return path;
+            }
+
+            try
+            {
+                string realPath = Marshal.PtrToStringAnsi(resolvedPath);
+                Debug.Assert(!string.IsNullOrWhiteSpace(realPath), "realPath must not be empty");
+                return realPath.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
+            }
+            finally
+            {
+                Free(resolvedPath);
+            }
         }
 
         private static string CreateEndpointHash(string canonicalProjectRoot)
@@ -81,5 +110,11 @@ namespace io.github.hatayama.uLoopMCP
 
             return builder.ToString();
         }
+
+        [DllImport(LIBC, EntryPoint = "realpath", SetLastError = true)]
+        private static extern IntPtr RealPath(string path, IntPtr resolvedPath);
+
+        [DllImport(LIBC, EntryPoint = "free")]
+        private static extern void Free(IntPtr pointer);
     }
 }

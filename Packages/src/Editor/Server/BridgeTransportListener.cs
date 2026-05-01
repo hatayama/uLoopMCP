@@ -92,6 +92,7 @@ namespace io.github.hatayama.uLoopMCP
     internal sealed class UnixDomainSocketBridgeTransportListener : IBridgeTransportListener
     {
         private Socket _listener;
+        private long _nextClientId;
 
         public BridgeTransportEndpoint Endpoint { get; }
 
@@ -121,7 +122,8 @@ namespace io.github.hatayama.uLoopMCP
         public BridgeClientConnection AcceptClient(CancellationToken ct)
         {
             Socket client = _listener.Accept();
-            return new BridgeClientConnection(Endpoint.Path, new NetworkStream(client, ownsSocket: true), 0);
+            string clientEndpoint = $"{Endpoint.Path}#{Interlocked.Increment(ref _nextClientId)}";
+            return new BridgeClientConnection(clientEndpoint, new NetworkStream(client, ownsSocket: true), 0);
         }
 
         public void Stop()
@@ -143,6 +145,7 @@ namespace io.github.hatayama.uLoopMCP
     internal sealed class WindowsNamedPipeBridgeTransportListener : IBridgeTransportListener
     {
         private NamedPipeServerStream _activePipe;
+        private long _nextClientId;
 
         public BridgeTransportEndpoint Endpoint { get; }
 
@@ -166,7 +169,8 @@ namespace io.github.hatayama.uLoopMCP
             _activePipe = pipe;
             pipe.WaitForConnection();
             _activePipe = null;
-            return new BridgeClientConnection(Endpoint.Path, pipe, 0);
+            string clientEndpoint = $"{Endpoint.Path}#{Interlocked.Increment(ref _nextClientId)}";
+            return new BridgeClientConnection(clientEndpoint, pipe, 0);
         }
 
         public void Stop()

@@ -98,7 +98,7 @@ namespace io.github.hatayama.uLoopMCP
             int actualPort = McpServerController.ServerPort;
             int savedPort = McpEditorSettings.GetCustomPort();
 
-            if (savedPort != actualPort)
+            if (NetworkUtility.IsValidPort(actualPort) && savedPort != actualPort)
             {
                 McpEditorSettings.SetCustomPort(actualPort);
             }
@@ -154,17 +154,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private void StartServer()
         {
-            int port = McpEditorSettings.GetCustomPort();
-
-            if (!McpPortValidator.ValidatePort(port))
-            {
-                EditorUtility.DisplayDialog("Port Error",
-                    $"Port must be between {McpServerConfig.MIN_PORT_NUMBER} and {McpServerConfig.MAX_PORT_NUMBER}",
-                    "OK");
-                return;
-            }
-
-            McpServerController.StartServer(port);
+            McpServerController.StartServer();
         }
 
         private void OnPortChanged(int port)
