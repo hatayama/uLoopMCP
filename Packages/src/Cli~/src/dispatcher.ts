@@ -209,15 +209,27 @@ function normalizeProjectLocalCliArgs(
   args: readonly string[],
   projectRoot: string,
 ): readonly string[] {
-  if (args[0] === '--project-path') {
-    return [...args.slice(2), '--project-path', projectRoot];
+  const normalizedArgs: string[] = [];
+  let foundProjectPath = false;
+
+  for (let index = 0; index < args.length; index++) {
+    const arg = args[index];
+
+    if (arg === '--project-path') {
+      foundProjectPath = true;
+      index++;
+      continue;
+    }
+
+    if (arg.startsWith('--project-path=')) {
+      foundProjectPath = true;
+      continue;
+    }
+
+    normalizedArgs.push(arg);
   }
 
-  if (args[0]?.startsWith('--project-path=')) {
-    return [...args.slice(1), '--project-path', projectRoot];
-  }
-
-  return args;
+  return foundProjectPath ? [...normalizedArgs, '--project-path', projectRoot] : args;
 }
 
 function isUnityProject(projectRoot: string): boolean {

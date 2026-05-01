@@ -236,6 +236,33 @@ describe('dispatcher', () => {
     ]);
   });
 
+  it('normalizes non-leading project-path arguments before project-local dispatch', async () => {
+    const parentRoot = mkdtempSync(join(tmpdir(), 'uloop-dispatcher-relative-project-'));
+    createdProjects.push(parentRoot);
+    const projectRoot = join(parentRoot, 'UnityProject');
+    mkdirSync(join(projectRoot, 'Assets'), { recursive: true });
+    mkdirSync(join(projectRoot, 'ProjectSettings'), { recursive: true });
+    const cliPath = installProjectLocalCli(projectRoot);
+    const dependencies = createDependencies(parentRoot, [
+      'get-logs',
+      '--project-path',
+      'UnityProject',
+      '--json',
+    ]);
+
+    const exitCode = await runDispatcher(dependencies);
+
+    expect(exitCode).toBe(0);
+    expect(dependencies.chdirCalls).toEqual([projectRoot]);
+    expect(dependencies.loadModuleCalls).toEqual([
+      {
+        modulePath: cliPath,
+        args: ['get-logs', '--json', '--project-path', projectRoot],
+        cwd: projectRoot,
+      },
+    ]);
+  });
+
   it('discovers the Unity project from a nested working directory', async () => {
     const projectRoot = createUnityProject();
     createdProjects.push(projectRoot);
