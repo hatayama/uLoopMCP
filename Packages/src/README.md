@@ -102,21 +102,6 @@ The Settings window shows whether the global `uloop` launcher is detected. The U
 If you see the following display, the installation was successful.  
 <img width="272" height="309" alt="2" src="https://github.com/user-attachments/assets/ec14f73b-53be-4435-af95-84bb9125e3e4" />
 
-
-
-
-<details>
-<summary>To install from terminal</summary>
-
-```bash
-npm install -g uloop-cli
-```
-
-This legacy npm dispatcher remains available during the v3 beta migration. The native installer above is the preferred path for the Go-based CLI.
-
-See [uloop-cli on npm](https://www.npmjs.com/package/uloop-cli) for details.
-</details>
-
 ## Step 2: Install Skills
 
 Select your target (Claude Code, Codex, etc.) and press the **Install Skills** button.  

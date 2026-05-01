@@ -57,7 +57,6 @@ jobs:
       - name: 🧪 Sanity check
         run: |
           test -f Packages/src/package.json && echo "✅ Unity package.json OK"
-          test -f Packages/src/Cli~/package.json && echo "✅ CLI package.json OK"
 
       # ── Execute release-please ───────────────────────────
       - name: 🚀 Run release‑please
@@ -68,50 +67,6 @@ jobs:
           manifest-file: .release-please-manifest.json
           target-branch: ${{ steps.target.outputs.branch }}
           token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: 🔧 Setup Node.js
-        if: steps.release.outputs.prs_created == 'true'
-        uses: actions/setup-node@v6
-        with:
-          node-version: "24"
-          cache: npm
-          cache-dependency-path: "Packages/src/Cli~/package-lock.json"
-
-      - name: 📦 Rebuild CLI bundle in release PR
-        if: steps.release.outputs.prs_created == 'true'
-        env:
-          RELEASE_PLEASE_PR: ${{ steps.release.outputs.pr || '' }}
-          RELEASE_PLEASE_PRS: ${{ steps.release.outputs.prs || '' }}
-        run: |
-          PR_DATA="${RELEASE_PLEASE_PRS:-${RELEASE_PLEASE_PR:-}}"
-          RELEASE_BRANCH=$(
-            printf '%s' "${PR_DATA}" \
-              | jq -r 'if type == "array" then .[0] else . end | .headBranchName // .headRefName // .head.ref // empty'
-          )
-
-          if [ -z "${RELEASE_BRANCH}" ]; then
-            echo "Release Please did not report a release PR branch." >&2
-            exit 1
-          fi
-
-          git fetch origin "${RELEASE_BRANCH}:refs/remotes/origin/${RELEASE_BRANCH}"
-          git checkout -B "${RELEASE_BRANCH}" "origin/${RELEASE_BRANCH}"
-
-          cd Packages/src/Cli~
-          npm ci
-          npm run build
-          cd ../../..
-
-          if git diff --quiet -- Packages/src/Cli~/dist/cli.bundle.cjs; then
-            echo "Project-local CLI bundle is already current."
-            exit 0
-          fi
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add Packages/src/Cli~/dist/cli.bundle.cjs
-          git commit -m "chore: rebuild project CLI bundle"
-          git push origin "HEAD:${RELEASE_BRANCH}"
 
   # ── Dispatch publish workflows when release is created ────────────
   # Keep publish workflows as the trusted publisher entrypoints.
@@ -125,51 +80,6 @@ jobs:
       actions: write
       contents: read
     steps:
-      - name: 🚀 Dispatch npm-publish workflow
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TARGET_BRANCH: ${{ needs.release.outputs.target_branch }}
-          TARGET_SHA: ${{ needs.release.outputs.target_sha }}
-        run: |
-          STARTED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-
-          gh workflow run npm-publish.yml \
-            --ref "${TARGET_BRANCH}" \
-            -f ref="${TARGET_SHA}" \
-            -f dry-run=false \
-            --repo "${GITHUB_REPOSITORY}"
-
-          RUN_ID=""
-          for _ in 1 2 3 4 5; do
-            sleep 3
-            RUN_ID=$(
-              gh run list \
-                --workflow npm-publish.yml \
-                --event workflow_dispatch \
-                --branch "${TARGET_BRANCH}" \
-                --repo "${GITHUB_REPOSITORY}" \
-                --limit 10 \
-                --json databaseId,createdAt \
-              | jq -r --arg started_at "${STARTED_AT}" '
-                  map(select(.createdAt >= $started_at))
-                  | sort_by(.createdAt)
-                  | last
-                  | .databaseId // empty
-                '
-            )
-
-            if [ -n "${RUN_ID}" ]; then
-              break
-            fi
-          done
-
-          if [ -z "${RUN_ID}" ]; then
-            echo "Failed to find the dispatched npm-publish workflow run." >&2
-            exit 1
-          fi
-
-          gh run watch "${RUN_ID}" --exit-status --repo "${GITHUB_REPOSITORY}"
-
       - name: 🚀 Dispatch native-cli-publish workflow
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
