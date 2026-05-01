@@ -798,12 +798,23 @@ export function getInstalledVersion(callback: (version: string | null) => void):
 /**
  * Update the global uloop dispatcher to the latest version using npm.
  */
+export function getUpdatePackageSpec(version: string = VERSION): string {
+  const prereleasePrefixIndex: number = version.indexOf('-');
+  if (prereleasePrefixIndex === -1) {
+    return 'uloop-cli@latest';
+  }
+
+  const prerelease: string = version.slice(prereleasePrefixIndex + 1);
+  const channel: string = prerelease.split('.')[0];
+  return channel.length > 0 ? `uloop-cli@${channel}` : 'uloop-cli@latest';
+}
+
 export function updateCli(): void {
   const previousVersion = VERSION;
   console.log('Updating global uloop dispatcher to the latest version...');
 
   const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-  const child = spawn(npmCommand, ['install', '-g', 'uloop-cli@latest'], {
+  const child = spawn(npmCommand, ['install', '-g', getUpdatePackageSpec()], {
     stdio: 'inherit',
   });
 

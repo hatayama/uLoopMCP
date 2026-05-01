@@ -3462,6 +3462,7 @@ var cli_exports = {};
 __export(cli_exports, {
   PROJECT_LOCAL_CLI_IN_PROCESS_MARKER: () => PROJECT_LOCAL_CLI_IN_PROCESS_MARKER,
   getInstalledVersion: () => getInstalledVersion,
+  getUpdatePackageSpec: () => getUpdatePackageSpec,
   runCli: () => runCli,
   tryHandleFastExecuteDynamicCodeCommand: () => tryHandleFastExecuteDynamicCodeCommand,
   tryParseFastExecuteDynamicCodeCommand: () => tryParseFastExecuteDynamicCodeCommand,
@@ -9235,11 +9236,20 @@ function getInstalledVersion(callback) {
     callback(null);
   });
 }
+function getUpdatePackageSpec(version = VERSION) {
+  const prereleasePrefixIndex = version.indexOf("-");
+  if (prereleasePrefixIndex === -1) {
+    return "uloop-cli@latest";
+  }
+  const prerelease = version.slice(prereleasePrefixIndex + 1);
+  const channel = prerelease.split(".")[0];
+  return channel.length > 0 ? `uloop-cli@${channel}` : "uloop-cli@latest";
+}
 function updateCli() {
   const previousVersion = VERSION;
   console.log("Updating global uloop dispatcher to the latest version...");
   const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
-  const child = (0, import_child_process2.spawn)(npmCommand, ["install", "-g", "uloop-cli@latest"], {
+  const child = (0, import_child_process2.spawn)(npmCommand, ["install", "-g", getUpdatePackageSpec()], {
     stdio: "inherit"
   });
   child.on("close", (code) => {
@@ -9560,6 +9570,7 @@ if (shouldRunCliEntryPoint()) {
 0 && (module.exports = {
   PROJECT_LOCAL_CLI_IN_PROCESS_MARKER,
   getInstalledVersion,
+  getUpdatePackageSpec,
   runCli,
   tryHandleFastExecuteDynamicCodeCommand,
   tryParseFastExecuteDynamicCodeCommand,

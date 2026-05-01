@@ -205,6 +205,21 @@ function findProjectPathArgument(args: readonly string[]): ProjectPathArgument {
   return { value: null, error: null };
 }
 
+function normalizeProjectLocalCliArgs(
+  args: readonly string[],
+  projectRoot: string,
+): readonly string[] {
+  if (args[0] === '--project-path') {
+    return [...args.slice(2), '--project-path', projectRoot];
+  }
+
+  if (args[0]?.startsWith('--project-path=')) {
+    return [...args.slice(1), '--project-path', projectRoot];
+  }
+
+  return args;
+}
+
 function isUnityProject(projectRoot: string): boolean {
   return (
     existsSync(join(projectRoot, 'Assets')) && existsSync(join(projectRoot, 'ProjectSettings'))
@@ -451,7 +466,7 @@ export async function runDispatcher(
 
   return runProjectLocalCli(
     localCliPath,
-    dependencies.args,
+    normalizeProjectLocalCliArgs(dependencies.args, projectResolution.projectRoot),
     projectResolution.projectRoot,
     dependencies,
   );

@@ -230,7 +230,7 @@ describe('dispatcher', () => {
     expect(dependencies.loadModuleCalls).toEqual([
       {
         modulePath: cliPath,
-        args: ['--project-path', projectRoot, 'get-logs', '--json'],
+        args: ['get-logs', '--json', '--project-path', projectRoot],
         cwd: projectRoot,
       },
     ]);
