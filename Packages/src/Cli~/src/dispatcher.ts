@@ -89,7 +89,7 @@ function createDefaultDependencies(): DispatcherDependencies {
     platform: process.platform,
     stdout: process.stdout,
     stderr: process.stderr,
-    spawnFn: spawn as DispatcherSpawnFn,
+    spawnFn: spawn,
     chdirFn: (path): void => {
       process.chdir(path);
     },
