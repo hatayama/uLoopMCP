@@ -46,7 +46,7 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
             Assert.That(File.Exists(projectLocalCliPath), Is.True);
             Assert.That(File.ReadAllText(projectLocalCliPath), Is.EqualTo(File.ReadAllText(sourceBundlePath)));
             Assert.That(File.Exists(windowsCommandPath), Is.True);
-            Assert.That(File.ReadAllText(windowsCommandPath), Does.Contain("node \"%~dp0\\uloop\" %*"));
+            Assert.That(File.ReadAllText(windowsCommandPath), Does.Contain("node \"%~dp0\\uloop.cjs\" %*"));
         }
 
         [Test]
