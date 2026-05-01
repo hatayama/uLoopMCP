@@ -117,6 +117,27 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         [Test]
+        public void RecoverSettingsFileIfNeeded_WhenLegacyPortFieldsExist_ShouldRemoveThem()
+        {
+            File.WriteAllText(
+                SettingsFilePath,
+                "{" +
+                "\"customPort\":18447," +
+                "\"serverPort\":18448," +
+                "\"serverTransportKind\":\"tcp\"," +
+                "\"connectedLLMTools\":[{\"Name\":\"codex\",\"Endpoint\":\"/tmp/uloop/test.sock#1\",\"Port\":18449}]" +
+                "}");
+
+            McpEditorSettings.RecoverSettingsFileIfNeeded();
+
+            string recoveredJson = File.ReadAllText(SettingsFilePath);
+            StringAssert.DoesNotContain("customPort", recoveredJson);
+            StringAssert.DoesNotContain("serverPort", recoveredJson);
+            StringAssert.DoesNotContain("serverTransportKind", recoveredJson);
+            StringAssert.DoesNotContain("\"Port\"", recoveredJson);
+        }
+
+        [Test]
         public void SetInstallSkillsFlat_PersistsValue()
         {
             McpEditorSettings.SetInstallSkillsFlat(true);

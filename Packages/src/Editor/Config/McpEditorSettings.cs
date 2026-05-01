@@ -2,6 +2,8 @@ using System;
 using System.IO;
 using System.Security;
 
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -61,6 +63,14 @@ namespace io.github.hatayama.uLoopMCP
     public static class McpEditorSettings
     {
         private static string SettingsFilePath => Path.Combine(McpConstants.USER_SETTINGS_FOLDER, McpConstants.SETTINGS_FILE_NAME);
+        private static readonly string[] LegacyPortSettingKeys =
+        {
+            "customPort",
+            "serverPort",
+            "port",
+            "Port",
+            "serverTransportKind"
+        };
 
         private static McpEditorSettingsData _cachedSettings;
 
@@ -88,6 +98,7 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             AtomicFileWriter.RecoverSidecarFiles(SettingsFilePath);
+            RemoveLegacyPortFieldsIfNeeded(SettingsFilePath);
         }
 
         /// <summary>
@@ -766,6 +777,55 @@ namespace io.github.hatayama.uLoopMCP
         {
             string fullPath = Path.GetFullPath(projectRootPath);
             return fullPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        }
+
+        private static void RemoveLegacyPortFieldsIfNeeded(string settingsPath)
+        {
+            if (!File.Exists(settingsPath))
+            {
+                return;
+            }
+
+            using StreamReader reader = File.OpenText(settingsPath);
+            JToken settingsToken = JToken.ReadFrom(new JsonTextReader(reader));
+            bool removed = RemoveLegacyPortFields(settingsToken);
+            if (!removed)
+            {
+                return;
+            }
+
+            AtomicFileWriter.Write(settingsPath, settingsToken.ToString(Formatting.Indented));
+        }
+
+        private static bool RemoveLegacyPortFields(JToken token)
+        {
+            Debug.Assert(token != null, "token must not be null");
+
+            bool removed = false;
+            if (token is JObject jsonObject)
+            {
+                foreach (string legacyKey in LegacyPortSettingKeys)
+                {
+                    removed |= jsonObject.Remove(legacyKey);
+                }
+
+                foreach (JProperty property in jsonObject.Properties())
+                {
+                    removed |= RemoveLegacyPortFields(property.Value);
+                }
+
+                return removed;
+            }
+
+            if (token is JArray jsonArray)
+            {
+                foreach (JToken item in jsonArray)
+                {
+                    removed |= RemoveLegacyPortFields(item);
+                }
+            }
+
+            return removed;
         }
 
         /// <summary>
