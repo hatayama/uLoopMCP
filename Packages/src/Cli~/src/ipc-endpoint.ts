@@ -51,15 +51,6 @@ export function createProjectIpcEndpoint(
   };
 }
 
-export function describeUnityConnectionEndpoint(endpoint: UnityConnectionEndpoint): string {
-  switch (endpoint.kind) {
-    case 'unix-socket':
-      return endpoint.path;
-    case 'windows-pipe':
-      return endpoint.path;
-  }
-}
-
 function createProjectEndpointName(canonicalProjectRoot: string): string {
   const hash = createHash('sha256')
     .update(canonicalProjectRoot, 'utf8')
