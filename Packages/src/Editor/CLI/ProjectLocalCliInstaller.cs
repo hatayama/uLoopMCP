@@ -68,7 +68,9 @@ namespace io.github.hatayama.uLoopMCP
 
             if (!File.Exists(sourceBinaryPath))
             {
-                return new CliInstallResult(false, $"Project-local CLI binary was not found: {sourceBinaryPath}");
+                return new CliInstallResult(
+                    false,
+                    $"Project-local CLI binary was not found for {Application.platform}/{RuntimeInformation.ProcessArchitecture}: {sourceBinaryPath}");
             }
 
             string projectLocalBinDir = GetProjectLocalBinDir(projectRoot);

@@ -36,17 +36,19 @@ namespace io.github.hatayama.uLoopMCP
             string releaseTag = BuildReleaseTag(packageVersion);
             if (platform == RuntimePlatform.WindowsEditor)
             {
+                string scriptUrl = BuildReleaseAssetUrl(releaseTag, CliConstants.WINDOWS_INSTALL_SCRIPT_NAME);
                 string command =
                     $"$env:{CliConstants.INSTALL_VERSION_ENVIRONMENT_VARIABLE}='{releaseTag}'; " +
-                    $"irm '{CliConstants.WINDOWS_INSTALL_SCRIPT_URL}' | iex";
+                    $"irm '{scriptUrl}' | iex";
                 return new NativeCliInstallCommand(
                     "powershell",
                     $"-NoProfile -ExecutionPolicy Bypass -Command \"{command}\"",
                     command);
             }
 
+            string posixScriptUrl = BuildReleaseAssetUrl(releaseTag, CliConstants.POSIX_INSTALL_SCRIPT_NAME);
             string posixCommand =
-                $"curl -fsSL '{CliConstants.POSIX_INSTALL_SCRIPT_URL}' | " +
+                $"curl -fsSL '{posixScriptUrl}' | " +
                 $"{CliConstants.INSTALL_VERSION_ENVIRONMENT_VARIABLE}='{releaseTag}' sh";
             return new NativeCliInstallCommand(
                 "/bin/sh",
@@ -111,6 +113,14 @@ namespace io.github.hatayama.uLoopMCP
                 return packageVersion;
             }
             return $"{CliConstants.RELEASE_TAG_PREFIX}{packageVersion}";
+        }
+
+        private static string BuildReleaseAssetUrl(string releaseTag, string assetName)
+        {
+            UnityEngine.Debug.Assert(!string.IsNullOrWhiteSpace(releaseTag), "releaseTag must not be null or empty");
+            UnityEngine.Debug.Assert(!string.IsNullOrWhiteSpace(assetName), "assetName must not be null or empty");
+
+            return $"{CliConstants.RELEASE_DOWNLOAD_BASE_URL}/{releaseTag}/{assetName}";
         }
     }
 }

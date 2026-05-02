@@ -13,7 +13,7 @@ namespace io.github.hatayama.uLoopMCP.Tests
                 "3.0.0-beta.0");
 
             Assert.That(command.FileName, Is.EqualTo("/bin/sh"));
-            Assert.That(command.Arguments, Does.Contain(CliConstants.POSIX_INSTALL_SCRIPT_URL));
+            Assert.That(command.Arguments, Does.Contain("https://github.com/hatayama/unity-cli-loop/releases/download/v3.0.0-beta.0/install.sh"));
             Assert.That(command.Arguments, Does.Contain("ULOOP_VERSION='v3.0.0-beta.0'"));
             Assert.That(command.ManualCommand, Does.Contain("curl -fsSL"));
             Assert.That(command.ManualCommand, Does.Not.Contain("npm"));
@@ -27,7 +27,7 @@ namespace io.github.hatayama.uLoopMCP.Tests
                 "3.0.0-beta.0");
 
             Assert.That(command.FileName, Is.EqualTo("powershell"));
-            Assert.That(command.Arguments, Does.Contain(CliConstants.WINDOWS_INSTALL_SCRIPT_URL));
+            Assert.That(command.Arguments, Does.Contain("https://github.com/hatayama/unity-cli-loop/releases/download/v3.0.0-beta.0/install.ps1"));
             Assert.That(command.Arguments, Does.Contain("$env:ULOOP_VERSION='v3.0.0-beta.0'"));
             Assert.That(command.ManualCommand, Does.Contain("irm"));
             Assert.That(command.ManualCommand, Does.Not.Contain("npm"));

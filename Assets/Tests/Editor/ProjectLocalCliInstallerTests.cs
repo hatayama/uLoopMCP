@@ -1,4 +1,5 @@
 using System.IO;
+using System.Runtime.InteropServices;
 
 using NUnit.Framework;
 using UnityEngine;
@@ -64,6 +65,8 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
 
             Assert.That(result.Success, Is.False);
             Assert.That(result.ErrorOutput, Does.Contain(missingSourceBundlePath));
+            Assert.That(result.ErrorOutput, Does.Contain(Application.platform.ToString()));
+            Assert.That(result.ErrorOutput, Does.Contain(RuntimeInformation.ProcessArchitecture.ToString()));
         }
 
         [Test]

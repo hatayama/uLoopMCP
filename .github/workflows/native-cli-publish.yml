@@ -35,6 +35,10 @@ jobs:
           go-version: '1.26.1'
           cache-dependency-path: Packages/src/GoCli~/go.sum
 
+      - name: Test native CLI
+        working-directory: Packages/src/GoCli~
+        run: go test ./...
+
       - name: Build native CLI binaries
         run: scripts/build-go-cli.sh
 

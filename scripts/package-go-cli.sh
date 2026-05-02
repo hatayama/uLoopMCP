@@ -34,6 +34,11 @@ package_windows() {
   rm -rf "$tmp_dir"
 }
 
+package_installers() {
+  cp "$ROOT_DIR/scripts/install.sh" "$RELEASE_DIR/install.sh"
+  cp "$ROOT_DIR/scripts/install.ps1" "$RELEASE_DIR/install.ps1"
+}
+
 create_checksum() {
   asset_path="$1"
   asset_name=$(basename "$asset_path")
@@ -53,6 +58,7 @@ create_checksum() {
 package_unix darwin-arm64
 package_unix darwin-amd64
 package_windows
+package_installers
 
 for asset_path in "$RELEASE_DIR"/*.tar.gz "$RELEASE_DIR"/*.zip; do
   create_checksum "$asset_path"
