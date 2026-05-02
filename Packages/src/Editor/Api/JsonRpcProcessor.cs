@@ -121,8 +121,7 @@ namespace io.github.hatayama.uLoopMCP
 
             return new JsonRpcRequestUloopMetadata
             {
-                ExpectedProjectRoot = metadataToken["expectedProjectRoot"]?.ToString(),
-                ExpectedServerSessionId = metadataToken["expectedServerSessionId"]?.ToString()
+                ExpectedProjectRoot = metadataToken["expectedProjectRoot"]?.ToString()
             };
         }
 
@@ -208,21 +207,17 @@ namespace io.github.hatayama.uLoopMCP
         {
             JsonRpcRequestIdentityValidator.Validate(
                 request?.UloopMetadata,
-                McpEditorSettings.GetProjectRootPath(),
-                McpEditorSettings.GetServerSessionId());
+                GetCurrentProjectRoot());
+        }
+
+        private static string GetCurrentProjectRoot()
+        {
+            string projectRoot = UnityMcpPathResolver.GetProjectRoot();
+            return BridgeTransportEndpoint.CanonicalizeProjectRoot(projectRoot);
         }
 
         private static void LogParameterValidationException(ParameterValidationException exception)
         {
-            if (JsonRpcRequestIdentityValidator.IsExpectedRetryableFailure(exception))
-            {
-#if ULOOPMCP_DEBUG
-                UnityEngine.Debug.LogWarning(
-                    $"[JsonRpcProcessor] Expected retryable parameter validation event: {exception.Message}");
-#endif
-                return;
-            }
-
             UnityEngine.Debug.LogError(
                 $"[JsonRpcProcessor] Parameter validation error: {exception.Message}\nStack trace: {exception.StackTrace}");
         }
