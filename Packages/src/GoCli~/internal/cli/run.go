@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"syscall"
 
 	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/project"
@@ -19,6 +20,22 @@ const (
 	projectLocalUnixPath    = ".uloop/bin/uloop-core"
 	projectLocalWindowsPath = ".uloop/bin/uloop-core.exe"
 )
+
+type commandHelpEntry struct {
+	name        string
+	description string
+}
+
+var nativeCommandHelpEntries = []commandHelpEntry{
+	{name: "launch", description: "Open this Unity project with the matching Editor version"},
+	{name: "list", description: "Show Unity tools currently exposed by the Editor"},
+	{name: "sync", description: "Refresh .uloop/tools.json from the running Editor"},
+	{name: "focus-window", description: "Bring the Unity Editor window to the foreground"},
+	{name: "fix", description: "Remove stale uloop lock files after an interrupted run"},
+	{name: "skills", description: "List, install, or uninstall agent skills"},
+	{name: "completion", description: "Print or install shell completion"},
+	{name: "update", description: "Update the global uloop launcher binary"},
+}
 
 func RunProjectLocal(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer) int {
 	remainingArgs, projectPath, err := parseGlobalProjectPath(args)
@@ -342,13 +359,75 @@ func isHelpRequest(args []string) bool {
 }
 
 func printHelp(stdout io.Writer) {
-	writeFormat(stdout, "uloop %s\n\nUsage:\n  uloop <command> [options]\n\n", version)
-	writeLine(stdout, "Native Go CLI preview. Dynamic Unity tool commands are loaded from .uloop/tools.json.")
+	printMainHelp(
+		stdout,
+		"Project-local CLI. Runs native uloop commands and Unity tool commands from .uloop/tools.json.",
+		loadDefaultTools())
 }
 
 func printLauncherHelp(stdout io.Writer) {
-	writeFormat(stdout, "uloop %s\n\nUsage:\n  uloop <command> [options]\n\n", version)
-	writeLine(stdout, "Native Go dispatcher preview. Dispatches to the project-local uloop-core binary.")
+	printMainHelp(
+		stdout,
+		"Global dispatcher. Finds the Unity project, then dispatches to the project-local uloop-core binary.",
+		loadDefaultTools())
+}
+
+func printMainHelp(stdout io.Writer, description string, cache toolsCache) {
+	writeFormat(stdout, "uloop %s\n\n", version)
+	writeLine(stdout, "Usage:")
+	writeLine(stdout, "  uloop <command> [options]")
+	writeLine(stdout, "")
+	writeLine(stdout, description)
+	writeLine(stdout, "")
+	printNativeCommandHelp(stdout)
+	writeLine(stdout, "")
+	printUnityToolCommandHelp(stdout, cache)
+	writeLine(stdout, "")
+	writeLine(stdout, "More:")
+	writeLine(stdout, "  uloop list                                  Show the live Unity tool list")
+	writeLine(stdout, "  uloop <command> --help                      Show help for native commands that support it")
+	writeLine(stdout, "  uloop completion --list-commands            Print command names for completion")
+	writeLine(stdout, "  uloop completion --list-options <command>   Print options for a Unity tool command")
+}
+
+func printNativeCommandHelp(stdout io.Writer) {
+	writeLine(stdout, "Native commands:")
+	for _, entry := range nativeCommandHelpEntries {
+		writeFormat(stdout, "  %-14s %s\n", entry.name, entry.description)
+	}
+}
+
+func printUnityToolCommandHelp(stdout io.Writer, cache toolsCache) {
+	writeLine(stdout, "Unity tool commands:")
+	if len(cache.Tools) == 0 {
+		writeLine(stdout, "  No cached Unity tools found. Run `uloop sync` while Unity is running.")
+		return
+	}
+
+	nativeCommandNames := nativeCommandNameSet()
+	for _, tool := range cache.Tools {
+		if nativeCommandNames[tool.Name] {
+			continue
+		}
+		writeFormat(stdout, "  %-22s %s\n", tool.Name, firstHelpSentence(tool.Description))
+	}
+}
+
+func nativeCommandNameSet() map[string]bool {
+	names := make(map[string]bool, len(nativeCommandHelpEntries))
+	for _, entry := range nativeCommandHelpEntries {
+		names[entry.name] = true
+	}
+	return names
+}
+
+func firstHelpSentence(description string) string {
+	normalized := strings.TrimSpace(description)
+	index := strings.Index(normalized, ".")
+	if index < 0 {
+		return normalized
+	}
+	return normalized[:index+1]
 }
 
 func loadCompletionTools(startPath string, projectPath string) toolsCache {
