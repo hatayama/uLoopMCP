@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -129,7 +130,7 @@ func TestCompletionSupportsPwshProfile(t *testing.T) {
 		t.Fatalf("getShellConfigPath failed: %v", err)
 	}
 
-	expectedPath := filepath.Join(temporaryHome, "Documents", "PowerShell", "Microsoft.PowerShell_profile.ps1")
+	expectedPath := getPwshProfilePath(temporaryHome, runtime.GOOS)
 	if configPath != expectedPath {
 		t.Fatalf("pwsh profile path mismatch: %s", configPath)
 	}
@@ -137,5 +138,21 @@ func TestCompletionSupportsPwshProfile(t *testing.T) {
 	script := getCompletionScript("pwsh")
 	if !strings.Contains(script, "Register-ArgumentCompleter") {
 		t.Fatalf("pwsh completion script mismatch: %s", script)
+	}
+}
+
+func TestGetPwshProfilePathUsesPlatformSpecificLocation(t *testing.T) {
+	home := filepath.Join("home", "user")
+
+	windowsPath := getPwshProfilePath(home, "windows")
+	expectedWindowsPath := filepath.Join(home, "Documents", "PowerShell", "Microsoft.PowerShell_profile.ps1")
+	if windowsPath != expectedWindowsPath {
+		t.Fatalf("windows pwsh profile path mismatch: %s", windowsPath)
+	}
+
+	posixPath := getPwshProfilePath(home, "darwin")
+	expectedPosixPath := filepath.Join(home, ".config", "powershell", "Microsoft.PowerShell_profile.ps1")
+	if posixPath != expectedPosixPath {
+		t.Fatalf("posix pwsh profile path mismatch: %s", posixPath)
 	}
 }

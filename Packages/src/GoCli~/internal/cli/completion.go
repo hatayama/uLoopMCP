@@ -224,10 +224,17 @@ func getShellConfigPath(shellName string) (string, error) {
 	case "powershell":
 		return filepath.Join(home, filepath.FromSlash(powerShellProfileSubpath)), nil
 	case "pwsh":
-		return filepath.Join(home, filepath.FromSlash(pwshProfileSubpath)), nil
+		return getPwshProfilePath(home, runtime.GOOS), nil
 	default:
 		return "", fmt.Errorf("unknown shell: %s", shellName)
 	}
+}
+
+func getPwshProfilePath(home string, goos string) string {
+	if goos == "windows" {
+		return filepath.Join(home, filepath.FromSlash(pwshProfileSubpath))
+	}
+	return filepath.Join(home, ".config", "powershell", "Microsoft.PowerShell_profile.ps1")
 }
 
 func installCompletionScript(configPath string, shellName string, script string) error {
