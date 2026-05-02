@@ -87,6 +87,43 @@ name: uloop-sample
 	}
 }
 
+func TestUninstallSkillsForTargetUsesSelectedLayoutOnly(t *testing.T) {
+	projectRoot := t.TempDir()
+	sourceDir := filepath.Join(projectRoot, "source", "Skill")
+	writeSkillFile(t, sourceDir, `---
+name: uloop-sample
+---
+
+# sample
+`)
+
+	skill := skillDefinition{
+		name:            "uloop-sample",
+		content:         []byte("sample"),
+		sourceDirectory: sourceDir,
+	}
+	target := targetConfigs["claude"]
+	baseDir := getSkillsBaseDir(projectRoot, target, false)
+	groupedDir := getPreferredSkillDir(baseDir, skill.name, true)
+	flatDir := getPreferredSkillDir(baseDir, skill.name, false)
+	writeSkillFile(t, groupedDir, "# grouped\n")
+	writeSkillFile(t, flatDir, "# flat\n")
+
+	removed, notFound, err := uninstallSkillsForTarget(projectRoot, target, []skillDefinition{skill}, false, true)
+	if err != nil {
+		t.Fatalf("uninstallSkillsForTarget failed: %v", err)
+	}
+	if removed != 1 || notFound != 0 {
+		t.Fatalf("uninstall result mismatch: removed=%d notFound=%d", removed, notFound)
+	}
+	if _, err := os.Stat(groupedDir); err == nil {
+		t.Fatal("grouped skill should be removed")
+	}
+	if _, err := os.Stat(flatDir); err != nil {
+		t.Fatalf("flat skill should remain: %v", err)
+	}
+}
+
 func TestParseSkillsOptionsRequiresKnownFlags(t *testing.T) {
 	_, err := parseSkillsOptions([]string{"--claude", "--bad-target"})
 	if err == nil {

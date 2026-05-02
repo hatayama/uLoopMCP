@@ -119,3 +119,23 @@ func TestCompletionInstallReplacesExistingBlock(t *testing.T) {
 		t.Fatalf("install output mismatch: %s", stdout.String())
 	}
 }
+
+func TestCompletionSupportsPwshProfile(t *testing.T) {
+	temporaryHome := t.TempDir()
+	t.Setenv("HOME", temporaryHome)
+
+	configPath, err := getShellConfigPath("pwsh")
+	if err != nil {
+		t.Fatalf("getShellConfigPath failed: %v", err)
+	}
+
+	expectedPath := filepath.Join(temporaryHome, "Documents", "PowerShell", "Microsoft.PowerShell_profile.ps1")
+	if configPath != expectedPath {
+		t.Fatalf("pwsh profile path mismatch: %s", configPath)
+	}
+
+	script := getCompletionScript("pwsh")
+	if !strings.Contains(script, "Register-ArgumentCompleter") {
+		t.Fatalf("pwsh completion script mismatch: %s", script)
+	}
+}

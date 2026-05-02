@@ -50,3 +50,16 @@ func TestCleanupStaleLockFilesAllowsMissingTempDirectory(t *testing.T) {
 		t.Fatalf("cleaned count mismatch: %d", cleaned)
 	}
 }
+
+func TestCleanupStaleLockFilesReturnsUnexpectedStatError(t *testing.T) {
+	projectRoot := t.TempDir()
+	tempPath := filepath.Join(projectRoot, "Temp")
+	if err := os.WriteFile(tempPath, []byte("not a directory"), 0o644); err != nil {
+		t.Fatalf("failed to seed Temp file: %v", err)
+	}
+
+	_, err := cleanupStaleLockFiles(projectRoot)
+	if err == nil {
+		t.Fatal("expected stat error")
+	}
+}

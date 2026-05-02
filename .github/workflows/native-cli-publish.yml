@@ -43,15 +43,33 @@ jobs:
 
       - name: Resolve release tag
         id: release
+        env:
+          INPUT_RELEASE_TAG: ${{ inputs.release-tag }}
         run: |
-          if [ -n "${{ inputs.release-tag }}" ]; then
-            RELEASE_TAG="${{ inputs.release-tag }}"
+          if [ -n "${INPUT_RELEASE_TAG}" ]; then
+            RELEASE_TAG="${INPUT_RELEASE_TAG}"
           elif [ "${GITHUB_REF_TYPE}" = "tag" ]; then
             RELEASE_TAG="${GITHUB_REF_NAME}"
           else
             RELEASE_TAG=$(jq -r '.["Packages/src"]' .release-please-manifest.json)
             RELEASE_TAG="v${RELEASE_TAG}"
           fi
+
+          case "${RELEASE_TAG}" in
+            v[0-9]*)
+              ;;
+            *)
+              echo "Invalid release tag: ${RELEASE_TAG}" >&2
+              exit 1
+              ;;
+          esac
+
+          case "${RELEASE_TAG}" in
+            *[!A-Za-z0-9._-]*)
+              echo "Invalid release tag: ${RELEASE_TAG}" >&2
+              exit 1
+              ;;
+          esac
 
           echo "tag=${RELEASE_TAG}" >> "$GITHUB_OUTPUT"
           echo "Release tag: ${RELEASE_TAG}"

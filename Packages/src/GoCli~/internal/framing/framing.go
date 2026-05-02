@@ -62,6 +62,9 @@ func readContentLength(reader *bufio.Reader) (int, error) {
 		if !strings.HasPrefix(strings.ToLower(header), strings.ToLower(contentLengthHeader)) {
 			continue
 		}
+		if foundContentLength {
+			return 0, fmt.Errorf("duplicate Content-Length header")
+		}
 
 		value := strings.TrimSpace(header[len(contentLengthHeader):])
 		parsed, err := strconv.Atoi(value)

@@ -245,6 +245,11 @@ func focusUnityProcessMac(ctx context.Context, pid int) error {
 }
 
 func focusUnityProcessWindows(ctx context.Context, pid int) error {
+	script := buildFocusUnityProcessWindowsScript(pid)
+	return exec.CommandContext(ctx, windowsPowerShellCommand, "-NoProfile", "-Command", script).Run()
+}
+
+func buildFocusUnityProcessWindowsScript(pid int) string {
 	addTypeLines := []string{
 		"Add-Type -TypeDefinition @\"",
 		"using System;",
@@ -260,11 +265,13 @@ func focusUnityProcessWindows(ctx context.Context, pid int) error {
 	}
 	scriptLines = append(scriptLines, addTypeLines...)
 	scriptLines = append(scriptLines,
-		fmt.Sprintf("try { $process = Get-Process -Id %d -ErrorAction Stop } catch { return }", pid),
+		fmt.Sprintf("try { $process = Get-Process -Id %d -ErrorAction Stop } catch { throw 'Unity process was not found: %d' }", pid, pid),
 		"$handle = $process.MainWindowHandle",
-		"if ($handle -eq 0) { return }",
-		"[Win32Interop]::ShowWindowAsync($handle, 9) | Out-Null",
-		"[Win32Interop]::SetForegroundWindow($handle) | Out-Null",
+		fmt.Sprintf("if ($handle -eq 0) { throw 'Unity process has no main window handle: %d' }", pid),
+		"$shown = [Win32Interop]::ShowWindowAsync($handle, 9)",
+		"if (-not $shown) { throw 'Failed to show Unity window' }",
+		"$focused = [Win32Interop]::SetForegroundWindow($handle)",
+		"if (-not $focused) { throw 'Failed to focus Unity window' }",
 	)
-	return exec.CommandContext(ctx, windowsPowerShellCommand, "-NoProfile", "-Command", strings.Join(scriptLines, "\n")).Run()
+	return strings.Join(scriptLines, "\n")
 }

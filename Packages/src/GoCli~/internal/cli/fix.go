@@ -35,6 +35,9 @@ func cleanupStaleLockFiles(projectRoot string) (int, error) {
 	for _, lockFileName := range staleLockFileNames {
 		lockFilePath := filepath.Join(tempDirectory, lockFileName)
 		if _, err := os.Stat(lockFilePath); err != nil {
+			if !os.IsNotExist(err) {
+				return cleaned, err
+			}
 			continue
 		}
 		if err := os.Remove(lockFilePath); err != nil {

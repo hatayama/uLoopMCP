@@ -237,23 +237,18 @@ func uninstallSkillsForTarget(projectRoot string, target skillTarget, skills []s
 	notFound := 0
 	baseDir := getSkillsBaseDir(projectRoot, target, global)
 	for _, skill := range skills {
-		removedThisSkill := false
-		for _, candidate := range []string{
-			getPreferredSkillDir(baseDir, skill.name, grouped),
-			getPreferredSkillDir(baseDir, skill.name, !grouped),
-		} {
-			if _, err := os.Stat(candidate); err != nil {
-				continue
-			}
-			if err := os.RemoveAll(candidate); err != nil {
+		destinationDir := getPreferredSkillDir(baseDir, skill.name, grouped)
+		if _, err := os.Stat(destinationDir); err != nil {
+			if !os.IsNotExist(err) {
 				return removed, notFound, err
 			}
-			removed++
-			removedThisSkill = true
-		}
-		if !removedThisSkill {
 			notFound++
+			continue
 		}
+		if err := os.RemoveAll(destinationDir); err != nil {
+			return removed, notFound, err
+		}
+		removed++
 	}
 	return removed, notFound, nil
 }

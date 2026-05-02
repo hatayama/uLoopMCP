@@ -79,24 +79,25 @@ namespace io.github.hatayama.uLoopMCP
                     return;
                 }
 
-                StringBuilder errorBuilder = new StringBuilder();
-                process.OutputDataReceived += (s, e) => { };
-                process.ErrorDataReceived += (s, e) => { if (e.Data != null) errorBuilder.AppendLine(e.Data); };
-                process.BeginOutputReadLine();
-                process.BeginErrorReadLine();
-
-                if (!process.WaitForExit(CliConstants.GLOBAL_INSTALL_TIMEOUT_MS))
+                using (process)
                 {
-                    if (!process.HasExited) process.Kill();
-                    process.Dispose();
-                    errorOutput = $"Installation timed out after {CliConstants.GLOBAL_INSTALL_TIMEOUT_MS / 1000} seconds.\nRun manually:\n{command.ManualCommand}";
-                    return;
-                }
+                    StringBuilder errorBuilder = new StringBuilder();
+                    process.OutputDataReceived += (s, e) => { };
+                    process.ErrorDataReceived += (s, e) => { if (e.Data != null) errorBuilder.AppendLine(e.Data); };
+                    process.BeginOutputReadLine();
+                    process.BeginErrorReadLine();
 
-                process.WaitForExit();
-                errorOutput = errorBuilder.ToString();
-                success = process.ExitCode == 0;
-                process.Dispose();
+                    if (!process.WaitForExit(CliConstants.GLOBAL_INSTALL_TIMEOUT_MS))
+                    {
+                        if (!process.HasExited) process.Kill();
+                        errorOutput = $"Installation timed out after {CliConstants.GLOBAL_INSTALL_TIMEOUT_MS / 1000} seconds.\nRun manually:\n{command.ManualCommand}";
+                        return;
+                    }
+
+                    process.WaitForExit();
+                    errorOutput = errorBuilder.ToString();
+                    success = process.ExitCode == 0;
+                }
             });
 
             CliInstallationDetector.InvalidateCache();

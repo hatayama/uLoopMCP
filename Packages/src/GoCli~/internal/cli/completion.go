@@ -20,6 +20,7 @@ const (
 	completionStartMarker    = "# >>> uloop completion >>>"
 	completionEndMarker      = "# <<< uloop completion <<<"
 	powerShellProfileSubpath = "Documents/WindowsPowerShell/Microsoft.PowerShell_profile.ps1"
+	pwshProfileSubpath       = "Documents/PowerShell/Microsoft.PowerShell_profile.ps1"
 )
 
 var nativeCommandNames = []string{
@@ -72,7 +73,7 @@ func tryHandleCompletionRequest(args []string, cache toolsCache, stdout io.Write
 		shellName = detectShell()
 	}
 	if shellName == "" {
-		fmt.Fprintln(stderr, "Could not detect shell. Use --shell bash, --shell zsh, or --shell powershell.")
+		fmt.Fprintln(stderr, "Could not detect shell. Use --shell bash, --shell zsh, --shell powershell, or --shell pwsh.")
 		return true, 1
 	}
 
@@ -93,7 +94,7 @@ func tryHandleCompletionRequest(args []string, cache toolsCache, stdout io.Write
 	}
 
 	fmt.Fprintf(stdout, "Completion installed to %s\n", configPath)
-	if shellName == "powershell" {
+	if isPowerShellShell(shellName) {
 		fmt.Fprintln(stdout, "Restart PowerShell to enable completion.")
 		return true, 0
 	}
@@ -144,10 +145,13 @@ func parseCompletionRequest(args []string) (completionRequest, error) {
 
 func normalizeShell(value string) (string, error) {
 	normalized := strings.ToLower(value)
-	if normalized == "bash" || normalized == "zsh" || normalized == "powershell" {
+	if normalized == "bash" || normalized == "zsh" || normalized == "powershell" || normalized == "pwsh" {
 		return normalized, nil
 	}
-	return "", fmt.Errorf("unknown shell: %s. Supported: bash, zsh, powershell", value)
+	if normalized == "powershell-core" {
+		return "pwsh", nil
+	}
+	return "", fmt.Errorf("unknown shell: %s. Supported: bash, zsh, powershell, pwsh", value)
 }
 
 func printCommandNames(cache toolsCache, stdout io.Writer) {
@@ -219,6 +223,8 @@ func getShellConfigPath(shellName string) (string, error) {
 		return filepath.Join(home, ".bashrc"), nil
 	case "powershell":
 		return filepath.Join(home, filepath.FromSlash(powerShellProfileSubpath)), nil
+	case "pwsh":
+		return filepath.Join(home, filepath.FromSlash(pwshProfileSubpath)), nil
 	default:
 		return "", fmt.Errorf("unknown shell: %s", shellName)
 	}
@@ -236,7 +242,7 @@ func installCompletionScript(configPath string, shellName string, script string)
 
 	content = removeExistingCompletionBlock(content)
 	lineToAdd := "\n" + completionStartMarker + "\n"
-	if shellName == "powershell" {
+	if isPowerShellShell(shellName) {
 		lineToAdd += script + "\n"
 	} else {
 		lineToAdd += fmt.Sprintf("eval \"$(uloop completion --shell %s)\"\n", shellName)
@@ -265,7 +271,7 @@ _uloop_completions() {
   fi
 }
 complete -F _uloop_completions uloop`
-	case "powershell":
+	case "powershell", "pwsh":
 		return `# uloop PowerShell completion
 Register-ArgumentCompleter -Native -CommandName uloop -ScriptBlock {
   param($wordToComplete, $commandAst, $cursorPosition)
@@ -304,7 +310,11 @@ compdef _uloop uloop`
 	}
 }
 
+func isPowerShellShell(shellName string) bool {
+	return shellName == "powershell" || shellName == "pwsh"
+}
+
 func printCompletionHelp(stdout io.Writer) {
 	fmt.Fprintln(stdout, "Usage:")
-	fmt.Fprintln(stdout, "  uloop completion [--shell bash|zsh|powershell] [--install]")
+	fmt.Fprintln(stdout, "  uloop completion [--shell bash|zsh|powershell|pwsh] [--install]")
 }

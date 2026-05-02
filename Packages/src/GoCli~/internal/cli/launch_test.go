@@ -15,7 +15,7 @@ func TestParseLaunchOptionsSupportsCoreFlags(t *testing.T) {
 			"--restart",
 			"--delete-recovery",
 			"--platform", "Android",
-			"--max-depth=-1",
+			"--max-depth", "-1",
 			"/tmp/project",
 		},
 		"",

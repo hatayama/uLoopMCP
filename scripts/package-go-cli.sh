@@ -34,6 +34,26 @@ package_windows() {
   rm -rf "$tmp_dir"
 }
 
+create_checksum() {
+  asset_path="$1"
+  asset_name=$(basename "$asset_path")
+  if command -v sha256sum >/dev/null 2>&1; then
+    (
+      cd "$RELEASE_DIR"
+      sha256sum "$asset_name" > "$asset_name.sha256"
+    )
+    return
+  fi
+  (
+    cd "$RELEASE_DIR"
+    shasum -a 256 "$asset_name" > "$asset_name.sha256"
+  )
+}
+
 package_unix darwin-arm64
 package_unix darwin-amd64
 package_windows
+
+for asset_path in "$RELEASE_DIR"/*.tar.gz "$RELEASE_DIR"/*.zip; do
+  create_checksum "$asset_path"
+done

@@ -1,6 +1,7 @@
 using System.IO;
 
 using NUnit.Framework;
+using UnityEngine;
 
 namespace io.github.hatayama.uLoopMCP.Tests.Editor
 {
@@ -43,7 +44,10 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
 
             Assert.That(result.Success, Is.True, result.ErrorOutput);
             Assert.That(File.Exists(projectLocalCliPath), Is.True);
-            Assert.That(Path.GetFileName(projectLocalCliPath), Is.EqualTo("uloop-core"));
+            string expectedFileName = Application.platform == RuntimePlatform.WindowsEditor
+                ? "uloop-core.exe"
+                : "uloop-core";
+            Assert.That(Path.GetFileName(projectLocalCliPath), Is.EqualTo(expectedFileName));
             Assert.That(File.ReadAllText(projectLocalCliPath), Is.EqualTo(File.ReadAllText(sourceBundlePath)));
         }
 

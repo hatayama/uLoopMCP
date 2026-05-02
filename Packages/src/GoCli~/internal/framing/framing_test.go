@@ -30,3 +30,12 @@ func TestReadRejectsMissingContentLength(t *testing.T) {
 		t.Fatal("Read succeeded for missing Content-Length")
 	}
 }
+
+func TestReadRejectsDuplicateContentLength(t *testing.T) {
+	input := "Content-Length: 2\r\nContent-Length: 3\r\n\r\n{}"
+
+	_, err := Read(bufio.NewReader(bytes.NewBufferString(input)))
+	if err == nil {
+		t.Fatal("Read succeeded for duplicate Content-Length")
+	}
+}

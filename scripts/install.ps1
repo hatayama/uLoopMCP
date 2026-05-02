@@ -14,13 +14,22 @@ if ($Version -eq "latest") {
 } else {
     $DownloadUrl = "https://github.com/$Repository/releases/download/$Version/$AssetName"
 }
+$ChecksumUrl = "$DownloadUrl.sha256"
 
 $TempDir = Join-Path ([System.IO.Path]::GetTempPath()) ("uloop-install-" + [System.Guid]::NewGuid().ToString("N"))
 New-Item -ItemType Directory -Path $TempDir | Out-Null
 
 try {
     $ArchivePath = Join-Path $TempDir $AssetName
+    $ChecksumPath = Join-Path $TempDir "$AssetName.sha256"
     Invoke-WebRequest -Uri $DownloadUrl -OutFile $ArchivePath
+    Invoke-WebRequest -Uri $ChecksumUrl -OutFile $ChecksumPath
+    $ExpectedHash = ((Get-Content -Path $ChecksumPath -Raw) -split "\s+")[0].ToLowerInvariant()
+    $ActualHash = (Get-FileHash -Path $ArchivePath -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($ExpectedHash -ne $ActualHash) {
+        throw "Checksum mismatch for $AssetName"
+    }
+
     Expand-Archive -Path $ArchivePath -DestinationPath $TempDir -Force
 
     New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
@@ -44,4 +53,3 @@ try {
 finally {
     Remove-Item -Path $TempDir -Recurse -Force -ErrorAction SilentlyContinue
 }
-

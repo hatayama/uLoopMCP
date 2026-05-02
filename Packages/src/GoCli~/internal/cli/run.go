@@ -21,22 +21,23 @@ const (
 )
 
 func RunProjectLocal(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer) int {
-	if len(args) == 0 || isHelpRequest(args) {
-		printHelp(stdout)
-		return 0
-	}
-	if isVersionRequest(args) {
-		fmt.Fprintln(stdout, version)
-		return 0
-	}
-
-	command := args[0]
-	remainingArgs := args[1:]
-	remainingArgs, projectPath, err := parseGlobalProjectPath(remainingArgs)
+	remainingArgs, projectPath, err := parseGlobalProjectPath(args)
 	if err != nil {
 		fmt.Fprintln(stderr, err.Error())
 		return 1
 	}
+
+	if len(remainingArgs) == 0 || isHelpRequest(remainingArgs) {
+		printHelp(stdout)
+		return 0
+	}
+	if isVersionRequest(remainingArgs) {
+		fmt.Fprintln(stdout, version)
+		return 0
+	}
+
+	command := remainingArgs[0]
+	commandArgs := remainingArgs[1:]
 
 	startPath, err := os.Getwd()
 	if err != nil {
@@ -45,16 +46,16 @@ func RunProjectLocal(ctx context.Context, args []string, stdout io.Writer, stder
 	}
 
 	completionTools := loadCompletionTools(startPath, projectPath)
-	if handled, code := tryHandleCompletionRequest(args, completionTools, stdout, stderr); handled {
+	if handled, code := tryHandleCompletionRequest(remainingArgs, completionTools, stdout, stderr); handled {
 		return code
 	}
-	if handled, code := tryHandleUpdateRequest(ctx, args, stdout, stderr); handled {
+	if handled, code := tryHandleUpdateRequest(ctx, remainingArgs, stdout, stderr); handled {
 		return code
 	}
-	if handled, code := tryHandleLaunchRequest(ctx, args, startPath, projectPath, stdout, stderr); handled {
+	if handled, code := tryHandleLaunchRequest(ctx, remainingArgs, startPath, projectPath, stdout, stderr); handled {
 		return code
 	}
-	if handled, code := tryHandleSkillsRequest(args, startPath, projectPath, stdout, stderr); handled {
+	if handled, code := tryHandleSkillsRequest(remainingArgs, startPath, projectPath, stdout, stderr); handled {
 		return code
 	}
 
@@ -86,7 +87,7 @@ func RunProjectLocal(ctx context.Context, args []string, stdout io.Writer, stder
 			return 1
 		}
 
-		params, nestedProjectPath, err := buildToolParams(remainingArgs, tool)
+		params, nestedProjectPath, err := buildToolParams(commandArgs, tool)
 		if err != nil {
 			fmt.Fprintln(stderr, err.Error())
 			return 1

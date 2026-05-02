@@ -131,10 +131,17 @@ func readLaunchOptionValue(option string, args []string, index int) (string, boo
 		}
 		return parts[1], false, nil
 	}
-	if index+1 >= len(args) || strings.HasPrefix(args[index+1], "-") {
+	if index+1 >= len(args) || isInvalidLaunchOptionValue(option, args[index+1]) {
 		return "", false, fmt.Errorf("%s requires a value", option)
 	}
 	return args[index+1], true, nil
+}
+
+func isInvalidLaunchOptionValue(option string, value string) bool {
+	if option == "--max-depth" {
+		return isNextOptionToken(value)
+	}
+	return strings.HasPrefix(value, "-")
 }
 
 func runLaunch(ctx context.Context, options launchOptions, startPath string, stdout io.Writer, stderr io.Writer) int {

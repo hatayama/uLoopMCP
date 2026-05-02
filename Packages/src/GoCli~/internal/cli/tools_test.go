@@ -71,3 +71,29 @@ func TestBuildToolParamsAcceptsNegativeNumericValues(t *testing.T) {
 		t.Fatalf("Count mismatch: %#v", params["Count"])
 	}
 }
+
+func TestParseGlobalProjectPathAcceptsLeadingOption(t *testing.T) {
+	remaining, projectPath, err := parseGlobalProjectPath(
+		[]string{
+			"--project-path", "/tmp/project",
+			"compile",
+			"--force-recompile", "true",
+		},
+	)
+	if err != nil {
+		t.Fatalf("parseGlobalProjectPath failed: %v", err)
+	}
+
+	if projectPath != "/tmp/project" {
+		t.Fatalf("project path mismatch: %s", projectPath)
+	}
+	expected := []string{"compile", "--force-recompile", "true"}
+	if len(remaining) != len(expected) {
+		t.Fatalf("remaining length mismatch: %#v", remaining)
+	}
+	for index, value := range expected {
+		if remaining[index] != value {
+			t.Fatalf("remaining mismatch: %#v", remaining)
+		}
+	}
+}

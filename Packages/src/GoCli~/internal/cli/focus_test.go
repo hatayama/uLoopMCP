@@ -1,6 +1,9 @@
 package cli
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestParseMacUnityProcessesExtractsProjectPath(t *testing.T) {
 	output := `123 /Applications/Unity/Hub/Editor/6000.0.0f1/Unity.app/Contents/MacOS/Unity -projectPath "/Users/me/My Project" -useHub -hubIPC
@@ -52,5 +55,23 @@ func TestExtractProjectPathSupportsEqualsAndSpaces(t *testing.T) {
 		if actual != expected {
 			t.Fatalf("project path mismatch for %q: %q", command, actual)
 		}
+	}
+}
+
+func TestBuildFocusUnityProcessWindowsScriptThrowsOnFailures(t *testing.T) {
+	script := buildFocusUnityProcessWindowsScript(123)
+
+	for _, expected := range []string{
+		"throw 'Unity process was not found: 123'",
+		"throw 'Unity process has no main window handle: 123'",
+		"throw 'Failed to show Unity window'",
+		"throw 'Failed to focus Unity window'",
+	} {
+		if !strings.Contains(script, expected) {
+			t.Fatalf("script missing %q: %s", expected, script)
+		}
+	}
+	if strings.Contains(script, "catch { return }") || strings.Contains(script, "{ return }") {
+		t.Fatalf("script should not silently return: %s", script)
 	}
 }
