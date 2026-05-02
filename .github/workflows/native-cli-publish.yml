@@ -30,7 +30,7 @@ jobs:
           ref: ${{ inputs.ref || github.ref }}
 
       - name: Setup Go
-        uses: actions/setup-go@v7
+        uses: actions/setup-go@v6
         with:
           go-version-file: Packages/src/GoCli~/go.mod
 
@@ -67,4 +67,3 @@ jobs:
         if: inputs.dry-run == true
         run: |
           ls -lh Packages/src/GoCli~/release
-
