@@ -13,6 +13,7 @@ var staleLockFileNames = []string{
 	"serverstarting.lock",
 }
 
+// TODO: Extend fix to remove only project-owned stale IPC sockets after proving the listener is dead.
 func runFix(projectRoot string, stdout io.Writer, stderr io.Writer) int {
 	cleaned, err := cleanupStaleLockFiles(projectRoot)
 	if err != nil {
