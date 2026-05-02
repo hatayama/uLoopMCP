@@ -32,7 +32,8 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v6
         with:
-          go-version-file: Packages/src/GoCli~/go.mod
+          go-version: '1.26.1'
+          cache-dependency-path: Packages/src/GoCli~/go.sum
 
       - name: Build native CLI binaries
         run: scripts/build-go-cli.sh
