@@ -104,6 +104,37 @@ func TestRunLauncherPrintsHelpAfterProjectPathOption(t *testing.T) {
 
 func TestRunLauncherPrintsProjectCachedToolsAfterProjectPathOption(t *testing.T) {
 	projectRoot := t.TempDir()
+	writeProjectWithToolCache(t, projectRoot)
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	code := RunLauncher(
+		context.Background(),
+		[]string{"--project-path", projectRoot, "-h"},
+		&stdout,
+		&stderr)
+
+	assertProjectToolHelp(t, code, stdout.String(), stderr.String())
+}
+
+func TestRunLauncherPrintsProjectCachedToolsFromCurrentDirectory(t *testing.T) {
+	projectRoot := t.TempDir()
+	writeProjectWithToolCache(t, projectRoot)
+	t.Chdir(projectRoot)
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	code := RunLauncher(
+		context.Background(),
+		[]string{"-h"},
+		&stdout,
+		&stderr)
+
+	assertProjectToolHelp(t, code, stdout.String(), stderr.String())
+}
+
+func writeProjectWithToolCache(t *testing.T, projectRoot string) {
+	t.Helper()
 	if err := os.MkdirAll(filepath.Join(projectRoot, "Assets"), 0o755); err != nil {
 		t.Fatalf("failed to create Assets: %v", err)
 	}
@@ -125,19 +156,13 @@ func TestRunLauncherPrintsProjectCachedToolsAfterProjectPathOption(t *testing.T)
     }
   ]
 }`)
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
+}
 
-	code := RunLauncher(
-		context.Background(),
-		[]string{"--project-path", projectRoot, "-h"},
-		&stdout,
-		&stderr)
-
+func assertProjectToolHelp(t *testing.T, code int, output string, stderr string) {
+	t.Helper()
 	if code != 0 {
-		t.Fatalf("exit code mismatch: %d stderr=%s", code, stderr.String())
+		t.Fatalf("exit code mismatch: %d stderr=%s", code, stderr)
 	}
-	output := stdout.String()
 	for _, expected := range []string{
 		"Unity tool commands from this project's cache:",
 		"project-tool",

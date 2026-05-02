@@ -134,10 +134,6 @@ func RunLauncher(ctx context.Context, args []string, stdout io.Writer, stderr io
 		writeLine(stdout, version)
 		return 0
 	}
-	if len(args) == 0 || isHelpRequest(args) {
-		printLauncherHelp(stdout)
-		return 0
-	}
 	if handled, code := tryHandleCompletionRequest(args, loadDefaultTools(), stdout, stderr); handled {
 		return code
 	}
