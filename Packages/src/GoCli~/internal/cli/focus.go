@@ -20,7 +20,7 @@ var (
 	windowsUnityExecutablePattern = regexp.MustCompile(`(?i)Unity\.exe`)
 	macProcessLinePattern         = regexp.MustCompile(`^\s*(\d+)\s+(.*)$`)
 	projectPathFlagPattern        = regexp.MustCompile(`(?i)-projectpath(?:=|\s+)(.+)$`)
-	nextUnityFlagPattern          = regexp.MustCompile(`\s-[A-Za-z]`)
+	nextUnityFlagPattern          = regexp.MustCompile(`\s-[A-Za-z][A-Za-z0-9-]*(?:=|\s|$)`)
 )
 
 type unityProcess struct {

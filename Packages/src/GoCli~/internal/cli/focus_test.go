@@ -38,9 +38,13 @@ func TestParseWindowsUnityProcessesExtractsProjectPath(t *testing.T) {
 
 func TestExtractProjectPathSupportsEqualsAndSpaces(t *testing.T) {
 	cases := map[string]string{
-		`Unity -projectPath="/Users/me/My Project" -useHub`:  "/Users/me/My Project",
-		`Unity -projectpath '/Users/me/Other Project' -flag`: "/Users/me/Other Project",
-		`Unity -projectPath /Users/me/Plain -flag`:           "/Users/me/Plain",
+		`Unity -projectPath="/Users/me/My Project" -useHub`:                                                        "/Users/me/My Project",
+		`Unity -projectpath '/Users/me/Other Project' -flag`:                                                       "/Users/me/Other Project",
+		`Unity -projectPath /Users/me/Plain -flag`:                                                                 "/Users/me/Plain",
+		`Unity Hub -- --silent -- -projectPath /Users/me/vision-client-3/vision-client -cacheServerEnableUpload`:   "/Users/me/vision-client-3/vision-client",
+		`Unity -projectPath /Users/me/vision-client-3/vision-client -acceptSoftwareTermsForThisRunOnly -useHub`:    "/Users/me/vision-client-3/vision-client",
+		`Unity -projectPath /Users/me/vision-client-3/vision-client -cacheServerEnableDownload=false -useHub`:      "/Users/me/vision-client-3/vision-client",
+		`Unity -projectPath /Users/me/vision-client-3/vision-client -hubSessionId 715810a5-220d-411e-a7d2-28cf46f`: "/Users/me/vision-client-3/vision-client",
 	}
 
 	for command, expected := range cases {
