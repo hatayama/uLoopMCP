@@ -138,18 +138,24 @@ def assert_interrupt_keeps_unity_alive(project_path: str, timeout: float) -> Non
         raise AssertionError("interrupted uloop launch did not exit")
 
     for attempt in range(1, 31):
-        result = run_command(
-            [
-                "uloop",
-                "execute-dynamic-code",
-                "--project-path",
+        try:
+            result = run_command(
+                [
+                    "uloop",
+                    "execute-dynamic-code",
+                    "--project-path",
+                    project_path,
+                    "--code",
+                    'return "alive-after-ctrl-c";',
+                ],
                 project_path,
-                "--code",
-                'return "alive-after-ctrl-c";',
-            ],
-            project_path,
-            10,
-        )
+                10,
+            )
+        except subprocess.TimeoutExpired:
+            print(f"Unity reachability check timed out: attempt={attempt}")
+            time.sleep(1)
+            continue
+
         if result.returncode == 0 and "alive-after-ctrl-c" in result.stdout:
             print(f"Unity stayed alive after Ctrl+C: attempt={attempt}")
             return
