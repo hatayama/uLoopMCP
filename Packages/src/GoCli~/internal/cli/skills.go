@@ -363,6 +363,16 @@ func collectSkillDefinitions(projectRoot string) ([]skillDefinition, error) {
 	return skills, nil
 }
 
+func collectInternalSkillToolNames(projectRoot string) map[string]bool {
+	toolNames := map[string]bool{}
+	for _, sourceRoot := range enumerateSkillSourceRoots(projectRoot) {
+		for _, toolName := range scanInternalSkillToolNames(sourceRoot) {
+			toolNames[toolName] = true
+		}
+	}
+	return toolNames
+}
+
 func enumerateSkillSourceRoots(projectRoot string) []skillSourceRoot {
 	sourceRoots := []skillSourceRoot{}
 	seen := map[string]bool{}
@@ -415,6 +425,23 @@ func scanSkillSourceRoot(sourceRoot skillSourceRoot) ([]skillDefinition, error) 
 	return skills, nil
 }
 
+func scanInternalSkillToolNames(sourceRoot skillSourceRoot) []string {
+	if _, err := os.Stat(sourceRoot.path); err != nil {
+		return []string{}
+	}
+
+	scanRoots := []string{sourceRoot.path}
+	if !sourceRoot.cliOnly {
+		scanRoots = findEditorFolders(sourceRoot.path, skillSearchMaxDepth)
+	}
+
+	toolNames := []string{}
+	for _, scanRoot := range scanRoots {
+		toolNames = append(toolNames, scanInternalSkillDirectories(scanRoot)...)
+	}
+	return toolNames
+}
+
 func scanSkillDirectories(searchRoot string) ([]skillDefinition, error) {
 	skills := []skillDefinition{}
 	err := filepath.WalkDir(searchRoot, func(path string, entry os.DirEntry, walkErr error) error {
@@ -457,6 +484,38 @@ func scanSkillDirectories(searchRoot string) ([]skillDefinition, error) {
 	return skills, nil
 }
 
+func scanInternalSkillDirectories(searchRoot string) []string {
+	toolNames := []string{}
+	_ = filepath.WalkDir(searchRoot, func(path string, entry os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return nil
+		}
+		if !entry.IsDir() {
+			if entry.Name() != skillFileName {
+				return nil
+			}
+			toolName, ok := readInternalSkillToolName(filepath.Dir(path))
+			if ok {
+				toolNames = append(toolNames, toolName)
+			}
+			return nil
+		}
+		if excludedSkillSearchDirs[entry.Name()] && entry.Name() != "Skill" {
+			return filepath.SkipDir
+		}
+		if entry.Name() != "Skill" {
+			return nil
+		}
+
+		toolName, ok := readInternalSkillToolName(path)
+		if ok {
+			toolNames = append(toolNames, toolName)
+		}
+		return filepath.SkipDir
+	})
+	return toolNames
+}
+
 func readSkillDefinition(skillDirectory string) (skillDefinition, bool, error) {
 	skillPath := filepath.Join(skillDirectory, skillFileName)
 	content, err := os.ReadFile(skillPath)
@@ -467,7 +526,7 @@ func readSkillDefinition(skillDirectory string) (skillDefinition, bool, error) {
 		return skillDefinition{}, false, err
 	}
 	frontmatter := parseSkillFrontmatter(string(content))
-	if frontmatter["internal"] == "true" {
+	if strings.EqualFold(frontmatter["internal"], "true") {
 		return skillDefinition{}, false, nil
 	}
 	name := frontmatter["name"]
@@ -483,6 +542,26 @@ func readSkillDefinition(skillDirectory string) (skillDefinition, bool, error) {
 		content:         content,
 		sourceDirectory: skillDirectory,
 	}, true, nil
+}
+
+func readInternalSkillToolName(skillDirectory string) (string, bool) {
+	skillPath := filepath.Join(skillDirectory, skillFileName)
+	content, err := os.ReadFile(skillPath)
+	if err != nil {
+		return "", false
+	}
+	frontmatter := parseSkillFrontmatter(string(content))
+	if !strings.EqualFold(frontmatter["internal"], "true") {
+		return "", false
+	}
+	if frontmatter["toolName"] != "" {
+		return frontmatter["toolName"], true
+	}
+	name := frontmatter["name"]
+	if strings.HasPrefix(name, "uloop-") {
+		return strings.TrimPrefix(name, "uloop-"), true
+	}
+	return "", false
 }
 
 func parseSkillFrontmatter(content string) map[string]string {

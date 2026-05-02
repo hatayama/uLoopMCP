@@ -1,6 +1,8 @@
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
 namespace io.github.hatayama.uLoopMCP
@@ -1024,6 +1026,64 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         [Test]
+        public void GetInternalSkillToolNames_WhenInternalSkillUsesSkillName_ReturnsToolName()
+        {
+            string temporaryRoot = CreateTemporaryProjectRoot();
+            CreateFakeSourceSkill(
+                temporaryRoot,
+                "uloop-public-skill",
+                "PublicTool",
+                "reference.md",
+                "reference");
+            CreateFakeSourceSkill(
+                temporaryRoot,
+                "uloop-internal-skill",
+                "InternalTool",
+                "reference.md",
+                "internal-reference",
+                isInternal: true);
+
+            HashSet<string> internalToolNames = SkillInstallLayout.GetInternalSkillToolNames(temporaryRoot);
+
+            Assert.That(internalToolNames, Does.Contain("internal-skill"));
+            Assert.That(internalToolNames, Does.Not.Contain("public-skill"));
+        }
+
+        [Test]
+        public void GetToolSettingsCatalogForProjectRoot_WhenSkillIsInternal_HidesToolFromUserFacingLists()
+        {
+            string temporaryRoot = CreateTemporaryProjectRoot();
+            CreateFakeSourceSkill(
+                temporaryRoot,
+                "uloop-internal-tool",
+                "InternalTool",
+                "reference.md",
+                "internal-reference",
+                isInternal: true);
+
+            UnityToolRegistry registry = new();
+            registry.RegisterTool(new FakeUnityTool("internal-tool"));
+            registry.RegisterTool(new FakeUnityTool("public-tool"));
+
+            string[] catalogNames = registry.GetToolSettingsCatalogForProjectRoot(temporaryRoot)
+                .Select(tool => tool.Name)
+                .ToArray();
+            string[] registeredToolNames = registry.GetRegisteredToolsForProjectRoot(temporaryRoot)
+                .Select(tool => tool.Name)
+                .ToArray();
+            string[] allToolNames = registry.GetAllRegisteredToolInfosForProjectRoot(temporaryRoot)
+                .Select(tool => tool.Name)
+                .ToArray();
+
+            Assert.That(catalogNames, Does.Not.Contain("internal-tool"));
+            Assert.That(catalogNames, Does.Contain("public-tool"));
+            Assert.That(registeredToolNames, Does.Not.Contain("internal-tool"));
+            Assert.That(registeredToolNames, Does.Contain("public-tool"));
+            Assert.That(allToolNames, Does.Not.Contain("internal-tool"));
+            Assert.That(allToolNames, Does.Contain("public-tool"));
+        }
+
+        [Test]
         public void DetectTargets_WhenSourceOnlyHasMetaSidecars_IgnoresThem()
         {
             string temporaryRoot = CreateTemporaryProjectRoot();
@@ -1358,6 +1418,27 @@ namespace io.github.hatayama.uLoopMCP
             File.WriteAllText(
                 Path.Combine(packagesDir, "manifest.json"),
                 "{\n  \"dependencies\": {\n" + dependenciesContent + "\n  }\n}");
+        }
+
+        private sealed class FakeUnityTool : IUnityTool
+        {
+            public string ToolName { get; }
+
+            public ToolParameterSchema ParameterSchema { get; } = new();
+
+            public FakeUnityTool(string toolName)
+            {
+                ToolName = toolName;
+            }
+
+            public Task<BaseToolResponse> ExecuteAsync(JToken paramsToken)
+            {
+                return Task.FromResult<BaseToolResponse>(new FakeToolResponse());
+            }
+        }
+
+        private sealed class FakeToolResponse : BaseToolResponse
+        {
         }
     }
 }
