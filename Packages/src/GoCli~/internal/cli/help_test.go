@@ -3,6 +3,8 @@ package cli
 import (
 	"bytes"
 	"context"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -97,5 +99,55 @@ func TestRunLauncherPrintsHelpAfterProjectPathOption(t *testing.T) {
 	}
 	if strings.Contains(output, "Native Go CLI preview") {
 		t.Fatalf("launcher should not dispatch help to project-local core:\n%s", output)
+	}
+}
+
+func TestRunLauncherPrintsProjectCachedToolsAfterProjectPathOption(t *testing.T) {
+	projectRoot := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(projectRoot, "Assets"), 0o755); err != nil {
+		t.Fatalf("failed to create Assets: %v", err)
+	}
+	if err := os.MkdirAll(filepath.Join(projectRoot, "ProjectSettings"), 0o755); err != nil {
+		t.Fatalf("failed to create ProjectSettings: %v", err)
+	}
+	writeToolCache(t, projectRoot, `{
+  "version": "test",
+  "tools": [
+    {
+      "name": "project-tool",
+      "description": "Project specific tool",
+      "inputSchema": {"type": "object", "properties": {}}
+    },
+    {
+      "name": "focus-window",
+      "description": "Cached focus-window should not be listed because native command wins",
+      "inputSchema": {"type": "object", "properties": {}}
+    }
+  ]
+}`)
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	code := RunLauncher(
+		context.Background(),
+		[]string{"--project-path", projectRoot, "-h"},
+		&stdout,
+		&stderr)
+
+	if code != 0 {
+		t.Fatalf("exit code mismatch: %d stderr=%s", code, stderr.String())
+	}
+	output := stdout.String()
+	for _, expected := range []string{
+		"Unity tool commands from this project's cache:",
+		"project-tool",
+		"Project specific tool",
+	} {
+		if !strings.Contains(output, expected) {
+			t.Fatalf("help output missing %q:\n%s", expected, output)
+		}
+	}
+	if strings.Contains(output, "Cached focus-window should not be listed") {
+		t.Fatalf("help output should not list cached tools shadowed by native commands:\n%s", output)
 	}
 }

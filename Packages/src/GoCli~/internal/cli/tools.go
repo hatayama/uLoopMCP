@@ -70,6 +70,20 @@ func loadTools(projectRoot string) (toolsCache, error) {
 	return filterInternalSkillTools(projectRoot, cache), nil
 }
 
+func loadCachedTools(projectRoot string) (toolsCache, bool) {
+	cachePath := filepath.Join(projectRoot, cacheDirectoryName, cacheFileName)
+	content, err := os.ReadFile(cachePath)
+	if err != nil {
+		return toolsCache{}, false
+	}
+
+	var cache toolsCache
+	if json.Unmarshal(content, &cache) != nil {
+		return toolsCache{}, false
+	}
+	return filterInternalSkillTools(projectRoot, cache), true
+}
+
 func loadDefaultTools() toolsCache {
 	content, err := embeddedTools.ReadFile(defaultToolsFile)
 	if err != nil {
