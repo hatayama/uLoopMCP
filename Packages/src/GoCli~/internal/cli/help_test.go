@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestPrintLauncherHelpListsNativeAndUnityToolCommands(t *testing.T) {
+func TestPrintLauncherHelpListsNativeCommandsAndLiveToolGuidance(t *testing.T) {
 	var stdout bytes.Buffer
 
 	printLauncherHelp(&stdout)
@@ -18,18 +18,28 @@ func TestPrintLauncherHelpListsNativeAndUnityToolCommands(t *testing.T) {
 		"  focus-window",
 		"  list",
 		"  skills",
-		"Unity tool commands:",
-		"  compile",
-		"  get-logs",
+		"Unity tool commands are project-specific.",
+		"uloop list",
+		"--project-path <path>",
+		"uloop --project-path /path/to/project list",
 		"uloop completion --list-options <command>",
 	} {
 		if !strings.Contains(output, expected) {
 			t.Fatalf("help output missing %q:\n%s", expected, output)
 		}
 	}
+	for _, unexpected := range []string{
+		"  compile",
+		"  get-logs",
+		"  run-tests",
+	} {
+		if strings.Contains(output, unexpected) {
+			t.Fatalf("help output should not include baked-in Unity tool %q:\n%s", unexpected, output)
+		}
+	}
 }
 
-func TestPrintProjectLocalHelpListsNativeAndUnityToolCommands(t *testing.T) {
+func TestPrintProjectLocalHelpListsNativeCommandsAndLiveToolGuidance(t *testing.T) {
 	var stdout bytes.Buffer
 
 	printHelp(&stdout)
@@ -41,13 +51,22 @@ func TestPrintProjectLocalHelpListsNativeAndUnityToolCommands(t *testing.T) {
 		"  focus-window",
 		"  list",
 		"  sync",
-		"Unity tool commands:",
-		"  compile",
-		"  run-tests",
+		"Unity tool commands are project-specific.",
+		"--project-path <path>",
+		"uloop --project-path /path/to/project list",
 		"uloop list",
 	} {
 		if !strings.Contains(output, expected) {
 			t.Fatalf("help output missing %q:\n%s", expected, output)
+		}
+	}
+	for _, unexpected := range []string{
+		"  compile",
+		"  get-logs",
+		"  run-tests",
+	} {
+		if strings.Contains(output, unexpected) {
+			t.Fatalf("help output should not include baked-in Unity tool %q:\n%s", unexpected, output)
 		}
 	}
 }

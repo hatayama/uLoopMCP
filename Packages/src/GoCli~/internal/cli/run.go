@@ -9,7 +9,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"syscall"
 
 	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/project"
@@ -361,18 +360,16 @@ func isHelpRequest(args []string) bool {
 func printHelp(stdout io.Writer) {
 	printMainHelp(
 		stdout,
-		"Project-local CLI. Runs native uloop commands and Unity tool commands from .uloop/tools.json.",
-		loadDefaultTools())
+		"Project-local CLI. Runs native uloop commands and dispatches live Unity tool commands.")
 }
 
 func printLauncherHelp(stdout io.Writer) {
 	printMainHelp(
 		stdout,
-		"Global dispatcher. Finds the Unity project, then dispatches to the project-local uloop-core binary.",
-		loadDefaultTools())
+		"Global dispatcher. Finds the Unity project, then dispatches to the project-local uloop-core binary.")
 }
 
-func printMainHelp(stdout io.Writer, description string, cache toolsCache) {
+func printMainHelp(stdout io.Writer, description string) {
 	writeFormat(stdout, "uloop %s\n\n", version)
 	writeLine(stdout, "Usage:")
 	writeLine(stdout, "  uloop <command> [options]")
@@ -381,10 +378,13 @@ func printMainHelp(stdout io.Writer, description string, cache toolsCache) {
 	writeLine(stdout, "")
 	printNativeCommandHelp(stdout)
 	writeLine(stdout, "")
-	printUnityToolCommandHelp(stdout, cache)
+	printGlobalOptionsHelp(stdout)
+	writeLine(stdout, "")
+	printUnityToolCommandGuidance(stdout)
 	writeLine(stdout, "")
 	writeLine(stdout, "More:")
 	writeLine(stdout, "  uloop list                                  Show the live Unity tool list")
+	writeLine(stdout, "  uloop --project-path /path/to/project list  Show tools for another Unity project")
 	writeLine(stdout, "  uloop <command> --help                      Show help for native commands that support it")
 	writeLine(stdout, "  uloop completion --list-commands            Print command names for completion")
 	writeLine(stdout, "  uloop completion --list-options <command>   Print options for a Unity tool command")
@@ -397,37 +397,15 @@ func printNativeCommandHelp(stdout io.Writer) {
 	}
 }
 
-func printUnityToolCommandHelp(stdout io.Writer, cache toolsCache) {
-	writeLine(stdout, "Unity tool commands:")
-	if len(cache.Tools) == 0 {
-		writeLine(stdout, "  No cached Unity tools found. Run `uloop sync` while Unity is running.")
-		return
-	}
-
-	nativeCommandNames := nativeCommandNameSet()
-	for _, tool := range cache.Tools {
-		if nativeCommandNames[tool.Name] {
-			continue
-		}
-		writeFormat(stdout, "  %-22s %s\n", tool.Name, firstHelpSentence(tool.Description))
-	}
+func printGlobalOptionsHelp(stdout io.Writer) {
+	writeLine(stdout, "Global options:")
+	writeLine(stdout, "  --project-path <path>   Run against a Unity project outside the current directory")
 }
 
-func nativeCommandNameSet() map[string]bool {
-	names := make(map[string]bool, len(nativeCommandHelpEntries))
-	for _, entry := range nativeCommandHelpEntries {
-		names[entry.name] = true
-	}
-	return names
-}
-
-func firstHelpSentence(description string) string {
-	normalized := strings.TrimSpace(description)
-	index := strings.Index(normalized, ".")
-	if index < 0 {
-		return normalized
-	}
-	return normalized[:index+1]
+func printUnityToolCommandGuidance(stdout io.Writer) {
+	writeLine(stdout, "Unity tool commands are project-specific.")
+	writeLine(stdout, "  Run `uloop list` inside a Unity project to show the live tool list.")
+	writeLine(stdout, "  Run `uloop sync` after the Editor tool set changes to refresh cached commands.")
 }
 
 func loadCompletionTools(startPath string, projectPath string) toolsCache {
