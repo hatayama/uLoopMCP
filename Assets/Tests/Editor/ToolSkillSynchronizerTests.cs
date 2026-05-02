@@ -1025,6 +1025,7 @@ namespace io.github.hatayama.uLoopMCP
             Assert.That(detectedTargets[0].HasExistingSkills, Is.True);
         }
 
+        // Tests that internal skill metadata maps back to the hidden tool name only.
         [Test]
         public void GetInternalSkillToolNames_WhenInternalSkillUsesSkillName_ReturnsToolName()
         {
@@ -1049,6 +1050,7 @@ namespace io.github.hatayama.uLoopMCP
             Assert.That(internalToolNames, Does.Not.Contain("public-skill"));
         }
 
+        // Tests that user-facing tool catalogs omit tools backed by internal skills.
         [Test]
         public void GetToolSettingsCatalogForProjectRoot_WhenSkillIsInternal_HidesToolFromUserFacingLists()
         {

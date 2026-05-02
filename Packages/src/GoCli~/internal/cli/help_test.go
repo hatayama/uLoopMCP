@@ -9,6 +9,7 @@ import (
 	"testing"
 )
 
+// Tests that launcher help lists native commands and live-tool discovery guidance without baked-in tools.
 func TestPrintLauncherHelpListsNativeCommandsAndLiveToolGuidance(t *testing.T) {
 	var stdout bytes.Buffer
 
@@ -42,6 +43,7 @@ func TestPrintLauncherHelpListsNativeCommandsAndLiveToolGuidance(t *testing.T) {
 	}
 }
 
+// Tests that project-local help lists native commands and points users to live tool discovery.
 func TestPrintProjectLocalHelpListsNativeCommandsAndLiveToolGuidance(t *testing.T) {
 	var stdout bytes.Buffer
 
@@ -74,6 +76,7 @@ func TestPrintProjectLocalHelpListsNativeCommandsAndLiveToolGuidance(t *testing.
 	}
 }
 
+// Tests that launcher help handles --project-path before dispatching to project-local core.
 func TestRunLauncherPrintsHelpAfterProjectPathOption(t *testing.T) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
@@ -102,6 +105,7 @@ func TestRunLauncherPrintsHelpAfterProjectPathOption(t *testing.T) {
 	}
 }
 
+// Tests that launcher help shows cached tool commands for an explicit Unity project path.
 func TestRunLauncherPrintsProjectCachedToolsAfterProjectPathOption(t *testing.T) {
 	projectRoot := t.TempDir()
 	writeProjectWithToolCache(t, projectRoot)
@@ -117,6 +121,7 @@ func TestRunLauncherPrintsProjectCachedToolsAfterProjectPathOption(t *testing.T)
 	assertProjectToolHelp(t, code, stdout.String(), stderr.String())
 }
 
+// Tests that launcher help shows cached tool commands when run inside a Unity project.
 func TestRunLauncherPrintsProjectCachedToolsFromCurrentDirectory(t *testing.T) {
 	projectRoot := t.TempDir()
 	writeProjectWithToolCache(t, projectRoot)

@@ -6,6 +6,7 @@ import (
 	"testing"
 )
 
+// Tests that tool arguments are converted according to their schema types.
 func TestBuildToolParamsConvertsSchemaTypes(t *testing.T) {
 	tool := toolDefinition{
 		Name: "sample-tool",
@@ -46,6 +47,7 @@ func TestBuildToolParamsConvertsSchemaTypes(t *testing.T) {
 	}
 }
 
+// Tests that cached tool loading hides tools whose source skills are internal.
 func TestLoadToolsFiltersInternalSkillToolsFromCache(t *testing.T) {
 	projectRoot := t.TempDir()
 	writeTestSkill(t, projectRoot, "Assets/Editor/InternalTool/Skill", `---
@@ -84,6 +86,7 @@ internal: true
 	}
 }
 
+// Tests that embedded fallback tools do not expose internal-only commands.
 func TestLoadDefaultToolsDoesNotExposeInternalSkillTools(t *testing.T) {
 	cache := loadDefaultTools()
 
@@ -94,6 +97,7 @@ func TestLoadDefaultToolsDoesNotExposeInternalSkillTools(t *testing.T) {
 	}
 }
 
+// Tests that numeric tool arguments can be negative values instead of being parsed as flags.
 func TestBuildToolParamsAcceptsNegativeNumericValues(t *testing.T) {
 	tool := toolDefinition{
 		Name: "sample-tool",
@@ -124,6 +128,7 @@ func TestBuildToolParamsAcceptsNegativeNumericValues(t *testing.T) {
 	}
 }
 
+// Tests that the global --project-path option is removed before command-specific parsing.
 func TestParseGlobalProjectPathAcceptsLeadingOption(t *testing.T) {
 	remaining, projectPath, err := parseGlobalProjectPath(
 		[]string{

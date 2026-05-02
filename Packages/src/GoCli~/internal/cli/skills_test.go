@@ -9,6 +9,7 @@ import (
 	"testing"
 )
 
+// Tests that CLI-only skill discovery excludes skills marked as internal.
 func TestCollectSkillDefinitionsIncludesCliOnlyAndSkipsInternal(t *testing.T) {
 	projectRoot := t.TempDir()
 	writeTestSkill(t, projectRoot, "Packages/src/GoCli~/internal/cli/skill-definitions/cli-only/uloop-launch/Skill", `---
@@ -38,6 +39,7 @@ internal: true
 	}
 }
 
+// Tests that skill discovery includes package, CLI-only, project-local, and cached package skill roots.
 func TestCollectSkillDefinitionsIncludesProjectAndPackageRoots(t *testing.T) {
 	projectRoot := t.TempDir()
 	writeTestSkill(t, projectRoot, "Packages/src/Editor/Api/McpTools/Compile/Skill", `---
@@ -97,6 +99,7 @@ name: uloop-cached-package
 	}
 }
 
+// Tests that direct SKILL.md files without a frontmatter name use their own directory name.
 func TestCollectSkillDefinitionsUsesDirectoryNameWhenDirectSkillOmitsName(t *testing.T) {
 	projectRoot := t.TempDir()
 	writeTestSkill(t, projectRoot, "Assets/Editor/DirectTool", `---
@@ -117,6 +120,7 @@ func TestCollectSkillDefinitionsUsesDirectoryNameWhenDirectSkillOmitsName(t *tes
 	}
 }
 
+// Tests that installing and uninstalling a managed skill copies allowed files and removes the skill.
 func TestInstallAndUninstallSkillsForTarget(t *testing.T) {
 	projectRoot := t.TempDir()
 	sourceDir := filepath.Join(projectRoot, "source", "Skill")
@@ -168,6 +172,7 @@ name: uloop-sample
 	}
 }
 
+// Tests that installing skills removes disabled and deprecated skill directories from all layouts.
 func TestInstallSkillsForTargetRemovesDisabledAndDeprecatedSkills(t *testing.T) {
 	projectRoot := t.TempDir()
 	enabledSourceDir := filepath.Join(projectRoot, "source", "Enabled", "Skill")
@@ -228,6 +233,7 @@ name: uloop-disabled-skill
 	}
 }
 
+// Tests that grouped installs migrate an existing legacy flat skill instead of duplicating it.
 func TestInstallSkillsForTargetMigratesLegacyFlatSkillToGroupedLayout(t *testing.T) {
 	projectRoot := t.TempDir()
 	sourceDir := filepath.Join(projectRoot, "source", "Skill")
@@ -265,6 +271,7 @@ name: uloop-sample
 	}
 }
 
+// Tests that flat installs remove a grouped copy of the same managed skill.
 func TestInstallSkillsForTargetRemovesGroupedSkillWhenInstallingFlatLayout(t *testing.T) {
 	projectRoot := t.TempDir()
 	sourceDir := filepath.Join(projectRoot, "source", "Skill")
@@ -301,6 +308,7 @@ name: uloop-sample
 	}
 }
 
+// Tests that uninstalling uses only the selected layout and leaves the other layout intact.
 func TestUninstallSkillsForTargetUsesSelectedLayoutOnly(t *testing.T) {
 	projectRoot := t.TempDir()
 	sourceDir := filepath.Join(projectRoot, "source", "Skill")
@@ -338,6 +346,7 @@ name: uloop-sample
 	}
 }
 
+// Tests that skills option parsing rejects unknown flags.
 func TestParseSkillsOptionsRequiresKnownFlags(t *testing.T) {
 	_, err := parseSkillsOptions([]string{"--claude", "--bad-target"})
 	if err == nil {
