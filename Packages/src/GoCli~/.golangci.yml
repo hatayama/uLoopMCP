@@ -1,11 +1,7 @@
 version: "2"
 
 linters:
-  default: none
-  enable:
-    - govet
-    - ineffassign
-    - unused
+  default: standard
 
 run:
   timeout: 5m
