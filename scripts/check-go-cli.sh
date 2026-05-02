@@ -10,19 +10,9 @@ if ! command -v golangci-lint >/dev/null 2>&1; then
   exit 1
 fi
 
-unformatted_files=$(
-  cd "$GO_CLI_DIR"
-  gofmt -l .
-)
-
-if [ -n "$unformatted_files" ]; then
-  echo "Go files need formatting. Run gofmt -w on these files:" >&2
-  printf '%s\n' "$unformatted_files" >&2
-  exit 1
-fi
-
 (
   cd "$GO_CLI_DIR"
+  golangci-lint fmt --diff
   go vet ./...
   golangci-lint run ./...
   go test ./...
