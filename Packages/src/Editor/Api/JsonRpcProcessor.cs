@@ -27,7 +27,7 @@ namespace io.github.hatayama.uLoopMCP
     /// 
     /// Related classes:
     /// - UnityApiHandler: Executes Unity commands based on JSON-RPC requests
-    /// - McpBridgeServer: TCP server that receives JSON-RPC messages from CLI clients
+    /// - McpBridgeServer: Project IPC bridge that receives JSON-RPC messages from CLI clients
     /// - MainThreadSwitcher: Ensures Unity API calls run on the main thread
     /// - JsonRpcRequest: Request model for JSON-RPC 2.0 protocol
     /// - ClientExecutionContext: Thread-local context for tracking current client
