@@ -16,8 +16,8 @@ import (
 )
 
 const (
-	projectLocalUnixPath    = ".uloop/bin/uloop"
-	projectLocalWindowsPath = ".uloop/bin/uloop.exe"
+	projectLocalUnixPath    = ".uloop/bin/uloop-core"
+	projectLocalWindowsPath = ".uloop/bin/uloop-core.exe"
 )
 
 func RunProjectLocal(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer) int {
@@ -144,7 +144,7 @@ func RunLauncher(ctx context.Context, args []string, stdout io.Writer, stderr io
 		localPath = filepath.Join(projectRoot, projectLocalWindowsPath)
 	}
 	if _, err := os.Stat(localPath); err != nil {
-		fmt.Fprintf(stderr, "Project-local uloop CLI was not found at %s\n", localPath)
+		fmt.Fprintf(stderr, "Project-local uloop-core CLI was not found at %s\n", localPath)
 		return 1
 	}
 
@@ -268,7 +268,7 @@ func printHelp(stdout io.Writer) {
 
 func printLauncherHelp(stdout io.Writer) {
 	fmt.Fprintf(stdout, "uloop %s\n\nUsage:\n  uloop <command> [options]\n\n", version)
-	fmt.Fprintln(stdout, "Native Go launcher preview. Dispatches to the project-local uloop binary.")
+	fmt.Fprintln(stdout, "Native Go dispatcher preview. Dispatches to the project-local uloop-core binary.")
 }
 
 func loadCompletionTools(startPath string, projectPath string) toolsCache {

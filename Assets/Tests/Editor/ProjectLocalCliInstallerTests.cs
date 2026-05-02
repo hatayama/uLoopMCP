@@ -43,6 +43,7 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
 
             Assert.That(result.Success, Is.True, result.ErrorOutput);
             Assert.That(File.Exists(projectLocalCliPath), Is.True);
+            Assert.That(Path.GetFileName(projectLocalCliPath), Is.EqualTo("uloop-core"));
             Assert.That(File.ReadAllText(projectLocalCliPath), Is.EqualTo(File.ReadAllText(sourceBundlePath)));
         }
 

@@ -12,7 +12,7 @@ namespace io.github.hatayama.uLoopMCP
         public const string GO_CLI_PACKAGE_DIR_NAME = "GoCli~";
         public const string DIST_DIR_NAME = "dist";
         public const string PROJECT_LOCAL_BIN_DIR_NAME = "bin";
-        public const string PROJECT_LOCAL_UNIX_COMMAND_NAME = "uloop";
-        public const string PROJECT_LOCAL_WINDOWS_COMMAND_NAME = "uloop.exe";
+        public const string PROJECT_LOCAL_UNIX_COMMAND_NAME = "uloop-core";
+        public const string PROJECT_LOCAL_WINDOWS_COMMAND_NAME = "uloop-core.exe";
     }
 }

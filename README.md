@@ -95,7 +95,7 @@ Select Window > Unity CLI Loop > Settings. A dedicated window will open — conf
 
 <img width="277" height="306" alt="1" src="https://github.com/user-attachments/assets/0e25c327-73bf-4af6-997b-eebb3c26b372" />
 
-The Settings window shows whether the global `uloop` launcher is detected. The Unity package refreshes this project's `.uloop/bin/uloop` CLI bundle automatically when it is missing or version-mismatched.
+The Settings window shows whether the global `uloop` command is detected. The distributed command is backed by the `uloop-dispatcher` binary, and the Unity package refreshes this project's `.uloop/bin/uloop-core` CLI bundle automatically when it is missing, version-mismatched, or binary-mismatched.
 
 
 

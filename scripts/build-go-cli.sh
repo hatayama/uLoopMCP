@@ -25,11 +25,10 @@ build_binary() {
   )
 }
 
-build_binary darwin arm64 uloop ./cmd/uloop
-build_binary darwin amd64 uloop ./cmd/uloop
-build_binary windows amd64 uloop ./cmd/uloop
+build_binary darwin arm64 uloop-core ./cmd/uloop-core
+build_binary darwin amd64 uloop-core ./cmd/uloop-core
+build_binary windows amd64 uloop-core ./cmd/uloop-core
 
-build_binary darwin arm64 uloop-launcher ./cmd/uloop-launcher
-build_binary darwin amd64 uloop-launcher ./cmd/uloop-launcher
-build_binary windows amd64 uloop-launcher ./cmd/uloop-launcher
-
+build_binary darwin arm64 uloop-dispatcher ./cmd/uloop-dispatcher
+build_binary darwin amd64 uloop-dispatcher ./cmd/uloop-dispatcher
+build_binary windows amd64 uloop-dispatcher ./cmd/uloop-dispatcher

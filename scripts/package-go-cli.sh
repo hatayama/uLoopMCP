@@ -13,7 +13,7 @@ package_unix() {
   platform="$1"
   tmp_dir="$RELEASE_DIR/tmp-$platform"
   mkdir -p "$tmp_dir"
-  cp "$DIST_DIR/$platform/uloop-launcher" "$tmp_dir/uloop"
+  cp "$DIST_DIR/$platform/uloop-dispatcher" "$tmp_dir/uloop"
   chmod +x "$tmp_dir/uloop"
   (
     cd "$tmp_dir"
@@ -26,7 +26,7 @@ package_windows() {
   platform="windows-amd64"
   tmp_dir="$RELEASE_DIR/tmp-$platform"
   mkdir -p "$tmp_dir"
-  cp "$DIST_DIR/$platform/uloop-launcher.exe" "$tmp_dir/uloop.exe"
+  cp "$DIST_DIR/$platform/uloop-dispatcher.exe" "$tmp_dir/uloop.exe"
   (
     cd "$tmp_dir"
     zip -q "$RELEASE_DIR/uloop-$platform.zip" uloop.exe
@@ -37,4 +37,3 @@ package_windows() {
 package_unix darwin-arm64
 package_unix darwin-amd64
 package_windows
-

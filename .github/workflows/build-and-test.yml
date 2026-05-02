@@ -33,12 +33,12 @@ jobs:
       - name: Verify checked-in native Go CLI binaries
         run: |
           git diff --exit-code -- \
-            Packages/src/GoCli~/dist/darwin-arm64/uloop \
-            Packages/src/GoCli~/dist/darwin-amd64/uloop \
-            Packages/src/GoCli~/dist/windows-amd64/uloop.exe \
-            Packages/src/GoCli~/dist/darwin-arm64/uloop-launcher \
-            Packages/src/GoCli~/dist/darwin-amd64/uloop-launcher \
-            Packages/src/GoCli~/dist/windows-amd64/uloop-launcher.exe
+            Packages/src/GoCli~/dist/darwin-arm64/uloop-core \
+            Packages/src/GoCli~/dist/darwin-amd64/uloop-core \
+            Packages/src/GoCli~/dist/windows-amd64/uloop-core.exe \
+            Packages/src/GoCli~/dist/darwin-arm64/uloop-dispatcher \
+            Packages/src/GoCli~/dist/darwin-amd64/uloop-dispatcher \
+            Packages/src/GoCli~/dist/windows-amd64/uloop-dispatcher.exe
 
       - name: Package native Go CLI installers
         run: scripts/package-go-cli.sh
@@ -58,8 +58,8 @@ jobs:
           test -f "Packages/src/package.json" || exit 1
           test -d "Packages/src/Editor" || exit 1
           test -d "Packages/src/GoCli~" || exit 1
-          test -f "Packages/src/GoCli~/dist/darwin-arm64/uloop" || exit 1
-          test -f "Packages/src/GoCli~/dist/windows-amd64/uloop.exe" || exit 1
+          test -f "Packages/src/GoCli~/dist/darwin-arm64/uloop-core" || exit 1
+          test -f "Packages/src/GoCli~/dist/windows-amd64/uloop-core.exe" || exit 1
 
           echo "✅ Unity Package structure is valid"
 
