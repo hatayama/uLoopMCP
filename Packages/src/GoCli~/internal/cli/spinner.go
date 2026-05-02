@@ -10,7 +10,7 @@ import (
 
 const spinnerFrameInterval = 80 * time.Millisecond
 
-var spinnerFrames = []string{"-", "\\", "|", "/"}
+var spinnerFrames = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
 
 type terminalSpinner struct {
 	writer   io.Writer
@@ -24,7 +24,7 @@ type terminalSpinner struct {
 }
 
 func newToolSpinner(stderr io.Writer, command string) *terminalSpinner {
-	return newSpinner(stderr, isTerminalWriter(stderr), fmt.Sprintf("Executing %s...", command))
+	return newSpinner(stderr, isTerminalWriter(stderr), "Connecting to Unity...")
 }
 
 func newSpinner(writer io.Writer, enabled bool, message string) *terminalSpinner {

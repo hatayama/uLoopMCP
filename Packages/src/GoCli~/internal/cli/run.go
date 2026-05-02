@@ -157,7 +157,9 @@ func RunLauncher(ctx context.Context, args []string, stdout io.Writer, stderr io
 
 func runTool(ctx context.Context, connection project.Connection, command string, params map[string]any, stdout io.Writer, stderr io.Writer) int {
 	spinner := newToolSpinner(stderr, command)
-	result, err := unity.NewClient(connection).Send(ctx, command, params)
+	result, err := unity.NewClient(connection).SendWithProgress(ctx, command, params, func(string) {
+		spinner.Update(fmt.Sprintf("Executing %s...", command))
+	})
 	spinner.Stop()
 	if err != nil {
 		fmt.Fprintln(stderr, err.Error())
@@ -169,7 +171,9 @@ func runTool(ctx context.Context, connection project.Connection, command string,
 
 func runList(ctx context.Context, connection project.Connection, stdout io.Writer, stderr io.Writer) int {
 	spinner := newToolSpinner(stderr, "list")
-	result, err := unity.NewClient(connection).Send(ctx, "get-tool-details", map[string]any{})
+	result, err := unity.NewClient(connection).SendWithProgress(ctx, "get-tool-details", map[string]any{}, func(string) {
+		spinner.Update("Fetching tool list...")
+	})
 	spinner.Stop()
 	if err != nil {
 		fmt.Fprintln(stderr, err.Error())
@@ -181,7 +185,9 @@ func runList(ctx context.Context, connection project.Connection, stdout io.Write
 
 func runSync(ctx context.Context, connection project.Connection, stdout io.Writer, stderr io.Writer) int {
 	spinner := newToolSpinner(stderr, "sync")
-	result, err := unity.NewClient(connection).Send(ctx, "get-tool-details", map[string]any{})
+	result, err := unity.NewClient(connection).SendWithProgress(ctx, "get-tool-details", map[string]any{}, func(string) {
+		spinner.Update("Syncing tools...")
+	})
 	spinner.Stop()
 	if err != nil {
 		fmt.Fprintln(stderr, err.Error())

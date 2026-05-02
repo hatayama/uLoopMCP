@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 
 using UnityEngine;
 
@@ -28,6 +29,34 @@ namespace io.github.hatayama.uLoopMCP
 
             string version = DetectProjectLocalCliVersion(projectRoot);
             return string.Equals(version, expectedVersion, System.StringComparison.Ordinal);
+        }
+
+        internal static bool IsProjectLocalCliCurrentForBundle(
+            string sourceBinaryPath,
+            string projectRoot,
+            string expectedVersion)
+        {
+            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(sourceBinaryPath), "sourceBinaryPath must not be null or empty");
+            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(projectRoot), "projectRoot must not be null or empty");
+            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(expectedVersion), "expectedVersion must not be null or empty");
+
+            if (!File.Exists(sourceBinaryPath))
+            {
+                return false;
+            }
+
+            string projectLocalCliPath = GetProjectLocalCliPath(projectRoot);
+            if (!File.Exists(projectLocalCliPath))
+            {
+                return false;
+            }
+
+            if (!IsProjectLocalCliVersionCurrent(projectRoot, expectedVersion))
+            {
+                return false;
+            }
+
+            return FilesHaveSameSha256(sourceBinaryPath, projectLocalCliPath);
         }
 
         internal static CliInstallResult InstallProjectLocalCliFromBundle(
@@ -222,6 +251,32 @@ namespace io.github.hatayama.uLoopMCP
         {
             UnityEngine.Debug.Assert(value != null, "value must not be null");
             return $"\"{value.Replace("\"", "\\\"")}\"";
+        }
+
+        private static bool FilesHaveSameSha256(string leftPath, string rightPath)
+        {
+            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(leftPath), "leftPath must not be null or empty");
+            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(rightPath), "rightPath must not be null or empty");
+
+            FileInfo leftInfo = new FileInfo(leftPath);
+            FileInfo rightInfo = new FileInfo(rightPath);
+            if (leftInfo.Length != rightInfo.Length)
+            {
+                return false;
+            }
+
+            byte[] leftHash = ComputeSha256(leftPath);
+            byte[] rightHash = ComputeSha256(rightPath);
+            return System.Linq.Enumerable.SequenceEqual(leftHash, rightHash);
+        }
+
+        private static byte[] ComputeSha256(string path)
+        {
+            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(path), "path must not be null or empty");
+
+            using SHA256 sha256 = SHA256.Create();
+            using FileStream stream = File.OpenRead(path);
+            return sha256.ComputeHash(stream);
         }
     }
 }

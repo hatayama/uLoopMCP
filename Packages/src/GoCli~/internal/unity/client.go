@@ -18,6 +18,8 @@ type Client struct {
 	requestID  int
 }
 
+type ProgressFunc func(message string)
+
 type rpcRequest struct {
 	JSONRPC string                   `json:"jsonrpc"`
 	Method  string                   `json:"method"`
@@ -44,6 +46,10 @@ func NewClient(connection project.Connection) *Client {
 }
 
 func (client *Client) Send(ctx context.Context, method string, params map[string]any) (json.RawMessage, error) {
+	return client.SendWithProgress(ctx, method, params, nil)
+}
+
+func (client *Client) SendWithProgress(ctx context.Context, method string, params map[string]any, progress ProgressFunc) (json.RawMessage, error) {
 	ctx, cancel := context.WithTimeout(ctx, requestTimeout)
 	defer cancel()
 
@@ -52,6 +58,10 @@ func (client *Client) Send(ctx context.Context, method string, params map[string
 		return nil, fmt.Errorf("connection error: %w", err)
 	}
 	defer conn.Close()
+
+	if progress != nil {
+		progress("connected")
+	}
 
 	client.requestID++
 	request := rpcRequest{
