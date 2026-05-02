@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics;
 using System.Text;
 using System.Threading.Tasks;
@@ -28,27 +29,34 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public static class NativeCliInstaller
     {
-        public static NativeCliInstallCommand GetInstallCommand(RuntimePlatform platform)
+        public static NativeCliInstallCommand GetInstallCommand(RuntimePlatform platform, string packageVersion)
         {
+            UnityEngine.Debug.Assert(!string.IsNullOrWhiteSpace(packageVersion), "packageVersion must not be null or empty");
+
+            string releaseTag = BuildReleaseTag(packageVersion);
             if (platform == RuntimePlatform.WindowsEditor)
             {
-                string command = $"irm '{CliConstants.WINDOWS_INSTALL_SCRIPT_URL}' | iex";
+                string command =
+                    $"$env:{CliConstants.INSTALL_VERSION_ENVIRONMENT_VARIABLE}='{releaseTag}'; " +
+                    $"irm '{CliConstants.WINDOWS_INSTALL_SCRIPT_URL}' | iex";
                 return new NativeCliInstallCommand(
                     "powershell",
                     $"-NoProfile -ExecutionPolicy Bypass -Command \"{command}\"",
                     command);
             }
 
-            string posixCommand = $"curl -fsSL '{CliConstants.POSIX_INSTALL_SCRIPT_URL}' | sh";
+            string posixCommand =
+                $"curl -fsSL '{CliConstants.POSIX_INSTALL_SCRIPT_URL}' | " +
+                $"{CliConstants.INSTALL_VERSION_ENVIRONMENT_VARIABLE}='{releaseTag}' sh";
             return new NativeCliInstallCommand(
                 "/bin/sh",
                 $"-c \"{posixCommand}\"",
                 posixCommand);
         }
 
-        public static async Task<CliInstallResult> InstallAsync(RuntimePlatform platform)
+        public static async Task<CliInstallResult> InstallAsync(RuntimePlatform platform, string packageVersion)
         {
-            NativeCliInstallCommand command = GetInstallCommand(platform);
+            NativeCliInstallCommand command = GetInstallCommand(platform, packageVersion);
             ProcessStartInfo startInfo = new ProcessStartInfo
             {
                 FileName = command.FileName,
@@ -93,6 +101,15 @@ namespace io.github.hatayama.uLoopMCP
 
             CliInstallationDetector.InvalidateCache();
             return new CliInstallResult(success, errorOutput);
+        }
+
+        private static string BuildReleaseTag(string packageVersion)
+        {
+            if (packageVersion.StartsWith(CliConstants.RELEASE_TAG_PREFIX, StringComparison.Ordinal))
+            {
+                return packageVersion;
+            }
+            return $"{CliConstants.RELEASE_TAG_PREFIX}{packageVersion}";
         }
     }
 }

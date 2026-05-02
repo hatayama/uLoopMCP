@@ -7,6 +7,8 @@ namespace io.github.hatayama.uLoopMCP
         public const int GLOBAL_INSTALL_TIMEOUT_MS = 30000;
         public const string POSIX_INSTALL_SCRIPT_URL = "https://raw.githubusercontent.com/hatayama/unity-cli-loop/main/scripts/install.sh";
         public const string WINDOWS_INSTALL_SCRIPT_URL = "https://raw.githubusercontent.com/hatayama/unity-cli-loop/main/scripts/install.ps1";
+        public const string INSTALL_VERSION_ENVIRONMENT_VARIABLE = "ULOOP_VERSION";
+        public const string RELEASE_TAG_PREFIX = "v";
         public const string SKILL_DIR_PREFIX = "uloop-";
         public const string SKILL_DIR_GLOB = "uloop-*";
         public const string GO_CLI_PACKAGE_DIR_NAME = "GoCli~";

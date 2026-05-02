@@ -20,6 +20,11 @@ type Client struct {
 
 type ProgressFunc func(message string)
 
+type SendOutcome struct {
+	Result            json.RawMessage
+	RequestDispatched bool
+}
+
 type rpcRequest struct {
 	JSONRPC string                   `json:"jsonrpc"`
 	Method  string                   `json:"method"`
@@ -50,12 +55,17 @@ func (client *Client) Send(ctx context.Context, method string, params map[string
 }
 
 func (client *Client) SendWithProgress(ctx context.Context, method string, params map[string]any, progress ProgressFunc) (json.RawMessage, error) {
+	outcome, err := client.SendWithProgressOutcome(ctx, method, params, progress)
+	return outcome.Result, err
+}
+
+func (client *Client) SendWithProgressOutcome(ctx context.Context, method string, params map[string]any, progress ProgressFunc) (SendOutcome, error) {
 	ctx, cancel := context.WithTimeout(ctx, requestTimeout)
 	defer cancel()
 
 	conn, err := dialEndpoint(ctx, client.connection.Endpoint)
 	if err != nil {
-		return nil, fmt.Errorf("connection error: %w", err)
+		return SendOutcome{}, fmt.Errorf("connection error: %w", err)
 	}
 	defer conn.Close()
 
@@ -74,7 +84,7 @@ func (client *Client) SendWithProgress(ctx context.Context, method string, param
 
 	payload, err := json.Marshal(request)
 	if err != nil {
-		return nil, err
+		return SendOutcome{}, err
 	}
 
 	if deadline, ok := ctx.Deadline(); ok {
@@ -82,24 +92,26 @@ func (client *Client) SendWithProgress(ctx context.Context, method string, param
 	}
 
 	if err := framing.Write(conn, payload); err != nil {
-		return nil, err
+		return SendOutcome{}, err
 	}
+	outcome := SendOutcome{RequestDispatched: true}
 
 	responsePayload, err := framing.Read(bufio.NewReader(conn))
 	if err != nil {
-		return nil, err
+		return outcome, err
 	}
 
 	var response rpcResponse
 	if err := json.Unmarshal(responsePayload, &response); err != nil {
-		return nil, err
+		return outcome, err
 	}
 	if response.Error != nil {
-		return nil, fmt.Errorf("Unity error: %s", response.Error.Message)
+		return outcome, fmt.Errorf("Unity error: %s", response.Error.Message)
 	}
 	if len(response.Result) == 0 {
-		return nil, fmt.Errorf("UNITY_NO_RESPONSE")
+		return outcome, fmt.Errorf("UNITY_NO_RESPONSE")
 	}
 
-	return response.Result, nil
+	outcome.Result = response.Result
+	return outcome, nil
 }

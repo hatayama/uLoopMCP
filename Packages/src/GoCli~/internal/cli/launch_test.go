@@ -1,8 +1,11 @@
 package cli
 
 import (
+	"bytes"
+	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -74,6 +77,27 @@ func TestResolveLaunchProjectRootAcceptsUnityProjectWithoutUloopSettings(t *test
 	}
 	if resolved != projectRoot {
 		t.Fatalf("project root mismatch: %s", resolved)
+	}
+}
+
+func TestRunLaunchQuitDoesNotLaunchWhenUnityIsNotRunning(t *testing.T) {
+	projectRoot := createLaunchTestProject(t)
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	code := runLaunch(
+		context.Background(),
+		launchOptions{quit: true, projectPath: projectRoot},
+		projectRoot,
+		&stdout,
+		&stderr,
+	)
+
+	if code != 0 {
+		t.Fatalf("exit code mismatch: %d stderr=%s", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "No Unity process is running") {
+		t.Fatalf("stdout mismatch: %s", stdout.String())
 	}
 }
 

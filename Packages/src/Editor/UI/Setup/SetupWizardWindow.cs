@@ -804,11 +804,15 @@ namespace io.github.hatayama.uLoopMCP
 
             try
             {
-                CliInstallResult result = await NativeCliInstaller.InstallAsync(Application.platform);
+                CliInstallResult result = await NativeCliInstaller.InstallAsync(
+                    Application.platform,
+                    McpConstants.PackageInfo.version);
 
                 if (!result.Success)
                 {
-                    NativeCliInstallCommand command = NativeCliInstaller.GetInstallCommand(Application.platform);
+                    NativeCliInstallCommand command = NativeCliInstaller.GetInstallCommand(
+                        Application.platform,
+                        McpConstants.PackageInfo.version);
                     EditorUtility.DisplayDialog(
                         "Installation Failed",
                         $"Failed to install uloop-cli.\n\n{result.ErrorOutput}\n\n"

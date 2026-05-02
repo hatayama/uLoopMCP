@@ -173,6 +173,11 @@ func runLaunch(ctx context.Context, options launchOptions, startPath string, std
 		}
 	}
 
+	if options.quit {
+		fmt.Fprintln(stdout, "No Unity process is running for this project.")
+		return 0
+	}
+
 	unityPath, err := resolveUnityExecutablePath(projectRoot)
 	if err != nil {
 		fmt.Fprintln(stderr, err.Error())

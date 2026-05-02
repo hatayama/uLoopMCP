@@ -8,10 +8,13 @@ namespace io.github.hatayama.uLoopMCP.Tests
         [Test]
         public void GetInstallCommand_OnMacUsesDirectInstallScriptWithoutNpm()
         {
-            NativeCliInstallCommand command = NativeCliInstaller.GetInstallCommand(RuntimePlatform.OSXEditor);
+            NativeCliInstallCommand command = NativeCliInstaller.GetInstallCommand(
+                RuntimePlatform.OSXEditor,
+                "3.0.0-beta.0");
 
             Assert.That(command.FileName, Is.EqualTo("/bin/sh"));
             Assert.That(command.Arguments, Does.Contain(CliConstants.POSIX_INSTALL_SCRIPT_URL));
+            Assert.That(command.Arguments, Does.Contain("ULOOP_VERSION='v3.0.0-beta.0'"));
             Assert.That(command.ManualCommand, Does.Contain("curl -fsSL"));
             Assert.That(command.ManualCommand, Does.Not.Contain("npm"));
         }
@@ -19,10 +22,13 @@ namespace io.github.hatayama.uLoopMCP.Tests
         [Test]
         public void GetInstallCommand_OnWindowsUsesPowerShellInstallScriptWithoutNpm()
         {
-            NativeCliInstallCommand command = NativeCliInstaller.GetInstallCommand(RuntimePlatform.WindowsEditor);
+            NativeCliInstallCommand command = NativeCliInstaller.GetInstallCommand(
+                RuntimePlatform.WindowsEditor,
+                "3.0.0-beta.0");
 
             Assert.That(command.FileName, Is.EqualTo("powershell"));
             Assert.That(command.Arguments, Does.Contain(CliConstants.WINDOWS_INSTALL_SCRIPT_URL));
+            Assert.That(command.Arguments, Does.Contain("$env:ULOOP_VERSION='v3.0.0-beta.0'"));
             Assert.That(command.ManualCommand, Does.Contain("irm"));
             Assert.That(command.ManualCommand, Does.Not.Contain("npm"));
         }

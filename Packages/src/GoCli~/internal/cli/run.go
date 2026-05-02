@@ -156,6 +156,10 @@ func RunLauncher(ctx context.Context, args []string, stdout io.Writer, stderr io
 }
 
 func runTool(ctx context.Context, connection project.Connection, command string, params map[string]any, stdout io.Writer, stderr io.Writer) int {
+	if shouldWaitForCompileDomainReload(command, params) {
+		return runCompileWithDomainReloadWait(ctx, connection, params, stdout, stderr)
+	}
+
 	spinner := newToolSpinner(stderr, command)
 	result, err := unity.NewClient(connection).SendWithProgress(ctx, command, params, func(string) {
 		spinner.Update(fmt.Sprintf("Executing %s...", command))
@@ -163,6 +167,47 @@ func runTool(ctx context.Context, connection project.Connection, command string,
 	spinner.Stop()
 	if err != nil {
 		fmt.Fprintln(stderr, err.Error())
+		return 1
+	}
+	writeJSON(stdout, result)
+	return 0
+}
+
+func runCompileWithDomainReloadWait(ctx context.Context, connection project.Connection, params map[string]any, stdout io.Writer, stderr io.Writer) int {
+	requestID, err := ensureCompileRequestID(params)
+	if err != nil {
+		fmt.Fprintln(stderr, err.Error())
+		return 1
+	}
+
+	spinner := newToolSpinner(stderr, compileCommandName)
+	outcome, err := unity.NewClient(connection).SendWithProgressOutcome(ctx, compileCommandName, params, func(string) {
+		spinner.Update("Executing compile...")
+	})
+	if err != nil && shouldWaitForCompileResult(err, outcome) {
+		spinner.Update("Connection lost during compile. Waiting for result file...")
+	}
+	if !shouldWaitForCompileResult(err, outcome) {
+		spinner.Stop()
+		fmt.Fprintln(stderr, err.Error())
+		return 1
+	}
+
+	spinner.Update("Waiting for domain reload to complete...")
+	result, completed, waitErr := waitForCompileCompletion(ctx, compileCompletionOptions{
+		projectRoot:  connection.ProjectRoot,
+		requestID:    requestID,
+		timeout:      compileWaitTimeout,
+		pollInterval: compileWaitPollInterval,
+		lockGrace:    compileLockGracePeriod,
+	})
+	spinner.Stop()
+	if waitErr != nil {
+		fmt.Fprintln(stderr, waitErr.Error())
+		return 1
+	}
+	if !completed {
+		fmt.Fprintln(stderr, "Compile wait timed out after 90000ms. Run 'uloop fix' and retry.")
 		return 1
 	}
 	writeJSON(stdout, result)
