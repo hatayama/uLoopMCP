@@ -210,7 +210,7 @@ func resolveLaunchProjectRoot(startPath string, options launchOptions) (string, 
 		}
 		return projectRoot, nil
 	}
-	return project.FindUnityProjectRoot(startPath)
+	return project.FindUnityProjectRootWithin(startPath, options.maxDepth)
 }
 
 func resolveUnityExecutablePath(projectRoot string) (string, error) {

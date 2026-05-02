@@ -173,11 +173,21 @@ func parseFlagValue(arg string, args []string, index int) (string, string, bool,
 		return parts[0], parts[1], false, nil
 	}
 
-	if index+1 >= len(args) || strings.HasPrefix(args[index+1], "-") {
+	if index+1 >= len(args) || isNextOptionToken(args[index+1]) {
 		return "", "", false, fmt.Errorf("--%s requires a value", trimmed)
 	}
 
 	return trimmed, args[index+1], true, nil
+}
+
+func isNextOptionToken(value string) bool {
+	if !strings.HasPrefix(value, "-") {
+		return false
+	}
+	if _, err := strconv.ParseFloat(value, 64); err == nil {
+		return false
+	}
+	return true
 }
 
 func findProperty(tool toolDefinition, kebabName string) (string, toolProperty, bool) {

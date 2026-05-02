@@ -12,7 +12,7 @@ import (
 const (
 	installerScriptURL          = "https://raw.githubusercontent.com/hatayama/unity-cli-loop/main/scripts/install.sh"
 	windowsInstallerScriptURL   = "https://raw.githubusercontent.com/hatayama/unity-cli-loop/main/scripts/install.ps1"
-	updateUnsupportedOSMessage  = "native update is only supported on macOS, Linux, and Windows"
+	updateUnsupportedOSMessage  = "native update is only supported on macOS and Windows"
 	updateUnsupportedArgMessage = "update does not accept options yet"
 )
 
@@ -45,7 +45,7 @@ func tryHandleUpdateRequest(ctx context.Context, args []string, stdout io.Writer
 
 func updateCommandForOS(goos string) (string, []string, error) {
 	switch goos {
-	case "darwin", "linux":
+	case "darwin":
 		return "sh", []string{"-c", fmt.Sprintf("curl -fsSL %s | sh", shellQuote(installerScriptURL))}, nil
 	case "windows":
 		return windowsPowerShellCommand, []string{

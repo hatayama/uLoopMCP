@@ -41,6 +41,16 @@ func TestUpdateCommandForWindowsUsesPowerShellInstaller(t *testing.T) {
 	}
 }
 
+func TestUpdateCommandForLinuxIsUnsupported(t *testing.T) {
+	_, _, err := updateCommandForOS("linux")
+	if err == nil {
+		t.Fatal("expected unsupported OS error")
+	}
+	if !strings.Contains(err.Error(), "macOS and Windows") {
+		t.Fatalf("unexpected linux error: %v", err)
+	}
+}
+
 func TestUpdateCommandRejectsUnsupportedOS(t *testing.T) {
 	_, _, err := updateCommandForOS("plan9")
 	if err == nil {

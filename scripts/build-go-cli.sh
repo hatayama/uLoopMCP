@@ -21,7 +21,7 @@ build_binary() {
 
   (
     cd "$GO_CLI_DIR"
-    GOOS="$os" GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o "$output_dir/$name$extension" "$package"
+    GOOS="$os" GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -buildvcs=false -ldflags="-s -w" -o "$output_dir/$name$extension" "$package"
   )
 }
 

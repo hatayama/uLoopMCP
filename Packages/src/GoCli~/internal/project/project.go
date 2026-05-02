@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 )
 
@@ -18,6 +19,17 @@ const (
 	unixSocketDir        = "/tmp/uloop"
 	windowsPipePrefix    = `\\.\pipe\uloop`
 )
+
+var excludedProjectSearchDirs = map[string]bool{
+	".git":         true,
+	"Build":        true,
+	"Builds":       true,
+	"Library":      true,
+	"Logs":         true,
+	"Temp":         true,
+	"node_modules": true,
+	"obj":          true,
+}
 
 type Endpoint struct {
 	Network string
@@ -109,6 +121,28 @@ func FindUnityProjectRoot(startPath string) (string, error) {
 		return "", err
 	}
 
+	return findUnityProjectRootInParents(currentPath)
+}
+
+func FindUnityProjectRootWithin(startPath string, maxDepth int) (string, error) {
+	currentPath, err := filepath.Abs(startPath)
+	if err != nil {
+		return "", err
+	}
+
+	if IsUnityProject(currentPath) {
+		return currentPath, nil
+	}
+
+	childProjects := findUnityProjectsInChildren(currentPath, maxDepth)
+	if len(childProjects) > 0 {
+		return childProjects[0], nil
+	}
+
+	return findUnityProjectRootInParents(currentPath)
+}
+
+func findUnityProjectRootInParents(currentPath string) (string, error) {
 	for {
 		if IsUnityProject(currentPath) {
 			return currentPath, nil
@@ -124,6 +158,37 @@ func FindUnityProjectRoot(startPath string) (string, error) {
 		}
 		currentPath = parentPath
 	}
+}
+
+func findUnityProjectsInChildren(startPath string, maxDepth int) []string {
+	projects := []string{}
+
+	var scan func(string, int)
+	scan = func(currentPath string, depth int) {
+		if maxDepth >= 0 && depth > maxDepth {
+			return
+		}
+		if IsUnityProject(currentPath) {
+			projects = append(projects, currentPath)
+			return
+		}
+
+		entries, err := os.ReadDir(currentPath)
+		if err != nil {
+			return
+		}
+
+		for _, entry := range entries {
+			if !entry.IsDir() || excludedProjectSearchDirs[entry.Name()] {
+				continue
+			}
+			scan(filepath.Join(currentPath, entry.Name()), depth+1)
+		}
+	}
+
+	scan(startPath, 0)
+	sort.Strings(projects)
+	return projects
 }
 
 func IsUnityProject(projectPath string) bool {

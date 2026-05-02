@@ -41,3 +41,33 @@ func TestBuildToolParamsConvertsSchemaTypes(t *testing.T) {
 		t.Fatalf("Names mismatch: %#v", params["Names"])
 	}
 }
+
+func TestBuildToolParamsAcceptsNegativeNumericValues(t *testing.T) {
+	tool := toolDefinition{
+		Name: "sample-tool",
+		InputSchema: inputSchema{
+			Properties: map[string]toolProperty{
+				"DeltaX": {Type: "number"},
+				"Count":  {Type: "integer"},
+			},
+		},
+	}
+
+	params, _, err := buildToolParams(
+		[]string{
+			"--delta-x", "-10.5",
+			"--count", "-2",
+		},
+		tool,
+	)
+	if err != nil {
+		t.Fatalf("buildToolParams failed: %v", err)
+	}
+
+	if params["DeltaX"] != -10.5 {
+		t.Fatalf("DeltaX mismatch: %#v", params["DeltaX"])
+	}
+	if params["Count"] != -2 {
+		t.Fatalf("Count mismatch: %#v", params["Count"])
+	}
+}
