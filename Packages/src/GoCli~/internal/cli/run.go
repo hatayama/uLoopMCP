@@ -155,6 +155,14 @@ func RunLauncher(ctx context.Context, args []string, stdout io.Writer, stderr io
 		writeClassifiedError(stderr, err, errorContext{})
 		return 1
 	}
+	if len(remainingArgs) == 0 || isHelpRequest(remainingArgs) {
+		printLauncherHelp(stdout)
+		return 0
+	}
+	if isVersionRequest(remainingArgs) {
+		writeLine(stdout, version)
+		return 0
+	}
 	if handled, code := tryHandleLaunchRequest(ctx, remainingArgs, startPath, explicitProjectPath, stdout, stderr); handled {
 		return code
 	}
