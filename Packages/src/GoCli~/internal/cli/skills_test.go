@@ -97,6 +97,26 @@ name: uloop-cached-package
 	}
 }
 
+func TestCollectSkillDefinitionsUsesDirectoryNameWhenDirectSkillOmitsName(t *testing.T) {
+	projectRoot := t.TempDir()
+	writeTestSkill(t, projectRoot, "Assets/Editor/DirectTool", `---
+---
+
+# direct project
+`)
+
+	skills, err := collectSkillDefinitions(projectRoot)
+	if err != nil {
+		t.Fatalf("collectSkillDefinitions failed: %v", err)
+	}
+
+	actualNames := skillNames(skills)
+	expectedNames := []string{"DirectTool"}
+	if !reflect.DeepEqual(actualNames, expectedNames) {
+		t.Fatalf("skill names mismatch:\nactual:   %#v\nexpected: %#v", actualNames, expectedNames)
+	}
+}
+
 func TestInstallAndUninstallSkillsForTarget(t *testing.T) {
 	projectRoot := t.TempDir()
 	sourceDir := filepath.Join(projectRoot, "source", "Skill")

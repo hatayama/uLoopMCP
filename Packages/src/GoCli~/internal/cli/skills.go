@@ -531,7 +531,7 @@ func readSkillDefinition(skillDirectory string) (skillDefinition, bool, error) {
 	}
 	name := frontmatter["name"]
 	if name == "" {
-		name = filepath.Base(filepath.Dir(skillDirectory))
+		name = fallbackSkillName(skillDirectory)
 	}
 	if !isSafeSkillName(name) {
 		return skillDefinition{}, false, nil
@@ -562,6 +562,13 @@ func readInternalSkillToolName(skillDirectory string) (string, bool) {
 		return strings.TrimPrefix(name, "uloop-"), true
 	}
 	return "", false
+}
+
+func fallbackSkillName(skillDirectory string) string {
+	if filepath.Base(skillDirectory) == "Skill" {
+		return filepath.Base(filepath.Dir(skillDirectory))
+	}
+	return filepath.Base(skillDirectory)
 }
 
 func parseSkillFrontmatter(content string) map[string]string {
