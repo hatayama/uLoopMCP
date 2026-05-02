@@ -65,7 +65,7 @@ func (client *Client) SendWithProgressOutcome(ctx context.Context, method string
 
 	conn, err := dialEndpoint(ctx, client.connection.Endpoint)
 	if err != nil {
-		return SendOutcome{}, fmt.Errorf("connection error: %w", err)
+		return SendOutcome{}, formatConnectionAttemptError(client.connection, err)
 	}
 	defer conn.Close()
 
@@ -114,4 +114,20 @@ func (client *Client) SendWithProgressOutcome(ctx context.Context, method string
 
 	outcome.Result = response.Result
 	return outcome, nil
+}
+
+func formatConnectionAttemptError(connection project.Connection, err error) error {
+	return fmt.Errorf(
+		"Unity CLI Loop server is not reachable for this project.\n\n"+
+			"The CLI could not open the project's IPC endpoint. This is a connection attempt failure before a request was sent; it does not mean an established connection was disconnected.\n\n"+
+			"Project: %s\n"+
+			"Endpoint: %s\n"+
+			"Next steps:\n"+
+			"  - If Unity is closed, run: uloop launch\n"+
+			"  - If Unity is starting, compiling, or reloading scripts, wait and retry\n"+
+			"  - If this project is open in another Unity instance, close the other instance\n\n"+
+			"Cause: %w",
+		connection.ProjectRoot,
+		connection.Endpoint.Address,
+		err)
 }
