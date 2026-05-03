@@ -782,13 +782,13 @@ namespace io.github.hatayama.UnityCliLoop
         {
             UnityEngine.Debug.Assert(!string.IsNullOrWhiteSpace(path), "path must not be null or empty");
 
-            string normalizedPath = path.Trim().Trim('"').TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            string normalizedPath = path.Trim().Trim('"');
             if (platform != RuntimePlatform.WindowsEditor)
             {
-                return normalizedPath;
+                return normalizedPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
             }
 
-            return normalizedPath.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
+            return normalizedPath.TrimEnd('\\', '/').Replace('/', '\\');
         }
 
         private static void ReplaceInstalledCliFromStaged(string stagedInstallPath, string installPath)
