@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -250,6 +251,18 @@ func TestInstallSkillsNormalizesCRLFLineEndings(t *testing.T) {
 	}
 }
 
+// Tests that PowerShell scripts keep their source encoding while line endings are normalized.
+func TestNormalizeSkillFileContentPreservesUTF16PowerShellEncoding(t *testing.T) {
+	source := utf16LittleEndianWithBOM("line1\r\nline2\r\n")
+	expected := utf16LittleEndianWithBOM("line1\nline2\n")
+
+	actual := normalizeSkillFileContent("install.ps1", source)
+
+	if !bytes.Equal(actual, expected) {
+		t.Fatalf("normalized UTF-16 content mismatch:\nactual:   % x\nexpected: % x", actual, expected)
+	}
+}
+
 // Tests that installing skills removes disabled and deprecated skill directories from all layouts.
 func TestInstallSkillsForTargetRemovesDisabledAndDeprecatedSkills(t *testing.T) {
 	projectRoot := t.TempDir()
@@ -468,6 +481,14 @@ func writeSkillFile(t *testing.T, skillDir string, content string) {
 	if err := os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte(normalizedContent), 0o644); err != nil {
 		t.Fatalf("failed to write skill file: %v", err)
 	}
+}
+
+func utf16LittleEndianWithBOM(content string) []byte {
+	bytes := []byte{0xff, 0xfe}
+	for _, char := range content {
+		bytes = append(bytes, byte(char), byte(char>>8))
+	}
+	return bytes
 }
 
 func skillNames(skills []skillDefinition) []string {
