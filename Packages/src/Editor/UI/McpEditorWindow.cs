@@ -591,9 +591,8 @@ namespace io.github.hatayama.UnityCliLoop
             bool isChecking = !CliInstallationDetector.IsCheckCompleted()
                 || _isRefreshingVersion
                 || !includeSkillDirectoryChecks;
-            bool needsUpdate = cliVersion != null
-                && CliVersionComparer.IsVersionLessThan(cliVersion, packageVersion);
-            bool needsDowngrade = false;
+            bool needsUpdate = IsCliUpdateNeeded(cliVersion, packageVersion);
+            bool needsDowngrade = IsCliDowngradeNeeded(cliVersion, packageVersion);
             bool groupSkillsUnderUnityCliLoop = !_installSkillsFlat;
             SkillInstallState selectedTargetInstallState = includeSkillDirectoryChecks
                 ? _selectedTargetInstallState
@@ -743,11 +742,31 @@ namespace io.github.hatayama.UnityCliLoop
         private bool ShouldUninstallCliFromPrimaryButton()
         {
             string cliVersion = CliInstallationDetector.GetCachedCliVersion();
+            return ShouldUninstallCliFromPrimaryButton(
+                cliVersion,
+                McpConstants.PackageInfo.version);
+        }
+
+        internal static bool ShouldUninstallCliFromPrimaryButton(
+            string cliVersion,
+            string packageVersion)
+        {
             bool isCliInstalled = cliVersion != null;
-            bool needsUpdate = cliVersion != null
-                && CliVersionComparer.IsVersionLessThan(cliVersion, McpConstants.PackageInfo.version);
-            bool needsDowngrade = false;
+            bool needsUpdate = IsCliUpdateNeeded(cliVersion, packageVersion);
+            bool needsDowngrade = IsCliDowngradeNeeded(cliVersion, packageVersion);
             return CliSetupSection.IsUninstallCliAction(isCliInstalled, needsUpdate, needsDowngrade);
+        }
+
+        internal static bool IsCliUpdateNeeded(string cliVersion, string packageVersion)
+        {
+            return cliVersion != null
+                && CliVersionComparer.IsVersionLessThan(cliVersion, packageVersion);
+        }
+
+        internal static bool IsCliDowngradeNeeded(string cliVersion, string packageVersion)
+        {
+            return cliVersion != null
+                && CliVersionComparer.IsVersionGreaterThan(cliVersion, packageVersion);
         }
 
         private async Task HandleUninstallCli()

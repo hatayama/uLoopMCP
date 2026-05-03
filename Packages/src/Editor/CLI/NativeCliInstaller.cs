@@ -797,6 +797,26 @@ namespace io.github.hatayama.UnityCliLoop
             }
 
             string localAppData = Environment.GetEnvironmentVariable(CliConstants.WINDOWS_LOCAL_APPDATA_ENVIRONMENT_VARIABLE);
+            return ShouldRemoveInstallDirectoryFromPath(
+                installDirectory,
+                platform,
+                homeDirectory,
+                localAppData);
+        }
+
+        internal static bool ShouldRemoveInstallDirectoryFromPath(
+            string installDirectory,
+            RuntimePlatform platform,
+            string homeDirectory,
+            string localAppData)
+        {
+            UnityEngine.Debug.Assert(!string.IsNullOrWhiteSpace(installDirectory), "installDirectory must not be null or empty");
+
+            if (platform != RuntimePlatform.WindowsEditor)
+            {
+                return false;
+            }
+
             return IsDefaultInstallDirectoryForCurrentUser(
                 installDirectory,
                 platform,

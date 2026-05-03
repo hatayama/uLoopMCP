@@ -933,5 +933,48 @@ namespace io.github.hatayama.UnityCliLoop.Tests
 
             Assert.That(result, Is.False);
         }
+
+        [Test]
+        public void ShouldRemoveInstallDirectoryFromPath_WhenWindowsDefaultDirectoryReturnsTrue()
+        {
+            // Verifies that Windows uninstalls can remove the package-owned default PATH directory.
+            bool result = NativeCliInstaller.ShouldRemoveInstallDirectoryFromPath(
+                System.IO.Path.Combine(
+                    "C:\\Users\\masamichi\\AppData\\Local",
+                    "Programs",
+                    "uloop",
+                    "bin"),
+                RuntimePlatform.WindowsEditor,
+                null,
+                "C:\\Users\\masamichi\\AppData\\Local");
+
+            Assert.That(result, Is.True);
+        }
+
+        [Test]
+        public void ShouldRemoveInstallDirectoryFromPath_WhenMacDefaultDirectoryReturnsFalse()
+        {
+            // Verifies that POSIX uninstalls preserve shared directories such as ~/.local/bin.
+            bool result = NativeCliInstaller.ShouldRemoveInstallDirectoryFromPath(
+                System.IO.Path.Combine("/Users/masamichi", ".local", "bin"),
+                RuntimePlatform.OSXEditor,
+                "/Users/masamichi",
+                null);
+
+            Assert.That(result, Is.False);
+        }
+
+        [Test]
+        public void ShouldRemoveInstallDirectoryFromPath_WhenWindowsSharedDirectoryReturnsFalse()
+        {
+            // Verifies that Windows uninstalls preserve user-owned shared PATH directories.
+            bool result = NativeCliInstaller.ShouldRemoveInstallDirectoryFromPath(
+                "C:\\Tools",
+                RuntimePlatform.WindowsEditor,
+                null,
+                "C:\\Users\\masamichi\\AppData\\Local");
+
+            Assert.That(result, Is.False);
+        }
     }
 }
