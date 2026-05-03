@@ -5,80 +5,80 @@ allowed-tools: Bash, Read, Grep
 
 # Link Go CLI
 
-この repository の開発中 Go CLI を global な `uloop` コマンドとして使えるようにする。
+Link this repository's in-development Go CLI as the global `uloop` command.
 
-## 目的
+## Goal
 
-`Packages/src/GoCli~` の native Go CLI をビルド・検証し、現在の checkout の `uloop-dispatcher` を PATH 上の `uloop` として参照させる。
+Build and verify the native Go CLI under `Packages/src/GoCli~`, then point the `uloop` command on PATH at this checkout's `uloop-dispatcher`.
 
-## 重要な前提
+## Important Assumptions
 
-- 対象は `Packages/src/GoCli~`。古い `Packages/src/Cli~` や `npm link` は使わない。
-- global に置く入口は `uloop-dispatcher`。`uloop-core` は project-local implementation なので直接 link しない。
-- 既存の無関係な `uloop` 実体が通常ファイルとして存在する場合は、上書きせずユーザーに確認する。
-- 検証なしで link 完了扱いにしない。
+- The target is `Packages/src/GoCli~`. Do not use the old `Packages/src/Cli~` path or `npm link`.
+- The global entrypoint is `uloop-dispatcher`. Do not link `uloop-core` directly because it is the project-local implementation.
+- If an unrelated existing `uloop` executable exists as a regular file, do not overwrite it. Ask the user first.
+- Do not treat the link as complete without verification.
 
-## 手順
+## Steps
 
-### Step 1: Repository root を確認
+### Step 1: Confirm the Repository Root
 
 ```bash
 git rev-parse --show-toplevel
 git status --short --branch
 ```
 
-`Packages/src/GoCli~/go.mod` と `scripts/check-go-cli.sh` が存在することを確認する。
+Confirm that `Packages/src/GoCli~/go.mod` and `scripts/check-go-cli.sh` exist.
 
-### Step 2: Go CLI をビルド・検証
+### Step 2: Build and Verify the Go CLI
 
 ```bash
 scripts/check-go-cli.sh
 ```
 
-この script は Go CLI の formatting / vet / lint / tests / checked-in dist validation をまとめて確認する。失敗したら link に進まず、原因を報告する。
+This script checks Go CLI formatting, vet, lint, tests, and checked-in dist validation. If it fails, do not continue to linking. Report the cause instead.
 
-### Step 3: 現在の platform 用 dispatcher を選ぶ
+### Step 3: Choose the Dispatcher for the Current Platform
 
 ```bash
 uname -s
 uname -m
 ```
 
-macOS の対応:
+macOS mapping:
 
-- `Darwin` + `arm64` または `aarch64` -> `Packages/src/GoCli~/dist/darwin-arm64/uloop-dispatcher`
-- `Darwin` + `x86_64` または `amd64` -> `Packages/src/GoCli~/dist/darwin-amd64/uloop-dispatcher`
+- `Darwin` + `arm64` or `aarch64` -> `Packages/src/GoCli~/dist/darwin-arm64/uloop-dispatcher`
+- `Darwin` + `x86_64` or `amd64` -> `Packages/src/GoCli~/dist/darwin-amd64/uloop-dispatcher`
 
-対象 dispatcher が存在し、実行可能であることを確認する。
+Confirm that the target dispatcher exists and is executable.
 
-### Step 4: global bin directory を選ぶ
+### Step 4: Choose the Global Bin Directory
 
-優先順位:
+Priority order:
 
-1. `ULOOP_GLOBAL_BIN_DIR` が設定されていればそれを使う
-2. `command -v uloop` が成功するなら、その `uloop` が置かれている directory を使う
-3. `$HOME/.npm-global/bin` が PATH に含まれる、または既存の `uloop` がそこにあるなら使う
-4. `$HOME/.local/bin` が PATH に含まれるなら使う
+1. Use `ULOOP_GLOBAL_BIN_DIR` when it is set.
+2. If `command -v uloop` succeeds, use the directory that contains that `uloop`.
+3. Use `$HOME/.npm-global/bin` when it is on PATH or already contains `uloop`.
+4. Use `$HOME/.local/bin` when it is on PATH.
 
-どれも使えない場合は、link を作らず PATH に入っている bin directory を確認するよう報告する。
+If none of these can be used, do not create a link. Report that the user should choose a bin directory that is on PATH.
 
-### Step 5: symlink を作る
+### Step 5: Create the Symlink
 
-選んだ directory に `uloop` symlink を作る。
+Create the `uloop` symlink in the selected directory.
 
-安全ルール:
+Safety rules:
 
-- 既存の `uloop` が symlink なら、現在の向き先を表示してから `ln -sfn` で更新する。
-- 既存の `uloop` が通常ファイルまたは directory なら、上書きせずユーザーに確認する。
-- `mkdir -p` してよいのは選択済みの global bin directory のみ。
+- If the existing `uloop` is a symlink, show its current target before updating it with `ln -sfn`.
+- If the existing `uloop` is a regular file or directory, do not overwrite it. Ask the user first.
+- Only use `mkdir -p` for the selected global bin directory.
 
-実行例:
+Example:
 
 ```bash
 ln -sfn "$DISPATCHER_PATH" "$GLOBAL_BIN_DIR/uloop"
 ```
 
-### Step 6: link 結果を確認
+### Step 6: Verify the Link Result
 
 ```bash
 which uloop
@@ -87,14 +87,14 @@ uloop --version
 uloop --help
 ```
 
-`readlink` の結果が現在の checkout の `Packages/src/GoCli~/dist/.../uloop-dispatcher` を指していることを確認する。
+Confirm that the `readlink` result points at this checkout's `Packages/src/GoCli~/dist/.../uloop-dispatcher`.
 
-## 完了報告
+## Completion Report
 
-次を短く報告する。
+Briefly report the following:
 
-- `which uloop` の結果
-- symlink の向き先
+- Result of `which uloop`
+- Symlink target
 - `uloop --version`
-- `scripts/check-go-cli.sh` の成否
-- git 差分の有無
+- `scripts/check-go-cli.sh` result
+- Whether there are git changes
