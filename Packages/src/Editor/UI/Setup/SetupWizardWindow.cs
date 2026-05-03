@@ -555,15 +555,16 @@ namespace io.github.hatayama.UnityCliLoop
         private void UpdateCliStep(bool cliInstalled, string cliVersion, bool cliVersionMatched)
         {
             bool needsUpdate = cliInstalled && !cliVersionMatched;
-            string buttonText = CliSetupSection.GetInstallCliButtonText(
+            string buttonText = GetCliButtonTextForSetupWizard(
                 cliInstalled,
                 _isInstallingCli,
                 false,
                 needsUpdate,
-                false,
                 cliVersion,
                 McpConstants.PackageInfo.version);
-            bool buttonEnabled = CliSetupSection.IsInstallCliButtonEnabled(
+            bool buttonEnabled = IsCliButtonEnabledForSetupWizard(
+                cliInstalled,
+                cliVersionMatched,
                 _isInstallingCli,
                 isChecking: false);
 
@@ -591,6 +592,46 @@ namespace io.github.hatayama.UnityCliLoop
             ViewDataBinder.ToggleClass(_cliStatusIcon, "setup-status-icon--pending", true);
             _installCliButton.SetEnabled(buttonEnabled);
             _installCliButton.text = buttonText;
+        }
+
+        internal static string GetCliButtonTextForSetupWizard(
+            bool cliInstalled,
+            bool isInstallingCli,
+            bool isChecking,
+            bool needsUpdate,
+            string cliVersion,
+            string packageVersion)
+        {
+            if (isChecking)
+            {
+                return "Checking...";
+            }
+
+            if (isInstallingCli)
+            {
+                return "Installing...";
+            }
+
+            if (!cliInstalled)
+            {
+                return "Install CLI";
+            }
+
+            if (needsUpdate)
+            {
+                return $"Update CLI (v{cliVersion} \u2192 v{packageVersion})";
+            }
+
+            return "Installed";
+        }
+
+        internal static bool IsCliButtonEnabledForSetupWizard(
+            bool cliInstalled,
+            bool cliVersionMatched,
+            bool isInstallingCli,
+            bool isChecking)
+        {
+            return !isInstallingCli && !isChecking && (!cliInstalled || !cliVersionMatched);
         }
 
         private static bool IsCliVersionMatched(string cliVersion)
@@ -811,12 +852,6 @@ namespace io.github.hatayama.UnityCliLoop
 
         private async void HandleInstallCli()
         {
-            if (ShouldUninstallCliFromPrimaryButton())
-            {
-                await HandleUninstallCli();
-                return;
-            }
-
             if (!LegacyNpmRemovalPrompt.ConfirmInstallCanProceed(Application.platform))
             {
                 return;
@@ -851,47 +886,6 @@ namespace io.github.hatayama.UnityCliLoop
                 _isInstallingCli = false;
                 RefreshUI(CliInstallRefreshPolicy.ShouldRefreshSkillsAfterCliInstall(
                     wasCliInstalledBeforeInstall));
-            }
-        }
-
-        private bool ShouldUninstallCliFromPrimaryButton()
-        {
-            string cliVersion = CliInstallationDetector.GetCachedCliVersion();
-            bool isCliInstalled = IsCliInstalled(cliVersion);
-            bool needsUpdate = isCliInstalled && !IsCliVersionMatched(cliVersion);
-            bool needsDowngrade = false;
-            return CliSetupSection.IsUninstallCliAction(isCliInstalled, needsUpdate, needsDowngrade);
-        }
-
-        private async Task HandleUninstallCli()
-        {
-            if (!CliUninstallPrompt.ConfirmUninstall())
-            {
-                return;
-            }
-
-            _isInstallingCli = true;
-            UpdateCliStep(
-                cliInstalled: true,
-                cliVersion: CliInstallationDetector.GetCachedCliVersion(),
-                cliVersionMatched: true);
-
-            try
-            {
-                CliInstallResult result = await NativeCliInstaller.UninstallAsync(Application.platform);
-                if (!result.Success)
-                {
-                    EditorUtility.DisplayDialog(
-                        "Uninstallation Failed",
-                        $"Failed to uninstall uLoop CLI.\n\n{result.ErrorOutput}",
-                        "OK");
-                    return;
-                }
-            }
-            finally
-            {
-                _isInstallingCli = false;
-                RefreshUI(refreshSkillsSection: true);
             }
         }
 
