@@ -27,7 +27,15 @@ function Test-RemoveLegacyEnabled {
 }
 
 function Get-NpmCommand {
-    Get-Command npm -ErrorAction SilentlyContinue | Select-Object -First 1
+    $CommandNames = @("npm.cmd", "npm.exe", "npm")
+    foreach ($CommandName in $CommandNames) {
+        $Command = Get-Command $CommandName -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($Command) {
+            return $Command.Source
+        }
+    }
+
+    return $null
 }
 
 function Test-LegacyNpmInstalled {
@@ -36,7 +44,7 @@ function Test-LegacyNpmInstalled {
         return $false
     }
 
-    & npm list -g $LegacyNpmPackage --depth=0 > $null 2> $null
+    & $NpmCommand list -g $LegacyNpmPackage --depth=0 > $null 2> $null
     return $LASTEXITCODE -eq 0
 }
 
@@ -46,8 +54,9 @@ function Remove-LegacyNpmIfEnabled {
     }
 
     if (Test-RemoveLegacyEnabled) {
+        $NpmCommand = Get-NpmCommand
         Write-Host "Removing legacy npm installation: $LegacyNpmPackage"
-        & npm uninstall -g $LegacyNpmPackage
+        & $NpmCommand uninstall -g $LegacyNpmPackage
         if ($LASTEXITCODE -ne 0) {
             throw "Failed to remove legacy npm installation: $LegacyNpmPackage"
         }
