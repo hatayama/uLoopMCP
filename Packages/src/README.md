@@ -102,6 +102,8 @@ $env:ULOOP_REMOVE_LEGACY = "1"
 irm https://raw.githubusercontent.com/hatayama/unity-cli-loop/main/scripts/install.ps1 | iex
 ```
 
+The **Install CLI** buttons in Settings and Setup Wizard use the same installer and opt into removing the legacy npm package automatically.
+
 Select Window > Unity CLI Loop > Settings. A dedicated window will open — confirm that the **CLI** button is highlighted in blue.
 
 <img width="277" height="306" alt="1" src="https://github.com/user-attachments/assets/0e25c327-73bf-4af6-997b-eebb3c26b372" />

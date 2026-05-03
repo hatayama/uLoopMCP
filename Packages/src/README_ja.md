@@ -103,6 +103,8 @@ $env:ULOOP_REMOVE_LEGACY = "1"
 irm https://raw.githubusercontent.com/hatayama/unity-cli-loop/main/scripts/install.ps1 | iex
 ```
 
+Settings と Setup Wizard の **Install CLI** ボタンは同じ installer を使い、旧 npm package の削除も自動で有効化します。
+
 Window > Unity CLI Loop > Settingsを選択します。専用ウィンドウが開くので **CLI** ボタンが青くなっている事を確認します。
 
 <img width="277" height="306" alt="1" src="https://github.com/user-attachments/assets/0e25c327-73bf-4af6-997b-eebb3c26b372" />

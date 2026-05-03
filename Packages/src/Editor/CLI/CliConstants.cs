@@ -9,6 +9,8 @@ namespace io.github.hatayama.UnityCliLoop
         public const string POSIX_INSTALL_SCRIPT_NAME = "install.sh";
         public const string WINDOWS_INSTALL_SCRIPT_NAME = "install.ps1";
         public const string INSTALL_VERSION_ENVIRONMENT_VARIABLE = "ULOOP_VERSION";
+        public const string REMOVE_LEGACY_ENVIRONMENT_VARIABLE = "ULOOP_REMOVE_LEGACY";
+        public const string REMOVE_LEGACY_ENABLED_VALUE = "1";
         public const string RELEASE_TAG_PREFIX = "v";
         public const string SKILL_DIR_PREFIX = "uloop-";
         public const string SKILL_DIR_GLOB = "uloop-*";

@@ -29,7 +29,10 @@ namespace io.github.hatayama.UnityCliLoop
     /// </summary>
     public static class NativeCliInstaller
     {
-        public static NativeCliInstallCommand GetInstallCommand(RuntimePlatform platform, string packageVersion)
+        public static NativeCliInstallCommand GetInstallCommand(
+            RuntimePlatform platform,
+            string packageVersion,
+            bool removeLegacyNpm)
         {
             UnityEngine.Debug.Assert(!string.IsNullOrWhiteSpace(packageVersion), "packageVersion must not be null or empty");
 
@@ -39,6 +42,7 @@ namespace io.github.hatayama.UnityCliLoop
                 string scriptUrl = BuildReleaseAssetUrl(releaseTag, CliConstants.WINDOWS_INSTALL_SCRIPT_NAME);
                 string command =
                     $"$env:{CliConstants.INSTALL_VERSION_ENVIRONMENT_VARIABLE}='{releaseTag}'; " +
+                    BuildWindowsRemoveLegacyAssignment(removeLegacyNpm) +
                     $"irm '{scriptUrl}' | iex";
                 return new NativeCliInstallCommand(
                     "powershell",
@@ -49,6 +53,7 @@ namespace io.github.hatayama.UnityCliLoop
             string posixScriptUrl = BuildReleaseAssetUrl(releaseTag, CliConstants.POSIX_INSTALL_SCRIPT_NAME);
             string posixCommand =
                 $"curl -fsSL '{posixScriptUrl}' | " +
+                BuildPosixRemoveLegacyAssignment(removeLegacyNpm) +
                 $"{CliConstants.INSTALL_VERSION_ENVIRONMENT_VARIABLE}='{releaseTag}' sh";
             return new NativeCliInstallCommand(
                 "/bin/sh",
@@ -56,9 +61,12 @@ namespace io.github.hatayama.UnityCliLoop
                 posixCommand);
         }
 
-        public static async Task<CliInstallResult> InstallAsync(RuntimePlatform platform, string packageVersion)
+        public static async Task<CliInstallResult> InstallAsync(
+            RuntimePlatform platform,
+            string packageVersion,
+            bool removeLegacyNpm)
         {
-            NativeCliInstallCommand command = GetInstallCommand(platform, packageVersion);
+            NativeCliInstallCommand command = GetInstallCommand(platform, packageVersion, removeLegacyNpm);
             ProcessStartInfo startInfo = new ProcessStartInfo
             {
                 FileName = command.FileName,
@@ -104,6 +112,26 @@ namespace io.github.hatayama.UnityCliLoop
 
             CliInstallationDetector.InvalidateCache();
             return new CliInstallResult(success, errorOutput);
+        }
+
+        private static string BuildWindowsRemoveLegacyAssignment(bool removeLegacyNpm)
+        {
+            if (!removeLegacyNpm)
+            {
+                return "";
+            }
+
+            return $"$env:{CliConstants.REMOVE_LEGACY_ENVIRONMENT_VARIABLE}='{CliConstants.REMOVE_LEGACY_ENABLED_VALUE}'; ";
+        }
+
+        private static string BuildPosixRemoveLegacyAssignment(bool removeLegacyNpm)
+        {
+            if (!removeLegacyNpm)
+            {
+                return "";
+            }
+
+            return $"{CliConstants.REMOVE_LEGACY_ENVIRONMENT_VARIABLE}='{CliConstants.REMOVE_LEGACY_ENABLED_VALUE}' ";
         }
 
         private static string BuildReleaseTag(string packageVersion)
