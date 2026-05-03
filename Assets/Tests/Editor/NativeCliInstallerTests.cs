@@ -208,6 +208,62 @@ namespace io.github.hatayama.UnityCliLoop.Tests
         }
 
         [Test]
+        public void PersistInstallDirectoryToUserPath_OnWindowsUpdatesUserPath()
+        {
+            // Verifies that Windows editor installs survive Unity restarts by updating User PATH.
+            string capturedName = null;
+            string capturedValue = null;
+            System.EnvironmentVariableTarget capturedTarget = default;
+
+            CliInstallResult result = NativeCliInstaller.PersistInstallDirectoryToUserPath(
+                "C:\\Users\\masamichi\\Programs\\uloop\\bin",
+                RuntimePlatform.WindowsEditor,
+                (name, target) => "C:\\npm",
+                (name, value, target) =>
+                {
+                    capturedName = name;
+                    capturedValue = value;
+                    capturedTarget = target;
+                });
+
+            Assert.That(result.Success, Is.True);
+            Assert.That(capturedName, Is.EqualTo("Path"));
+            Assert.That(capturedValue, Is.EqualTo("C:\\Users\\masamichi\\Programs\\uloop\\bin;C:\\npm"));
+            Assert.That(capturedTarget, Is.EqualTo(System.EnvironmentVariableTarget.User));
+        }
+
+        [Test]
+        public void PersistInstallDirectoryToUserPath_OnMacDoesNothing()
+        {
+            // Verifies that POSIX editor installs do not attempt unsupported .NET User PATH writes.
+            bool wroteUserPath = false;
+
+            CliInstallResult result = NativeCliInstaller.PersistInstallDirectoryToUserPath(
+                "/Users/masamichi/.local/bin",
+                RuntimePlatform.OSXEditor,
+                (name, target) => "/usr/local/bin",
+                (name, value, target) => { wroteUserPath = true; });
+
+            Assert.That(result.Success, Is.True);
+            Assert.That(wroteUserPath, Is.False);
+        }
+
+        [Test]
+        public void PersistInstallDirectoryToUserPath_OnWindowsSurfacesPermissionFailure()
+        {
+            // Verifies that permission failures are reported instead of crashing the editor installer.
+            CliInstallResult result = NativeCliInstaller.PersistInstallDirectoryToUserPath(
+                "C:\\Users\\masamichi\\Programs\\uloop\\bin",
+                RuntimePlatform.WindowsEditor,
+                (name, target) => "C:\\npm",
+                (name, value, target) => throw new System.UnauthorizedAccessException("denied"));
+
+            Assert.That(result.Success, Is.False);
+            Assert.That(result.ErrorOutput, Does.Contain("failed to persist the uLoop CLI install directory"));
+            Assert.That(result.ErrorOutput, Does.Contain("denied"));
+        }
+
+        [Test]
         public void GetDefaultInstallDirectoryFromRoots_OnMacMatchesInstallerDefault()
         {
             // Verifies that Unity mirrors the POSIX installer default install directory.
