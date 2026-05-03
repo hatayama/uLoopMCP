@@ -136,7 +136,9 @@ try {
     Copy-Item -Path (Join-Path $TempDir "uloop.exe") -Destination $StagedUloopPath -Force
     & $StagedUloopPath --version > $null
     Remove-LegacyNpmIfEnabled
-    Move-Item -Path $StagedUloopPath -Destination (Join-Path $InstallDir "uloop.exe") -Force
+    $FinalUloopPath = Join-Path $InstallDir "uloop.exe"
+    Copy-Item -Path $StagedUloopPath -Destination $FinalUloopPath -Force
+    Remove-Item -Path $StagedUloopPath -Force
     $StagedUloopPath = $null
 
     $UserPath = [Environment]::GetEnvironmentVariable("Path", "User")
@@ -152,7 +154,7 @@ try {
         Write-Host "Added $InstallDir to User PATH. Open a new terminal to use it everywhere."
     }
 
-    & (Join-Path $InstallDir "uloop.exe") --version
+    & $FinalUloopPath --version
     Confirm-ActiveUloopAfterLegacyCleanup
     Write-LegacyNpmWarningIfPresent
     Report-PathShadowing
