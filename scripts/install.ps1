@@ -312,8 +312,10 @@ try {
     }
 
     Assert-UloopVersionSucceeds -UloopPath $FinalUloopPath
-    Remove-LegacyUloopShims -NativeUloopPath $FinalUloopPath
-    Remove-LegacyNpmBinPathIfUnused
+    if (Test-RemoveLegacyEnabled) {
+        Remove-LegacyUloopShims -NativeUloopPath $FinalUloopPath
+        Remove-LegacyNpmBinPathIfUnused
+    }
     Confirm-ActiveUloopAfterLegacyCleanup
     Write-LegacyNpmWarningIfPresent
     Report-PathShadowing
