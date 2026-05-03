@@ -88,7 +88,8 @@ fi
 checksum_url="$download_url.sha256"
 
 tmp_dir=$(mktemp -d)
-trap 'rm -rf "$tmp_dir"' EXIT
+staged_uloop_path=""
+trap 'rm -rf "$tmp_dir"; if [ -n "$staged_uloop_path" ]; then rm -f "$staged_uloop_path"; fi' EXIT
 
 verify_checksum() {
   if command -v sha256sum >/dev/null 2>&1; then
@@ -118,8 +119,12 @@ curl -fsSL "$download_url" -o "$tmp_dir/$asset_name"
 curl -fsSL "$checksum_url" -o "$tmp_dir/$asset_name.sha256"
 verify_checksum
 tar -xzf "$tmp_dir/$asset_name" -C "$tmp_dir"
+staged_uloop_path="$INSTALL_DIR/.uloop-install-$$"
+install -m 0755 "$tmp_dir/uloop" "$staged_uloop_path"
+"$staged_uloop_path" --version >/dev/null
 remove_legacy_npm_if_enabled
-install -m 0755 "$tmp_dir/uloop" "$INSTALL_DIR/uloop"
+mv -f "$staged_uloop_path" "$INSTALL_DIR/uloop"
+staged_uloop_path=""
 
 case ":$PATH:" in
   *":$INSTALL_DIR:"*) ;;

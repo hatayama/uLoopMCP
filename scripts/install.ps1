@@ -84,6 +84,7 @@ function Report-PathShadowing {
 }
 
 $TempDir = Join-Path ([System.IO.Path]::GetTempPath()) ("uloop-install-" + [System.Guid]::NewGuid().ToString("N"))
+$StagedUloopPath = $null
 New-Item -ItemType Directory -Path $TempDir | Out-Null
 
 try {
@@ -99,9 +100,13 @@ try {
 
     Expand-Archive -Path $ArchivePath -DestinationPath $TempDir -Force
 
-    Remove-LegacyNpmIfEnabled
     New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
-    Copy-Item -Path (Join-Path $TempDir "uloop.exe") -Destination (Join-Path $InstallDir "uloop.exe") -Force
+    $StagedUloopPath = Join-Path $InstallDir ("uloop-install-" + [System.Guid]::NewGuid().ToString("N") + ".exe")
+    Copy-Item -Path (Join-Path $TempDir "uloop.exe") -Destination $StagedUloopPath -Force
+    & $StagedUloopPath --version > $null
+    Remove-LegacyNpmIfEnabled
+    Move-Item -Path $StagedUloopPath -Destination (Join-Path $InstallDir "uloop.exe") -Force
+    $StagedUloopPath = $null
 
     $UserPath = [Environment]::GetEnvironmentVariable("Path", "User")
     $PathEntries = @()
@@ -121,5 +126,8 @@ try {
     Report-PathShadowing
 }
 finally {
+    if ($StagedUloopPath -and (Test-Path $StagedUloopPath)) {
+        Remove-Item -Path $StagedUloopPath -Force -ErrorAction SilentlyContinue
+    }
     Remove-Item -Path $TempDir -Recurse -Force -ErrorAction SilentlyContinue
 }
