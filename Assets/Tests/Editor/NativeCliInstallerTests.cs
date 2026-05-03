@@ -247,6 +247,40 @@ namespace io.github.hatayama.UnityCliLoop.Tests
         }
 
         [Test]
+        public void InstallGlobalCliFromBundle_WhenInstallDirectoryContainsNullCharacterReturnsFailure()
+        {
+            // Verifies that invalid user-provided install paths stay inside the installer result contract.
+            string tempRoot = Path.Combine(
+                Path.GetTempPath(),
+                "uloop-native-installer-tests",
+                System.Guid.NewGuid().ToString("N"));
+            string sourceDir = Path.Combine(tempRoot, "source");
+            string sourcePath = Path.Combine(sourceDir, "uloop-dispatcher.exe");
+            string installDir = tempRoot + Path.DirectorySeparatorChar + "bad\0path";
+
+            Directory.CreateDirectory(sourceDir);
+            File.WriteAllText(sourcePath, "fake-binary");
+
+            try
+            {
+                CliInstallResult result = NativeCliInstaller.InstallGlobalCliFromBundle(
+                    sourcePath,
+                    installDir,
+                    RuntimePlatform.WindowsEditor);
+
+                Assert.That(result.Success, Is.False);
+                Assert.That(result.ErrorOutput, Does.Contain("Failed to install bundled CLI dispatcher"));
+            }
+            finally
+            {
+                if (Directory.Exists(tempRoot))
+                {
+                    Directory.Delete(tempRoot, true);
+                }
+            }
+        }
+
+        [Test]
         public void BuildPathWithInstallDirectory_OnWindowsPrependsMissingNativeInstallDir()
         {
             // Verifies that Unity's current Windows PATH prefers the freshly installed native CLI.

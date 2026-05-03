@@ -124,10 +124,10 @@ namespace io.github.hatayama.UnityCliLoop
                     $"Global CLI dispatcher binary was not found for {platform}/{RuntimeInformation.ProcessArchitecture}: {sourceBinaryPath}");
             }
 
-            string installPath = GetGlobalCliInstallPath(installDirectory, platform);
-            string stagedInstallPath = GetStagedGlobalCliInstallPath(installDirectory, platform);
             try
             {
+                string installPath = GetGlobalCliInstallPath(installDirectory, platform);
+                string stagedInstallPath = GetStagedGlobalCliInstallPath(installDirectory, platform);
                 Directory.CreateDirectory(installDirectory);
                 File.Copy(sourceBinaryPath, stagedInstallPath, overwrite: true);
 
@@ -146,6 +146,14 @@ namespace io.github.hatayama.UnityCliLoop
                 return BuildBundledCliInstallFailure(ex);
             }
             catch (UnauthorizedAccessException ex)
+            {
+                return BuildBundledCliInstallFailure(ex);
+            }
+            catch (ArgumentException ex)
+            {
+                return BuildBundledCliInstallFailure(ex);
+            }
+            catch (NotSupportedException ex)
             {
                 return BuildBundledCliInstallFailure(ex);
             }
