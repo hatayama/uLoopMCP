@@ -77,13 +77,13 @@ namespace io.github.hatayama.UnityCliLoop
                 RedirectStandardError = true,
                 CreateNoWindow = true
             };
-            ApplyInstallerSearchPath(startInfo, platform);
 
             bool success = false;
             string errorOutput = "";
 
             await Task.Run(() =>
             {
+                ApplyInstallerSearchPath(startInfo, platform);
                 Process process = ProcessStartHelper.TryStart(startInfo);
                 if (process == null)
                 {
