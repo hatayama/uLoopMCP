@@ -18,7 +18,7 @@ is_legacy_npm_installed() {
   command -v npm >/dev/null 2>&1 && npm list -g "$LEGACY_NPM_PACKAGE" --depth=0 >/dev/null 2>&1
 }
 
-remove_or_report_legacy_npm() {
+remove_legacy_npm_if_enabled() {
   if ! is_legacy_npm_installed; then
     return
   fi
@@ -26,6 +26,11 @@ remove_or_report_legacy_npm() {
   if is_remove_legacy_enabled; then
     echo "Removing legacy npm installation: $LEGACY_NPM_PACKAGE"
     npm uninstall -g "$LEGACY_NPM_PACKAGE"
+  fi
+}
+
+report_legacy_npm_if_present() {
+  if is_remove_legacy_enabled || ! is_legacy_npm_installed; then
     return
   fi
 
@@ -113,6 +118,7 @@ curl -fsSL "$download_url" -o "$tmp_dir/$asset_name"
 curl -fsSL "$checksum_url" -o "$tmp_dir/$asset_name.sha256"
 verify_checksum
 tar -xzf "$tmp_dir/$asset_name" -C "$tmp_dir"
+remove_legacy_npm_if_enabled
 install -m 0755 "$tmp_dir/uloop" "$INSTALL_DIR/uloop"
 
 case ":$PATH:" in
@@ -125,5 +131,5 @@ case ":$PATH:" in
 esac
 
 "$INSTALL_DIR/uloop" --version
-remove_or_report_legacy_npm
+report_legacy_npm_if_present
 report_path_shadowing

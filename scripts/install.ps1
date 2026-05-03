@@ -40,7 +40,7 @@ function Test-LegacyNpmInstalled {
     return $LASTEXITCODE -eq 0
 }
 
-function Remove-OrReportLegacyNpm {
+function Remove-LegacyNpmIfEnabled {
     if (-not (Test-LegacyNpmInstalled)) {
         return
     }
@@ -51,6 +51,11 @@ function Remove-OrReportLegacyNpm {
         if ($LASTEXITCODE -ne 0) {
             throw "Failed to remove legacy npm installation: $LegacyNpmPackage"
         }
+    }
+}
+
+function Write-LegacyNpmWarningIfPresent {
+    if ((Test-RemoveLegacyEnabled) -or (-not (Test-LegacyNpmInstalled))) {
         return
     }
 
@@ -94,6 +99,7 @@ try {
 
     Expand-Archive -Path $ArchivePath -DestinationPath $TempDir -Force
 
+    Remove-LegacyNpmIfEnabled
     New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
     Copy-Item -Path (Join-Path $TempDir "uloop.exe") -Destination (Join-Path $InstallDir "uloop.exe") -Force
 
@@ -111,7 +117,7 @@ try {
     }
 
     & (Join-Path $InstallDir "uloop.exe") --version
-    Remove-OrReportLegacyNpm
+    Write-LegacyNpmWarningIfPresent
     Report-PathShadowing
 }
 finally {
