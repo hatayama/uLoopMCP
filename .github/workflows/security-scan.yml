@@ -8,6 +8,7 @@ on:
       - 'Assets/**/*.cs'
       - 'Packages/src/GoCli~/**/*.go'
       - 'Packages/src/GoCli~/.golangci.yml'
+      - 'Packages/src/GoCli~/.go-version'
       - 'Packages/src/GoCli~/go.mod'
       - 'Packages/src/GoCli~/go.sum'
   pull_request:
@@ -17,6 +18,7 @@ on:
       - 'Assets/**/*.cs'
       - 'Packages/src/GoCli~/**/*.go'
       - 'Packages/src/GoCli~/.golangci.yml'
+      - 'Packages/src/GoCli~/.go-version'
       - 'Packages/src/GoCli~/go.mod'
       - 'Packages/src/GoCli~/go.sum'
   workflow_dispatch:
