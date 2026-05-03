@@ -1,3 +1,5 @@
+using System.IO;
+using System.Runtime.InteropServices;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -6,9 +8,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests
     public class NativeCliInstallerTests
     {
         [Test]
-        public void GetInstallCommand_OnMacUsesDirectInstallScriptWithoutNpm()
+        public void GetInstallCommand_OnMacKeepsCliOnlyCurlInstallerAvailable()
         {
-            // Verifies that macOS installs through the native release script, not npm.
+            // Verifies that CLI-only macOS users still have the direct release script, not npm.
             NativeCliInstallCommand command = NativeCliInstaller.GetInstallCommand(
                 RuntimePlatform.OSXEditor,
                 "3.0.0-beta.0",
@@ -23,9 +25,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests
         }
 
         [Test]
-        public void GetInstallCommand_OnWindowsUsesPowerShellInstallScriptWithoutNpm()
+        public void GetInstallCommand_OnWindowsKeepsCliOnlyPowerShellInstallerAvailable()
         {
-            // Verifies that Windows installs through the native release script, not npm.
+            // Verifies that CLI-only Windows users still have the direct release script, not npm.
             NativeCliInstallCommand command = NativeCliInstaller.GetInstallCommand(
                 RuntimePlatform.WindowsEditor,
                 "3.0.0-beta.0",
@@ -40,9 +42,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests
         }
 
         [Test]
-        public void GetInstallCommand_OnMacCanOptIntoLegacyNpmRemoval()
+        public void GetInstallCommand_OnMacCliOnlyInstallerCanOptIntoLegacyNpmRemoval()
         {
-            // Verifies that UI-triggered macOS installs can opt into removing the legacy npm launcher.
+            // Verifies that CLI-only macOS installs can opt into removing the legacy npm launcher.
             NativeCliInstallCommand command = NativeCliInstaller.GetInstallCommand(
                 RuntimePlatform.OSXEditor,
                 "3.0.0-beta.0",
@@ -53,9 +55,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests
         }
 
         [Test]
-        public void GetInstallCommand_OnWindowsCanOptIntoLegacyNpmRemoval()
+        public void GetInstallCommand_OnWindowsCliOnlyInstallerCanOptIntoLegacyNpmRemoval()
         {
-            // Verifies that UI-triggered Windows installs can opt into removing the legacy npm launcher.
+            // Verifies that CLI-only Windows installs can opt into removing the legacy npm launcher.
             NativeCliInstallCommand command = NativeCliInstaller.GetInstallCommand(
                 RuntimePlatform.WindowsEditor,
                 "3.0.0-beta.0",
@@ -63,6 +65,110 @@ namespace io.github.hatayama.UnityCliLoop.Tests
 
             Assert.That(command.Arguments, Does.Contain("$env:ULOOP_REMOVE_LEGACY='1'"));
             Assert.That(command.ManualCommand, Does.Contain("$env:ULOOP_REMOVE_LEGACY='1'"));
+        }
+
+        [Test]
+        public void GetGlobalCliBundlePath_OnMacArm64UsesPackagedDispatcher()
+        {
+            // Verifies that the editor installer reads the bundled macOS dispatcher from the package.
+            string result = NativeCliInstaller.GetGlobalCliBundlePath(
+                "/package",
+                RuntimePlatform.OSXEditor,
+                Architecture.Arm64);
+
+            Assert.That(result, Is.EqualTo(Path.Combine(
+                "/package",
+                "GoCli~",
+                "dist",
+                "darwin-arm64",
+                "uloop-dispatcher")));
+        }
+
+        [Test]
+        public void GetGlobalCliBundlePath_OnWindowsUsesPackagedDispatcher()
+        {
+            // Verifies that the editor installer reads the bundled Windows dispatcher from the package.
+            string result = NativeCliInstaller.GetGlobalCliBundlePath(
+                "C:\\package",
+                RuntimePlatform.WindowsEditor,
+                Architecture.X64);
+
+            Assert.That(result, Is.EqualTo(Path.Combine(
+                "C:\\package",
+                "GoCli~",
+                "dist",
+                "windows-amd64",
+                "uloop-dispatcher.exe")));
+        }
+
+        [Test]
+        public void InstallGlobalCliFromBundle_OnWindowsCopiesDispatcherAsUloopExe()
+        {
+            // Verifies that editor install copies the bundled dispatcher as the user-facing uloop command.
+            string tempRoot = Path.Combine(
+                Path.GetTempPath(),
+                "uloop-native-installer-tests",
+                System.Guid.NewGuid().ToString("N"));
+            string sourceDir = Path.Combine(tempRoot, "source");
+            string sourcePath = Path.Combine(sourceDir, "uloop-dispatcher.exe");
+            string installDir = Path.Combine(tempRoot, "install");
+
+            Directory.CreateDirectory(sourceDir);
+            File.WriteAllText(sourcePath, "fake-binary");
+
+            try
+            {
+                CliInstallResult result = NativeCliInstaller.InstallGlobalCliFromBundle(
+                    sourcePath,
+                    installDir,
+                    RuntimePlatform.WindowsEditor);
+
+                string installedPath = NativeCliInstaller.GetGlobalCliInstallPath(
+                    installDir,
+                    RuntimePlatform.WindowsEditor);
+                Assert.That(result.Success, Is.True);
+                Assert.That(result.ErrorOutput, Is.Empty);
+                Assert.That(Path.GetFileName(installedPath), Is.EqualTo("uloop.exe"));
+                Assert.That(File.ReadAllText(installedPath), Is.EqualTo("fake-binary"));
+            }
+            finally
+            {
+                if (Directory.Exists(tempRoot))
+                {
+                    Directory.Delete(tempRoot, true);
+                }
+            }
+        }
+
+        [Test]
+        public void InstallGlobalCliFromBundle_WhenBundleIsMissingReturnsFailure()
+        {
+            // Verifies that editor install reports a missing packaged dispatcher without creating the install dir.
+            string tempRoot = Path.Combine(
+                Path.GetTempPath(),
+                "uloop-native-installer-tests",
+                System.Guid.NewGuid().ToString("N"));
+            string sourcePath = Path.Combine(tempRoot, "missing", "uloop-dispatcher.exe");
+            string installDir = Path.Combine(tempRoot, "install");
+
+            try
+            {
+                CliInstallResult result = NativeCliInstaller.InstallGlobalCliFromBundle(
+                    sourcePath,
+                    installDir,
+                    RuntimePlatform.WindowsEditor);
+
+                Assert.That(result.Success, Is.False);
+                Assert.That(result.ErrorOutput, Does.Contain("Global CLI dispatcher binary was not found"));
+                Assert.That(Directory.Exists(installDir), Is.False);
+            }
+            finally
+            {
+                if (Directory.Exists(tempRoot))
+                {
+                    Directory.Delete(tempRoot, true);
+                }
+            }
         }
 
         [Test]
