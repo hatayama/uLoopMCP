@@ -1,4 +1,0 @@
-interface:
-  display_name: "Link Go CLI"
-  short_description: "Link this checkout native Go uloop dispatcher globally."
-  default_prompt: "Link this repository native Go CLI as the global uloop command."
