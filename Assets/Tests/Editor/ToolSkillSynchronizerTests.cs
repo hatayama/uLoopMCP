@@ -1234,6 +1234,27 @@ namespace io.github.hatayama.UnityCliLoop
             Assert.That(actualBytes, Is.EqualTo(expectedBytes));
         }
 
+        // Tests that rollback backups preserve the previous generated skill bytes.
+        [Test]
+        public void ReadSkillFilesForRollback_WhenGeneratedSkillUsesCrlfLineEndings_PreservesRawBytes()
+        {
+            string temporaryRoot = CreateTemporaryProjectRoot();
+            string installedSkillDir = Path.Combine(
+                temporaryRoot,
+                ".claude",
+                SkillInstallLayout.SkillsDirName,
+                SkillInstallLayout.ManagedSkillsDirName,
+                "uloop-public-skill");
+            WriteSkillFile(installedSkillDir, "---\r\nname: uloop-public-skill\r\n---\r\n");
+            string installedReferencePath = Path.Combine(installedSkillDir, "reference.md");
+            File.WriteAllText(installedReferencePath, "line1\r\nline2\r\n");
+            byte[] backupBytes = File.ReadAllBytes(installedReferencePath);
+
+            Dictionary<string, byte[]> backupFiles = ToolSkillSynchronizer.ReadSkillFilesForRollback(installedSkillDir);
+
+            Assert.That(backupFiles["reference.md"], Is.EqualTo(backupBytes));
+        }
+
         [Test]
         public void DetectTargets_WhenDeprecatedManagedSkillDirectoryExists_DoesNotReportOutdated()
         {
