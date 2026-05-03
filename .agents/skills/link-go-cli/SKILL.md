@@ -45,10 +45,13 @@ uname -s
 uname -m
 ```
 
-For macOS:
+Use these checked-in dispatchers:
 
 - `Darwin` + `arm64` or `aarch64`: `Packages/src/GoCli~/dist/darwin-arm64/uloop-dispatcher`
 - `Darwin` + `x86_64` or `amd64`: `Packages/src/GoCli~/dist/darwin-amd64/uloop-dispatcher`
+- `MINGW*`, `MSYS*`, `CYGWIN*`, or `Windows_NT` + `x86_64` or `amd64`: `Packages/src/GoCli~/dist/windows-amd64/uloop-dispatcher.exe`
+
+If the current platform does not match one of these combinations, stop without linking and report that this repository does not include a checked-in dispatcher for the current platform.
 
 Confirm the dispatcher exists and is executable before linking.
 
