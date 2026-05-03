@@ -303,7 +303,7 @@ func normalizeWindowsPosixHomeDirectory(home string) string {
 	if len(home) >= 3 && home[0] == '/' && isASCIIAlpha(home[1]) && home[2] == '/' {
 		return windowsDrivePath(home[1], home[3:])
 	}
-	if len(home) >= 8 && strings.HasPrefix(home, "/mnt/") && isASCIIAlpha(home[5]) && home[6] == '/' {
+	if len(home) >= 7 && strings.HasPrefix(home, "/mnt/") && isASCIIAlpha(home[5]) && home[6] == '/' {
 		return windowsDrivePath(home[5], home[7:])
 	}
 	return home

@@ -291,3 +291,24 @@ func TestGetHomeDirectoryForShellOnWindowsZshNormalizesWslHome(t *testing.T) {
 		t.Fatalf("windows zsh home mismatch: %s", home)
 	}
 }
+
+func TestGetHomeDirectoryForShellOnWindowsBashNormalizesWslDriveRoot(t *testing.T) {
+	// Tests that a WSL drive-root HOME is converted before Win32 file APIs receive it.
+	home, err := getHomeDirectoryForShell(
+		"bash",
+		"windows",
+		func() (string, error) {
+			return "/mnt/c/", nil
+		},
+		func() (string, error) {
+			return `C:\Users\ignored`, nil
+		},
+	)
+	if err != nil {
+		t.Fatalf("getHomeDirectoryForShell failed: %v", err)
+	}
+
+	if home != `C:\` {
+		t.Fatalf("windows bash drive-root home mismatch: %s", home)
+	}
+}
