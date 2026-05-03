@@ -141,6 +141,46 @@ namespace io.github.hatayama.UnityCliLoop.Tests
         }
 
         [Test]
+        public void InstallGlobalCliFromBundle_WhenInstallPathExistsReplacesPreviousCommand()
+        {
+            // Verifies that editor install swaps the staged dispatcher into the final command path.
+            string tempRoot = Path.Combine(
+                Path.GetTempPath(),
+                "uloop-native-installer-tests",
+                System.Guid.NewGuid().ToString("N"));
+            string sourceDir = Path.Combine(tempRoot, "source");
+            string sourcePath = Path.Combine(sourceDir, "uloop-dispatcher.exe");
+            string installDir = Path.Combine(tempRoot, "install");
+            string installPath = NativeCliInstaller.GetGlobalCliInstallPath(
+                installDir,
+                RuntimePlatform.WindowsEditor);
+
+            Directory.CreateDirectory(sourceDir);
+            Directory.CreateDirectory(installDir);
+            File.WriteAllText(sourcePath, "new-binary");
+            File.WriteAllText(installPath, "old-binary");
+
+            try
+            {
+                CliInstallResult result = NativeCliInstaller.InstallGlobalCliFromBundle(
+                    sourcePath,
+                    installDir,
+                    RuntimePlatform.WindowsEditor);
+
+                Assert.That(result.Success, Is.True);
+                Assert.That(File.ReadAllText(installPath), Is.EqualTo("new-binary"));
+                Assert.That(Directory.GetFiles(installDir, ".uloop.exe.install-*"), Is.Empty);
+            }
+            finally
+            {
+                if (Directory.Exists(tempRoot))
+                {
+                    Directory.Delete(tempRoot, true);
+                }
+            }
+        }
+
+        [Test]
         public void InstallGlobalCliFromBundle_WhenBundleIsMissingReturnsFailure()
         {
             // Verifies that editor install reports a missing packaged dispatcher without creating the install dir.
@@ -260,6 +300,69 @@ namespace io.github.hatayama.UnityCliLoop.Tests
 
             Assert.That(result.Success, Is.False);
             Assert.That(result.ErrorOutput, Does.Contain("failed to persist the uLoop CLI install directory"));
+            Assert.That(result.ErrorOutput, Does.Contain("denied"));
+        }
+
+        [Test]
+        public void RemoveLegacyNpmPackageIfPresent_WhenPackageMissingSkipsUninstall()
+        {
+            // Verifies that package installs do not require npm when the legacy launcher is absent.
+            int runCount = 0;
+
+            CliInstallResult result = NativeCliInstaller.RemoveLegacyNpmPackageIfPresent(
+                RuntimePlatform.OSXEditor,
+                (command, platform) =>
+                {
+                    runCount++;
+                    Assert.That(command.ManualCommand, Does.Contain("npm list -g uloop-cli"));
+                    return new CliInstallResult(false, "");
+                });
+
+            Assert.That(result.Success, Is.True);
+            Assert.That(runCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void RemoveLegacyNpmPackageIfPresent_WhenPackageExistsRunsUninstall()
+        {
+            // Verifies that package installs preserve the previous UI cleanup of the legacy npm launcher.
+            int runCount = 0;
+
+            CliInstallResult result = NativeCliInstaller.RemoveLegacyNpmPackageIfPresent(
+                RuntimePlatform.WindowsEditor,
+                (command, platform) =>
+                {
+                    runCount++;
+                    string expectedCommand = runCount == 1
+                        ? "npm list -g uloop-cli"
+                        : "npm uninstall -g uloop-cli";
+                    Assert.That(command.ManualCommand, Does.Contain(expectedCommand));
+                    return new CliInstallResult(true, "");
+                });
+
+            Assert.That(result.Success, Is.True);
+            Assert.That(runCount, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void RemoveLegacyNpmPackageIfPresent_WhenUninstallFailsReturnsManualCommand()
+        {
+            // Verifies that package installs fail visibly when the legacy launcher cannot be removed.
+            int runCount = 0;
+
+            CliInstallResult result = NativeCliInstaller.RemoveLegacyNpmPackageIfPresent(
+                RuntimePlatform.WindowsEditor,
+                (command, platform) =>
+                {
+                    runCount++;
+                    return runCount == 1
+                        ? new CliInstallResult(true, "")
+                        : new CliInstallResult(false, "denied");
+                });
+
+            Assert.That(result.Success, Is.False);
+            Assert.That(result.ErrorOutput, Does.Contain("Failed to remove legacy npm installation"));
+            Assert.That(result.ErrorOutput, Does.Contain("npm uninstall -g uloop-cli"));
             Assert.That(result.ErrorOutput, Does.Contain("denied"));
         }
 

@@ -92,6 +92,14 @@ namespace io.github.hatayama.UnityCliLoop
 
             if (result.Success)
             {
+                CliInstallResult legacyResult = RemoveLegacyNpmPackageIfPresent(
+                    platform,
+                    RunInstallCommand);
+                if (!legacyResult.Success)
+                {
+                    return legacyResult;
+                }
+
                 ApplyInstallDirectoryToCurrentProcessPath(platform);
                 CliInstallResult persistResult = PersistInstallDirectoryToUserPath(
                     installDirectory,
@@ -136,8 +144,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return executableResult;
             }
 
-            File.Copy(stagedInstallPath, installPath, overwrite: true);
-            File.Delete(stagedInstallPath);
+            ReplaceInstalledCliFromStaged(stagedInstallPath, installPath);
             return executableResult;
         }
 
@@ -199,6 +206,35 @@ namespace io.github.hatayama.UnityCliLoop
             {
                 return BuildUserPathPersistenceFailure(ex);
             }
+        }
+
+        internal static CliInstallResult RemoveLegacyNpmPackageIfPresent(
+            RuntimePlatform platform,
+            Func<NativeCliInstallCommand, RuntimePlatform, CliInstallResult> runCommand)
+        {
+            UnityEngine.Debug.Assert(runCommand != null, "runCommand must not be null");
+
+            NativeCliInstallCommand detectCommand = GetLegacyNpmListCommand(platform);
+            CliInstallResult detectResult = runCommand(detectCommand, platform);
+            if (!detectResult.Success)
+            {
+                return new CliInstallResult(true, "");
+            }
+
+            NativeCliInstallCommand uninstallCommand = GetLegacyNpmUninstallCommand(platform);
+            CliInstallResult uninstallResult = runCommand(uninstallCommand, platform);
+            if (uninstallResult.Success)
+            {
+                return new CliInstallResult(true, "");
+            }
+
+            string errorOutput =
+                $"Failed to remove legacy npm installation: {CliConstants.LEGACY_NPM_PACKAGE_NAME}\n"
+                + "The bundled dispatcher was installed, but an older npm launcher may still shadow it.\n"
+                + "Run manually:\n"
+                + $"  {uninstallCommand.ManualCommand}\n"
+                + uninstallResult.ErrorOutput;
+            return new CliInstallResult(false, errorOutput);
         }
 
         private static string GetStagedGlobalCliInstallPath(string installDirectory, RuntimePlatform platform)
@@ -327,6 +363,20 @@ namespace io.github.hatayama.UnityCliLoop
                 : StringComparison.Ordinal;
         }
 
+        private static void ReplaceInstalledCliFromStaged(string stagedInstallPath, string installPath)
+        {
+            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(stagedInstallPath), "stagedInstallPath must not be null or empty");
+            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(installPath), "installPath must not be null or empty");
+
+            if (!File.Exists(installPath))
+            {
+                File.Move(stagedInstallPath, installPath);
+                return;
+            }
+
+            File.Replace(stagedInstallPath, installPath, null, true);
+        }
+
         private static CliInstallResult BuildUserPathPersistenceFailure(Exception ex)
         {
             UnityEngine.Debug.Assert(ex != null, "ex must not be null");
@@ -415,6 +465,106 @@ namespace io.github.hatayama.UnityCliLoop
         {
             UnityEngine.Debug.Assert(value != null, "value must not be null");
             return $"\"{value.Replace("\"", "\\\"")}\"";
+        }
+
+        private static NativeCliInstallCommand GetLegacyNpmListCommand(RuntimePlatform platform)
+        {
+            string command = $"npm list -g {CliConstants.LEGACY_NPM_PACKAGE_NAME} --depth=0";
+            return BuildShellCommand(platform, command);
+        }
+
+        private static NativeCliInstallCommand GetLegacyNpmUninstallCommand(RuntimePlatform platform)
+        {
+            string command = $"npm uninstall -g {CliConstants.LEGACY_NPM_PACKAGE_NAME}";
+            return BuildShellCommand(platform, command);
+        }
+
+        private static NativeCliInstallCommand BuildShellCommand(RuntimePlatform platform, string command)
+        {
+            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(command), "command must not be null or empty");
+
+            if (platform == RuntimePlatform.WindowsEditor)
+            {
+                return new NativeCliInstallCommand(
+                    "cmd.exe",
+                    $"/c {command}",
+                    command);
+            }
+
+            return new NativeCliInstallCommand(
+                "/bin/sh",
+                $"-c \"{command}\"",
+                command);
+        }
+
+        private static CliInstallResult RunInstallCommand(NativeCliInstallCommand command, RuntimePlatform platform)
+        {
+            ProcessStartInfo startInfo = new ProcessStartInfo
+            {
+                FileName = command.FileName,
+                Arguments = command.Arguments,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+
+            ApplyInstallerSearchPath(startInfo, platform);
+
+            Process process = ProcessStartHelper.TryStart(startInfo);
+            if (process == null)
+            {
+                return new CliInstallResult(false, $"Failed to start command: {command.ManualCommand}");
+            }
+
+            StringBuilder errorBuilder = new StringBuilder();
+            process.OutputDataReceived += (sender, e) => { };
+            process.ErrorDataReceived += (sender, e) =>
+            {
+                if (e.Data != null)
+                {
+                    errorBuilder.AppendLine(e.Data);
+                }
+            };
+
+            process.BeginOutputReadLine();
+            process.BeginErrorReadLine();
+
+            bool exited = process.WaitForExit(CliConstants.GLOBAL_INSTALL_TIMEOUT_MS);
+            if (!exited)
+            {
+                if (!process.HasExited)
+                {
+                    process.Kill();
+                }
+
+                process.Dispose();
+                return new CliInstallResult(false, $"Command timed out: {command.ManualCommand}");
+            }
+
+            process.WaitForExit();
+            string errorOutput = errorBuilder.ToString();
+            bool success = process.ExitCode == 0;
+            process.Dispose();
+            return new CliInstallResult(success, errorOutput);
+        }
+
+        private static void ApplyInstallerSearchPath(ProcessStartInfo startInfo, RuntimePlatform platform)
+        {
+            UnityEngine.Debug.Assert(startInfo != null, "startInfo must not be null");
+
+            if (platform == RuntimePlatform.WindowsEditor)
+            {
+                return;
+            }
+
+            string loginShellPath = NodeEnvironmentResolver.GetLoginShellPathAtPlatform(platform);
+            if (string.IsNullOrEmpty(loginShellPath))
+            {
+                return;
+            }
+
+            startInfo.Environment[CliConstants.POSIX_PATH_ENVIRONMENT_VARIABLE] = loginShellPath;
         }
 
         private static string BuildWindowsRemoveLegacyAssignment(bool removeLegacyNpm)
