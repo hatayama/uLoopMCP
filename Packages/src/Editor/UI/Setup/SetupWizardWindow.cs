@@ -554,13 +554,26 @@ namespace io.github.hatayama.UnityCliLoop
 
         private void UpdateCliStep(bool cliInstalled, string cliVersion, bool cliVersionMatched)
         {
+            bool needsUpdate = cliInstalled && !cliVersionMatched;
+            string buttonText = CliSetupSection.GetInstallCliButtonText(
+                cliInstalled,
+                _isInstallingCli,
+                false,
+                needsUpdate,
+                false,
+                cliVersion,
+                McpConstants.PackageInfo.version);
+            bool buttonEnabled = CliSetupSection.IsInstallCliButtonEnabled(
+                _isInstallingCli,
+                isChecking: false);
+
             if (cliInstalled && cliVersionMatched)
             {
                 _cliStatusLabel.text = $"v{cliVersion}";
                 ViewDataBinder.ToggleClass(_cliStatusIcon, "setup-status-icon--success", true);
                 ViewDataBinder.ToggleClass(_cliStatusIcon, "setup-status-icon--pending", false);
-                _installCliButton.SetEnabled(false);
-                _installCliButton.text = "Installed";
+                _installCliButton.SetEnabled(buttonEnabled);
+                _installCliButton.text = buttonText;
                 return;
             }
 
@@ -576,8 +589,8 @@ namespace io.github.hatayama.UnityCliLoop
 
             ViewDataBinder.ToggleClass(_cliStatusIcon, "setup-status-icon--success", false);
             ViewDataBinder.ToggleClass(_cliStatusIcon, "setup-status-icon--pending", true);
-            _installCliButton.SetEnabled(!_isInstallingCli);
-            _installCliButton.text = _isInstallingCli ? "Installing..." : "Install CLI";
+            _installCliButton.SetEnabled(buttonEnabled);
+            _installCliButton.text = buttonText;
         }
 
         private static bool IsCliVersionMatched(string cliVersion)
@@ -798,6 +811,17 @@ namespace io.github.hatayama.UnityCliLoop
 
         private async void HandleInstallCli()
         {
+            if (ShouldUninstallCliFromPrimaryButton())
+            {
+                await HandleUninstallCli();
+                return;
+            }
+
+            if (!LegacyNpmRemovalPrompt.ConfirmInstallCanProceed(Application.platform))
+            {
+                return;
+            }
+
             bool wasCliInstalledBeforeInstall = CliInstallationDetector.IsCliInstalled();
             _isInstallingCli = true;
             UpdateCliStep(false, null, false);
@@ -827,6 +851,47 @@ namespace io.github.hatayama.UnityCliLoop
                 _isInstallingCli = false;
                 RefreshUI(CliInstallRefreshPolicy.ShouldRefreshSkillsAfterCliInstall(
                     wasCliInstalledBeforeInstall));
+            }
+        }
+
+        private bool ShouldUninstallCliFromPrimaryButton()
+        {
+            string cliVersion = CliInstallationDetector.GetCachedCliVersion();
+            bool isCliInstalled = IsCliInstalled(cliVersion);
+            bool needsUpdate = isCliInstalled && !IsCliVersionMatched(cliVersion);
+            bool needsDowngrade = false;
+            return CliSetupSection.IsUninstallCliAction(isCliInstalled, needsUpdate, needsDowngrade);
+        }
+
+        private async Task HandleUninstallCli()
+        {
+            if (!CliUninstallPrompt.ConfirmUninstall())
+            {
+                return;
+            }
+
+            _isInstallingCli = true;
+            UpdateCliStep(
+                cliInstalled: true,
+                cliVersion: CliInstallationDetector.GetCachedCliVersion(),
+                cliVersionMatched: true);
+
+            try
+            {
+                CliInstallResult result = await NativeCliInstaller.UninstallAsync(Application.platform);
+                if (!result.Success)
+                {
+                    EditorUtility.DisplayDialog(
+                        "Uninstallation Failed",
+                        $"Failed to uninstall uLoop CLI.\n\n{result.ErrorOutput}",
+                        "OK");
+                    return;
+                }
+            }
+            finally
+            {
+                _isInstallingCli = false;
+                RefreshUI(refreshSkillsSection: true);
             }
         }
 

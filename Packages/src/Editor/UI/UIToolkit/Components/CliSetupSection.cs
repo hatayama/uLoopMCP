@@ -105,44 +105,29 @@ namespace io.github.hatayama.UnityCliLoop
 
         private void UpdateInstallCliButton(CliSetupData data)
         {
-            if (data.IsChecking)
-            {
-                SetCliButton("Checking...", false);
-                return;
-            }
-
-            if (data.IsInstallingCli)
-            {
-                SetCliButton("Installing...", false);
-                return;
-            }
-
-            if (!data.IsCliInstalled)
-            {
-                SetCliButton("Install CLI", true);
-                return;
-            }
-
-            if (data.NeedsUpdate)
-            {
-                SetCliButton($"Update CLI (v{data.CliVersion} \u2192 v{data.PackageVersion})", true);
-                return;
-            }
-
-            if (data.NeedsDowngrade)
-            {
-                SetCliButton($"Downgrade CLI (v{data.CliVersion} \u2192 v{data.PackageVersion})", true);
-                return;
-            }
-
-            SetCliButton("Up to date", false);
+            string label = GetInstallCliButtonText(
+                data.IsCliInstalled,
+                data.IsInstallingCli,
+                data.IsChecking,
+                data.NeedsUpdate,
+                data.NeedsDowngrade,
+                data.CliVersion,
+                data.PackageVersion);
+            bool enabled = IsInstallCliButtonEnabled(
+                data.IsInstallingCli,
+                data.IsChecking);
+            bool visuallyDisabled = IsUninstallCliAction(
+                data.IsCliInstalled,
+                data.NeedsUpdate,
+                data.NeedsDowngrade);
+            SetCliButton(label, enabled, visuallyDisabled);
         }
 
-        private void SetCliButton(string text, bool enabled)
+        private void SetCliButton(string text, bool enabled, bool visuallyDisabled = false)
         {
             _installCliButton.text = text;
             _installCliButton.SetEnabled(enabled);
-            ViewDataBinder.ToggleClass(_installCliButton, "mcp-button--disabled", !enabled);
+            ViewDataBinder.ToggleClass(_installCliButton, "mcp-button--disabled", !enabled || visuallyDisabled);
         }
 
         private void InitializeTargetFieldIfNeeded(CliSetupData data)
@@ -204,6 +189,59 @@ namespace io.github.hatayama.UnityCliLoop
             _installSkillsButton.text = text;
             _installSkillsButton.SetEnabled(enabled);
             ViewDataBinder.ToggleClass(_installSkillsButton, "mcp-button--disabled", !enabled);
+        }
+
+        internal static string GetInstallCliButtonText(
+            bool isCliInstalled,
+            bool isInstallingCli,
+            bool isChecking,
+            bool needsUpdate,
+            bool needsDowngrade,
+            string cliVersion,
+            string packageVersion)
+        {
+            if (isChecking)
+            {
+                return "Checking...";
+            }
+
+            bool isUninstallAction = IsUninstallCliAction(isCliInstalled, needsUpdate, needsDowngrade);
+            if (isInstallingCli)
+            {
+                return isUninstallAction ? "Uninstalling..." : "Installing...";
+            }
+
+            if (!isCliInstalled)
+            {
+                return "Install CLI";
+            }
+
+            if (needsUpdate)
+            {
+                return $"Update CLI (v{cliVersion} \u2192 v{packageVersion})";
+            }
+
+            if (needsDowngrade)
+            {
+                return $"Downgrade CLI (v{cliVersion} \u2192 v{packageVersion})";
+            }
+
+            return "Uninstall CLI";
+        }
+
+        internal static bool IsInstallCliButtonEnabled(
+            bool isInstallingCli,
+            bool isChecking)
+        {
+            return !isInstallingCli && !isChecking;
+        }
+
+        internal static bool IsUninstallCliAction(
+            bool isCliInstalled,
+            bool needsUpdate,
+            bool needsDowngrade)
+        {
+            return isCliInstalled && !needsUpdate && !needsDowngrade;
         }
 
         internal static string GetInstallSkillsButtonText(

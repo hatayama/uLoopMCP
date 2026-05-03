@@ -236,7 +236,7 @@ func detectShell() string {
 }
 
 func getShellConfigPath(shellName string) (string, error) {
-	home, err := os.UserHomeDir()
+	home, err := getHomeDirectory()
 	if err != nil {
 		return "", err
 	}
@@ -253,6 +253,15 @@ func getShellConfigPath(shellName string) (string, error) {
 	default:
 		return "", fmt.Errorf("unknown shell: %s", shellName)
 	}
+}
+
+func getHomeDirectory() (string, error) {
+	home := os.Getenv("HOME")
+	if home != "" {
+		return home, nil
+	}
+
+	return os.UserHomeDir()
 }
 
 func getPwshProfilePath(home string, goos string) string {

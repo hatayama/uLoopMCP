@@ -697,6 +697,17 @@ namespace io.github.hatayama.UnityCliLoop
 
         private async void HandleInstallCli()
         {
+            if (ShouldUninstallCliFromPrimaryButton())
+            {
+                await HandleUninstallCli();
+                return;
+            }
+
+            if (!LegacyNpmRemovalPrompt.ConfirmInstallCanProceed(Application.platform))
+            {
+                return;
+            }
+
             bool wasCliInstalledBeforeInstall = CliInstallationDetector.IsCliInstalled();
             _isInstallingCli = true;
             RefreshCliSetupSection();
@@ -726,6 +737,45 @@ namespace io.github.hatayama.UnityCliLoop
                 RefreshAllSections(
                     refreshSkillInstallState:
                     CliInstallRefreshPolicy.ShouldRefreshSkillsAfterCliInstall(wasCliInstalledBeforeInstall));
+            }
+        }
+
+        private bool ShouldUninstallCliFromPrimaryButton()
+        {
+            string cliVersion = CliInstallationDetector.GetCachedCliVersion();
+            bool isCliInstalled = cliVersion != null;
+            bool needsUpdate = cliVersion != null
+                && CliVersionComparer.IsVersionLessThan(cliVersion, McpConstants.PackageInfo.version);
+            bool needsDowngrade = false;
+            return CliSetupSection.IsUninstallCliAction(isCliInstalled, needsUpdate, needsDowngrade);
+        }
+
+        private async Task HandleUninstallCli()
+        {
+            if (!CliUninstallPrompt.ConfirmUninstall())
+            {
+                return;
+            }
+
+            _isInstallingCli = true;
+            RefreshCliSetupSection();
+
+            try
+            {
+                CliInstallResult result = await NativeCliInstaller.UninstallAsync(Application.platform);
+                if (!result.Success)
+                {
+                    EditorUtility.DisplayDialog(
+                        "Uninstallation Failed",
+                        $"Failed to uninstall uLoop CLI.\n\n{result.ErrorOutput}",
+                        "OK");
+                    return;
+                }
+            }
+            finally
+            {
+                _isInstallingCli = false;
+                RefreshAllSections(refreshSkillInstallState: true);
             }
         }
 
