@@ -124,21 +124,31 @@ namespace io.github.hatayama.UnityCliLoop
                     $"Global CLI dispatcher binary was not found for {platform}/{RuntimeInformation.ProcessArchitecture}: {sourceBinaryPath}");
             }
 
-            Directory.CreateDirectory(installDirectory);
-
             string installPath = GetGlobalCliInstallPath(installDirectory, platform);
             string stagedInstallPath = GetStagedGlobalCliInstallPath(installDirectory, platform);
-            File.Copy(sourceBinaryPath, stagedInstallPath, overwrite: true);
-
-            CliInstallResult executableResult = MakeGlobalCliExecutable(stagedInstallPath, platform);
-            if (!executableResult.Success)
+            try
             {
-                File.Delete(stagedInstallPath);
+                Directory.CreateDirectory(installDirectory);
+                File.Copy(sourceBinaryPath, stagedInstallPath, overwrite: true);
+
+                CliInstallResult executableResult = MakeGlobalCliExecutable(stagedInstallPath, platform);
+                if (!executableResult.Success)
+                {
+                    File.Delete(stagedInstallPath);
+                    return executableResult;
+                }
+
+                ReplaceInstalledCliFromStaged(stagedInstallPath, installPath);
                 return executableResult;
             }
-
-            ReplaceInstalledCliFromStaged(stagedInstallPath, installPath);
-            return executableResult;
+            catch (IOException ex)
+            {
+                return BuildBundledCliInstallFailure(ex);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return BuildBundledCliInstallFailure(ex);
+            }
         }
 
         internal static string GetGlobalCliBundlePath(
@@ -399,6 +409,14 @@ namespace io.github.hatayama.UnityCliLoop
             string errorOutput =
                 "Installed the uLoop CLI binary, but failed to persist the uLoop CLI install directory in the Windows User PATH. "
                 + $"Update {CliConstants.WINDOWS_PATH_ENVIRONMENT_VARIABLE} manually or run the CLI-only installer.\n{ex.Message}";
+            return new CliInstallResult(false, errorOutput);
+        }
+
+        private static CliInstallResult BuildBundledCliInstallFailure(Exception ex)
+        {
+            UnityEngine.Debug.Assert(ex != null, "ex must not be null");
+
+            string errorOutput = $"Failed to install bundled CLI dispatcher: {ex.Message}";
             return new CliInstallResult(false, errorOutput);
         }
 
