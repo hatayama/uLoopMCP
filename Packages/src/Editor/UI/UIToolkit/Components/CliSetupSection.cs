@@ -116,18 +116,14 @@ namespace io.github.hatayama.UnityCliLoop
             bool enabled = IsInstallCliButtonEnabled(
                 data.IsInstallingCli,
                 data.IsChecking);
-            bool visuallyDisabled = IsUninstallCliAction(
-                data.IsCliInstalled,
-                data.NeedsUpdate,
-                data.NeedsDowngrade);
-            SetCliButton(label, enabled, visuallyDisabled);
+            SetCliButton(label, enabled);
         }
 
-        private void SetCliButton(string text, bool enabled, bool visuallyDisabled = false)
+        private void SetCliButton(string text, bool enabled)
         {
             _installCliButton.text = text;
             _installCliButton.SetEnabled(enabled);
-            ViewDataBinder.ToggleClass(_installCliButton, "mcp-button--disabled", !enabled || visuallyDisabled);
+            ViewDataBinder.ToggleClass(_installCliButton, "mcp-button--disabled", !enabled);
         }
 
         private void InitializeTargetFieldIfNeeded(CliSetupData data)

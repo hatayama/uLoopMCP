@@ -8,7 +8,7 @@ namespace io.github.hatayama.UnityCliLoop
     {
         private const string DialogTitle = "Uninstall uLoop CLI?";
         private const string DialogMessage =
-            "This removes the native uLoop CLI command from this user account and removes its install directory from the Windows User PATH.\n\n"
+            "This removes the native uLoop CLI command from this user account and removes package-owned PATH entries when applicable.\n\n"
             + "Project-local files are not removed.";
         private const string ConfirmButtonText = "OK";
         private const string CancelButtonText = "Cancel";

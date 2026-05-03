@@ -540,6 +540,46 @@ namespace io.github.hatayama.UnityCliLoop.Tests
         }
 
         [Test]
+        public void CleanupLegacyCommandShimsInDirectory_WhenForwardingShimTargetsPreviousDefaultInstallDeletesIt()
+        {
+            // Verifies that stale forwarders are cleaned even when they reference an older native install path.
+            string tempRoot = Path.Combine(
+                Path.GetTempPath(),
+                "uloop-native-installer-tests",
+                System.Guid.NewGuid().ToString("N"));
+            string legacyBinDirectory = Path.Combine(tempRoot, "npm");
+            string nativeUloopPath = Path.Combine(tempRoot, "custom", "uloop.exe");
+            string oldNativeUloopPath = Path.Combine(
+                "C:\\Users\\masamichi\\AppData\\Local",
+                CliConstants.WINDOWS_PROGRAMS_DIR_NAME,
+                CliConstants.NATIVE_INSTALL_DIR_NAME,
+                CliConstants.NATIVE_INSTALL_BIN_DIR_NAME,
+                CliConstants.GLOBAL_WINDOWS_COMMAND_NAME);
+            string commandShimPath = Path.Combine(legacyBinDirectory, "uloop.cmd");
+
+            Directory.CreateDirectory(legacyBinDirectory);
+            Directory.CreateDirectory(Path.GetDirectoryName(nativeUloopPath));
+            File.WriteAllText(commandShimPath, $"@\"{oldNativeUloopPath}\" %*");
+
+            try
+            {
+                CliInstallResult result = NativeCliInstaller.CleanupLegacyCommandShimsInDirectory(
+                    legacyBinDirectory,
+                    nativeUloopPath);
+
+                Assert.That(result.Success, Is.True, result.ErrorOutput);
+                Assert.That(File.Exists(commandShimPath), Is.False);
+            }
+            finally
+            {
+                if (Directory.Exists(tempRoot))
+                {
+                    Directory.Delete(tempRoot, true);
+                }
+            }
+        }
+
+        [Test]
         public void CleanupLegacyCommandShimsInDirectory_WhenCommandIsNotPackageOwnedPreservesFile()
         {
             // Verifies that unrelated user commands are not overwritten by legacy cleanup.
@@ -720,6 +760,47 @@ namespace io.github.hatayama.UnityCliLoop.Tests
                     (command, platform) => new CliInstallResult(false, ""),
                     tempRoot,
                     nativeUloopPath);
+
+                Assert.That(result, Is.True);
+            }
+            finally
+            {
+                if (Directory.Exists(tempRoot))
+                {
+                    Directory.Delete(tempRoot, true);
+                }
+            }
+        }
+
+        [Test]
+        public void HasLegacyNpmInstallation_WhenForwardingShimTargetsBundledDispatcherReturnsTrue()
+        {
+            // Verifies that package-cache dispatcher forwarders are detected as stale package-owned shims.
+            string tempRoot = Path.Combine(
+                Path.GetTempPath(),
+                "uloop-native-installer-tests",
+                System.Guid.NewGuid().ToString("N"));
+            string legacyBinDirectory = Path.Combine(tempRoot, "npm");
+            string bundledDispatcherPath = Path.Combine(
+                tempRoot,
+                "Library",
+                "PackageCache",
+                CliConstants.GO_CLI_PACKAGE_DIR_NAME,
+                CliConstants.DIST_DIR_NAME,
+                "windows-amd64",
+                CliConstants.GLOBAL_DISPATCHER_WINDOWS_BUNDLE_NAME);
+
+            Directory.CreateDirectory(legacyBinDirectory);
+            File.WriteAllText(
+                Path.Combine(legacyBinDirectory, "uloop.ps1"),
+                $"& '{bundledDispatcherPath}' @args");
+
+            try
+            {
+                bool result = NativeCliInstaller.HasLegacyNpmInstallation(
+                    RuntimePlatform.WindowsEditor,
+                    (command, platform) => new CliInstallResult(false, ""),
+                    tempRoot);
 
                 Assert.That(result, Is.True);
             }

@@ -132,7 +132,17 @@ function Test-NativeUloopShimContent {
         [string]$NativeUloopPath
     )
 
-    return $Content.IndexOf($NativeUloopPath, [System.StringComparison]::OrdinalIgnoreCase) -ge 0
+    return $Content.IndexOf($NativeUloopPath, [System.StringComparison]::OrdinalIgnoreCase) -ge 0 `
+        -or $Content.IndexOf("Programs\uloop\bin\uloop.exe", [System.StringComparison]::OrdinalIgnoreCase) -ge 0 `
+        -or $Content.IndexOf("Programs/uloop/bin/uloop.exe", [System.StringComparison]::OrdinalIgnoreCase) -ge 0 `
+        -or (
+            ($Content.IndexOf("GoCli~\dist", [System.StringComparison]::OrdinalIgnoreCase) -ge 0 `
+                -or $Content.IndexOf("GoCli~/dist", [System.StringComparison]::OrdinalIgnoreCase) -ge 0) `
+            -and (
+                $Content.IndexOf("uloop-dispatcher.exe", [System.StringComparison]::OrdinalIgnoreCase) -ge 0 `
+                    -or $Content.IndexOf("uloop-dispatcher", [System.StringComparison]::OrdinalIgnoreCase) -ge 0
+            )
+        )
 }
 
 function Test-PackageOwnedUloopShimContent {
@@ -198,13 +208,19 @@ function Remove-LegacyUloopShims {
             continue
         }
 
-        $ShimContent = [System.IO.File]::ReadAllText($ShimPath)
+        $ShimContent = Get-Content -LiteralPath $ShimPath -Raw -ErrorAction SilentlyContinue
+        if (-not $ShimContent) {
+            continue
+        }
+
         if (-not (Test-PackageOwnedUloopShimContent -Content $ShimContent -NativeUloopPath $NativeUloopPath)) {
             continue
         }
 
-        Remove-Item -LiteralPath $ShimPath -Force
-        Write-Host "Removed legacy uloop shim: $ShimPath"
+        Remove-Item -LiteralPath $ShimPath -Force -ErrorAction SilentlyContinue
+        if (-not (Test-Path $ShimPath -PathType Leaf)) {
+            Write-Host "Removed legacy uloop shim: $ShimPath"
+        }
     }
 }
 

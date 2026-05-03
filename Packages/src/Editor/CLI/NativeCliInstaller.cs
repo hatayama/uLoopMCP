@@ -1028,7 +1028,8 @@ namespace io.github.hatayama.UnityCliLoop
                 return false;
             }
 
-            return IsPackageOwnedCommandShimContent(File.ReadAllText(shimPath), nativeUloopPath);
+            string content = ReadCommandShimContentOrNull(shimPath);
+            return IsPackageOwnedCommandShimContent(content, nativeUloopPath);
         }
 
         internal static bool IsLegacyNpmShimContent(string content)
@@ -1046,18 +1047,89 @@ namespace io.github.hatayama.UnityCliLoop
 
         internal static bool IsNativeForwardingShimContent(string content, string nativeUloopPath)
         {
-            if (string.IsNullOrEmpty(content) || string.IsNullOrEmpty(nativeUloopPath))
+            if (string.IsNullOrEmpty(content))
             {
                 return false;
             }
 
-            return content.IndexOf(nativeUloopPath, StringComparison.OrdinalIgnoreCase) >= 0;
+            return ContainsIgnoreCase(content, nativeUloopPath)
+                || ContainsDefaultWindowsInstallCommandReference(content)
+                || ContainsPackagedDispatcherReference(content);
         }
 
         private static bool IsPackageOwnedCommandShimContent(string content, string nativeUloopPath)
         {
             return IsLegacyNpmShimContent(content)
                 || IsNativeForwardingShimContent(content, nativeUloopPath);
+        }
+
+        private static string ReadCommandShimContentOrNull(string shimPath)
+        {
+            try
+            {
+                return File.ReadAllText(shimPath);
+            }
+            catch (IOException)
+            {
+                return null;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return null;
+            }
+            catch (SecurityException)
+            {
+                return null;
+            }
+            catch (ArgumentException)
+            {
+                return null;
+            }
+            catch (NotSupportedException)
+            {
+                return null;
+            }
+        }
+
+        private static bool ContainsDefaultWindowsInstallCommandReference(string content)
+        {
+            string commandPath = Path.Combine(
+                CliConstants.WINDOWS_PROGRAMS_DIR_NAME,
+                CliConstants.NATIVE_INSTALL_DIR_NAME,
+                CliConstants.NATIVE_INSTALL_BIN_DIR_NAME,
+                CliConstants.GLOBAL_WINDOWS_COMMAND_NAME);
+            return ContainsPathWithEitherSeparator(content, commandPath);
+        }
+
+        private static bool ContainsPackagedDispatcherReference(string content)
+        {
+            string dispatcherDirectory = Path.Combine(
+                CliConstants.GO_CLI_PACKAGE_DIR_NAME,
+                CliConstants.DIST_DIR_NAME);
+            return ContainsPathWithEitherSeparator(content, dispatcherDirectory)
+                && (ContainsIgnoreCase(content, CliConstants.GLOBAL_DISPATCHER_WINDOWS_BUNDLE_NAME)
+                    || ContainsIgnoreCase(content, CliConstants.GLOBAL_DISPATCHER_UNIX_BUNDLE_NAME));
+        }
+
+        private static bool ContainsPathWithEitherSeparator(string content, string path)
+        {
+            UnityEngine.Debug.Assert(content != null, "content must not be null");
+            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(path), "path must not be null or empty");
+
+            string windowsPath = path.Replace('/', '\\');
+            string unixPath = path.Replace('\\', '/');
+            return ContainsIgnoreCase(content, windowsPath)
+                || ContainsIgnoreCase(content, unixPath);
+        }
+
+        private static bool ContainsIgnoreCase(string content, string value)
+        {
+            if (string.IsNullOrEmpty(content) || string.IsNullOrEmpty(value))
+            {
+                return false;
+            }
+
+            return content.IndexOf(value, StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         private static bool HasNpmBinCommandEntries(string legacyBinDirectory)
