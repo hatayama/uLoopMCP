@@ -66,39 +66,39 @@ namespace io.github.hatayama.UnityCliLoop.Tests
         }
 
         [Test]
-        public void BuildPathWithInstallDirectory_OnWindowsAppendsMissingNativeInstallDir()
+        public void BuildPathWithInstallDirectory_OnWindowsPrependsMissingNativeInstallDir()
         {
-            // Verifies that Unity's current Windows PATH can be extended for immediate native CLI detection.
+            // Verifies that Unity's current Windows PATH prefers the freshly installed native CLI.
             string result = NativeCliInstaller.BuildPathWithInstallDirectory(
                 "C:\\npm",
                 "C:\\Users\\masamichi\\Programs\\uloop\\bin",
                 RuntimePlatform.WindowsEditor);
 
-            Assert.That(result, Is.EqualTo("C:\\npm;C:\\Users\\masamichi\\Programs\\uloop\\bin"));
+            Assert.That(result, Is.EqualTo("C:\\Users\\masamichi\\Programs\\uloop\\bin;C:\\npm"));
         }
 
         [Test]
-        public void BuildPathWithInstallDirectory_OnWindowsDoesNotDuplicateExistingNativeInstallDir()
+        public void BuildPathWithInstallDirectory_OnWindowsMovesExistingNativeInstallDirToFront()
         {
-            // Verifies that Windows PATH matching is case-insensitive when the native install dir is already present.
+            // Verifies that a later Windows native install dir does not leave an earlier npm shim first.
             string result = NativeCliInstaller.BuildPathWithInstallDirectory(
                 "C:\\npm;C:\\USERS\\MASAMICHI\\PROGRAMS\\ULOOP\\BIN",
                 "C:\\Users\\masamichi\\Programs\\uloop\\bin",
                 RuntimePlatform.WindowsEditor);
 
-            Assert.That(result, Is.EqualTo("C:\\npm;C:\\USERS\\MASAMICHI\\PROGRAMS\\ULOOP\\BIN"));
+            Assert.That(result, Is.EqualTo("C:\\Users\\masamichi\\Programs\\uloop\\bin;C:\\npm"));
         }
 
         [Test]
-        public void BuildPathWithInstallDirectory_OnMacAppendsMissingNativeInstallDir()
+        public void BuildPathWithInstallDirectory_OnMacPrependsMissingNativeInstallDir()
         {
-            // Verifies that POSIX PATH keeps colon separation when adding the native install dir.
+            // Verifies that POSIX PATH prefers the freshly installed native CLI.
             string result = NativeCliInstaller.BuildPathWithInstallDirectory(
                 "/usr/local/bin",
                 "/Users/masamichi/.local/bin",
                 RuntimePlatform.OSXEditor);
 
-            Assert.That(result, Is.EqualTo("/usr/local/bin:/Users/masamichi/.local/bin"));
+            Assert.That(result, Is.EqualTo("/Users/masamichi/.local/bin:/usr/local/bin"));
         }
 
         [Test]

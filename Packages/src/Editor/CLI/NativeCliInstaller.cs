@@ -129,17 +129,29 @@ namespace io.github.hatayama.UnityCliLoop
             UnityEngine.Debug.Assert(!string.IsNullOrWhiteSpace(installDirectory), "installDirectory must not be null or empty");
 
             string normalizedPath = currentPath ?? "";
-            if (ContainsPathDirectory(normalizedPath, installDirectory, platform))
-            {
-                return normalizedPath;
-            }
-
             if (string.IsNullOrEmpty(normalizedPath))
             {
                 return installDirectory;
             }
 
-            return normalizedPath + GetPathSeparator(platform) + installDirectory;
+            string separator = GetPathSeparator(platform);
+            string[] entries = normalizedPath.Split(
+                new[] { separator },
+                StringSplitOptions.RemoveEmptyEntries);
+            StringComparison comparison = GetPathComparison(platform);
+            StringBuilder builder = new StringBuilder(installDirectory);
+            foreach (string entry in entries)
+            {
+                if (string.Equals(entry, installDirectory, comparison))
+                {
+                    continue;
+                }
+
+                builder.Append(separator);
+                builder.Append(entry);
+            }
+
+            return builder.ToString();
         }
 
         internal static string GetDefaultInstallDirectoryFromRoots(
@@ -220,28 +232,6 @@ namespace io.github.hatayama.UnityCliLoop
 
             string localAppData = Environment.GetEnvironmentVariable(CliConstants.WINDOWS_LOCAL_APPDATA_ENVIRONMENT_VARIABLE);
             return GetDefaultInstallDirectoryFromRoots(platform, homeDirectory, localAppData);
-        }
-
-        private static bool ContainsPathDirectory(string currentPath, string installDirectory, RuntimePlatform platform)
-        {
-            if (string.IsNullOrEmpty(currentPath))
-            {
-                return false;
-            }
-
-            string[] entries = currentPath.Split(
-                new[] { GetPathSeparator(platform) },
-                StringSplitOptions.RemoveEmptyEntries);
-            StringComparison comparison = GetPathComparison(platform);
-            foreach (string entry in entries)
-            {
-                if (string.Equals(entry, installDirectory, comparison))
-                {
-                    return true;
-                }
-            }
-
-            return false;
         }
 
         private static string GetPathEnvironmentVariableName(RuntimePlatform platform)
