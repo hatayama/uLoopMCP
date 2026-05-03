@@ -89,6 +89,7 @@ namespace io.github.hatayama.UnityCliLoop
                 sourceBinaryPath,
                 installDirectory,
                 platform));
+            CliInstallationDetector.InvalidateCache();
 
             if (result.Success)
             {
@@ -112,7 +113,6 @@ namespace io.github.hatayama.UnityCliLoop
                 }
             }
 
-            CliInstallationDetector.InvalidateCache();
             return result;
         }
 
