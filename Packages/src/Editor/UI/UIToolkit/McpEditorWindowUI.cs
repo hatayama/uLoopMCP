@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.UIElements;
 using UnityEditor;
 
-namespace io.github.hatayama.uLoopMCP
+namespace io.github.hatayama.UnityCliLoop
 {
     /// <summary>
     /// View layer for McpEditorWindow in MVP architecture.

@@ -6,7 +6,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
-namespace io.github.hatayama.uLoopMCP
+namespace io.github.hatayama.UnityCliLoop
 {
     // Deterministic controller for verifying record/replay accuracy.
     // Uses fixed per-frame movement (no deltaTime) to ensure identical

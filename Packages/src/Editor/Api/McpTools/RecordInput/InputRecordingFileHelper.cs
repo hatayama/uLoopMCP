@@ -9,7 +9,7 @@ using UnityEngine.InputSystem;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 
-namespace io.github.hatayama.uLoopMCP
+namespace io.github.hatayama.UnityCliLoop
 {
     internal static class InputRecordingFileHelper
     {

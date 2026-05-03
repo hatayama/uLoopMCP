@@ -9,7 +9,7 @@ using UnityEngine.InputSystem.UI;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-namespace io.github.hatayama.uLoopMCP
+namespace io.github.hatayama.UnityCliLoop
 {
     public static class DemoKeyboardSceneBuilder
     {
@@ -39,7 +39,7 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-        [MenuItem("uLoopMCP/Build Keyboard Demo Scene")]
+        [MenuItem("UnityCliLoop/Build Keyboard Demo Scene")]
         public static void Build()
         {
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);

@@ -12,7 +12,7 @@ using UnityEngine.InputSystem;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 
-namespace io.github.hatayama.uLoopMCP
+namespace io.github.hatayama.UnityCliLoop
 {
     [McpTool(Description = "Replay recorded input during PlayMode. Loads a JSON recording and injects keyboard/mouse input frame-by-frame with zero CLI overhead.")]
     public class ReplayInputTool : AbstractUnityTool<ReplayInputSchema, ReplayInputResponse>

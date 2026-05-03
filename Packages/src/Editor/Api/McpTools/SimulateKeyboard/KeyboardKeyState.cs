@@ -5,7 +5,7 @@ using UnityEditor;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
 
-namespace io.github.hatayama.uLoopMCP
+namespace io.github.hatayama.UnityCliLoop
 {
     // Tool instances are created fresh per invocation, so held-key state
     // between KeyDown/KeyUp must be held statically.

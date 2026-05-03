@@ -8,7 +8,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 #endif
 
-namespace io.github.hatayama.uLoopMCP
+namespace io.github.hatayama.UnityCliLoop
 {
     [McpTool(Description = "Simulate mouse input in PlayMode via Input System. Injects button clicks, mouse delta, and scroll wheel directly into Mouse.current for game logic that reads Input System (e.g. WasPressedThisFrame). Requires the Input System package.")]
     public class SimulateMouseInputTool : AbstractUnityTool<SimulateMouseInputSchema, SimulateMouseInputResponse>

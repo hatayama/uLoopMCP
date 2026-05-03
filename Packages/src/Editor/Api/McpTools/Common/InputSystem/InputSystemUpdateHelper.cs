@@ -7,7 +7,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
 
-namespace io.github.hatayama.uLoopMCP
+namespace io.github.hatayama.UnityCliLoop
 {
     // Shared helper for applying Input System state changes at the correct update phase.
     // Both keyboard and mouse simulation need frame-precise timing so that

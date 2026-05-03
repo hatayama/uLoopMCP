@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
 
-namespace io.github.hatayama.uLoopMCP
+namespace io.github.hatayama.UnityCliLoop
 {
     // Projects can process Input System events in dynamic, fixed, or manual mode.
     // Keyboard simulation must follow that configured loop to avoid frame mismatches.

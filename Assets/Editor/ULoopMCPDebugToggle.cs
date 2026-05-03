@@ -2,13 +2,13 @@ using UnityEditor;
 using UnityEngine;
 using System.Linq;
 
-namespace io.github.hatayama.uLoopMCP
+namespace io.github.hatayama.UnityCliLoop
 {
     /// <summary>
     /// Unity Editor menu items for toggling ULOOPMCP_DEBUG and debug-only Roslyn support.
     ///
     /// This file is intended for internal debugging convenience:
-    /// - It lives under Assets/Editor/ outside Packages, so it is NOT included in the distributed uLoopMCP package.
+    /// - It lives under Assets/Editor/ outside Packages, so it is NOT included in the distributed UnityCliLoop package.
     /// - In production, Roslyn define symbols are managed centrally via McpEditorSettings (see UpdateRoslynDefineSymbol).
     ///   These menus operate only on the currently selected BuildTargetGroup and may temporarily diverge from global policy.
     ///
@@ -16,10 +16,10 @@ namespace io.github.hatayama.uLoopMCP
     /// - McpEditorWindow: Uses ULOOPMCP_DEBUG to show/hide developer tools
     /// - McpLogger: Debug logging behavior controlled by this symbol
     /// </summary>
-    public static class ULoopMCPDebugToggle
+    public static class UnityCliLoopDebugToggle
     {
-        private const string MENU_PATH_ENABLE = "uLoopMCP/Tools/Debug Settings/Enable Debug Mode";
-        private const string MENU_PATH_DISABLE = "uLoopMCP/Tools/Debug Settings/Disable Debug Mode";
+        private const string MENU_PATH_ENABLE = "UnityCliLoop/Tools/Debug Settings/Enable Debug Mode";
+        private const string MENU_PATH_DISABLE = "UnityCliLoop/Tools/Debug Settings/Disable Debug Mode";
 
         /// <summary>
         /// Check if ULOOPMCP_DEBUG symbol is currently defined
@@ -39,7 +39,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             if (IsDebugModeEnabled())
             {
-                Debug.Log("[uLoopMCP] Debug mode is already enabled");
+                Debug.Log("[UnityCliLoop] Debug mode is already enabled");
                 return;
             }
 
@@ -56,7 +56,7 @@ namespace io.github.hatayama.uLoopMCP
             }
             
             PlayerSettings.SetScriptingDefineSymbolsForGroup(targetGroup, defines);
-            Debug.Log("[uLoopMCP] Debug mode enabled. Unity will recompile scripts.");
+            Debug.Log("[UnityCliLoop] Debug mode enabled. Unity will recompile scripts.");
         }
 
         /// <summary>
@@ -67,7 +67,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             if (!IsDebugModeEnabled())
             {
-                Debug.Log("[uLoopMCP] Debug mode is already disabled");
+                Debug.Log("[UnityCliLoop] Debug mode is already disabled");
                 return;
             }
 
@@ -79,7 +79,7 @@ namespace io.github.hatayama.uLoopMCP
             defines = string.Join(";", defineArray);
             
             PlayerSettings.SetScriptingDefineSymbolsForGroup(targetGroup, defines);
-            Debug.Log("[uLoopMCP] Debug mode disabled. Unity will recompile scripts.");
+            Debug.Log("[UnityCliLoop] Debug mode disabled. Unity will recompile scripts.");
         }
 
         /// <summary>
