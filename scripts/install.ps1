@@ -9,6 +9,7 @@ $InstallDir = if ($env:ULOOP_INSTALL_DIR) {
     Join-Path $env:LOCALAPPDATA "Programs\uloop\bin"
 }
 $AssetName = "uloop-windows-amd64.zip"
+$LegacyCleanupFailed = $false
 
 if ($Version -eq "latest") {
     $DownloadUrl = "https://github.com/$Repository/releases/latest/download/$AssetName"
@@ -58,9 +59,30 @@ function Remove-LegacyNpmIfEnabled {
         Write-Host "Removing legacy npm installation: $LegacyNpmPackage"
         & $NpmCommand uninstall -g $LegacyNpmPackage
         if ($LASTEXITCODE -ne 0) {
-            throw "Failed to remove legacy npm installation: $LegacyNpmPackage"
+            $script:LegacyCleanupFailed = $true
+            Write-Warning "Could not remove legacy npm installation: $LegacyNpmPackage"
+            Write-Host "To remove it manually, run:"
+            Write-Host "  npm uninstall -g $LegacyNpmPackage"
         }
     }
+}
+
+function Confirm-ActiveUloopAfterLegacyCleanup {
+    if (-not $script:LegacyCleanupFailed) {
+        return
+    }
+
+    $ResolvedCommand = Get-Command uloop -ErrorAction SilentlyContinue | Select-Object -First 1
+    if (-not $ResolvedCommand) {
+        return
+    }
+
+    $ExpectedUloop = Join-Path $InstallDir "uloop.exe"
+    if ([string]::Equals($ResolvedCommand.Source, $ExpectedUloop, [System.StringComparison]::OrdinalIgnoreCase)) {
+        return
+    }
+
+    throw "Failed to remove legacy npm installation, and PATH still resolves uloop to $($ResolvedCommand.Source). The native dispatcher was installed to $ExpectedUloop, but running uloop may still use the legacy command. Remove the legacy package manually, or move $InstallDir earlier in PATH."
 }
 
 function Write-LegacyNpmWarningIfPresent {
@@ -131,6 +153,7 @@ try {
     }
 
     & (Join-Path $InstallDir "uloop.exe") --version
+    Confirm-ActiveUloopAfterLegacyCleanup
     Write-LegacyNpmWarningIfPresent
     Report-PathShadowing
 }

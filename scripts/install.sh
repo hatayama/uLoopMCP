@@ -6,6 +6,7 @@ INSTALL_DIR="${ULOOP_INSTALL_DIR:-$HOME/.local/bin}"
 VERSION="${ULOOP_VERSION:-latest}"
 LEGACY_NPM_PACKAGE="uloop-cli"
 REMOVE_LEGACY="${ULOOP_REMOVE_LEGACY:-0}"
+legacy_cleanup_failed=0
 
 is_remove_legacy_enabled() {
   case "$REMOVE_LEGACY" in
@@ -25,8 +26,31 @@ remove_legacy_npm_if_enabled() {
 
   if is_remove_legacy_enabled; then
     echo "Removing legacy npm installation: $LEGACY_NPM_PACKAGE"
-    npm uninstall -g "$LEGACY_NPM_PACKAGE"
+    if ! npm uninstall -g "$LEGACY_NPM_PACKAGE"; then
+      legacy_cleanup_failed=1
+      echo "Warning: Could not remove legacy npm installation: $LEGACY_NPM_PACKAGE"
+      echo "To remove it manually, run:"
+      echo "  npm uninstall -g $LEGACY_NPM_PACKAGE"
+    fi
   fi
+}
+
+ensure_active_uloop_after_legacy_cleanup() {
+  if [ "$legacy_cleanup_failed" -ne 1 ]; then
+    return
+  fi
+
+  resolved_uloop=$(command -v uloop 2>/dev/null || true)
+  expected_uloop="$INSTALL_DIR/uloop"
+  if [ -z "$resolved_uloop" ] || [ "$resolved_uloop" = "$expected_uloop" ]; then
+    return
+  fi
+
+  echo "Failed to remove legacy npm installation, and PATH still resolves uloop to:" >&2
+  echo "  $resolved_uloop" >&2
+  echo "The native dispatcher was installed to $expected_uloop, but running uloop may still use the legacy command." >&2
+  echo "Remove the legacy package manually, or move $INSTALL_DIR earlier in PATH." >&2
+  exit 1
 }
 
 report_legacy_npm_if_present() {
@@ -136,5 +160,6 @@ case ":$PATH:" in
 esac
 
 "$INSTALL_DIR/uloop" --version
+ensure_active_uloop_after_legacy_cleanup
 report_legacy_npm_if_present
 report_path_shadowing
