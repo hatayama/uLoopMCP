@@ -114,6 +114,25 @@ function Report-PathShadowing {
     Write-Host "Move $InstallDir earlier in PATH, or remove the legacy installation if it owns that command."
 }
 
+function Assert-UloopVersionSucceeds {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$UloopPath,
+        [switch]$Quiet
+    )
+
+    if ($Quiet) {
+        & $UloopPath --version > $null
+    }
+    else {
+        & $UloopPath --version
+    }
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "uloop binary verification failed for $UloopPath"
+    }
+}
+
 $TempDir = Join-Path ([System.IO.Path]::GetTempPath()) ("uloop-install-" + [System.Guid]::NewGuid().ToString("N"))
 $StagedUloopPath = $null
 New-Item -ItemType Directory -Path $TempDir | Out-Null
@@ -134,7 +153,7 @@ try {
     New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
     $StagedUloopPath = Join-Path $InstallDir ("uloop-install-" + [System.Guid]::NewGuid().ToString("N") + ".exe")
     Copy-Item -Path (Join-Path $TempDir "uloop.exe") -Destination $StagedUloopPath -Force
-    & $StagedUloopPath --version > $null
+    Assert-UloopVersionSucceeds -UloopPath $StagedUloopPath -Quiet
     Remove-LegacyNpmIfEnabled
     $FinalUloopPath = Join-Path $InstallDir "uloop.exe"
     Copy-Item -Path $StagedUloopPath -Destination $FinalUloopPath -Force
@@ -154,7 +173,7 @@ try {
         Write-Host "Added $InstallDir to User PATH. Open a new terminal to use it everywhere."
     }
 
-    & $FinalUloopPath --version
+    Assert-UloopVersionSucceeds -UloopPath $FinalUloopPath
     Confirm-ActiveUloopAfterLegacyCleanup
     Write-LegacyNpmWarningIfPresent
     Report-PathShadowing
