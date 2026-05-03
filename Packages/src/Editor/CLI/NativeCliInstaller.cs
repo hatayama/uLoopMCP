@@ -93,24 +93,17 @@ namespace io.github.hatayama.UnityCliLoop
 
             if (result.Success)
             {
-                CliInstallResult legacyResult = RemoveLegacyNpmPackageIfPresent(
-                    platform,
-                    RunInstallCommand);
-                if (!legacyResult.Success)
-                {
-                    return legacyResult;
-                }
-
-                ApplyInstallDirectoryToCurrentProcessPath(platform);
-                CliInstallResult persistResult = PersistInstallDirectoryToUserPath(
+                result = FinishSuccessfulBundleInstall(
+                    result,
                     installDirectory,
                     platform,
-                    Environment.GetEnvironmentVariable,
-                    Environment.SetEnvironmentVariable);
-                if (!persistResult.Success)
-                {
-                    return persistResult;
-                }
+                    currentPlatform => RemoveLegacyNpmPackageIfPresent(currentPlatform, RunInstallCommand),
+                    ApplyInstallDirectoryToCurrentProcessPath,
+                    (currentInstallDirectory, currentPlatform) => PersistInstallDirectoryToUserPath(
+                        currentInstallDirectory,
+                        currentPlatform,
+                        Environment.GetEnvironmentVariable,
+                        Environment.SetEnvironmentVariable));
             }
 
             return result;
@@ -235,6 +228,28 @@ namespace io.github.hatayama.UnityCliLoop
                 + $"  {uninstallCommand.ManualCommand}\n"
                 + uninstallResult.ErrorOutput;
             return new CliInstallResult(false, errorOutput);
+        }
+
+        internal static CliInstallResult FinishSuccessfulBundleInstall(
+            CliInstallResult installResult,
+            string installDirectory,
+            RuntimePlatform platform,
+            Func<RuntimePlatform, CliInstallResult> removeLegacyNpmPackage,
+            Action<RuntimePlatform> applyInstallDirectoryToCurrentProcessPath,
+            Func<string, RuntimePlatform, CliInstallResult> persistInstallDirectoryToUserPath)
+        {
+            UnityEngine.Debug.Assert(installResult.Success, "installResult must be successful");
+            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(installDirectory), "installDirectory must not be null or empty");
+            UnityEngine.Debug.Assert(removeLegacyNpmPackage != null, "removeLegacyNpmPackage must not be null");
+            UnityEngine.Debug.Assert(applyInstallDirectoryToCurrentProcessPath != null, "applyInstallDirectoryToCurrentProcessPath must not be null");
+            UnityEngine.Debug.Assert(persistInstallDirectoryToUserPath != null, "persistInstallDirectoryToUserPath must not be null");
+
+            CliInstallResult legacyResult = removeLegacyNpmPackage(platform);
+            CliInstallResult result = legacyResult.Success ? installResult : legacyResult;
+
+            applyInstallDirectoryToCurrentProcessPath(platform);
+            CliInstallResult persistResult = persistInstallDirectoryToUserPath(installDirectory, platform);
+            return persistResult.Success ? result : persistResult;
         }
 
         private static string GetStagedGlobalCliInstallPath(string installDirectory, RuntimePlatform platform)

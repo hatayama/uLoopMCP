@@ -367,6 +367,50 @@ namespace io.github.hatayama.UnityCliLoop.Tests
         }
 
         [Test]
+        public void FinishSuccessfulBundleInstall_WhenLegacyRemovalFailsStillUpdatesPaths()
+        {
+            // Verifies that a copied dispatcher still updates PATH before reporting legacy cleanup failure.
+            bool appliedCurrentPath = false;
+            bool persistedUserPath = false;
+
+            CliInstallResult result = NativeCliInstaller.FinishSuccessfulBundleInstall(
+                new CliInstallResult(true, ""),
+                "C:\\Users\\masamichi\\Programs\\uloop\\bin",
+                RuntimePlatform.WindowsEditor,
+                platform => new CliInstallResult(false, "legacy failed"),
+                platform => { appliedCurrentPath = true; },
+                (installDirectory, platform) =>
+                {
+                    persistedUserPath = true;
+                    return new CliInstallResult(true, "");
+                });
+
+            Assert.That(result.Success, Is.False);
+            Assert.That(result.ErrorOutput, Does.Contain("legacy failed"));
+            Assert.That(appliedCurrentPath, Is.True);
+            Assert.That(persistedUserPath, Is.True);
+        }
+
+        [Test]
+        public void FinishSuccessfulBundleInstall_WhenPathPersistenceFailsReturnsPathFailure()
+        {
+            // Verifies that PATH persistence failure is reported after the current process PATH is updated.
+            bool appliedCurrentPath = false;
+
+            CliInstallResult result = NativeCliInstaller.FinishSuccessfulBundleInstall(
+                new CliInstallResult(true, ""),
+                "C:\\Users\\masamichi\\Programs\\uloop\\bin",
+                RuntimePlatform.WindowsEditor,
+                platform => new CliInstallResult(false, "legacy failed"),
+                platform => { appliedCurrentPath = true; },
+                (installDirectory, platform) => new CliInstallResult(false, "path failed"));
+
+            Assert.That(result.Success, Is.False);
+            Assert.That(result.ErrorOutput, Does.Contain("path failed"));
+            Assert.That(appliedCurrentPath, Is.True);
+        }
+
+        [Test]
         public void GetDefaultInstallDirectoryFromRoots_OnMacMatchesInstallerDefault()
         {
             // Verifies that Unity mirrors the POSIX installer default install directory.
