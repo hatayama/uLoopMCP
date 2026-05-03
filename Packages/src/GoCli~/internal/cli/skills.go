@@ -525,6 +525,7 @@ func readSkillDefinition(skillDirectory string) (skillDefinition, bool, error) {
 		}
 		return skillDefinition{}, false, err
 	}
+	content = normalizeSkillFileContent(skillFileName, content)
 	frontmatter := parseSkillFrontmatter(string(content))
 	if strings.EqualFold(frontmatter["internal"], "true") {
 		return skillDefinition{}, false, nil
@@ -647,6 +648,7 @@ func copySkillDirectory(sourceDir string, destinationDir string) error {
 		if err != nil {
 			return err
 		}
+		content = normalizeSkillFileContent(relativePath, content)
 		return os.WriteFile(destinationPath, content, 0o644)
 	})
 }
@@ -667,7 +669,9 @@ func isInstalledSkillOutdated(installedDir string, skill skillDefinition) bool {
 	if err != nil {
 		return true
 	}
-	if !bytes.Equal(installedContent, skill.content) {
+	installedContent = normalizeSkillFileContent(skillFileName, installedContent)
+	expectedContent := normalizeSkillFileContent(skillFileName, skill.content)
+	if !bytes.Equal(installedContent, expectedContent) {
 		return true
 	}
 
@@ -699,10 +703,27 @@ func collectComparableSkillFiles(root string) map[string][]byte {
 		if err != nil {
 			return nil
 		}
-		files[relativePath] = content
+		files[relativePath] = normalizeSkillFileContent(relativePath, content)
 		return nil
 	})
 	return files
+}
+
+func normalizeSkillFileContent(relativePath string, content []byte) []byte {
+	if !shouldNormalizeLineEndings(relativePath) || !bytes.Contains(content, []byte{'\r'}) {
+		return content
+	}
+	normalizedContent := bytes.ReplaceAll(content, []byte("\r\n"), []byte("\n"))
+	return bytes.ReplaceAll(normalizedContent, []byte("\r"), []byte("\n"))
+}
+
+func shouldNormalizeLineEndings(relativePath string) bool {
+	switch strings.ToLower(filepath.Ext(relativePath)) {
+	case ".json", ".md", ".ps1", ".sh", ".txt", ".yaml", ".yml":
+		return true
+	default:
+		return false
+	}
 }
 
 func getSkillsBaseDir(projectRoot string, target skillTarget, global bool) string {

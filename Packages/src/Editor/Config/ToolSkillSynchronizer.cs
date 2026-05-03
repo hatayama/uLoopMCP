@@ -779,7 +779,9 @@ namespace io.github.hatayama.UnityCliLoop
                 }
 
                 string relativePath = Path.GetRelativePath(skillDirectory, filePath);
-                files[relativePath] = File.ReadAllBytes(filePath);
+                files[relativePath] = SkillInstallLayout.NormalizeSkillFileContent(
+                    relativePath,
+                    File.ReadAllBytes(filePath));
             }
 
             return files;

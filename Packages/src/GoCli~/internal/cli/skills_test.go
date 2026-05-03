@@ -172,6 +172,84 @@ name: uloop-sample
 	}
 }
 
+// Tests that CRLF-only drift from Windows checkouts does not mark installed skills stale.
+func TestSkillStatusIgnoresCRLFLineEndings(t *testing.T) {
+	projectRoot := t.TempDir()
+	sourceDir := filepath.Join(projectRoot, "source", "Skill")
+	writeSkillFile(t, sourceDir, "---\nname: uloop-sample\n---\n\n# sample\n")
+	referencesDir := filepath.Join(sourceDir, "references")
+	if err := os.MkdirAll(referencesDir, 0o755); err != nil {
+		t.Fatalf("failed to create references: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(referencesDir, "note.md"), []byte("line1\nline2\n"), 0o644); err != nil {
+		t.Fatalf("failed to write source reference: %v", err)
+	}
+
+	skill := skillDefinition{
+		name:            "uloop-sample",
+		content:         []byte("---\nname: uloop-sample\n---\n\n# sample\n"),
+		sourceDirectory: sourceDir,
+	}
+	installedDir := filepath.Join(projectRoot, ".claude", "skills", managedSkillsDir, "uloop-sample")
+	writeSkillFile(t, installedDir, "---\r\nname: uloop-sample\r\n---\r\n\r\n# sample\r\n")
+	if err := os.MkdirAll(filepath.Join(installedDir, "references"), 0o755); err != nil {
+		t.Fatalf("failed to create installed references: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(installedDir, "references", "note.md"), []byte("line1\r\nline2\r\n"), 0o644); err != nil {
+		t.Fatalf("failed to write installed reference: %v", err)
+	}
+
+	status := getSkillStatus(filepath.Join(projectRoot, ".claude", "skills"), skill, true)
+
+	if status != "installed" {
+		t.Fatalf("status mismatch: %s", status)
+	}
+}
+
+// Tests that installing skills writes deterministic LF line endings.
+func TestInstallSkillsNormalizesCRLFLineEndings(t *testing.T) {
+	projectRoot := t.TempDir()
+	sourceDir := filepath.Join(projectRoot, "source", "Skill")
+	writeSkillFile(t, sourceDir, "---\r\nname: uloop-sample\r\n---\r\n\r\n# sample\r\n")
+	referencesDir := filepath.Join(sourceDir, "references")
+	if err := os.MkdirAll(referencesDir, 0o755); err != nil {
+		t.Fatalf("failed to create references: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(referencesDir, "note.md"), []byte("line1\r\nline2\r\n"), 0o644); err != nil {
+		t.Fatalf("failed to write source reference: %v", err)
+	}
+
+	skill := skillDefinition{
+		name:            "uloop-sample",
+		content:         []byte("---\r\nname: uloop-sample\r\n---\r\n\r\n# sample\r\n"),
+		sourceDirectory: sourceDir,
+	}
+
+	result, err := installSkillsForTarget(projectRoot, targetConfigs["claude"], []skillDefinition{skill}, false, true)
+	if err != nil {
+		t.Fatalf("installSkillsForTarget failed: %v", err)
+	}
+	if result.installed != 1 || result.updated != 0 || result.skipped != 0 {
+		t.Fatalf("install result mismatch: %#v", result)
+	}
+
+	installedReferencePath := filepath.Join(
+		projectRoot,
+		".claude",
+		"skills",
+		managedSkillsDir,
+		"uloop-sample",
+		"references",
+		"note.md")
+	content, err := os.ReadFile(installedReferencePath)
+	if err != nil {
+		t.Fatalf("failed to read installed reference: %v", err)
+	}
+	if strings.Contains(string(content), "\r") {
+		t.Fatalf("installed reference kept CRLF line endings: %q", string(content))
+	}
+}
+
 // Tests that installing skills removes disabled and deprecated skill directories from all layouts.
 func TestInstallSkillsForTargetRemovesDisabledAndDeprecatedSkills(t *testing.T) {
 	projectRoot := t.TempDir()

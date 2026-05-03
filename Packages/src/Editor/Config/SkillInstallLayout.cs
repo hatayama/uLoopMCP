@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 
 using UnityEngine;
@@ -21,6 +22,16 @@ namespace io.github.hatayama.UnityCliLoop
             ".meta",
             ".DS_Store",
             ".gitkeep"
+        };
+        private static readonly HashSet<string> TextSkillFileExtensions = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ".json",
+            ".md",
+            ".ps1",
+            ".sh",
+            ".txt",
+            ".yaml",
+            ".yml"
         };
 
         private sealed class SkillSourceDefinition
@@ -353,7 +364,7 @@ namespace io.github.hatayama.UnityCliLoop
                 }
 
                 string relativePath = Path.GetRelativePath(skillDirectory, filePath);
-                files[relativePath] = File.ReadAllBytes(filePath);
+                files[relativePath] = NormalizeSkillFileContent(relativePath, File.ReadAllBytes(filePath));
             }
 
             return files;
@@ -373,8 +384,29 @@ namespace io.github.hatayama.UnityCliLoop
 
             return new Dictionary<string, byte[]>(StringComparer.Ordinal)
             {
-                [SkillFileName] = File.ReadAllBytes(skillFilePath)
+                [SkillFileName] = NormalizeSkillFileContent(SkillFileName, File.ReadAllBytes(skillFilePath))
             };
+        }
+
+        internal static byte[] NormalizeSkillFileContent(string relativePath, byte[] content)
+        {
+            Debug.Assert(!string.IsNullOrEmpty(relativePath), "relativePath must not be null or empty");
+            Debug.Assert(content != null, "content must not be null");
+
+            if (!ShouldNormalizeLineEndings(relativePath) || Array.IndexOf(content, (byte)'\r') < 0)
+            {
+                return content;
+            }
+
+            string text = Encoding.UTF8.GetString(content);
+            string normalizedText = text.Replace("\r\n", "\n").Replace("\r", "\n");
+            return Encoding.UTF8.GetBytes(normalizedText);
+        }
+
+        private static bool ShouldNormalizeLineEndings(string relativePath)
+        {
+            string extension = Path.GetExtension(relativePath);
+            return TextSkillFileExtensions.Contains(extension);
         }
 
         private static Dictionary<string, SkillSourceDefinition> GetSkillSources(string projectRoot)
