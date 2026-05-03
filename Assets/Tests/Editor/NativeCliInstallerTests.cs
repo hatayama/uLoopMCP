@@ -903,5 +903,35 @@ namespace io.github.hatayama.UnityCliLoop.Tests
                 "uloop",
                 "bin")));
         }
+
+        [Test]
+        public void IsDefaultInstallDirectoryForCurrentUser_WhenWindowsDefaultDirectoryReturnsTrue()
+        {
+            // Verifies that uninstall can clean PATH entries for the package-owned default directory.
+            bool result = NativeCliInstaller.IsDefaultInstallDirectoryForCurrentUser(
+                System.IO.Path.Combine(
+                    "C:\\Users\\masamichi\\AppData\\Local",
+                    "Programs",
+                    "uloop",
+                    "bin"),
+                RuntimePlatform.WindowsEditor,
+                null,
+                "C:\\Users\\masamichi\\AppData\\Local");
+
+            Assert.That(result, Is.True);
+        }
+
+        [Test]
+        public void IsDefaultInstallDirectoryForCurrentUser_WhenWindowsSharedDirectoryReturnsFalse()
+        {
+            // Verifies that uninstall preserves user-owned shared PATH directories such as C:\Tools.
+            bool result = NativeCliInstaller.IsDefaultInstallDirectoryForCurrentUser(
+                "C:\\Tools",
+                RuntimePlatform.WindowsEditor,
+                null,
+                "C:\\Users\\masamichi\\AppData\\Local");
+
+            Assert.That(result, Is.False);
+        }
     }
 }

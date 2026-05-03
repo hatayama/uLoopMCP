@@ -127,6 +127,11 @@ namespace io.github.hatayama.UnityCliLoop
                 return result;
             }
 
+            if (!ShouldRemoveInstallDirectoryFromPath(installDirectory, platform))
+            {
+                return result;
+            }
+
             RemoveInstallDirectoryFromCurrentProcessPath(installDirectory, platform);
             return RemoveInstallDirectoryFromUserPath(
                 installDirectory,
@@ -730,6 +735,29 @@ namespace io.github.hatayama.UnityCliLoop
                 CliConstants.NATIVE_INSTALL_BIN_DIR_NAME);
         }
 
+        internal static bool IsDefaultInstallDirectoryForCurrentUser(
+            string installDirectory,
+            RuntimePlatform platform,
+            string homeDirectory,
+            string localAppData)
+        {
+            UnityEngine.Debug.Assert(!string.IsNullOrWhiteSpace(installDirectory), "installDirectory must not be null or empty");
+
+            string defaultInstallDirectory = GetDefaultInstallDirectoryFromRoots(
+                platform,
+                homeDirectory,
+                localAppData);
+            if (string.IsNullOrWhiteSpace(defaultInstallDirectory))
+            {
+                return false;
+            }
+
+            return string.Equals(
+                installDirectory,
+                defaultInstallDirectory,
+                GetPathComparison(platform));
+        }
+
         private static void ApplyInstallDirectoryToCurrentProcessPath(RuntimePlatform platform)
         {
             string installDirectory = GetInstallDirectoryForCurrentUser(platform);
@@ -754,6 +782,26 @@ namespace io.github.hatayama.UnityCliLoop
             string currentPath = Environment.GetEnvironmentVariable(pathVariableName);
             string updatedPath = BuildPathWithoutInstallDirectory(currentPath, installDirectory, platform);
             Environment.SetEnvironmentVariable(pathVariableName, updatedPath);
+        }
+
+        private static bool ShouldRemoveInstallDirectoryFromPath(
+            string installDirectory,
+            RuntimePlatform platform)
+        {
+            UnityEngine.Debug.Assert(!string.IsNullOrWhiteSpace(installDirectory), "installDirectory must not be null or empty");
+
+            string homeDirectory = Environment.GetEnvironmentVariable(CliConstants.POSIX_HOME_ENVIRONMENT_VARIABLE);
+            if (string.IsNullOrWhiteSpace(homeDirectory))
+            {
+                homeDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            }
+
+            string localAppData = Environment.GetEnvironmentVariable(CliConstants.WINDOWS_LOCAL_APPDATA_ENVIRONMENT_VARIABLE);
+            return IsDefaultInstallDirectoryForCurrentUser(
+                installDirectory,
+                platform,
+                homeDirectory,
+                localAppData);
         }
 
         private static string GetInstallDirectoryForCurrentUser(RuntimePlatform platform)
