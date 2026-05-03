@@ -4,7 +4,7 @@ using System.IO;
 using System.Text;
 using NUnit.Framework;
 
-namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
+namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
 {
     [TestFixture]
     public class SharedRoslynCompilerWorkerHostTests
@@ -26,7 +26,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         public void CreateCompileRequestCommand_WhenPathIsWindowsAbsolutePath_ShouldEncodeAsciiPayload()
         {
             string requestFilePath =
-                @"C:\Users\S06870\Documents\unity\vision-client_02\vision-client\Temp\uLoopMCPCompilation\DynamicCommand_1.worker";
+                @"C:\Users\S06870\Documents\unity\vision-client_02\vision-client\Temp\UnityCliLoopCompilation\DynamicCommand_1.worker";
 
             string command = SharedRoslynCompilerWorkerHost.CreateCompileRequestCommandForTests(requestFilePath);
 
