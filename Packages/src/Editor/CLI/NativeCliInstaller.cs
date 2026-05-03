@@ -99,7 +99,7 @@ namespace io.github.hatayama.UnityCliLoop
                     platform,
                     currentPlatform => RemoveLegacyNpmPackageIfPresent(currentPlatform, RunInstallCommand),
                     ApplyInstallDirectoryToCurrentProcessPath,
-                    RepairLegacyCommandShims,
+                    CleanupLegacyCommandShims,
                     (currentInstallDirectory, currentPlatform) => PersistInstallDirectoryToUserPath(
                         currentInstallDirectory,
                         currentPlatform,
@@ -353,13 +353,26 @@ namespace io.github.hatayama.UnityCliLoop
         public static bool HasLegacyNpmInstallation(RuntimePlatform platform)
         {
             string applicationData = Environment.GetEnvironmentVariable(CliConstants.WINDOWS_APPDATA_ENVIRONMENT_VARIABLE);
-            return HasLegacyNpmInstallation(platform, RunInstallCommand, applicationData);
+            string installDirectory = GetInstallDirectoryForCurrentUser(platform);
+            string nativeUloopPath = string.IsNullOrWhiteSpace(installDirectory)
+                ? null
+                : GetGlobalCliInstallPath(installDirectory, platform);
+            return HasLegacyNpmInstallation(platform, RunInstallCommand, applicationData, nativeUloopPath);
         }
 
         internal static bool HasLegacyNpmInstallation(
             RuntimePlatform platform,
             Func<NativeCliInstallCommand, RuntimePlatform, CliInstallResult> runCommand,
             string applicationData)
+        {
+            return HasLegacyNpmInstallation(platform, runCommand, applicationData, nativeUloopPath: null);
+        }
+
+        internal static bool HasLegacyNpmInstallation(
+            RuntimePlatform platform,
+            Func<NativeCliInstallCommand, RuntimePlatform, CliInstallResult> runCommand,
+            string applicationData,
+            string nativeUloopPath)
         {
             UnityEngine.Debug.Assert(runCommand != null, "runCommand must not be null");
 
@@ -368,7 +381,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return true;
             }
 
-            return HasLegacyCommandShims(platform, applicationData);
+            return HasLegacyCommandShims(platform, applicationData, nativeUloopPath);
         }
 
         internal static bool HasLegacyNpmPackage(
@@ -382,7 +395,10 @@ namespace io.github.hatayama.UnityCliLoop
             return detectResult.Success;
         }
 
-        internal static bool HasLegacyCommandShims(RuntimePlatform platform, string applicationData)
+        internal static bool HasLegacyCommandShims(
+            RuntimePlatform platform,
+            string applicationData,
+            string nativeUloopPath)
         {
             if (platform != RuntimePlatform.WindowsEditor || string.IsNullOrWhiteSpace(applicationData))
             {
@@ -390,10 +406,12 @@ namespace io.github.hatayama.UnityCliLoop
             }
 
             string legacyBinDirectory = Path.Combine(applicationData, CliConstants.WINDOWS_NPM_BIN_DIR_NAME);
-            return HasLegacyCommandShimsInDirectory(legacyBinDirectory);
+            return HasLegacyCommandShimsInDirectory(legacyBinDirectory, nativeUloopPath);
         }
 
-        internal static bool HasLegacyCommandShimsInDirectory(string legacyBinDirectory)
+        internal static bool HasLegacyCommandShimsInDirectory(
+            string legacyBinDirectory,
+            string nativeUloopPath)
         {
             UnityEngine.Debug.Assert(!string.IsNullOrEmpty(legacyBinDirectory), "legacyBinDirectory must not be null or empty");
 
@@ -411,7 +429,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             foreach (string shimPath in shimPaths)
             {
-                if (IsLegacyCommandShim(shimPath))
+                if (IsPackageOwnedCommandShim(shimPath, nativeUloopPath))
                 {
                     return true;
                 }
@@ -426,38 +444,36 @@ namespace io.github.hatayama.UnityCliLoop
             RuntimePlatform platform,
             Func<RuntimePlatform, CliInstallResult> removeLegacyNpmPackage,
             Action<RuntimePlatform> applyInstallDirectoryToCurrentProcessPath,
-            Func<string, RuntimePlatform, CliInstallResult> repairLegacyCommandShims,
+            Func<string, RuntimePlatform, CliInstallResult> cleanupLegacyCommandShims,
             Func<string, RuntimePlatform, CliInstallResult> persistInstallDirectoryToUserPath)
         {
             UnityEngine.Debug.Assert(installResult.Success, "installResult must be successful");
             UnityEngine.Debug.Assert(!string.IsNullOrEmpty(installDirectory), "installDirectory must not be null or empty");
             UnityEngine.Debug.Assert(removeLegacyNpmPackage != null, "removeLegacyNpmPackage must not be null");
             UnityEngine.Debug.Assert(applyInstallDirectoryToCurrentProcessPath != null, "applyInstallDirectoryToCurrentProcessPath must not be null");
-            UnityEngine.Debug.Assert(repairLegacyCommandShims != null, "repairLegacyCommandShims must not be null");
+            UnityEngine.Debug.Assert(cleanupLegacyCommandShims != null, "cleanupLegacyCommandShims must not be null");
             UnityEngine.Debug.Assert(persistInstallDirectoryToUserPath != null, "persistInstallDirectoryToUserPath must not be null");
 
             CliInstallResult legacyResult = removeLegacyNpmPackage(platform);
             CliInstallResult result = legacyResult.Success ? installResult : legacyResult;
 
             applyInstallDirectoryToCurrentProcessPath(platform);
-            CliInstallResult repairResult = legacyResult.Success
-                ? repairLegacyCommandShims(installDirectory, platform)
-                : new CliInstallResult(true, "");
+            CliInstallResult cleanupResult = cleanupLegacyCommandShims(installDirectory, platform);
             CliInstallResult persistResult = persistInstallDirectoryToUserPath(installDirectory, platform);
             if (!persistResult.Success)
             {
                 return persistResult;
             }
 
-            if (!repairResult.Success)
+            if (!cleanupResult.Success)
             {
-                return repairResult;
+                return cleanupResult;
             }
 
             return result;
         }
 
-        internal static CliInstallResult RepairLegacyCommandShims(string installDirectory, RuntimePlatform platform)
+        internal static CliInstallResult CleanupLegacyCommandShims(string installDirectory, RuntimePlatform platform)
         {
             UnityEngine.Debug.Assert(!string.IsNullOrEmpty(installDirectory), "installDirectory must not be null or empty");
 
@@ -474,10 +490,22 @@ namespace io.github.hatayama.UnityCliLoop
 
             string legacyBinDirectory = Path.Combine(applicationData, CliConstants.WINDOWS_NPM_BIN_DIR_NAME);
             string nativeUloopPath = GetGlobalCliInstallPath(installDirectory, platform);
-            return RepairLegacyCommandShimsInDirectory(legacyBinDirectory, nativeUloopPath);
+            CliInstallResult cleanupResult = CleanupLegacyCommandShimsInDirectory(legacyBinDirectory, nativeUloopPath);
+            if (!cleanupResult.Success)
+            {
+                return cleanupResult;
+            }
+
+            return RemoveLegacyNpmBinDirectoryFromPathIfUnused(
+                legacyBinDirectory,
+                platform,
+                Environment.GetEnvironmentVariable,
+                Environment.SetEnvironmentVariable,
+                name => Environment.GetEnvironmentVariable(name),
+                (name, value) => Environment.SetEnvironmentVariable(name, value));
         }
 
-        internal static CliInstallResult RepairLegacyCommandShimsInDirectory(
+        internal static CliInstallResult CleanupLegacyCommandShimsInDirectory(
             string legacyBinDirectory,
             string nativeUloopPath)
         {
@@ -500,31 +528,96 @@ namespace io.github.hatayama.UnityCliLoop
 
                 foreach (string shimPath in shimPaths)
                 {
-                    RepairLegacyCommandShim(shimPath, nativeUloopPath);
+                    DeletePackageOwnedCommandShim(shimPath, nativeUloopPath);
                 }
             }
             catch (IOException ex)
             {
-                return BuildLegacyShimRepairFailure(ex);
+                return BuildLegacyShimCleanupFailure(ex);
             }
             catch (UnauthorizedAccessException ex)
             {
-                return BuildLegacyShimRepairFailure(ex);
+                return BuildLegacyShimCleanupFailure(ex);
             }
             catch (SecurityException ex)
             {
-                return BuildLegacyShimRepairFailure(ex);
+                return BuildLegacyShimCleanupFailure(ex);
             }
             catch (ArgumentException ex)
             {
-                return BuildLegacyShimRepairFailure(ex);
+                return BuildLegacyShimCleanupFailure(ex);
             }
             catch (NotSupportedException ex)
             {
-                return BuildLegacyShimRepairFailure(ex);
+                return BuildLegacyShimCleanupFailure(ex);
             }
 
             return new CliInstallResult(true, "");
+        }
+
+        internal static CliInstallResult RemoveLegacyNpmBinDirectoryFromPathIfUnused(
+            string legacyBinDirectory,
+            RuntimePlatform platform,
+            Func<string, EnvironmentVariableTarget, string> getUserEnvironmentVariable,
+            Action<string, string, EnvironmentVariableTarget> setUserEnvironmentVariable,
+            Func<string, string> getProcessEnvironmentVariable,
+            Action<string, string> setProcessEnvironmentVariable)
+        {
+            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(legacyBinDirectory), "legacyBinDirectory must not be null or empty");
+            UnityEngine.Debug.Assert(getUserEnvironmentVariable != null, "getUserEnvironmentVariable must not be null");
+            UnityEngine.Debug.Assert(setUserEnvironmentVariable != null, "setUserEnvironmentVariable must not be null");
+            UnityEngine.Debug.Assert(getProcessEnvironmentVariable != null, "getProcessEnvironmentVariable must not be null");
+            UnityEngine.Debug.Assert(setProcessEnvironmentVariable != null, "setProcessEnvironmentVariable must not be null");
+
+            if (platform != RuntimePlatform.WindowsEditor)
+            {
+                return new CliInstallResult(true, "");
+            }
+
+            try
+            {
+                if (HasNpmBinCommandEntries(legacyBinDirectory))
+                {
+                    return new CliInstallResult(true, "");
+                }
+
+                string pathVariableName = GetPathEnvironmentVariableName(platform);
+                string currentUserPath = getUserEnvironmentVariable(pathVariableName, EnvironmentVariableTarget.User);
+                string updatedUserPath = BuildPathWithoutInstallDirectory(currentUserPath, legacyBinDirectory, platform);
+                if (!string.Equals(currentUserPath, updatedUserPath, GetPathComparison(platform)))
+                {
+                    setUserEnvironmentVariable(pathVariableName, updatedUserPath, EnvironmentVariableTarget.User);
+                }
+
+                string currentProcessPath = getProcessEnvironmentVariable(pathVariableName);
+                string updatedProcessPath = BuildPathWithoutInstallDirectory(currentProcessPath, legacyBinDirectory, platform);
+                if (!string.Equals(currentProcessPath, updatedProcessPath, GetPathComparison(platform)))
+                {
+                    setProcessEnvironmentVariable(pathVariableName, updatedProcessPath);
+                }
+
+                return new CliInstallResult(true, "");
+            }
+            catch (IOException ex)
+            {
+                return BuildLegacyNpmPathCleanupFailure(ex);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return BuildLegacyNpmPathCleanupFailure(ex);
+            }
+            catch (SecurityException ex)
+            {
+                return BuildLegacyNpmPathCleanupFailure(ex);
+            }
+            catch (ArgumentException ex)
+            {
+                return BuildLegacyNpmPathCleanupFailure(ex);
+            }
+            catch (NotSupportedException ex)
+            {
+                return BuildLegacyNpmPathCleanupFailure(ex);
+            }
         }
 
         private static string GetStagedGlobalCliInstallPath(string installDirectory, RuntimePlatform platform)
@@ -736,13 +829,24 @@ namespace io.github.hatayama.UnityCliLoop
             return new CliInstallResult(false, errorOutput);
         }
 
-        private static CliInstallResult BuildLegacyShimRepairFailure(Exception ex)
+        private static CliInstallResult BuildLegacyShimCleanupFailure(Exception ex)
         {
             UnityEngine.Debug.Assert(ex != null, "ex must not be null");
 
             string errorOutput =
-                "Installed the uLoop CLI binary, but failed to repair a legacy npm uloop launcher. "
-                + "Remove the stale launcher manually from the npm global bin directory or open a new terminal.\n"
+                "Installed the uLoop CLI binary, but failed to remove a legacy npm uloop launcher. "
+                + "Remove the stale launcher manually from the npm global bin directory.\n"
+                + ex.Message;
+            return new CliInstallResult(false, errorOutput);
+        }
+
+        private static CliInstallResult BuildLegacyNpmPathCleanupFailure(Exception ex)
+        {
+            UnityEngine.Debug.Assert(ex != null, "ex must not be null");
+
+            string errorOutput =
+                "Installed the uLoop CLI binary, but failed to remove an unused npm global bin directory from the Windows User PATH. "
+                + "Remove the unused npm global bin directory manually if it no longer contains command shims.\n"
                 + ex.Message;
             return new CliInstallResult(false, errorOutput);
         }
@@ -828,7 +932,7 @@ namespace io.github.hatayama.UnityCliLoop
             Directory.Delete(directoryPath);
         }
 
-        private static void RepairLegacyCommandShim(string shimPath, string nativeUloopPath)
+        private static void DeletePackageOwnedCommandShim(string shimPath, string nativeUloopPath)
         {
             UnityEngine.Debug.Assert(!string.IsNullOrEmpty(shimPath), "shimPath must not be null or empty");
             UnityEngine.Debug.Assert(!string.IsNullOrEmpty(nativeUloopPath), "nativeUloopPath must not be null or empty");
@@ -839,16 +943,15 @@ namespace io.github.hatayama.UnityCliLoop
             }
 
             string content = File.ReadAllText(shimPath);
-            if (!IsLegacyNpmShimContent(content))
+            if (!IsPackageOwnedCommandShimContent(content, nativeUloopPath))
             {
                 return;
             }
 
-            string forwarderContent = BuildLegacyShimForwarderContent(shimPath, nativeUloopPath);
-            File.WriteAllText(shimPath, forwarderContent);
+            File.Delete(shimPath);
         }
 
-        private static bool IsLegacyCommandShim(string shimPath)
+        private static bool IsPackageOwnedCommandShim(string shimPath, string nativeUloopPath)
         {
             UnityEngine.Debug.Assert(!string.IsNullOrEmpty(shimPath), "shimPath must not be null or empty");
 
@@ -857,7 +960,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return false;
             }
 
-            return IsLegacyNpmShimContent(File.ReadAllText(shimPath));
+            return IsPackageOwnedCommandShimContent(File.ReadAllText(shimPath), nativeUloopPath);
         }
 
         internal static bool IsLegacyNpmShimContent(string content)
@@ -873,46 +976,45 @@ namespace io.github.hatayama.UnityCliLoop
                 || content.IndexOf(windowsPackagePath, StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
-        internal static string BuildLegacyShimForwarderContent(string shimPath, string nativeUloopPath)
+        internal static bool IsNativeForwardingShimContent(string content, string nativeUloopPath)
         {
-            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(shimPath), "shimPath must not be null or empty");
-            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(nativeUloopPath), "nativeUloopPath must not be null or empty");
-
-            string extension = Path.GetExtension(shimPath);
-            string powerShellShimExtension = Path.GetExtension(CliConstants.WINDOWS_POWERSHELL_SHIM_NAME);
-            if (string.Equals(extension, powerShellShimExtension, StringComparison.OrdinalIgnoreCase))
+            if (string.IsNullOrEmpty(content) || string.IsNullOrEmpty(nativeUloopPath))
             {
-                return "#!/usr/bin/env pwsh\n"
-                    + $"& {QuotePowerShellSingleQuotedString(nativeUloopPath)} @args\n"
-                    + "exit $LASTEXITCODE\n";
+                return false;
             }
 
-            string commandShimExtension = Path.GetExtension(CliConstants.WINDOWS_CMD_SHIM_NAME);
-            if (string.Equals(extension, commandShimExtension, StringComparison.OrdinalIgnoreCase))
+            return content.IndexOf(nativeUloopPath, StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static bool IsPackageOwnedCommandShimContent(string content, string nativeUloopPath)
+        {
+            return IsLegacyNpmShimContent(content)
+                || IsNativeForwardingShimContent(content, nativeUloopPath);
+        }
+
+        private static bool HasNpmBinCommandEntries(string legacyBinDirectory)
+        {
+            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(legacyBinDirectory), "legacyBinDirectory must not be null or empty");
+
+            if (!Directory.Exists(legacyBinDirectory))
             {
-                return "@echo off\r\n"
-                    + $"\"{nativeUloopPath}\" %*\r\n"
-                    + "exit /b %ERRORLEVEL%\r\n";
+                return false;
             }
 
-            return "#!/bin/sh\n"
-                + $"native_path={QuotePosixSingleQuotedString(nativeUloopPath)}\n"
-                + "if command -v cygpath >/dev/null 2>&1; then\n"
-                + "  native_path=\"$(cygpath -u \"$native_path\")\"\n"
-                + "fi\n"
-                + "exec \"$native_path\" \"$@\"\n";
-        }
+            string[] entries = Directory.GetFileSystemEntries(legacyBinDirectory);
+            foreach (string entry in entries)
+            {
+                string entryName = Path.GetFileName(entry);
+                if (string.Equals(entryName, "node_modules", StringComparison.OrdinalIgnoreCase)
+                    && Directory.Exists(entry))
+                {
+                    continue;
+                }
 
-        private static string QuotePowerShellSingleQuotedString(string value)
-        {
-            UnityEngine.Debug.Assert(value != null, "value must not be null");
-            return $"'{value.Replace("'", "''")}'";
-        }
+                return true;
+            }
 
-        private static string QuotePosixSingleQuotedString(string value)
-        {
-            UnityEngine.Debug.Assert(value != null, "value must not be null");
-            return $"'{value.Replace("'", "'\"'\"'")}'";
+            return false;
         }
 
         private static string GetNativeCliPlatformDir(RuntimePlatform platform, Architecture architecture)

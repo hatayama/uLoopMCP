@@ -109,14 +109,6 @@ function Report-PathShadowing {
         return
     }
 
-    if (Test-RepairedLegacyShim -ShimPath $ResolvedCommand.Source -NativeUloopPath $ExpectedUloop) {
-        Write-Host "PATH resolves uloop through a repaired legacy shim:"
-        Write-Host "  $($ResolvedCommand.Source)"
-        Write-Host "The shim forwards to:"
-        Write-Host "  $ExpectedUloop"
-        return
-    }
-
     Write-Host "Installed uloop to $ExpectedUloop, but PATH resolves uloop to:"
     Write-Host "  $($ResolvedCommand.Source)"
     Write-Host "Move $InstallDir earlier in PATH, or remove the legacy installation if it owns that command."
@@ -132,48 +124,59 @@ function Test-LegacyUloopShimContent {
         -or $Content.IndexOf("node_modules\uloop-cli", [System.StringComparison]::OrdinalIgnoreCase) -ge 0
 }
 
-function ConvertTo-PowerShellSingleQuotedString {
+function Test-NativeUloopShimContent {
     param(
         [Parameter(Mandatory = $true)]
-        [string]$Value
-    )
-
-    return "'" + $Value.Replace("'", "''") + "'"
-}
-
-function ConvertTo-PosixDoubleQuotedString {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$Value
-    )
-
-    $EscapedValue = $Value.Replace("\", "\\").Replace("$", "\$").Replace("`"", "\`"")
-    return "`"$EscapedValue`""
-}
-
-function New-LegacyShimForwarderContent {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$ShimPath,
+        [string]$Content,
         [Parameter(Mandatory = $true)]
         [string]$NativeUloopPath
     )
 
-    $Extension = [System.IO.Path]::GetExtension($ShimPath)
-    if ([string]::Equals($Extension, ".ps1", [System.StringComparison]::OrdinalIgnoreCase)) {
-        $QuotedNativeUloopPath = ConvertTo-PowerShellSingleQuotedString -Value $NativeUloopPath
-        return "#!/usr/bin/env pwsh`n& $QuotedNativeUloopPath @args`nexit `$LASTEXITCODE`n"
-    }
-
-    if ([string]::Equals($Extension, ".cmd", [System.StringComparison]::OrdinalIgnoreCase)) {
-        return "@echo off`r`n`"$NativeUloopPath`" %*`r`nexit /b %ERRORLEVEL%`r`n"
-    }
-
-    $QuotedShellPath = ConvertTo-PosixDoubleQuotedString -Value $NativeUloopPath
-    return "#!/bin/sh`nnative_path=$QuotedShellPath`nif command -v cygpath >/dev/null 2>&1; then`n  native_path=`"`$(cygpath -u `"`$native_path`")`"`nfi`nexec `"`$native_path`" `"`$@`"`n"
+    return $Content.IndexOf($NativeUloopPath, [System.StringComparison]::OrdinalIgnoreCase) -ge 0
 }
 
-function Repair-LegacyUloopShims {
+function Test-PackageOwnedUloopShimContent {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Content,
+        [Parameter(Mandatory = $true)]
+        [string]$NativeUloopPath
+    )
+
+    return (Test-LegacyUloopShimContent -Content $Content) `
+        -or (Test-NativeUloopShimContent -Content $Content -NativeUloopPath $NativeUloopPath)
+}
+
+function Remove-PathEntry {
+    param(
+        [AllowNull()]
+        [AllowEmptyString()]
+        [string]$PathValue,
+        [Parameter(Mandatory = $true)]
+        [string]$EntryToRemove
+    )
+
+    if (-not $PathValue) {
+        return ""
+    }
+
+    $FilteredEntries = @()
+    foreach ($PathEntry in ($PathValue -split ";")) {
+        if (-not $PathEntry) {
+            continue
+        }
+
+        if ([string]::Equals($PathEntry, $EntryToRemove, [System.StringComparison]::OrdinalIgnoreCase)) {
+            continue
+        }
+
+        $FilteredEntries += $PathEntry
+    }
+
+    return ($FilteredEntries -join ";")
+}
+
+function Remove-LegacyUloopShims {
     param(
         [Parameter(Mandatory = $true)]
         [string]$NativeUloopPath
@@ -196,30 +199,57 @@ function Repair-LegacyUloopShims {
         }
 
         $ShimContent = [System.IO.File]::ReadAllText($ShimPath)
-        if (-not (Test-LegacyUloopShimContent -Content $ShimContent)) {
+        if (-not (Test-PackageOwnedUloopShimContent -Content $ShimContent -NativeUloopPath $NativeUloopPath)) {
             continue
         }
 
-        $ForwarderContent = New-LegacyShimForwarderContent -ShimPath $ShimPath -NativeUloopPath $NativeUloopPath
-        [System.IO.File]::WriteAllText($ShimPath, $ForwarderContent, [System.Text.Encoding]::UTF8)
-        Write-Host "Repaired legacy uloop shim: $ShimPath"
+        Remove-Item -LiteralPath $ShimPath -Force
+        Write-Host "Removed legacy uloop shim: $ShimPath"
     }
 }
 
-function Test-RepairedLegacyShim {
+function Test-NpmBinContainsCommandEntries {
     param(
         [Parameter(Mandatory = $true)]
-        [string]$ShimPath,
-        [Parameter(Mandatory = $true)]
-        [string]$NativeUloopPath
+        [string]$LegacyBinDir
     )
 
-    if (-not (Test-Path $ShimPath -PathType Leaf)) {
+    if (-not (Test-Path $LegacyBinDir -PathType Container)) {
         return $false
     }
 
-    $ShimContent = [System.IO.File]::ReadAllText($ShimPath)
-    return $ShimContent.IndexOf($NativeUloopPath, [System.StringComparison]::OrdinalIgnoreCase) -ge 0
+    foreach ($Entry in (Get-ChildItem -LiteralPath $LegacyBinDir -Force)) {
+        if ($Entry.PSIsContainer -and [string]::Equals($Entry.Name, "node_modules", [System.StringComparison]::OrdinalIgnoreCase)) {
+            continue
+        }
+
+        return $true
+    }
+
+    return $false
+}
+
+function Remove-LegacyNpmBinPathIfUnused {
+    if (-not $env:APPDATA) {
+        return
+    }
+
+    $LegacyBinDir = Join-Path $env:APPDATA "npm"
+    if (Test-NpmBinContainsCommandEntries -LegacyBinDir $LegacyBinDir) {
+        return
+    }
+
+    $UserPath = [Environment]::GetEnvironmentVariable("Path", "User")
+    $UpdatedUserPath = Remove-PathEntry -PathValue $UserPath -EntryToRemove $LegacyBinDir
+    if ($UserPath -and (-not [string]::Equals($UserPath, $UpdatedUserPath, [System.StringComparison]::OrdinalIgnoreCase))) {
+        [Environment]::SetEnvironmentVariable("Path", $UpdatedUserPath, "User")
+        Write-Host "Removed unused npm global bin directory from User PATH: $LegacyBinDir"
+    }
+
+    $UpdatedProcessPath = Remove-PathEntry -PathValue $env:Path -EntryToRemove $LegacyBinDir
+    if ($env:Path -and (-not [string]::Equals($env:Path, $UpdatedProcessPath, [System.StringComparison]::OrdinalIgnoreCase))) {
+        $env:Path = $UpdatedProcessPath
+    }
 }
 
 function Assert-UloopVersionSucceeds {
@@ -282,7 +312,8 @@ try {
     }
 
     Assert-UloopVersionSucceeds -UloopPath $FinalUloopPath
-    Repair-LegacyUloopShims -NativeUloopPath $FinalUloopPath
+    Remove-LegacyUloopShims -NativeUloopPath $FinalUloopPath
+    Remove-LegacyNpmBinPathIfUnused
     Confirm-ActiveUloopAfterLegacyCleanup
     Write-LegacyNpmWarningIfPresent
     Report-PathShadowing
