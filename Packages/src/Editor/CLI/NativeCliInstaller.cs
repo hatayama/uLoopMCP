@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -76,6 +77,7 @@ namespace io.github.hatayama.UnityCliLoop
                 RedirectStandardError = true,
                 CreateNoWindow = true
             };
+            ApplyInstallerSearchPath(startInfo, platform);
 
             bool success = false;
             string errorOutput = "";
@@ -110,8 +112,157 @@ namespace io.github.hatayama.UnityCliLoop
                 }
             });
 
+            if (success)
+            {
+                ApplyInstallDirectoryToCurrentProcessPath(platform);
+            }
+
             CliInstallationDetector.InvalidateCache();
             return new CliInstallResult(success, errorOutput);
+        }
+
+        internal static string BuildPathWithInstallDirectory(
+            string currentPath,
+            string installDirectory,
+            RuntimePlatform platform)
+        {
+            UnityEngine.Debug.Assert(!string.IsNullOrWhiteSpace(installDirectory), "installDirectory must not be null or empty");
+
+            string normalizedPath = currentPath ?? "";
+            if (ContainsPathDirectory(normalizedPath, installDirectory, platform))
+            {
+                return normalizedPath;
+            }
+
+            if (string.IsNullOrEmpty(normalizedPath))
+            {
+                return installDirectory;
+            }
+
+            return normalizedPath + GetPathSeparator(platform) + installDirectory;
+        }
+
+        internal static string GetDefaultInstallDirectoryFromRoots(
+            RuntimePlatform platform,
+            string homeDirectory,
+            string localAppData)
+        {
+            if (platform == RuntimePlatform.WindowsEditor)
+            {
+                if (string.IsNullOrWhiteSpace(localAppData))
+                {
+                    return null;
+                }
+
+                return Path.Combine(
+                    localAppData,
+                    CliConstants.WINDOWS_PROGRAMS_DIR_NAME,
+                    CliConstants.NATIVE_INSTALL_DIR_NAME,
+                    CliConstants.NATIVE_INSTALL_BIN_DIR_NAME);
+            }
+
+            if (string.IsNullOrWhiteSpace(homeDirectory))
+            {
+                return null;
+            }
+
+            return Path.Combine(
+                homeDirectory,
+                CliConstants.POSIX_LOCAL_DIR_NAME,
+                CliConstants.NATIVE_INSTALL_BIN_DIR_NAME);
+        }
+
+        private static void ApplyInstallerSearchPath(ProcessStartInfo startInfo, RuntimePlatform platform)
+        {
+            UnityEngine.Debug.Assert(startInfo != null, "startInfo must not be null");
+
+            if (platform == RuntimePlatform.WindowsEditor)
+            {
+                return;
+            }
+
+            string loginShellPath = NodeEnvironmentResolver.GetLoginShellPathAtPlatform(platform);
+            if (string.IsNullOrEmpty(loginShellPath))
+            {
+                return;
+            }
+
+            startInfo.Environment[CliConstants.POSIX_PATH_ENVIRONMENT_VARIABLE] = loginShellPath;
+        }
+
+        private static void ApplyInstallDirectoryToCurrentProcessPath(RuntimePlatform platform)
+        {
+            string installDirectory = GetInstallDirectoryForCurrentUser(platform);
+            if (string.IsNullOrEmpty(installDirectory))
+            {
+                return;
+            }
+
+            string pathVariableName = GetPathEnvironmentVariableName(platform);
+            string currentPath = Environment.GetEnvironmentVariable(pathVariableName);
+            string updatedPath = BuildPathWithInstallDirectory(currentPath, installDirectory, platform);
+            Environment.SetEnvironmentVariable(pathVariableName, updatedPath);
+        }
+
+        private static string GetInstallDirectoryForCurrentUser(RuntimePlatform platform)
+        {
+            string configuredInstallDirectory = Environment.GetEnvironmentVariable(CliConstants.INSTALL_DIR_ENVIRONMENT_VARIABLE);
+            if (!string.IsNullOrWhiteSpace(configuredInstallDirectory))
+            {
+                return configuredInstallDirectory;
+            }
+
+            string homeDirectory = Environment.GetEnvironmentVariable(CliConstants.POSIX_HOME_ENVIRONMENT_VARIABLE);
+            if (string.IsNullOrWhiteSpace(homeDirectory))
+            {
+                homeDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            }
+
+            string localAppData = Environment.GetEnvironmentVariable(CliConstants.WINDOWS_LOCAL_APPDATA_ENVIRONMENT_VARIABLE);
+            return GetDefaultInstallDirectoryFromRoots(platform, homeDirectory, localAppData);
+        }
+
+        private static bool ContainsPathDirectory(string currentPath, string installDirectory, RuntimePlatform platform)
+        {
+            if (string.IsNullOrEmpty(currentPath))
+            {
+                return false;
+            }
+
+            string[] entries = currentPath.Split(
+                new[] { GetPathSeparator(platform) },
+                StringSplitOptions.RemoveEmptyEntries);
+            StringComparison comparison = GetPathComparison(platform);
+            foreach (string entry in entries)
+            {
+                if (string.Equals(entry, installDirectory, comparison))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static string GetPathEnvironmentVariableName(RuntimePlatform platform)
+        {
+            return platform == RuntimePlatform.WindowsEditor
+                ? CliConstants.WINDOWS_PATH_ENVIRONMENT_VARIABLE
+                : CliConstants.POSIX_PATH_ENVIRONMENT_VARIABLE;
+        }
+
+        private static string GetPathSeparator(RuntimePlatform platform)
+        {
+            return platform == RuntimePlatform.WindowsEditor
+                ? CliConstants.WINDOWS_PATH_SEPARATOR
+                : CliConstants.POSIX_PATH_SEPARATOR;
+        }
+
+        private static StringComparison GetPathComparison(RuntimePlatform platform)
+        {
+            return platform == RuntimePlatform.WindowsEditor
+                ? StringComparison.OrdinalIgnoreCase
+                : StringComparison.Ordinal;
         }
 
         private static string BuildWindowsRemoveLegacyAssignment(bool removeLegacyNpm)

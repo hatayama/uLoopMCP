@@ -64,5 +64,69 @@ namespace io.github.hatayama.UnityCliLoop.Tests
             Assert.That(command.Arguments, Does.Contain("$env:ULOOP_REMOVE_LEGACY='1'"));
             Assert.That(command.ManualCommand, Does.Contain("$env:ULOOP_REMOVE_LEGACY='1'"));
         }
+
+        [Test]
+        public void BuildPathWithInstallDirectory_OnWindowsAppendsMissingNativeInstallDir()
+        {
+            // Verifies that Unity's current Windows PATH can be extended for immediate native CLI detection.
+            string result = NativeCliInstaller.BuildPathWithInstallDirectory(
+                "C:\\npm",
+                "C:\\Users\\masamichi\\Programs\\uloop\\bin",
+                RuntimePlatform.WindowsEditor);
+
+            Assert.That(result, Is.EqualTo("C:\\npm;C:\\Users\\masamichi\\Programs\\uloop\\bin"));
+        }
+
+        [Test]
+        public void BuildPathWithInstallDirectory_OnWindowsDoesNotDuplicateExistingNativeInstallDir()
+        {
+            // Verifies that Windows PATH matching is case-insensitive when the native install dir is already present.
+            string result = NativeCliInstaller.BuildPathWithInstallDirectory(
+                "C:\\npm;C:\\USERS\\MASAMICHI\\PROGRAMS\\ULOOP\\BIN",
+                "C:\\Users\\masamichi\\Programs\\uloop\\bin",
+                RuntimePlatform.WindowsEditor);
+
+            Assert.That(result, Is.EqualTo("C:\\npm;C:\\USERS\\MASAMICHI\\PROGRAMS\\ULOOP\\BIN"));
+        }
+
+        [Test]
+        public void BuildPathWithInstallDirectory_OnMacAppendsMissingNativeInstallDir()
+        {
+            // Verifies that POSIX PATH keeps colon separation when adding the native install dir.
+            string result = NativeCliInstaller.BuildPathWithInstallDirectory(
+                "/usr/local/bin",
+                "/Users/masamichi/.local/bin",
+                RuntimePlatform.OSXEditor);
+
+            Assert.That(result, Is.EqualTo("/usr/local/bin:/Users/masamichi/.local/bin"));
+        }
+
+        [Test]
+        public void GetDefaultInstallDirectoryFromRoots_OnMacMatchesInstallerDefault()
+        {
+            // Verifies that Unity mirrors the POSIX installer default install directory.
+            string result = NativeCliInstaller.GetDefaultInstallDirectoryFromRoots(
+                RuntimePlatform.OSXEditor,
+                "/Users/masamichi",
+                null);
+
+            Assert.That(result, Is.EqualTo(System.IO.Path.Combine("/Users/masamichi", ".local", "bin")));
+        }
+
+        [Test]
+        public void GetDefaultInstallDirectoryFromRoots_OnWindowsMatchesInstallerDefault()
+        {
+            // Verifies that Unity mirrors the PowerShell installer default install directory.
+            string result = NativeCliInstaller.GetDefaultInstallDirectoryFromRoots(
+                RuntimePlatform.WindowsEditor,
+                null,
+                "C:\\Users\\masamichi\\AppData\\Local");
+
+            Assert.That(result, Is.EqualTo(System.IO.Path.Combine(
+                "C:\\Users\\masamichi\\AppData\\Local",
+                "Programs",
+                "uloop",
+                "bin")));
+        }
     }
 }
