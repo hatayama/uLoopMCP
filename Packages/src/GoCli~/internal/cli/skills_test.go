@@ -192,12 +192,19 @@ func TestSkillStatusIgnoresCRLFLineEndings(t *testing.T) {
 		sourceDirectory: sourceDir,
 	}
 	installedDir := filepath.Join(projectRoot, ".claude", "skills", managedSkillsDir, "uloop-sample")
-	writeSkillFile(t, installedDir, "---\r\nname: uloop-sample\r\n---\r\n\r\n# sample\r\n")
+	writeRawSkillFile(t, installedDir, "---\r\nname: uloop-sample\r\n---\r\n\r\n# sample\r\n")
 	if err := os.MkdirAll(filepath.Join(installedDir, "references"), 0o755); err != nil {
 		t.Fatalf("failed to create installed references: %v", err)
 	}
 	if err := os.WriteFile(filepath.Join(installedDir, "references", "note.md"), []byte("line1\r\nline2\r\n"), 0o644); err != nil {
 		t.Fatalf("failed to write installed reference: %v", err)
+	}
+	installedSkillContent, err := os.ReadFile(filepath.Join(installedDir, "SKILL.md"))
+	if err != nil {
+		t.Fatalf("failed to read installed skill: %v", err)
+	}
+	if !bytes.Contains(installedSkillContent, []byte("\r\n")) {
+		t.Fatal("test setup should keep CRLF line endings in installed SKILL.md")
 	}
 
 	status := getSkillStatus(filepath.Join(projectRoot, ".claude", "skills"), skill, true)
@@ -480,6 +487,16 @@ func writeSkillFile(t *testing.T, skillDir string, content string) {
 	normalizedContent := strings.ReplaceAll(content, "\r\n", "\n")
 	if err := os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte(normalizedContent), 0o644); err != nil {
 		t.Fatalf("failed to write skill file: %v", err)
+	}
+}
+
+func writeRawSkillFile(t *testing.T, skillDir string, content string) {
+	t.Helper()
+	if err := os.MkdirAll(skillDir, 0o755); err != nil {
+		t.Fatalf("failed to create skill dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte(content), 0o644); err != nil {
+		t.Fatalf("failed to write raw skill file: %v", err)
 	}
 }
 
