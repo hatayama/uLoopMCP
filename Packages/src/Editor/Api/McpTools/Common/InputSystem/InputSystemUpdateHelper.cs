@@ -1,5 +1,5 @@
 #nullable enable
-#if ULOOPMCP_HAS_INPUT_SYSTEM
+#if ULOOP_HAS_INPUT_SYSTEM
 using System;
 using System.Threading;
 using System.Threading.Tasks;

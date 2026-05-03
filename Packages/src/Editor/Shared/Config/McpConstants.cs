@@ -73,10 +73,10 @@ namespace io.github.hatayama.UnityCliLoop
         public const string USER_SETTINGS_FOLDER = "UserSettings";
         
         // Scripting define symbols
-        public const string SCRIPTING_DEFINE_ULOOPMCP_DEBUG = "ULOOPMCP_DEBUG";
+        public const string SCRIPTING_DEFINE_ULOOP_DEBUG = "ULOOP_DEBUG";
         
         // Environment variable keys for development mode
-        public const string ENV_KEY_ULOOPMCP_DEBUG = "ULOOPMCP_DEBUG";
+        public const string ENV_KEY_ULOOP_DEBUG = "ULOOP_DEBUG";
         public const string UNKNOWN_CLIENT_NAME = "Unknown Client";
         
         // Command messages

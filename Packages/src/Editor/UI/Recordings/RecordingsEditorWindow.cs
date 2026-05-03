@@ -1,4 +1,4 @@
-#if ULOOPMCP_HAS_INPUT_SYSTEM
+#if ULOOP_HAS_INPUT_SYSTEM
 using System;
 using System.Collections.Generic;
 using System.IO;

@@ -4,7 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
-#if ULOOPMCP_HAS_INPUT_SYSTEM
+#if ULOOP_HAS_INPUT_SYSTEM
 using UnityEngine.InputSystem;
 #endif
 
@@ -16,19 +16,19 @@ namespace io.github.hatayama.UnityCliLoop
         public override string ToolName => "simulate-mouse-input";
 
         protected override
-#if !ULOOPMCP_HAS_INPUT_SYSTEM
+#if !ULOOP_HAS_INPUT_SYSTEM
 #pragma warning disable CS1998
 #endif
             async Task<SimulateMouseInputResponse> ExecuteAsync(
             SimulateMouseInputSchema parameters,
             CancellationToken ct)
-#if !ULOOPMCP_HAS_INPUT_SYSTEM
+#if !ULOOP_HAS_INPUT_SYSTEM
 #pragma warning restore CS1998
 #endif
         {
             ct.ThrowIfCancellationRequested();
 
-#if !ULOOPMCP_HAS_INPUT_SYSTEM
+#if !ULOOP_HAS_INPUT_SYSTEM
             return new SimulateMouseInputResponse
             {
                 Success = false,
@@ -137,7 +137,7 @@ namespace io.github.hatayama.UnityCliLoop
 #endif
         }
 
-#if ULOOPMCP_HAS_INPUT_SYSTEM
+#if ULOOP_HAS_INPUT_SYSTEM
         private static void EnsureOverlayExists()
         {
             OverlayCanvasFactory.EnsureExists();

@@ -50,7 +50,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private void ApplyDebugStyle()
         {
-#if ULOOPMCP_DEBUG
+#if ULOOP_DEBUG
             VisualElement mainContainer = _root.Q<VisualElement>("main-scroll-view");
             mainContainer?.AddToClassList("mcp-main-container--debug");
 #endif

@@ -1,4 +1,4 @@
-#if ULOOPMCP_HAS_INPUT_SYSTEM
+#if ULOOP_HAS_INPUT_SYSTEM
 using System.Collections;
 using System.IO;
 using io.github.hatayama.UnityCliLoop;

@@ -5,7 +5,7 @@ using System.Linq;
 namespace io.github.hatayama.UnityCliLoop
 {
     /// <summary>
-    /// Unity Editor menu items for toggling ULOOPMCP_DEBUG and debug-only Roslyn support.
+    /// Unity Editor menu items for toggling ULOOP_DEBUG and debug-only Roslyn support.
     ///
     /// This file is intended for internal debugging convenience:
     /// - It lives under Assets/Editor/ outside Packages, so it is NOT included in the distributed UnityCliLoop package.
@@ -13,7 +13,7 @@ namespace io.github.hatayama.UnityCliLoop
     ///   These menus operate only on the currently selected BuildTargetGroup and may temporarily diverge from global policy.
     ///
     /// Related classes:
-    /// - McpEditorWindow: Uses ULOOPMCP_DEBUG to show/hide developer tools
+    /// - McpEditorWindow: Uses ULOOP_DEBUG to show/hide developer tools
     /// - McpLogger: Debug logging behavior controlled by this symbol
     /// </summary>
     public static class UnityCliLoopDebugToggle
@@ -22,17 +22,17 @@ namespace io.github.hatayama.UnityCliLoop
         private const string MENU_PATH_DISABLE = "UnityCliLoop/Tools/Debug Settings/Disable Debug Mode";
 
         /// <summary>
-        /// Check if ULOOPMCP_DEBUG symbol is currently defined
+        /// Check if ULOOP_DEBUG symbol is currently defined
         /// </summary>
         private static bool IsDebugModeEnabled()
         {
             BuildTargetGroup targetGroup = EditorUserBuildSettings.selectedBuildTargetGroup;
             string defines = PlayerSettings.GetScriptingDefineSymbolsForGroup(targetGroup);
-            return defines.Split(';').Contains(McpConstants.SCRIPTING_DEFINE_ULOOPMCP_DEBUG);
+            return defines.Split(';').Contains(McpConstants.SCRIPTING_DEFINE_ULOOP_DEBUG);
         }
 
         /// <summary>
-        /// Enable ULOOPMCP_DEBUG scripting define symbol
+        /// Enable ULOOP_DEBUG scripting define symbol
         /// </summary>
         [MenuItem(MENU_PATH_ENABLE)]
         public static void EnableDebugMode()
@@ -48,11 +48,11 @@ namespace io.github.hatayama.UnityCliLoop
             
             if (string.IsNullOrEmpty(defines))
             {
-                defines = McpConstants.SCRIPTING_DEFINE_ULOOPMCP_DEBUG;
+                defines = McpConstants.SCRIPTING_DEFINE_ULOOP_DEBUG;
             }
             else
             {
-                defines += ";" + McpConstants.SCRIPTING_DEFINE_ULOOPMCP_DEBUG;
+                defines += ";" + McpConstants.SCRIPTING_DEFINE_ULOOP_DEBUG;
             }
             
             PlayerSettings.SetScriptingDefineSymbolsForGroup(targetGroup, defines);
@@ -60,7 +60,7 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         /// <summary>
-        /// Disable ULOOPMCP_DEBUG scripting define symbol
+        /// Disable ULOOP_DEBUG scripting define symbol
         /// </summary>
         [MenuItem(MENU_PATH_DISABLE)]
         public static void DisableDebugMode()
@@ -75,7 +75,7 @@ namespace io.github.hatayama.UnityCliLoop
             string defines = PlayerSettings.GetScriptingDefineSymbolsForGroup(targetGroup);
             
             string[] defineArray = defines.Split(';');
-            defineArray = defineArray.Where(d => d != McpConstants.SCRIPTING_DEFINE_ULOOPMCP_DEBUG).ToArray();
+            defineArray = defineArray.Where(d => d != McpConstants.SCRIPTING_DEFINE_ULOOP_DEBUG).ToArray();
             defines = string.Join(";", defineArray);
             
             PlayerSettings.SetScriptingDefineSymbolsForGroup(targetGroup, defines);
