@@ -4,6 +4,51 @@ set -eu
 REPOSITORY="hatayama/unity-cli-loop"
 INSTALL_DIR="${ULOOP_INSTALL_DIR:-$HOME/.local/bin}"
 VERSION="${ULOOP_VERSION:-latest}"
+LEGACY_NPM_PACKAGE="uloop-cli"
+REMOVE_LEGACY="${ULOOP_REMOVE_LEGACY:-0}"
+
+is_remove_legacy_enabled() {
+  case "$REMOVE_LEGACY" in
+    1|true|TRUE|yes|YES) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+is_legacy_npm_installed() {
+  command -v npm >/dev/null 2>&1 && npm list -g "$LEGACY_NPM_PACKAGE" --depth=0 >/dev/null 2>&1
+}
+
+remove_or_report_legacy_npm() {
+  if ! is_legacy_npm_installed; then
+    return
+  fi
+
+  if is_remove_legacy_enabled; then
+    echo "Removing legacy npm installation: $LEGACY_NPM_PACKAGE"
+    npm uninstall -g "$LEGACY_NPM_PACKAGE"
+    return
+  fi
+
+  echo "Legacy npm installation detected: $LEGACY_NPM_PACKAGE"
+  echo "The native dispatcher was installed, but the npm package may still provide an older uloop command."
+  echo "To remove it, run:"
+  echo "  npm uninstall -g $LEGACY_NPM_PACKAGE"
+  echo "Or rerun this installer with:"
+  echo "  ULOOP_REMOVE_LEGACY=1"
+}
+
+report_path_shadowing() {
+  resolved_uloop=$(command -v uloop 2>/dev/null || true)
+  expected_uloop="$INSTALL_DIR/uloop"
+
+  if [ -z "$resolved_uloop" ] || [ "$resolved_uloop" = "$expected_uloop" ]; then
+    return
+  fi
+
+  echo "Installed uloop to $expected_uloop, but PATH resolves uloop to:"
+  echo "  $resolved_uloop"
+  echo "Move $INSTALL_DIR earlier in PATH, or remove the legacy installation if it owns that command."
+}
 
 detect_asset_name() {
   os=$(uname -s)
@@ -80,3 +125,5 @@ case ":$PATH:" in
 esac
 
 "$INSTALL_DIR/uloop" --version
+remove_or_report_legacy_npm
+report_path_shadowing

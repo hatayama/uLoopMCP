@@ -1,6 +1,7 @@
 $ErrorActionPreference = "Stop"
 
 $Repository = "hatayama/unity-cli-loop"
+$LegacyNpmPackage = "uloop-cli"
 $Version = if ($env:ULOOP_VERSION) { $env:ULOOP_VERSION } else { "latest" }
 $InstallDir = if ($env:ULOOP_INSTALL_DIR) {
     $env:ULOOP_INSTALL_DIR
@@ -15,6 +16,67 @@ if ($Version -eq "latest") {
     $DownloadUrl = "https://github.com/$Repository/releases/download/$Version/$AssetName"
 }
 $ChecksumUrl = "$DownloadUrl.sha256"
+
+function Test-RemoveLegacyEnabled {
+    if (-not $env:ULOOP_REMOVE_LEGACY) {
+        return $false
+    }
+
+    $EnabledValues = @("1", "true", "yes")
+    return $EnabledValues -contains $env:ULOOP_REMOVE_LEGACY.ToLowerInvariant()
+}
+
+function Get-NpmCommand {
+    Get-Command npm -ErrorAction SilentlyContinue | Select-Object -First 1
+}
+
+function Test-LegacyNpmInstalled {
+    $NpmCommand = Get-NpmCommand
+    if (-not $NpmCommand) {
+        return $false
+    }
+
+    & npm list -g $LegacyNpmPackage --depth=0 > $null 2> $null
+    return $LASTEXITCODE -eq 0
+}
+
+function Remove-OrReportLegacyNpm {
+    if (-not (Test-LegacyNpmInstalled)) {
+        return
+    }
+
+    if (Test-RemoveLegacyEnabled) {
+        Write-Host "Removing legacy npm installation: $LegacyNpmPackage"
+        & npm uninstall -g $LegacyNpmPackage
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to remove legacy npm installation: $LegacyNpmPackage"
+        }
+        return
+    }
+
+    Write-Host "Legacy npm installation detected: $LegacyNpmPackage"
+    Write-Host "The native dispatcher was installed, but the npm package may still provide an older uloop command."
+    Write-Host "To remove it, run:"
+    Write-Host "  npm uninstall -g $LegacyNpmPackage"
+    Write-Host "Or rerun this installer with:"
+    Write-Host "  `$env:ULOOP_REMOVE_LEGACY = `"1`""
+}
+
+function Report-PathShadowing {
+    $ResolvedCommand = Get-Command uloop -ErrorAction SilentlyContinue | Select-Object -First 1
+    if (-not $ResolvedCommand) {
+        return
+    }
+
+    $ExpectedUloop = Join-Path $InstallDir "uloop.exe"
+    if ([string]::Equals($ResolvedCommand.Source, $ExpectedUloop, [System.StringComparison]::OrdinalIgnoreCase)) {
+        return
+    }
+
+    Write-Host "Installed uloop to $ExpectedUloop, but PATH resolves uloop to:"
+    Write-Host "  $($ResolvedCommand.Source)"
+    Write-Host "Move $InstallDir earlier in PATH, or remove the legacy installation if it owns that command."
+}
 
 $TempDir = Join-Path ([System.IO.Path]::GetTempPath()) ("uloop-install-" + [System.Guid]::NewGuid().ToString("N"))
 New-Item -ItemType Directory -Path $TempDir | Out-Null
@@ -49,6 +111,8 @@ try {
     }
 
     & (Join-Path $InstallDir "uloop.exe") --version
+    Remove-OrReportLegacyNpm
+    Report-PathShadowing
 }
 finally {
     Remove-Item -Path $TempDir -Recurse -Force -ErrorAction SilentlyContinue
