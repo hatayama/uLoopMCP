@@ -95,8 +95,17 @@ func copySkillDirectory(sourceDir string, destinationDir string) error {
 }
 
 func getSkillStatus(baseDir string, skill skillDefinition, grouped bool) (string, error) {
+	return getSkillStatusWithStat(baseDir, skill, grouped, os.Stat)
+}
+
+func getSkillStatusWithStat(
+	baseDir string,
+	skill skillDefinition,
+	grouped bool,
+	stat func(string) (os.FileInfo, error),
+) (string, error) {
 	skillDir := getPreferredSkillDir(baseDir, skill.name, grouped)
-	if _, err := os.Stat(filepath.Join(skillDir, skillFileName)); err != nil {
+	if _, err := stat(filepath.Join(skillDir, skillFileName)); err != nil {
 		if os.IsNotExist(err) {
 			return "not_installed", nil
 		}

@@ -259,18 +259,15 @@ func TestSkillStatusReturnsStatErrors(t *testing.T) {
 	projectRoot := t.TempDir()
 	baseDir := filepath.Join(projectRoot, ".claude", "skills")
 	skill := skillDefinition{name: "uloop-sample"}
-	skillDir := getPreferredSkillDir(baseDir, skill.name, true)
-	if err := os.MkdirAll(skillDir, 0o755); err != nil {
-		t.Fatalf("failed to create skill dir: %v", err)
-	}
-	if err := os.Chmod(skillDir, 0); err != nil {
-		t.Fatalf("failed to chmod skill dir: %v", err)
-	}
-	t.Cleanup(func() {
-		_ = os.Chmod(skillDir, 0o755)
-	})
 
-	_, err := getSkillStatus(baseDir, skill, true)
+	_, err := getSkillStatusWithStat(
+		baseDir,
+		skill,
+		true,
+		func(string) (os.FileInfo, error) {
+			return nil, os.ErrPermission
+		},
+	)
 
 	if err == nil {
 		t.Fatal("expected status check error")
