@@ -60,8 +60,11 @@ detect_installed_command_name() {
 }
 
 find_latest_asset_url() {
-  curl -fsSL "https://api.github.com/repos/$REPOSITORY/releases?per_page=20" |
-    awk -v asset_name="$asset_name" '
+  page=1
+
+  while :; do
+    releases_json=$(curl -fsSL "https://api.github.com/repos/$REPOSITORY/releases?per_page=100&page=$page")
+    asset_url=$(printf '%s\n' "$releases_json" | awk -v asset_name="$asset_name" '
       /"browser_download_url":/ {
         line = $0
         sub(/^[[:space:]]*"browser_download_url": "/, "", line)
@@ -76,7 +79,20 @@ find_latest_asset_url() {
           print found
         }
       }
-    '
+    ')
+
+    if [ -n "$asset_url" ]; then
+      echo "$asset_url"
+      return
+    fi
+
+    release_count=$(printf '%s\n' "$releases_json" | awk '/"tag_name":/ { count++ } END { print count + 0 }')
+    if [ "$release_count" -lt 100 ]; then
+      return
+    fi
+
+    page=$((page + 1))
+  done
 }
 
 set_download_urls() {
