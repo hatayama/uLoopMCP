@@ -244,10 +244,36 @@ func TestSkillStatusIgnoresCRLFLineEndings(t *testing.T) {
 		t.Fatal("test setup should keep CRLF line endings in installed SKILL.md")
 	}
 
-	status := getSkillStatus(filepath.Join(projectRoot, ".claude", "skills"), skill, true)
+	status, err := getSkillStatus(filepath.Join(projectRoot, ".claude", "skills"), skill, true)
+	if err != nil {
+		t.Fatalf("getSkillStatus failed: %v", err)
+	}
 
 	if status != "installed" {
 		t.Fatalf("status mismatch: %s", status)
+	}
+}
+
+// Tests that status checks surface inaccessible installed skill directories.
+func TestSkillStatusReturnsStatErrors(t *testing.T) {
+	projectRoot := t.TempDir()
+	baseDir := filepath.Join(projectRoot, ".claude", "skills")
+	skill := skillDefinition{name: "uloop-sample"}
+	skillDir := getPreferredSkillDir(baseDir, skill.name, true)
+	if err := os.MkdirAll(skillDir, 0o755); err != nil {
+		t.Fatalf("failed to create skill dir: %v", err)
+	}
+	if err := os.Chmod(skillDir, 0); err != nil {
+		t.Fatalf("failed to chmod skill dir: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = os.Chmod(skillDir, 0o755)
+	})
+
+	_, err := getSkillStatus(baseDir, skill, true)
+
+	if err == nil {
+		t.Fatal("expected status check error")
 	}
 }
 
@@ -386,7 +412,10 @@ name: uloop-sample
 		sourceDirectory: sourceDir,
 	}
 	target := targetConfigs["claude"]
-	baseDir := getSkillsBaseDir(projectRoot, target, false)
+	baseDir, err := getSkillsBaseDir(projectRoot, target, false)
+	if err != nil {
+		t.Fatalf("getSkillsBaseDir failed: %v", err)
+	}
 	flatDir := getPreferredSkillDir(baseDir, skill.name, false)
 	groupedDir := getPreferredSkillDir(baseDir, skill.name, true)
 	writeSkillFile(t, flatDir, skillContent)
@@ -423,7 +452,10 @@ name: uloop-sample
 		sourceDirectory: sourceDir,
 	}
 	target := targetConfigs["claude"]
-	baseDir := getSkillsBaseDir(projectRoot, target, false)
+	baseDir, err := getSkillsBaseDir(projectRoot, target, false)
+	if err != nil {
+		t.Fatalf("getSkillsBaseDir failed: %v", err)
+	}
 	groupedDir := getPreferredSkillDir(baseDir, skill.name, true)
 	flatDir := getPreferredSkillDir(baseDir, skill.name, false)
 	writeSkillFile(t, groupedDir, "# grouped\n")
@@ -460,7 +492,10 @@ name: uloop-sample
 		sourceDirectory: sourceDir,
 	}
 	target := targetConfigs["claude"]
-	baseDir := getSkillsBaseDir(projectRoot, target, false)
+	baseDir, err := getSkillsBaseDir(projectRoot, target, false)
+	if err != nil {
+		t.Fatalf("getSkillsBaseDir failed: %v", err)
+	}
 	groupedDir := getPreferredSkillDir(baseDir, skill.name, true)
 	flatDir := getPreferredSkillDir(baseDir, skill.name, false)
 	writeSkillFile(t, groupedDir, "# grouped\n")
@@ -478,6 +513,51 @@ name: uloop-sample
 	}
 	if _, err := os.Stat(flatDir); err != nil {
 		t.Fatalf("flat skill should remain: %v", err)
+	}
+}
+
+// Tests that uninstalling deprecated skills only cleans the selected layout.
+func TestUninstallSkillsForTargetRemovesDeprecatedSkillsFromSelectedLayoutOnly(t *testing.T) {
+	projectRoot := t.TempDir()
+	target := targetConfigs["claude"]
+	baseDir, err := getSkillsBaseDir(projectRoot, target, false)
+	if err != nil {
+		t.Fatalf("getSkillsBaseDir failed: %v", err)
+	}
+	groupedDeprecatedDir := getPreferredSkillDir(baseDir, "uloop-capture-window", true)
+	flatDeprecatedDir := getPreferredSkillDir(baseDir, "uloop-capture-window", false)
+	writeSkillFile(t, groupedDeprecatedDir, "# grouped deprecated\n")
+	writeSkillFile(t, flatDeprecatedDir, "# flat deprecated\n")
+
+	removed, notFound, err := uninstallSkillsForTarget(projectRoot, target, []skillDefinition{}, false, true)
+	if err != nil {
+		t.Fatalf("uninstallSkillsForTarget failed: %v", err)
+	}
+	if removed != 1 || notFound != 0 {
+		t.Fatalf("uninstall result mismatch: removed=%d notFound=%d", removed, notFound)
+	}
+	if _, err := os.Stat(groupedDeprecatedDir); err == nil {
+		t.Fatal("grouped deprecated skill should be removed")
+	}
+	if _, err := os.Stat(flatDeprecatedDir); err != nil {
+		t.Fatalf("flat deprecated skill should remain: %v", err)
+	}
+}
+
+// Tests that global skill paths fail instead of falling back to a relative directory.
+func TestGetSkillsBaseDirReturnsHomeLookupErrorForGlobalTargets(t *testing.T) {
+	originalUserHomeDir := userHomeDir
+	userHomeDir = func() (string, error) {
+		return "", os.ErrPermission
+	}
+	t.Cleanup(func() {
+		userHomeDir = originalUserHomeDir
+	})
+
+	_, err := getSkillsBaseDir(t.TempDir(), targetConfigs["claude"], true)
+
+	if err == nil {
+		t.Fatal("expected home lookup error")
 	}
 }
 

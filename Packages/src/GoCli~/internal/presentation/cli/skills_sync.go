@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
 )
@@ -25,14 +26,39 @@ func syncSkillDirectory(sourceDir string, destinationDir string) error {
 	if err := copySkillDirectory(sourceDir, tempDir); err != nil {
 		return err
 	}
-	if err := os.RemoveAll(destinationDir); err != nil {
-		return err
-	}
-	if err := os.Rename(tempDir, destinationDir); err != nil {
+	if err := replaceSkillDirectory(tempDir, destinationDir); err != nil {
 		return err
 	}
 	replaced = true
 	return nil
+}
+
+func replaceSkillDirectory(sourceDir string, destinationDir string) error {
+	if _, err := os.Stat(destinationDir); err != nil {
+		if os.IsNotExist(err) {
+			return os.Rename(sourceDir, destinationDir)
+		}
+		return err
+	}
+
+	parentDir := filepath.Dir(destinationDir)
+	backupDir, err := os.MkdirTemp(parentDir, filepath.Base(destinationDir)+".backup-")
+	if err != nil {
+		return err
+	}
+	if err := os.Remove(backupDir); err != nil {
+		return err
+	}
+	if err := os.Rename(destinationDir, backupDir); err != nil {
+		return err
+	}
+	if err := os.Rename(sourceDir, destinationDir); err != nil {
+		if restoreErr := os.Rename(backupDir, destinationDir); restoreErr != nil {
+			return fmt.Errorf("replace skill directory failed: %w; restore failed: %v", err, restoreErr)
+		}
+		return err
+	}
+	return os.RemoveAll(backupDir)
 }
 
 func copySkillDirectory(sourceDir string, destinationDir string) error {
@@ -68,15 +94,18 @@ func copySkillDirectory(sourceDir string, destinationDir string) error {
 	})
 }
 
-func getSkillStatus(baseDir string, skill skillDefinition, grouped bool) string {
+func getSkillStatus(baseDir string, skill skillDefinition, grouped bool) (string, error) {
 	skillDir := getPreferredSkillDir(baseDir, skill.name, grouped)
 	if _, err := os.Stat(filepath.Join(skillDir, skillFileName)); err != nil {
-		return "not_installed"
+		if os.IsNotExist(err) {
+			return "not_installed", nil
+		}
+		return "", err
 	}
 	if isInstalledSkillOutdated(skillDir, skill) {
-		return "outdated"
+		return "outdated", nil
 	}
-	return "installed"
+	return "installed", nil
 }
 
 func isInstalledSkillOutdated(installedDir string, skill skillDefinition) bool {

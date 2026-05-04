@@ -4,10 +4,25 @@ set -eu
 ROOT_DIR=$(CDPATH= cd "$(dirname "$0")/.." && pwd)
 
 path_contains_dir() {
-  case ":$PATH:" in
-    *":$1:"*) return 0 ;;
-    *) return 1 ;;
-  esac
+  expected_dir=$(normalize_path_dir "$1")
+  old_ifs=$IFS
+  IFS=:
+  for path_dir in $PATH; do
+    if [ "$(normalize_path_dir "$path_dir")" = "$expected_dir" ]; then
+      IFS=$old_ifs
+      return 0
+    fi
+  done
+  IFS=$old_ifs
+  return 1
+}
+
+normalize_path_dir() {
+  path_dir="$1"
+  while [ "$path_dir" != "/" ] && [ "${path_dir%/}" != "$path_dir" ]; do
+    path_dir=${path_dir%/}
+  done
+  printf '%s\n' "$path_dir"
 }
 
 ensure_symlink_target() {

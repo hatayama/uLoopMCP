@@ -127,7 +127,7 @@ func tryHandleSkillsRequest(args []string, startPath string, globalProjectPath s
 
 	switch subcommand {
 	case "list":
-		return true, runSkillsList(projectRoot, skills, options, stdout)
+		return true, runSkillsList(projectRoot, skills, options, stdout, stderr)
 	case "install":
 		if len(options.targets) == 0 {
 			printSkillsTargetGuidance("install", stdout)
@@ -211,7 +211,7 @@ func resolveSkillsProjectRoot(startPath string, explicitProjectPath string, glob
 	return project.FindUnityProjectRoot(startPath)
 }
 
-func runSkillsList(projectRoot string, skills []skillDefinition, options skillCommandOptions, stdout io.Writer) int {
+func runSkillsList(projectRoot string, skills []skillDefinition, options skillCommandOptions, stdout io.Writer, stderr io.Writer) int {
 	targets := options.targets
 	if len(targets) == 0 {
 		targets = defaultSkillTargets()
@@ -226,12 +226,20 @@ func runSkillsList(projectRoot string, skills []skillDefinition, options skillCo
 	writeLine(stdout, "uloop Skills Status:")
 	writeLine(stdout, "")
 	for _, target := range targets {
-		baseDir := getSkillsBaseDir(projectRoot, target, options.global)
+		baseDir, err := getSkillsBaseDir(projectRoot, target, options.global)
+		if err != nil {
+			writeClassifiedError(stderr, err, errorContext{projectRoot: projectRoot, command: skillsCommandName})
+			return 1
+		}
 		writeFormat(stdout, "%s (%s):\n", target.displayName, location)
 		writeFormat(stdout, "Location: %s\n", baseDir)
 		writeLine(stdout, strings.Repeat("=", 50))
 		for _, skill := range skills {
-			status := getSkillStatus(baseDir, skill, !options.flat)
+			status, err := getSkillStatus(baseDir, skill, !options.flat)
+			if err != nil {
+				writeClassifiedError(stderr, err, errorContext{projectRoot: projectRoot, command: skillsCommandName})
+				return 1
+			}
 			writeFormat(stdout, "  %s %s (%s)\n", statusIcon(status), skill.name, statusText(status))
 		}
 		writeLine(stdout, "")
@@ -257,7 +265,12 @@ func runSkillsInstall(projectRoot string, skills []skillDefinition, options skil
 		if result.deprecatedRemoved > 0 {
 			writeFormat(stdout, "  Deprecated removed: %d\n", result.deprecatedRemoved)
 		}
-		writeFormat(stdout, "  Location: %s\n\n", getSkillsBaseDir(projectRoot, target, options.global))
+		baseDir, err := getSkillsBaseDir(projectRoot, target, options.global)
+		if err != nil {
+			writeClassifiedError(stderr, err, errorContext{projectRoot: projectRoot, command: skillsCommandName})
+			return 1
+		}
+		writeFormat(stdout, "  Location: %s\n\n", baseDir)
 	}
 	return 0
 }
@@ -275,7 +288,12 @@ func runSkillsUninstall(projectRoot string, skills []skillDefinition, options sk
 		writeFormat(stdout, "%s:\n", target.displayName)
 		writeFormat(stdout, "  Removed: %d\n", removed)
 		writeFormat(stdout, "  Not found: %d\n", notFound)
-		writeFormat(stdout, "  Location: %s\n\n", getSkillsBaseDir(projectRoot, target, options.global))
+		baseDir, err := getSkillsBaseDir(projectRoot, target, options.global)
+		if err != nil {
+			writeClassifiedError(stderr, err, errorContext{projectRoot: projectRoot, command: skillsCommandName})
+			return 1
+		}
+		writeFormat(stdout, "  Location: %s\n\n", baseDir)
 	}
 	return 0
 }
@@ -289,7 +307,10 @@ type skillInstallResult struct {
 
 func installSkillsForTarget(projectRoot string, target skillTarget, skills []skillDefinition, global bool, grouped bool) (skillInstallResult, error) {
 	result := skillInstallResult{}
-	baseDir := getSkillsBaseDir(projectRoot, target, global)
+	baseDir, err := getSkillsBaseDir(projectRoot, target, global)
+	if err != nil {
+		return skillInstallResult{}, err
+	}
 	deprecatedRemoved, err := removeDeprecatedSkillDirs(baseDir)
 	if err != nil {
 		return skillInstallResult{}, err
@@ -313,7 +334,10 @@ func installSkillsForTarget(projectRoot string, target skillTarget, skills []ski
 			continue
 		}
 
-		status := getSkillStatus(baseDir, skill, grouped)
+		status, err := getSkillStatus(baseDir, skill, grouped)
+		if err != nil {
+			return skillInstallResult{}, err
+		}
 		destinationDir := getPreferredSkillDir(baseDir, skill.name, grouped)
 		if status == "installed" {
 			result.skipped++
@@ -343,8 +367,11 @@ func installSkillsForTarget(projectRoot string, target skillTarget, skills []ski
 func uninstallSkillsForTarget(projectRoot string, target skillTarget, skills []skillDefinition, global bool, grouped bool) (int, int, error) {
 	removed := 0
 	notFound := 0
-	baseDir := getSkillsBaseDir(projectRoot, target, global)
-	deprecatedRemoved, err := removeDeprecatedSkillDirs(baseDir)
+	baseDir, err := getSkillsBaseDir(projectRoot, target, global)
+	if err != nil {
+		return removed, notFound, err
+	}
+	deprecatedRemoved, err := removeDeprecatedSkillDirsForLayout(baseDir, grouped)
 	if err != nil {
 		return removed, notFound, err
 	}

@@ -7,15 +7,17 @@ import (
 	"strings"
 )
 
-func getSkillsBaseDir(projectRoot string, target skillTarget, global bool) string {
+var userHomeDir = os.UserHomeDir
+
+func getSkillsBaseDir(projectRoot string, target skillTarget, global bool) (string, error) {
 	if global {
-		homeDir, err := os.UserHomeDir()
-		if err == nil {
-			return filepath.Join(homeDir, target.projectDir, "skills")
+		homeDir, err := userHomeDir()
+		if err != nil {
+			return "", err
 		}
-		return filepath.Join(target.projectDir, "skills")
+		return filepath.Join(homeDir, target.projectDir, "skills"), nil
 	}
-	return filepath.Join(projectRoot, target.projectDir, "skills")
+	return filepath.Join(projectRoot, target.projectDir, "skills"), nil
 }
 
 func getPreferredSkillDir(baseDir string, skillName string, grouped bool) string {
@@ -54,8 +56,7 @@ func removeDeprecatedSkillDirs(baseDir string) (int, error) {
 	removed := 0
 	for _, skillName := range deprecatedSkillNames {
 		for _, grouped := range []bool{true, false} {
-			skillDir := getPreferredSkillDir(baseDir, skillName, grouped)
-			exists, err := removeDirIfExists(skillDir)
+			exists, err := removeDeprecatedSkillDir(baseDir, skillName, grouped)
 			if err != nil {
 				return removed, err
 			}
@@ -65,6 +66,24 @@ func removeDeprecatedSkillDirs(baseDir string) (int, error) {
 		}
 	}
 	return removed, nil
+}
+
+func removeDeprecatedSkillDirsForLayout(baseDir string, grouped bool) (int, error) {
+	removed := 0
+	for _, skillName := range deprecatedSkillNames {
+		exists, err := removeDeprecatedSkillDir(baseDir, skillName, grouped)
+		if err != nil {
+			return removed, err
+		}
+		if exists {
+			removed++
+		}
+	}
+	return removed, nil
+}
+
+func removeDeprecatedSkillDir(baseDir string, skillName string, grouped bool) (bool, error) {
+	return removeDirIfExists(getPreferredSkillDir(baseDir, skillName, grouped))
 }
 
 func removeSkillFromAllLayouts(baseDir string, skillName string) error {
