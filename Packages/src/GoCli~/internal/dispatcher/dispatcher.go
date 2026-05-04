@@ -67,6 +67,10 @@ func Run(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer)
 		printHelpForResolvedProject(stdout, startPath, explicitProjectPath)
 		return 0
 	}
+	if isVersionRequest(remainingArgs) {
+		writeLine(stdout, version.Dispatcher)
+		return 0
+	}
 	if isLaunchHelpRequest(remainingArgs) {
 		printLaunchHelp(stdout)
 		return 0
@@ -270,7 +274,7 @@ func projectLocalPath(projectRoot string) string {
 }
 
 func execProjectLocal(ctx context.Context, localPath string, args []string, projectRoot string, stderr io.Writer) int {
-	environment := append(os.Environ(), version.DispatcherVersionEnv+"="+version.Dispatcher)
+	environment := dispatcherEnvironment(os.Environ())
 	if runtime.GOOS != "windows" {
 		err := syscall.Exec(localPath, append([]string{localPath}, args...), environment)
 		if err != nil {
@@ -290,6 +294,18 @@ func execProjectLocal(ctx context.Context, localPath string, args []string, proj
 		return 1
 	}
 	return 0
+}
+
+func dispatcherEnvironment(baseEnvironment []string) []string {
+	prefix := version.DispatcherVersionEnv + "="
+	environment := make([]string, 0, len(baseEnvironment)+1)
+	for _, entry := range baseEnvironment {
+		if strings.HasPrefix(entry, prefix) {
+			continue
+		}
+		environment = append(environment, entry)
+	}
+	return append(environment, prefix+version.Dispatcher)
 }
 
 func writeLine(writer io.Writer, value string) {

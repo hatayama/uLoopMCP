@@ -27,6 +27,50 @@ func TestRunVersionPrintsDispatcherVersion(t *testing.T) {
 	}
 }
 
+func TestRunVersionAfterProjectPathPrintsDispatcherVersion(t *testing.T) {
+	// Verifies that --version remains a dispatcher-owned global flag after --project-path parsing.
+	projectRoot := t.TempDir()
+	createUnityProject(t, projectRoot)
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	code := Run(context.Background(), []string{"--project-path", projectRoot, "--version"}, &stdout, &stderr)
+
+	if code != 0 {
+		t.Fatalf("exit code mismatch: %d stderr=%s", code, stderr.String())
+	}
+	if strings.TrimSpace(stdout.String()) != version.Dispatcher {
+		t.Fatalf("dispatcher version mismatch: %s", stdout.String())
+	}
+}
+
+func TestDispatcherEnvironmentOverridesExistingDispatcherVersion(t *testing.T) {
+	// Verifies that nested dispatcher invocations cannot pass stale compatibility versions to core.
+	environment := dispatcherEnvironment([]string{
+		"PATH=/bin",
+		version.DispatcherVersionEnv + "=0.0.0",
+		"HOME=/tmp/home",
+	})
+
+	matches := 0
+	actual := ""
+	prefix := version.DispatcherVersionEnv + "="
+	for _, entry := range environment {
+		if !strings.HasPrefix(entry, prefix) {
+			continue
+		}
+		matches++
+		actual = strings.TrimPrefix(entry, prefix)
+	}
+
+	if matches != 1 {
+		t.Fatalf("dispatcher version env count mismatch: %d in %#v", matches, environment)
+	}
+	if actual != version.Dispatcher {
+		t.Fatalf("dispatcher version mismatch: %s", actual)
+	}
+}
+
 func TestRunMissingProjectLocalCoreReportsStructuredError(t *testing.T) {
 	// Verifies that the dispatcher finds a Unity project without importing the core CLI package.
 	projectRoot := t.TempDir()
