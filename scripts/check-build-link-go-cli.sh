@@ -34,32 +34,68 @@ update_uloop_link() {
   echo "Global uloop now points at the rebuilt dispatcher: $link_path -> $(readlink "$link_path")"
 }
 
+install_project_local_core() {
+  mkdir -p "$ROOT_DIR/.uloop/bin"
+  rm -f "$project_local_core_path"
+  cp "$core_path" "$project_local_core_path"
+  chmod +x "$project_local_core_path"
+  echo "Project-local uloop-core now uses the rebuilt binary: $project_local_core_path"
+}
+
+ensure_global_uloop_resolves_to_link() {
+  resolved_uloop_path=$(command -v uloop || true)
+
+  if [ "$resolved_uloop_path" = "$global_uloop_path" ]; then
+    return 0
+  fi
+  if [ -n "$extra_global_uloop_path" ] && [ "$resolved_uloop_path" = "$extra_global_uloop_path" ]; then
+    return 0
+  fi
+
+  echo "Global uloop symlink was updated, but shell resolution does not point at it." >&2
+  echo "Resolved uloop: ${resolved_uloop_path:-not found}" >&2
+  echo "Expected uloop: $global_uloop_path" >&2
+  echo "Add $global_bin_dir to PATH or set ULOOP_GLOBAL_BIN_DIR to a directory earlier in PATH." >&2
+  exit 1
+}
+
 "$ROOT_DIR/scripts/check-go-cli-source.sh"
 "$ROOT_DIR/scripts/build-go-cli.sh"
 
+core_path=""
 dispatcher_path=""
 global_command_name="uloop"
 existing_uloop_path=""
+project_local_core_path="$ROOT_DIR/.uloop/bin/uloop-core"
 os=$(uname -s)
 arch=$(uname -m)
 
 case "$os:$arch" in
   Darwin:arm64 | Darwin:aarch64)
+    core_path="$ROOT_DIR/Packages/src/GoCli~/dist/darwin-arm64/uloop-core"
     dispatcher_path="$ROOT_DIR/Packages/src/GoCli~/dist/darwin-arm64/uloop-dispatcher"
     ;;
   Darwin:x86_64 | Darwin:amd64)
+    core_path="$ROOT_DIR/Packages/src/GoCli~/dist/darwin-amd64/uloop-core"
     dispatcher_path="$ROOT_DIR/Packages/src/GoCli~/dist/darwin-amd64/uloop-dispatcher"
     ;;
   MINGW*:x86_64 | MINGW*:amd64 | MSYS*:x86_64 | MSYS*:amd64 | CYGWIN*:x86_64 | CYGWIN*:amd64 | Windows_NT:x86_64 | Windows_NT:amd64)
+    core_path="$ROOT_DIR/Packages/src/GoCli~/dist/windows-amd64/uloop-core.exe"
     dispatcher_path="$ROOT_DIR/Packages/src/GoCli~/dist/windows-amd64/uloop-dispatcher.exe"
     global_command_name="uloop.exe"
+    project_local_core_path="$ROOT_DIR/.uloop/bin/uloop-core.exe"
     ;;
 esac
 
-if [ -z "$dispatcher_path" ]; then
+if [ -z "$dispatcher_path" ] || [ -z "$core_path" ]; then
   echo "Go CLI source checks passed and dist binaries were rebuilt."
   echo "No checked-in dispatcher is mapped for this platform: $os/$arch"
   exit 0
+fi
+
+if [ ! -x "$core_path" ]; then
+  echo "Project-local core was not built or is not executable: $core_path" >&2
+  exit 1
 fi
 
 if [ ! -x "$dispatcher_path" ]; then
@@ -74,7 +110,7 @@ if [ -n "${ULOOP_GLOBAL_BIN_DIR:-}" ]; then
 elif command -v uloop >/dev/null 2>&1; then
   existing_uloop_path=$(command -v uloop)
   global_bin_dir=$(dirname "$existing_uloop_path")
-elif path_contains_dir "$HOME/.npm-global/bin" || [ -e "$HOME/.npm-global/bin/uloop" ]; then
+elif path_contains_dir "$HOME/.npm-global/bin"; then
   global_bin_dir="$HOME/.npm-global/bin"
 elif path_contains_dir "$HOME/.local/bin"; then
   global_bin_dir="$HOME/.local/bin"
@@ -88,6 +124,7 @@ if [ -z "$global_bin_dir" ]; then
 fi
 
 mkdir -p "$global_bin_dir"
+global_bin_dir=$(CDPATH= cd "$global_bin_dir" && pwd)
 global_uloop_path="$global_bin_dir/$global_command_name"
 extra_global_uloop_path=""
 
@@ -100,6 +137,8 @@ fi
 
 echo "Go CLI source checks passed and dist binaries were rebuilt."
 
+install_project_local_core
+
 ensure_symlink_target "$global_uloop_path"
 if [ -n "$extra_global_uloop_path" ]; then
   ensure_symlink_target "$extra_global_uloop_path"
@@ -110,4 +149,6 @@ if [ -n "$extra_global_uloop_path" ]; then
   update_uloop_link "$extra_global_uloop_path"
 fi
 
-"$global_uloop_path" --version
+ensure_global_uloop_resolves_to_link
+
+uloop --version
