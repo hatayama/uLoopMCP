@@ -26,11 +26,14 @@ func TestPrintLauncherHelpListsNativeCommandsAndLiveToolGuidance(t *testing.T) {
 		"uloop list",
 		"--project-path <path>",
 		"uloop --project-path /path/to/project list",
-		"uloop completion --list-options <command>",
+		"uloop --list-options <command>",
 	} {
 		if !strings.Contains(output, expected) {
 			t.Fatalf("help output missing %q:\n%s", expected, output)
 		}
+	}
+	if strings.Contains(output, "uloop completion --list-options") {
+		t.Fatalf("help output should use top-level completion helpers:\n%s", output)
 	}
 	for _, unexpected := range []string{
 		"  compile",

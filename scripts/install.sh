@@ -7,9 +7,9 @@ VERSION="${ULOOP_VERSION:-latest}"
 
 report_path_shadowing() {
   resolved_uloop=$(command -v uloop 2>/dev/null || true)
-  expected_uloop="$INSTALL_DIR/uloop"
+  expected_uloop="$INSTALL_DIR/$installed_command_name"
 
-  if [ -z "$resolved_uloop" ] || [ "$resolved_uloop" = "$expected_uloop" ]; then
+  if [ -z "$resolved_uloop" ] || [ "$resolved_uloop" = "$expected_uloop" ] || [ "$resolved_uloop.exe" = "$expected_uloop" ]; then
     return
   fi
 
@@ -24,6 +24,7 @@ detect_asset_name() {
 
   case "$os" in
     Darwin) os_name="darwin" ;;
+    MINGW*|MSYS*|CYGWIN*) os_name="windows" ;;
     *)
       echo "Unsupported OS: $os" >&2
       exit 1
@@ -36,19 +37,81 @@ detect_asset_name() {
     *)
       echo "Unsupported architecture: $arch" >&2
       exit 1
-      ;;
+    ;;
   esac
+
+  if [ "$os_name" = "windows" ]; then
+    echo "uloop-$os_name-$arch_name.zip"
+    return
+  fi
 
   echo "uloop-$os_name-$arch_name.tar.gz"
 }
 
+detect_installed_command_name() {
+  case "$asset_name" in
+    *.zip) echo "uloop.exe" ;;
+    *) echo "uloop" ;;
+  esac
+}
+
+find_latest_asset_url() {
+  curl -fsSL "https://api.github.com/repos/$REPOSITORY/releases?per_page=20" |
+    awk -v asset_name="$asset_name" '
+      /"browser_download_url":/ {
+        line = $0
+        sub(/^[[:space:]]*"browser_download_url": "/, "", line)
+        sub(/",?[[:space:]]*$/, "", line)
+        count = split(line, parts, "/")
+        if (parts[count] == asset_name && found == "") {
+          found = line
+        }
+      }
+      END {
+        if (found != "") {
+          print found
+        }
+      }
+    '
+}
+
+set_download_urls() {
+  if [ "$VERSION" != "latest" ]; then
+    download_url="https://github.com/$REPOSITORY/releases/download/$VERSION/$asset_name"
+    checksum_url="$download_url.sha256"
+    return
+  fi
+
+  download_url=$(find_latest_asset_url)
+  if [ -z "$download_url" ]; then
+    echo "Could not find a latest release asset named $asset_name." >&2
+    echo "Set ULOOP_VERSION to a release tag that provides this asset." >&2
+    exit 1
+  fi
+  checksum_url="$download_url.sha256"
+}
+
+extract_asset() {
+  case "$asset_name" in
+    *.zip)
+      if ! command -v unzip >/dev/null 2>&1; then
+        echo "unzip is required to extract $asset_name" >&2
+        exit 1
+      fi
+      unzip -q "$tmp_dir/$asset_name" -d "$tmp_dir"
+      return
+      ;;
+    *)
+      tar -xzf "$tmp_dir/$asset_name" -C "$tmp_dir"
+      ;;
+  esac
+}
+
 asset_name=$(detect_asset_name)
-if [ "$VERSION" = "latest" ]; then
-  download_url="https://github.com/$REPOSITORY/releases/latest/download/$asset_name"
-else
-  download_url="https://github.com/$REPOSITORY/releases/download/$VERSION/$asset_name"
-fi
-checksum_url="$download_url.sha256"
+installed_command_name=$(detect_installed_command_name)
+download_url=""
+checksum_url=""
+set_download_urls
 
 tmp_dir=$(mktemp -d)
 staged_uloop_path=""
@@ -81,11 +144,14 @@ mkdir -p "$INSTALL_DIR"
 curl -fsSL "$download_url" -o "$tmp_dir/$asset_name"
 curl -fsSL "$checksum_url" -o "$tmp_dir/$asset_name.sha256"
 verify_checksum
-tar -xzf "$tmp_dir/$asset_name" -C "$tmp_dir"
+extract_asset
 staged_uloop_path="$INSTALL_DIR/.uloop-install-$$"
-install -m 0755 "$tmp_dir/uloop" "$staged_uloop_path"
+if [ "$installed_command_name" = "uloop.exe" ]; then
+  staged_uloop_path="$staged_uloop_path.exe"
+fi
+install -m 0755 "$tmp_dir/$installed_command_name" "$staged_uloop_path"
 "$staged_uloop_path" --version >/dev/null
-mv -f "$staged_uloop_path" "$INSTALL_DIR/uloop"
+mv -f "$staged_uloop_path" "$INSTALL_DIR/$installed_command_name"
 staged_uloop_path=""
 
 case ":$PATH:" in
@@ -97,5 +163,5 @@ case ":$PATH:" in
     ;;
 esac
 
-"$INSTALL_DIR/uloop" --version
+"$INSTALL_DIR/$installed_command_name" --version
 report_path_shadowing

@@ -110,6 +110,24 @@ func TestCompletionPrintsShellScriptWithoutProject(t *testing.T) {
 	}
 }
 
+func TestDetectShellOnWindowsGitBashUsesBash(t *testing.T) {
+	// Tests that Git Bash auto-install writes bash completion instead of PowerShell completion.
+	shellName := detectShellFromEnvironment("windows", "/usr/bin/bash", "MINGW64")
+
+	if shellName != "bash" {
+		t.Fatalf("windows Git Bash shell mismatch: %s", shellName)
+	}
+}
+
+func TestDetectShellOnWindowsPowerShellDefaultsToPowerShell(t *testing.T) {
+	// Tests that regular Windows terminals still get the native PowerShell completion default.
+	shellName := detectShellFromEnvironment("windows", "", "")
+
+	if shellName != "powershell" {
+		t.Fatalf("windows default shell mismatch: %s", shellName)
+	}
+}
+
 func containsString(values []string, expected string) bool {
 	for _, value := range values {
 		if value == expected {
