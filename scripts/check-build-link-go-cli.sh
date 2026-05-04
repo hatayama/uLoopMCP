@@ -10,11 +10,36 @@ path_contains_dir() {
   esac
 }
 
+ensure_symlink_target() {
+  link_path="$1"
+
+  if [ -e "$link_path" ] && [ ! -L "$link_path" ]; then
+    echo "Go CLI source checks passed and dist binaries were rebuilt."
+    echo "Refusing to overwrite non-symlink global uloop: $link_path" >&2
+    exit 1
+  fi
+}
+
+update_uloop_link() {
+  link_path="$1"
+
+  if [ -L "$link_path" ]; then
+    current_target=$(readlink "$link_path")
+    echo "Updating global uloop symlink: $link_path -> $current_target"
+  else
+    echo "Creating global uloop symlink: $link_path"
+  fi
+
+  ln -sfn "$dispatcher_path" "$link_path"
+  echo "Global uloop now points at the rebuilt dispatcher: $link_path -> $(readlink "$link_path")"
+}
+
 "$ROOT_DIR/scripts/check-go-cli-source.sh"
 "$ROOT_DIR/scripts/build-go-cli.sh"
 
 dispatcher_path=""
 global_command_name="uloop"
+existing_uloop_path=""
 os=$(uname -s)
 arch=$(uname -m)
 
@@ -47,8 +72,8 @@ global_bin_dir=""
 if [ -n "${ULOOP_GLOBAL_BIN_DIR:-}" ]; then
   global_bin_dir="$ULOOP_GLOBAL_BIN_DIR"
 elif command -v uloop >/dev/null 2>&1; then
-  uloop_path=$(command -v uloop)
-  global_bin_dir=$(dirname "$uloop_path")
+  existing_uloop_path=$(command -v uloop)
+  global_bin_dir=$(dirname "$existing_uloop_path")
 elif path_contains_dir "$HOME/.npm-global/bin" || [ -e "$HOME/.npm-global/bin/uloop" ]; then
   global_bin_dir="$HOME/.npm-global/bin"
 elif path_contains_dir "$HOME/.local/bin"; then
@@ -64,21 +89,25 @@ fi
 
 mkdir -p "$global_bin_dir"
 global_uloop_path="$global_bin_dir/$global_command_name"
+extra_global_uloop_path=""
 
-if [ -e "$global_uloop_path" ] && [ ! -L "$global_uloop_path" ]; then
-  echo "Go CLI source checks passed and dist binaries were rebuilt."
-  echo "Refusing to overwrite non-symlink global uloop: $global_uloop_path" >&2
-  exit 1
+if [ "$global_command_name" = "uloop.exe" ] && [ -n "$existing_uloop_path" ] && [ "$existing_uloop_path" != "$global_uloop_path" ]; then
+  existing_uloop_dir=$(dirname "$existing_uloop_path")
+  if [ "$existing_uloop_dir" = "$global_bin_dir" ]; then
+    extra_global_uloop_path="$existing_uloop_path"
+  fi
 fi
 
 echo "Go CLI source checks passed and dist binaries were rebuilt."
-if [ -L "$global_uloop_path" ]; then
-  current_target=$(readlink "$global_uloop_path")
-  echo "Updating global uloop symlink: $global_uloop_path -> $current_target"
-else
-  echo "Creating global uloop symlink: $global_uloop_path"
+
+ensure_symlink_target "$global_uloop_path"
+if [ -n "$extra_global_uloop_path" ]; then
+  ensure_symlink_target "$extra_global_uloop_path"
 fi
 
-ln -sfn "$dispatcher_path" "$global_uloop_path"
-echo "Global uloop now points at the rebuilt dispatcher: $global_uloop_path -> $(readlink "$global_uloop_path")"
+update_uloop_link "$global_uloop_path"
+if [ -n "$extra_global_uloop_path" ]; then
+  update_uloop_link "$extra_global_uloop_path"
+fi
+
 "$global_uloop_path" --version

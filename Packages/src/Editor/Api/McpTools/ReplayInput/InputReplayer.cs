@@ -87,7 +87,6 @@ namespace io.github.hatayama.UnityCliLoop
             _replayHeldButtons.Clear();
             _hasMousePosition = DetectMousePositionEvents(data!);
             ResetUiReplayState();
-            DisableUiInputModulesForReplay();
             if (_hasMousePosition)
             {
                 SimulateMouseInputOverlayState.Clear();
@@ -448,12 +447,14 @@ namespace io.github.hatayama.UnityCliLoop
         {
             if (!_replayMousePosition.HasValue)
             {
+                RestoreUiInputModules();
                 return;
             }
 
             EventSystem? eventSystem = EventSystem.current;
             if (eventSystem == null)
             {
+                RestoreUiInputModules();
                 return;
             }
 
@@ -466,6 +467,7 @@ namespace io.github.hatayama.UnityCliLoop
             bool justPressed = leftHeld && !_prevLeftButtonHeld;
             bool justReleased = !leftHeld && _prevLeftButtonHeld;
             _prevLeftButtonHeld = leftHeld;
+            SetUiInputModulesSuppressed(leftHeld || justReleased);
 
             Vector2 gameViewSize = Handles.GetMainGameViewSize();
             Vector2 inputPos = new Vector2(screenPos.x, gameViewSize.y - screenPos.y);
@@ -656,12 +658,11 @@ namespace io.github.hatayama.UnityCliLoop
             return false;
         }
 
-        private static void DisableUiInputModulesForReplay()
+        private static void SetUiInputModulesSuppressed(bool suppressed)
         {
-            RestoreUiInputModules();
-
-            if (!_hasMousePosition)
+            if (!suppressed)
             {
+                RestoreUiInputModules();
                 return;
             }
 
