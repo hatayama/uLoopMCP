@@ -4,9 +4,9 @@ import (
 	"context"
 	"os"
 
-	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/app"
+	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/dispatcher"
 )
 
 func main() {
-	os.Exit(app.RunLauncher(context.Background(), os.Args[1:], os.Stdout, os.Stderr))
+	os.Exit(dispatcher.Run(context.Background(), os.Args[1:], os.Stdout, os.Stderr))
 }

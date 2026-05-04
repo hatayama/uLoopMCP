@@ -19,6 +19,7 @@ const (
 	errorCodeUnityDisconnectedAfterDispatch = "UNITY_DISCONNECTED_AFTER_DISPATCH"
 	errorCodeUnityRPCError                  = "UNITY_RPC_ERROR"
 	errorCodeCompileWaitTimeout             = "COMPILE_WAIT_TIMEOUT"
+	errorCodeDispatcherUpdateRequired       = "DISPATCHER_UPDATE_REQUIRED"
 	errorCodeInternalError                  = "INTERNAL_ERROR"
 
 	errorPhaseArgumentParsing = "argument_parsing"

@@ -4,6 +4,7 @@ namespace io.github.hatayama.UnityCliLoop
     {
         public const string EXECUTABLE_NAME = "uloop";
         public const string VERSION_FLAG = "--version";
+        public const string REQUIRED_DISPATCHER_VERSION_FLAG = "--required-dispatcher-version";
         public const string RELEASE_DOWNLOAD_BASE_URL = "https://github.com/hatayama/unity-cli-loop/releases/download";
         public const string POSIX_INSTALL_SCRIPT_NAME = "install.sh";
         public const string WINDOWS_INSTALL_SCRIPT_NAME = "install.ps1";

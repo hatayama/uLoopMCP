@@ -6,20 +6,13 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"runtime"
-	"syscall"
 
 	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/adapters/project"
 	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/adapters/unity"
 	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/application"
 	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/domain"
-)
-
-const (
-	projectLocalUnixPath    = ".uloop/bin/uloop-core"
-	projectLocalWindowsPath = ".uloop/bin/uloop-core.exe"
+	cliversion "github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/version"
 )
 
 func RunProjectLocal(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer) int {
@@ -35,6 +28,10 @@ func RunProjectLocal(ctx context.Context, args []string, stdout io.Writer, stder
 	}
 	if isVersionRequest(remainingArgs) {
 		writeLine(stdout, version)
+		return 0
+	}
+	if isRequiredDispatcherVersionRequest(remainingArgs) {
+		writeLine(stdout, cliversion.MinimumRequiredDispatcher)
 		return 0
 	}
 
@@ -59,6 +56,13 @@ func RunProjectLocal(ctx context.Context, args []string, stdout io.Writer, stder
 	}
 	if handled, code := tryHandleSkillsRequest(remainingArgs, startPath, projectPath, stdout, stderr); handled {
 		return code
+	}
+	if !isDispatcherCompatible(os.Getenv(cliversion.DispatcherVersionEnv)) {
+		writeErrorEnvelope(stderr, dispatcherUpdateRequiredError(
+			os.Getenv(cliversion.DispatcherVersionEnv),
+			cliversion.MinimumRequiredDispatcher,
+			command))
+		return 1
 	}
 
 	connection, err := project.ResolveConnection(startPath, projectPath)
@@ -112,70 +116,6 @@ func RunProjectLocal(ctx context.Context, args []string, stdout io.Writer, stder
 		}
 		return runTool(ctx, connection, command, params, stdout, stderr)
 	}
-}
-
-func RunLauncher(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer) int {
-	if isVersionRequest(args) {
-		writeLine(stdout, version)
-		return 0
-	}
-	if handled, code := tryHandleCompletionRequest(args, loadDefaultTools(), stdout, stderr); handled {
-		return code
-	}
-	if handled, code := tryHandleUpdateRequest(ctx, args, stdout, stderr); handled {
-		return code
-	}
-
-	startPath, err := os.Getwd()
-	if err != nil {
-		writeClassifiedError(stderr, err, errorContext{})
-		return 1
-	}
-
-	remainingArgs, explicitProjectPath, err := parseGlobalProjectPath(args)
-	if err != nil {
-		writeClassifiedError(stderr, err, errorContext{})
-		return 1
-	}
-	if len(remainingArgs) == 0 || isHelpRequest(remainingArgs) {
-		printLauncherHelpForResolvedProject(stdout, startPath, explicitProjectPath)
-		return 0
-	}
-	if isVersionRequest(remainingArgs) {
-		writeLine(stdout, version)
-		return 0
-	}
-	if handled, code := tryHandleLaunchRequest(ctx, remainingArgs, startPath, explicitProjectPath, stdout, stderr); handled {
-		return code
-	}
-	if handled, code := tryHandleSkillsRequest(remainingArgs, startPath, explicitProjectPath, stdout, stderr); handled {
-		return code
-	}
-
-	projectRoot, err := resolveLauncherProjectRoot(startPath, explicitProjectPath)
-	if err != nil {
-		writeClassifiedError(stderr, err, errorContext{})
-		return 1
-	}
-
-	localPath := filepath.Join(projectRoot, projectLocalUnixPath)
-	if runtime.GOOS == "windows" {
-		localPath = filepath.Join(projectRoot, projectLocalWindowsPath)
-	}
-	if _, err := os.Stat(localPath); err != nil {
-		command := ""
-		if len(remainingArgs) > 0 {
-			command = remainingArgs[0]
-		}
-		writeErrorEnvelope(stderr, projectLocalCLIMissingError(localPath, projectRoot, command))
-		return 1
-	}
-
-	forwardedArgs := append([]string{}, remainingArgs...)
-	if explicitProjectPath != "" {
-		forwardedArgs = append(forwardedArgs, "--project-path", projectRoot)
-	}
-	return execProjectLocal(ctx, localPath, forwardedArgs, projectRoot, stderr)
 }
 
 func runTool(ctx context.Context, connection domain.Connection, command string, params map[string]any, stdout io.Writer, stderr io.Writer) int {
@@ -322,39 +262,4 @@ func writeJSON(stdout io.Writer, result json.RawMessage) {
 	encoder := json.NewEncoder(stdout)
 	encoder.SetIndent("", "  ")
 	_ = encoder.Encode(pretty)
-}
-
-func resolveLauncherProjectRoot(startPath string, explicitProjectPath string) (string, error) {
-	if explicitProjectPath != "" {
-		projectRoot, err := filepath.Abs(explicitProjectPath)
-		if err != nil {
-			return "", err
-		}
-		if !project.IsUnityProject(projectRoot) {
-			return "", fmt.Errorf("--project-path does not point to a Unity project: %s", projectRoot)
-		}
-		return projectRoot, nil
-	}
-	return project.FindProjectRoot(startPath)
-}
-
-func execProjectLocal(ctx context.Context, localPath string, args []string, projectRoot string, stderr io.Writer) int {
-	if runtime.GOOS != "windows" {
-		err := syscall.Exec(localPath, append([]string{localPath}, args...), os.Environ())
-		if err != nil {
-			writeClassifiedError(stderr, err, errorContext{projectRoot: projectRoot})
-			return 1
-		}
-		return 0
-	}
-
-	command := exec.CommandContext(ctx, localPath, args...)
-	command.Dir = projectRoot
-	command.Stdout = os.Stdout
-	command.Stderr = os.Stderr
-	command.Stdin = os.Stdin
-	if err := command.Run(); err != nil {
-		return 1
-	}
-	return 0
 }

@@ -31,21 +31,6 @@ func printLauncherHelp(stdout io.Writer) {
 		false)
 }
 
-func printLauncherHelpForResolvedProject(stdout io.Writer, startPath string, explicitProjectPath string) {
-	projectRoot, err := resolveLauncherProjectRoot(startPath, explicitProjectPath)
-	if err != nil {
-		printLauncherHelp(stdout)
-		return
-	}
-
-	cache, ok := loadCachedTools(projectRoot)
-	printMainHelp(
-		stdout,
-		"Global dispatcher. Finds the Unity project, then dispatches to the project-local uloop-core binary.",
-		cache,
-		ok)
-}
-
 func printMainHelp(stdout io.Writer, description string, cache toolsCache, hasProjectToolCache bool) {
 	writeFormat(stdout, "uloop %s\n\n", version)
 	writeLine(stdout, "Usage:")

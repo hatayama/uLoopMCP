@@ -9,13 +9,14 @@ import (
 	"strings"
 
 	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/domain"
+	cliversion "github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/version"
 )
 
 //go:embed default-tools.json
 var embeddedTools embed.FS
 
 const (
-	version             = "3.0.0-beta.0"
+	version             = cliversion.Core
 	cacheDirectoryName  = ".uloop"
 	cacheFileName       = "tools.json"
 	defaultToolsFile    = "default-tools.json"
@@ -48,20 +49,6 @@ func loadTools(projectRoot string) (toolsCache, error) {
 		return toolsCache{}, err
 	}
 	return filterInternalSkillTools(projectRoot, cache), nil
-}
-
-func loadCachedTools(projectRoot string) (toolsCache, bool) {
-	cachePath := filepath.Join(projectRoot, cacheDirectoryName, cacheFileName)
-	content, err := os.ReadFile(cachePath)
-	if err != nil {
-		return toolsCache{}, false
-	}
-
-	var cache toolsCache
-	if json.Unmarshal(content, &cache) != nil {
-		return toolsCache{}, false
-	}
-	return filterInternalSkillTools(projectRoot, cache), true
 }
 
 func loadDefaultTools() toolsCache {

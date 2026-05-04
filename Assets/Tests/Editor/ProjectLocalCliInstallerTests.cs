@@ -151,10 +151,36 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             Assert.That(File.ReadAllText(projectLocalCliPath), Is.EqualTo(replacementBundleContent));
         }
 
+        [Test]
+        public void DetectCliOutput_WithRequiredDispatcherVersionFlag_ReturnsRequirement()
+        {
+            string sourceBundlePath = Path.Combine(_temporaryRoot, "source-cli.cjs");
+            File.WriteAllText(sourceBundlePath, BuildVersionScript("3.0.0-beta.1", "source"));
+
+            string projectRoot = Path.Combine(_temporaryRoot, "Project");
+            Directory.CreateDirectory(projectRoot);
+            CliInstallResult initialResult = ProjectLocalCliInstaller.InstallProjectLocalCliFromBundle(
+                sourceBundlePath,
+                projectRoot);
+            Assert.That(initialResult.Success, Is.True, initialResult.ErrorOutput);
+            string projectLocalCliPath = ProjectLocalCliInstaller.GetProjectLocalCliPath(projectRoot);
+
+            string requiredDispatcherVersion = ProjectLocalCliInstaller.DetectCliOutput(
+                projectLocalCliPath,
+                projectRoot,
+                CliConstants.REQUIRED_DISPATCHER_VERSION_FLAG);
+
+            Assert.That(requiredDispatcherVersion, Is.EqualTo("3.0.0-beta.1"));
+        }
+
         private static string BuildVersionScript(string version, string marker)
         {
             return "#!/bin/sh\n"
                 + "if [ \"$1\" = \"--version\" ]; then\n"
+                + $"  echo \"{version}\"\n"
+                + "  exit 0\n"
+                + "fi\n"
+                + $"if [ \"$1\" = \"{CliConstants.REQUIRED_DISPATCHER_VERSION_FLAG}\" ]; then\n"
                 + $"  echo \"{version}\"\n"
                 + "  exit 0\n"
                 + "fi\n"

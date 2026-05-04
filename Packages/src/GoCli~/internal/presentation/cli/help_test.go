@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/dispatcher"
 )
 
 // Tests that launcher help lists native commands and live-tool discovery guidance without baked-in tools.
@@ -81,7 +83,7 @@ func TestRunLauncherPrintsHelpAfterProjectPathOption(t *testing.T) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
-	code := RunLauncher(
+	code := dispatcher.Run(
 		context.Background(),
 		[]string{"--project-path", "/does/not/need/to/exist", "-h"},
 		&stdout,
@@ -112,7 +114,7 @@ func TestRunLauncherPrintsProjectCachedToolsAfterProjectPathOption(t *testing.T)
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
-	code := RunLauncher(
+	code := dispatcher.Run(
 		context.Background(),
 		[]string{"--project-path", projectRoot, "-h"},
 		&stdout,
@@ -129,7 +131,7 @@ func TestRunLauncherPrintsProjectCachedToolsFromCurrentDirectory(t *testing.T) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
-	code := RunLauncher(
+	code := dispatcher.Run(
 		context.Background(),
 		[]string{"-h"},
 		&stdout,

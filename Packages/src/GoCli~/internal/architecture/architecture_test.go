@@ -82,6 +82,27 @@ func TestProductionGoFilesStayFocused(t *testing.T) {
 	}
 }
 
+// Tests that the global dispatcher binary stays independent from project-local core implementation packages.
+func TestDispatcherCommandDoesNotDependOnCorePackages(t *testing.T) {
+	moduleRoot := findModuleRoot(t)
+	command := exec.Command("go", "list", "-deps", "./cmd/uloop-dispatcher")
+	command.Dir = moduleRoot
+	output, err := command.Output()
+	if err != nil {
+		t.Fatalf("go list failed: %v", err)
+	}
+
+	for _, dependency := range strings.Split(strings.TrimSpace(string(output)), "\n") {
+		switch dependency {
+		case modulePath + "/internal/app",
+			modulePath + "/internal/presentation/cli",
+			modulePath + "/internal/adapters/unity",
+			modulePath + "/internal/application":
+			t.Fatalf("dispatcher command must not depend on core package %s", dependency)
+		}
+	}
+}
+
 func listPackages(t *testing.T, moduleRoot string) []goPackage {
 	t.Helper()
 	command := exec.Command("go", "list", "-json", "./...")

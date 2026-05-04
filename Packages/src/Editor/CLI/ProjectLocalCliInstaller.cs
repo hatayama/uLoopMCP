@@ -31,6 +31,15 @@ namespace io.github.hatayama.UnityCliLoop
             return string.Equals(version, expectedVersion, System.StringComparison.Ordinal);
         }
 
+        public static string DetectBundledRequiredDispatcherVersion()
+        {
+            string sourceBinaryPath = GetProjectCliBundlePath();
+            return DetectCliOutput(
+                sourceBinaryPath,
+                McpConstants.PackageResolvedPath,
+                CliConstants.REQUIRED_DISPATCHER_VERSION_FLAG);
+        }
+
         internal static bool IsProjectLocalCliCurrentForBundle(
             string sourceBinaryPath,
             string projectRoot,
@@ -124,16 +133,28 @@ namespace io.github.hatayama.UnityCliLoop
             UnityEngine.Debug.Assert(!string.IsNullOrEmpty(projectRoot), "projectRoot must not be null or empty");
 
             string projectLocalCliPath = GetProjectLocalCliPath(projectRoot);
-            if (!File.Exists(projectLocalCliPath))
+            return DetectCliOutput(projectLocalCliPath, projectRoot, CliConstants.VERSION_FLAG);
+        }
+
+        internal static string DetectCliOutput(
+            string executablePath,
+            string workingDirectory,
+            string arguments)
+        {
+            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(executablePath), "executablePath must not be null or empty");
+            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(workingDirectory), "workingDirectory must not be null or empty");
+            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(arguments), "arguments must not be null or empty");
+
+            if (!File.Exists(executablePath))
             {
                 return null;
             }
 
             ProcessStartInfo startInfo = new ProcessStartInfo
             {
-                FileName = projectLocalCliPath,
-                Arguments = CliConstants.VERSION_FLAG,
-                WorkingDirectory = projectRoot,
+                FileName = executablePath,
+                Arguments = arguments,
+                WorkingDirectory = workingDirectory,
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
