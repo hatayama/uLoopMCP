@@ -266,7 +266,7 @@ func internalCLIError(message string, context errorContext) cliError {
 func availableCommandNames(cache toolsCache) []string {
 	seen := map[string]bool{}
 	names := []string{}
-	for _, name := range []string{"list", "sync", "focus-window", "fix"} {
+	for _, name := range nativeCommandNamesForCompletion() {
 		seen[name] = true
 		names = append(names, name)
 	}

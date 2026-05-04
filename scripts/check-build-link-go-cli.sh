@@ -43,7 +43,7 @@ install_project_local_core() {
 }
 
 ensure_global_uloop_resolves_to_link() {
-  resolved_uloop_path=$(command -v uloop || true)
+  resolved_uloop_path=$(command -v "$global_command_name" || true)
 
   if [ "$resolved_uloop_path" = "$global_uloop_path" ]; then
     return 0
@@ -52,9 +52,9 @@ ensure_global_uloop_resolves_to_link() {
     return 0
   fi
 
-  echo "Global uloop symlink was updated, but shell resolution does not point at it." >&2
-  echo "Resolved uloop: ${resolved_uloop_path:-not found}" >&2
-  echo "Expected uloop: $global_uloop_path" >&2
+  echo "Global $global_command_name symlink was updated, but shell resolution does not point at it." >&2
+  echo "Resolved $global_command_name: ${resolved_uloop_path:-not found}" >&2
+  echo "Expected $global_command_name: $global_uloop_path" >&2
   echo "Add $global_bin_dir to PATH or set ULOOP_GLOBAL_BIN_DIR to a directory earlier in PATH." >&2
   exit 1
 }
@@ -107,7 +107,10 @@ global_bin_dir=""
 
 if [ -n "${ULOOP_GLOBAL_BIN_DIR:-}" ]; then
   global_bin_dir="$ULOOP_GLOBAL_BIN_DIR"
-elif command -v uloop >/dev/null 2>&1; then
+elif command -v "$global_command_name" >/dev/null 2>&1; then
+  existing_uloop_path=$(command -v "$global_command_name")
+  global_bin_dir=$(dirname "$existing_uloop_path")
+elif [ "$global_command_name" = "uloop.exe" ] && command -v uloop >/dev/null 2>&1; then
   existing_uloop_path=$(command -v uloop)
   global_bin_dir=$(dirname "$existing_uloop_path")
 elif path_contains_dir "$HOME/.npm-global/bin"; then
@@ -151,4 +154,4 @@ fi
 
 ensure_global_uloop_resolves_to_link
 
-uloop --version
+"$global_command_name" --version

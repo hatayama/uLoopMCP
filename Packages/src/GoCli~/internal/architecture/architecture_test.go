@@ -26,12 +26,12 @@ func TestOnionLayerDependencies(t *testing.T) {
 	moduleRoot := findModuleRoot(t)
 	packages := listPackages(t, moduleRoot)
 	for _, goPackage := range packages {
+		if strings.Contains(goPackage.ImportPath, "/internal/cli") {
+			t.Fatalf("legacy aggregate cli package must not be reintroduced: %s", goPackage.ImportPath)
+		}
 		sourceLayer := layerOf(goPackage.ImportPath)
 		if sourceLayer == "" {
 			continue
-		}
-		if strings.Contains(goPackage.ImportPath, "/internal/cli") {
-			t.Fatalf("legacy aggregate cli package must not be reintroduced: %s", goPackage.ImportPath)
 		}
 		for _, importedPath := range goPackage.Imports {
 			if !strings.HasPrefix(importedPath, modulePath) {

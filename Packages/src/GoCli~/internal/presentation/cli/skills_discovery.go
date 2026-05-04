@@ -54,8 +54,6 @@ func enumerateSkillSourceRoots(projectRoot string) []skillSourceRoot {
 		sourceRoots = append(sourceRoots, skillSourceRoot{path: absolutePath, cliOnly: cliOnly})
 	}
 
-	packageRoot := resolvePackageRoot(projectRoot)
-	addSourceRoot(packageRoot, false)
 	addSourceRoot(filepath.Join(projectRoot, "Packages/src/GoCli~/internal/presentation/cli/skill-definitions/cli-only"), true)
 	addSourceRoot(filepath.Join(projectRoot, "Assets"), false)
 	for _, packageRoot := range enumerateDirectProjectPackageRoots(projectRoot) {
@@ -67,6 +65,7 @@ func enumerateSkillSourceRoots(projectRoot string) []skillSourceRoot {
 	for _, packageRoot := range resolveDependencyPackageCacheRoots(projectRoot) {
 		addSourceRoot(packageRoot, false)
 	}
+	addSourceRoot(resolvePackageRoot(projectRoot), false)
 	return sourceRoots
 }
 

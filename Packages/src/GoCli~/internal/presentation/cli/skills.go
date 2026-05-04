@@ -104,6 +104,10 @@ func tryHandleSkillsRequest(args []string, startPath string, globalProjectPath s
 	}
 
 	subcommand := args[1]
+	if !isKnownSkillsSubcommand(subcommand) {
+		writeErrorEnvelope(stderr, unknownSkillsSubcommandError(subcommand, errorContext{command: skillsCommandName}))
+		return true, 1
+	}
 	options, err := parseSkillsOptions(args[2:])
 	if err != nil {
 		writeClassifiedError(stderr, err, errorContext{command: skillsCommandName})
@@ -136,19 +140,13 @@ func tryHandleSkillsRequest(args []string, startPath string, globalProjectPath s
 			return true, 0
 		}
 		return true, runSkillsUninstall(projectRoot, skills, options, stdout, stderr)
-	default:
-		writeErrorEnvelope(stderr, (&argumentError{
-			message:     "Unknown skills command: " + subcommand,
-			received:    subcommand,
-			command:     skillsCommandName,
-			nextActions: []string{"Use `uloop skills list`, `uloop skills install`, or `uloop skills uninstall`."},
-		}).toCLIError(errorContext{projectRoot: projectRoot, command: skillsCommandName}))
-		return true, 1
 	}
+	return true, 1
 }
 
 func parseSkillsOptions(args []string) (skillCommandOptions, error) {
 	options := skillCommandOptions{}
+	seenTargets := map[string]bool{}
 	for _, arg := range args {
 		switch arg {
 		case "-g", "--global":
@@ -157,7 +155,11 @@ func parseSkillsOptions(args []string) (skillCommandOptions, error) {
 			options.flat = true
 		case "--claude", "--codex", "--cursor", "--gemini", "--agents", "--windsurf", "--antigravity":
 			targetID := strings.TrimPrefix(arg, "--")
+			if seenTargets[targetID] {
+				continue
+			}
 			options.targets = append(options.targets, targetConfigs[targetID])
+			seenTargets[targetID] = true
 		default:
 			return skillCommandOptions{}, &argumentError{
 				message:     "Unknown skills option: " + arg,
@@ -168,6 +170,24 @@ func parseSkillsOptions(args []string) (skillCommandOptions, error) {
 		}
 	}
 	return options, nil
+}
+
+func isKnownSkillsSubcommand(subcommand string) bool {
+	switch subcommand {
+	case "list", "install", "uninstall":
+		return true
+	default:
+		return false
+	}
+}
+
+func unknownSkillsSubcommandError(subcommand string, context errorContext) cliError {
+	return (&argumentError{
+		message:     "Unknown skills command: " + subcommand,
+		received:    subcommand,
+		command:     skillsCommandName,
+		nextActions: []string{"Use `uloop skills list`, `uloop skills install`, or `uloop skills uninstall`."},
+	}).toCLIError(context)
 }
 
 func resolveSkillsProjectRoot(startPath string, explicitProjectPath string, global bool) (string, error) {

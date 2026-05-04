@@ -100,6 +100,43 @@ name: uloop-cached-package
 	}
 }
 
+// Tests that CLI-only and project-local skills win over package-root duplicates.
+func TestCollectSkillDefinitionsUsesUnitySideSourcePrecedence(t *testing.T) {
+	projectRoot := t.TempDir()
+	writeTestSkill(t, projectRoot, "Packages/src/Editor/Api/McpTools/Compile/Skill", `---
+name: uloop-launch
+---
+
+# package launch
+`)
+	writeTestSkill(t, projectRoot, "Packages/src/Editor/Api/McpTools/ProjectDuplicate/Skill", `---
+name: uloop-project
+---
+
+# package project
+`)
+	writeTestSkill(t, projectRoot, "Packages/src/GoCli~/internal/presentation/cli/skill-definitions/cli-only/uloop-launch/Skill", `---
+name: uloop-launch
+---
+
+# cli-only launch
+`)
+	writeTestSkill(t, projectRoot, "Assets/Editor/ProjectDuplicate/Skill", `---
+name: uloop-project
+---
+
+# asset project
+`)
+
+	skills, err := collectSkillDefinitions(projectRoot)
+	if err != nil {
+		t.Fatalf("collectSkillDefinitions failed: %v", err)
+	}
+
+	assertSkillContentContains(t, skills, "uloop-launch", "# cli-only launch")
+	assertSkillContentContains(t, skills, "uloop-project", "# asset project")
+}
+
 // Tests that direct SKILL.md files without a frontmatter name use their own directory name.
 func TestCollectSkillDefinitionsUsesDirectoryNameWhenDirectSkillOmitsName(t *testing.T) {
 	projectRoot := t.TempDir()
@@ -452,6 +489,47 @@ func TestParseSkillsOptionsRequiresKnownFlags(t *testing.T) {
 	}
 }
 
+// Tests that repeated target flags are ignored after their first occurrence.
+func TestParseSkillsOptionsDeduplicatesTargets(t *testing.T) {
+	options, err := parseSkillsOptions([]string{"--claude", "--claude", "--codex"})
+	if err != nil {
+		t.Fatalf("parseSkillsOptions failed: %v", err)
+	}
+
+	actualIDs := []string{}
+	for _, target := range options.targets {
+		actualIDs = append(actualIDs, target.id)
+	}
+	expectedIDs := []string{"claude", "codex"}
+	if !reflect.DeepEqual(actualIDs, expectedIDs) {
+		t.Fatalf("target ids mismatch: %#v", actualIDs)
+	}
+}
+
+// Tests that unknown skills subcommands are rejected before project resolution.
+func TestTryHandleSkillsRequestRejectsUnknownSubcommandWithoutProject(t *testing.T) {
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+
+	handled, code := tryHandleSkillsRequest(
+		[]string{"skills", "unknown"},
+		t.TempDir(),
+		"",
+		stdout,
+		stderr,
+	)
+
+	if !handled || code != 1 {
+		t.Fatalf("unexpected result: handled=%v code=%d", handled, code)
+	}
+	if !strings.Contains(stderr.String(), "Unknown skills command: unknown") {
+		t.Fatalf("stderr mismatch: %s", stderr.String())
+	}
+	if strings.Contains(stderr.String(), "unity project not found") {
+		t.Fatalf("unknown subcommand should not resolve project first: %s", stderr.String())
+	}
+}
+
 func writeTestSkill(t *testing.T, projectRoot string, relativeDir string, content string) {
 	t.Helper()
 	writeSkillFile(t, filepath.Join(projectRoot, filepath.FromSlash(relativeDir)), content)
@@ -515,4 +593,18 @@ func skillNames(skills []skillDefinition) []string {
 	}
 	sort.Strings(names)
 	return names
+}
+
+func assertSkillContentContains(t *testing.T, skills []skillDefinition, skillName string, expectedContent string) {
+	t.Helper()
+	for _, skill := range skills {
+		if skill.name != skillName {
+			continue
+		}
+		if !strings.Contains(string(skill.content), expectedContent) {
+			t.Fatalf("skill %s content mismatch: %s", skillName, string(skill.content))
+		}
+		return
+	}
+	t.Fatalf("skill not found: %s", skillName)
 }
