@@ -15,7 +15,7 @@ import (
 var embeddedTools embed.FS
 
 const (
-	version             = "3.0.0-beta.0"
+	version             = "3.0.0-beta.1"
 	cacheDirectoryName  = ".uloop"
 	cacheFileName       = "tools.json"
 	defaultToolsFile    = "default-tools.json"

@@ -2,8 +2,8 @@
 E2E verification: human plays freely, then CLI replays and verifies.
 
 Usage:
-  powershell -ExecutionPolicy Bypass -File .\Assets\Tests\Demo\scripts\verify-replay-via-cli.ps1
-  powershell -ExecutionPolicy Bypass -File .\Assets\Tests\Demo\scripts\verify-replay-via-cli.ps1 -ProjectPath C:\path\to\project
+  powershell -NoProfile -ExecutionPolicy Bypass -File .\Assets\Tests\Demo\scripts\verify-replay-via-cli.ps1
+  powershell -NoProfile -ExecutionPolicy Bypass -File .\Assets\Tests\Demo\scripts\verify-replay-via-cli.ps1 -ProjectPath C:\path\to\project
 
 Prerequisites:
   - Unity Editor running with InputReplayVerificationScene loaded

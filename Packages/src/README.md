@@ -459,11 +459,14 @@ Replay recorded keyboard and mouse input during PlayMode. Loads a JSON recording
 → replay-input (Action: Stop)
 ```
 
-Manual record/replay E2E helpers are available for both POSIX shells and Windows PowerShell:
+Terminal-driven E2E helpers are available for both POSIX shells and Windows PowerShell:
 
 ```bash
 sh Assets/Tests/Demo/scripts/verify-replay-via-cli.sh
-powershell -ExecutionPolicy Bypass -File .\Assets\Tests\Demo\scripts\verify-replay-via-cli.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Assets\Tests\Demo\scripts\verify-replay-via-cli.ps1
+
+sh scripts/test-simulate-mouse-demo.sh
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-simulate-mouse-demo.ps1
 ```
 
 ## Tool Reference
