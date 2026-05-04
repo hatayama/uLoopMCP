@@ -16,6 +16,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $DiscoveryScenePath = "Assets/Scenes/SimulateMouseDemoScene.unity"
+$KeyboardScenePath = "Assets/Scenes/SimulateKeyboardDemoScene.unity"
 $RunTestsFilter = "io.github.hatayama.UnityCliLoop.Tests.Editor.CliVersionComparerTests.IsVersionGreaterThanOrEqual_WhenVersionIsInvalid_ReturnsFalse"
 
 function Get-ResolvedProjectPath {
@@ -264,6 +265,17 @@ function Invoke-CompileGetLogsStress {
     }
 }
 
+function Get-KeyboardCubeZ {
+    [pscustomobject]$result = Invoke-DynamicCode -Code @'
+using UnityEngine;
+GameObject cube = GameObject.Find("KeyboardInputCube");
+if (cube == null) return -9999f;
+return cube.transform.position.z;
+'@
+
+    return [double]$result.Result
+}
+
 try {
     Invoke-Step -Name "Launch Smoke" -Body { Invoke-LaunchSmoke }
     Invoke-Step -Name "Core CLI Tool Smoke" -Body { Invoke-CoreToolSmoke }
@@ -275,6 +287,19 @@ try {
         Invoke-UloopJsonChecked -CommandArguments @("simulate-mouse-input", "--action", "SmoothDelta", "--delta-x", "120", "--delta-y", "0", "--duration", "0.5") | Out-Null
         Invoke-UloopJsonChecked -CommandArguments @("simulate-mouse-input", "--action", "Click", "--x", "400", "--y", "300") | Out-Null
         Invoke-UloopJsonChecked -CommandArguments @("simulate-mouse-input", "--action", "Scroll", "--scroll-y", "120") | Out-Null
+        Stop-PlayMode
+    }
+    Invoke-Step -Name "Keyboard Cube E2E" -Body {
+        Open-Scene -ScenePath $KeyboardScenePath
+        Start-PlayMode
+        [double]$beforeZ = Get-KeyboardCubeZ
+        Invoke-UloopJsonChecked -CommandArguments @("simulate-keyboard", "--action", "KeyDown", "--key", "W") | Out-Null
+        Start-Sleep -Seconds 1
+        Invoke-UloopJsonChecked -CommandArguments @("simulate-keyboard", "--action", "KeyUp", "--key", "W") | Out-Null
+        [double]$afterZ = Get-KeyboardCubeZ
+        if ($afterZ -le ($beforeZ + 0.1)) {
+            throw "KeyboardInputCube did not move forward: beforeZ=$beforeZ afterZ=$afterZ"
+        }
         Stop-PlayMode
     }
     Invoke-Step -Name "Input Record Replay E2E" -Body {
