@@ -14,6 +14,7 @@ path_contains_dir() {
 "$ROOT_DIR/scripts/build-go-cli.sh"
 
 dispatcher_path=""
+global_command_name="uloop"
 os=$(uname -s)
 arch=$(uname -m)
 
@@ -26,6 +27,7 @@ case "$os:$arch" in
     ;;
   MINGW*:x86_64 | MINGW*:amd64 | MSYS*:x86_64 | MSYS*:amd64 | CYGWIN*:x86_64 | CYGWIN*:amd64 | Windows_NT:x86_64 | Windows_NT:amd64)
     dispatcher_path="$ROOT_DIR/Packages/src/GoCli~/dist/windows-amd64/uloop-dispatcher.exe"
+    global_command_name="uloop.exe"
     ;;
 esac
 
@@ -61,7 +63,7 @@ if [ -z "$global_bin_dir" ]; then
 fi
 
 mkdir -p "$global_bin_dir"
-global_uloop_path="$global_bin_dir/uloop"
+global_uloop_path="$global_bin_dir/$global_command_name"
 
 if [ -e "$global_uloop_path" ] && [ ! -L "$global_uloop_path" ]; then
   echo "Go CLI source checks passed and dist binaries were rebuilt."
