@@ -69,6 +69,53 @@ func TestRunLaunchWithoutProjectLocalCoreUsesBootstrapLaunch(t *testing.T) {
 	}
 }
 
+func TestRunLaunchQuitWithoutProjectLocalCoreDoesNotOpenUnity(t *testing.T) {
+	// Verifies that bootstrap launch rejects quit instead of silently starting Unity.
+	projectRoot := t.TempDir()
+	createUnityProject(t, projectRoot)
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	code := Run(context.Background(), []string{"--project-path", projectRoot, "launch", "--quit"}, &stdout, &stderr)
+
+	if code != 1 {
+		t.Fatalf("exit code mismatch: %d stdout=%s stderr=%s", code, stdout.String(), stderr.String())
+	}
+	var envelope cliErrorEnvelope
+	if err := json.Unmarshal(stderr.Bytes(), &envelope); err != nil {
+		t.Fatalf("stderr is not valid JSON: %v\n%s", err, stderr.String())
+	}
+	if envelope.Error.ErrorCode != errorCodeInvalidArgument {
+		t.Fatalf("error code mismatch: %#v", envelope.Error)
+	}
+}
+
+func TestParseLaunchBootstrapOptionsPreservesQuitAndRestart(t *testing.T) {
+	// Verifies that bootstrap launch does not discard lifecycle flags before deciding whether to run.
+	options, err := parseLaunchBootstrapOptions([]string{"--quit", "--restart"})
+	if err != nil {
+		t.Fatalf("parseLaunchBootstrapOptions failed: %v", err)
+	}
+	if !options.quit {
+		t.Fatal("quit flag was not preserved")
+	}
+	if !options.restart {
+		t.Fatal("restart flag was not preserved")
+	}
+}
+
+func TestWaitForPathReturnsWhenPathExists(t *testing.T) {
+	// Verifies that bootstrap launch can block on project-local core creation without timing out.
+	targetPath := filepath.Join(t.TempDir(), "uloop-core")
+	if err := os.WriteFile(targetPath, []byte("core"), 0o644); err != nil {
+		t.Fatalf("failed to write target path: %v", err)
+	}
+
+	if err := waitForPath(context.Background(), targetPath, launchCoreReadyTimeout); err != nil {
+		t.Fatalf("waitForPath failed: %v", err)
+	}
+}
+
 func TestParseProjectPathAcceptsValueForm(t *testing.T) {
 	// Verifies that dispatcher parsing preserves the global --project-path contract.
 	remaining, projectPath, err := parseProjectPath([]string{"--project-path=/tmp/project", "list"})

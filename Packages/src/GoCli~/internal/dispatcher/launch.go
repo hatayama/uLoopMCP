@@ -11,12 +11,19 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const (
-	launchCommandName      = "launch"
-	projectVersionFilePath = "ProjectSettings/ProjectVersion.txt"
-	recoveryDirectoryPath  = "Assets/_Recovery"
+	launchCommandName        = "launch"
+	launchPathPollInterval   = 500 * time.Millisecond
+	launchCoreReadyTimeout   = 180 * time.Second
+	launchLockfileTimeout    = 5 * time.Second
+	projectVersionFilePath   = "ProjectSettings/ProjectVersion.txt"
+	recoveryDirectoryPath    = "Assets/_Recovery"
+	launchTempDirectoryName  = "Temp"
+	unityLockfileName        = "UnityLockfile"
+	unsupportedBootstrapFlag = "requires project-local uloop-core and cannot run before the core is generated"
 )
 
 var editorVersionPattern = regexp.MustCompile(`(?m)^m_EditorVersion:\s*(.+)$`)
@@ -24,6 +31,8 @@ var editorVersionPattern = regexp.MustCompile(`(?m)^m_EditorVersion:\s*(.+)$`)
 type launchBootstrapOptions struct {
 	deleteRecovery bool
 	platform       string
+	quit           bool
+	restart        bool
 }
 
 func isLaunchCommand(args []string) bool {
@@ -38,6 +47,14 @@ func runLaunchBootstrap(ctx context.Context, args []string, projectRoot string, 
 	options, err := parseLaunchBootstrapOptions(args)
 	if err != nil {
 		writeError(stderr, argumentError(err.Error(), launchCommandName))
+		return 1
+	}
+	if options.quit {
+		writeError(stderr, argumentError("--quit "+unsupportedBootstrapFlag, launchCommandName))
+		return 1
+	}
+	if options.restart {
+		writeError(stderr, argumentError("--restart "+unsupportedBootstrapFlag, launchCommandName))
 		return 1
 	}
 
@@ -59,6 +76,10 @@ func runLaunchBootstrap(ctx context.Context, args []string, projectRoot string, 
 		launchArgs = append(launchArgs, "-buildTarget", options.platform)
 	}
 
+	writeLine(stdout, "Opening Unity...")
+	writeFormat(stdout, "Project Path: %s\n", projectRoot)
+	writeFormat(stdout, "Detected Unity version: %s\n", readUnityVersionForLog(projectRoot))
+
 	command := newUnityLaunchCommand(ctx, unityPath, launchArgs)
 	if err := command.Start(); err != nil {
 		writeError(stderr, internalError(err.Error(), projectRoot))
@@ -68,10 +89,11 @@ func runLaunchBootstrap(ctx context.Context, args []string, projectRoot string, 
 		writeError(stderr, internalError(err.Error(), projectRoot))
 		return 1
 	}
-
-	writeLine(stdout, "Opening Unity...")
-	writeFormat(stdout, "Project Path: %s\n", projectRoot)
-	writeFormat(stdout, "Detected Unity version: %s\n", readUnityVersionForLog(projectRoot))
+	_ = waitForPath(ctx, unityLockfilePath(projectRoot), launchLockfileTimeout)
+	if err := waitForPath(ctx, projectLocalPath(projectRoot), launchCoreReadyTimeout); err != nil {
+		writeError(stderr, internalError(err.Error(), projectRoot))
+		return 1
+	}
 	return 0
 }
 
@@ -81,9 +103,9 @@ func parseLaunchBootstrapOptions(args []string) (launchBootstrapOptions, error) 
 		arg := args[index]
 		switch {
 		case arg == "-r" || arg == "--restart":
-			continue
+			options.restart = true
 		case arg == "-q" || arg == "--quit":
-			continue
+			options.quit = true
 		case arg == "-d" || arg == "--delete-recovery":
 			options.deleteRecovery = true
 		case arg == "-a" || arg == "-f" || arg == "--add-unity-hub" || arg == "--favorite" || arg == "--unity-hub-entry":
@@ -206,6 +228,35 @@ func newUnityLaunchCommand(ctx context.Context, unityPath string, launchArgs []s
 	command.Env = append(os.Environ(), "MSYS_NO_PATHCONV=1")
 	configureDetachedUnityLaunchCommand(command)
 	return command
+}
+
+func unityLockfilePath(projectRoot string) string {
+	return filepath.Join(projectRoot, launchTempDirectoryName, unityLockfileName)
+}
+
+func waitForPath(ctx context.Context, targetPath string, timeout time.Duration) error {
+	timeoutContext, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	ticker := time.NewTicker(launchPathPollInterval)
+	defer ticker.Stop()
+
+	for {
+		if _, err := os.Stat(targetPath); err == nil {
+			return nil
+		} else if !os.IsNotExist(err) {
+			return err
+		}
+
+		select {
+		case <-timeoutContext.Done():
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+			return fmt.Errorf("timed out waiting for %s", targetPath)
+		case <-ticker.C:
+		}
+	}
 }
 
 func launchMaxDepth(args []string) int {
