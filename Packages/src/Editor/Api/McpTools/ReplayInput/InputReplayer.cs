@@ -34,10 +34,11 @@ namespace io.github.hatayama.UnityCliLoop
         private static bool _showOverlay;
         private static readonly HashSet<Key> _replayHeldKeys = new();
         private static readonly HashSet<MouseButton> _replayHeldButtons = new();
+        private static readonly List<BaseInputModule> _disabledInputModules = new();
         private static Vector2? _replayMousePosition;
 
-        // InputModule (StandaloneInputModule / InputSystemUIInputModule) ignores injected
-        // Mouse.current state, so UI interactions must go through ExecuteEvents directly.
+        // UI replay goes through ExecuteEvents so verification does not depend on
+        // GameView focus or the active input module's update timing.
         private static bool _hasMousePosition;
         private static bool _prevLeftButtonHeld;
         private static Vector2? _previousReplayMousePosition;
@@ -86,6 +87,7 @@ namespace io.github.hatayama.UnityCliLoop
             _replayHeldButtons.Clear();
             _hasMousePosition = DetectMousePositionEvents(data!);
             ResetUiReplayState();
+            DisableUiInputModulesForReplay();
             if (_hasMousePosition)
             {
                 SimulateMouseInputOverlayState.Clear();
@@ -115,6 +117,7 @@ namespace io.github.hatayama.UnityCliLoop
             _currentFrame = 0;
             _replayHeldKeys.Clear();
             _replayHeldButtons.Clear();
+            RestoreUiInputModules();
             ResetUiReplayState();
 
             ReplayInputOverlayState.Clear();
@@ -651,6 +654,51 @@ namespace io.github.hatayama.UnityCliLoop
                 }
             }
             return false;
+        }
+
+        private static void DisableUiInputModulesForReplay()
+        {
+            RestoreUiInputModules();
+
+            if (!_hasMousePosition)
+            {
+                return;
+            }
+
+            EventSystem? eventSystem = EventSystem.current;
+            if (eventSystem == null)
+            {
+                return;
+            }
+
+            BaseInputModule[] modules = eventSystem.GetComponents<BaseInputModule>();
+            for (int i = 0; i < modules.Length; i++)
+            {
+                BaseInputModule module = modules[i];
+                if (!module.enabled)
+                {
+                    continue;
+                }
+
+                // Replay synthesizes ExecuteEvents directly; leaving input modules enabled
+                // lets them consume the same injected Mouse.current state a second time.
+                module.enabled = false;
+                _disabledInputModules.Add(module);
+            }
+        }
+
+        private static void RestoreUiInputModules()
+        {
+            for (int i = 0; i < _disabledInputModules.Count; i++)
+            {
+                BaseInputModule module = _disabledInputModules[i];
+                if (module != null)
+                {
+                    module.enabled = true;
+                }
+            }
+
+            _disabledInputModules.Clear();
         }
 
         private static void ResetUiReplayState()
