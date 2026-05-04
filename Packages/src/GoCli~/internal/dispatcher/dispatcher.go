@@ -91,10 +91,7 @@ func Run(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer)
 		return 1
 	}
 
-	forwardedArgs := append([]string{}, remainingArgs...)
-	if explicitProjectPath != "" {
-		forwardedArgs = append(forwardedArgs, "--project-path", projectRoot)
-	}
+	forwardedArgs := forwardedProjectLocalArgs(remainingArgs, explicitProjectPath, projectRoot)
 	return execProjectLocal(ctx, localPath, forwardedArgs, projectRoot, stderr)
 }
 
@@ -103,6 +100,35 @@ func commandName(args []string) string {
 		return ""
 	}
 	return args[0]
+}
+
+func forwardedProjectLocalArgs(args []string, explicitProjectPath string, projectRoot string) []string {
+	forwardedArgs := append([]string{}, args...)
+	if explicitProjectPath != "" {
+		return append(forwardedArgs, "--project-path", projectRoot)
+	}
+	if isLaunchCommand(forwardedArgs) {
+		return replaceLaunchPositionalProjectPath(forwardedArgs, projectRoot)
+	}
+	return forwardedArgs
+}
+
+func replaceLaunchPositionalProjectPath(args []string, projectRoot string) []string {
+	for index := 1; index < len(args); index++ {
+		arg := args[index]
+		if arg == "-p" || arg == "--platform" || arg == "--max-depth" {
+			if index+1 < len(args) {
+				index++
+			}
+			continue
+		}
+		if strings.HasPrefix(arg, "-") {
+			continue
+		}
+		args[index] = projectRoot
+		return args
+	}
+	return args
 }
 
 func isVersionRequest(args []string) bool {

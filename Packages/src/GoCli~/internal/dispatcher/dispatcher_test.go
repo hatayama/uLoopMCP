@@ -228,6 +228,24 @@ func TestResolveProjectRootForLaunchSkipsOptionValuesBeforePositionalProjectPath
 	}
 }
 
+func TestForwardedProjectLocalArgsForLaunchUsesResolvedPositionalProjectPath(t *testing.T) {
+	// Verifies that Windows core dispatch does not re-resolve relative launch paths from the project root.
+	projectRoot := filepath.Join(t.TempDir(), "Game")
+	args := []string{"launch", "--platform", "iOS", "relative/Game"}
+
+	forwarded := forwardedProjectLocalArgs(args, "", projectRoot)
+
+	if len(forwarded) != len(args) {
+		t.Fatalf("forwarded args length mismatch: %#v", forwarded)
+	}
+	if forwarded[3] != projectRoot {
+		t.Fatalf("forwarded project path mismatch: %#v", forwarded)
+	}
+	if args[3] != "relative/Game" {
+		t.Fatalf("input args were mutated: %#v", args)
+	}
+}
+
 func TestRunCompletionScriptDoesNotRequireUnityProject(t *testing.T) {
 	// Verifies that shell completion stays a dispatcher-owned global command.
 	changeDirectory(t, t.TempDir())
