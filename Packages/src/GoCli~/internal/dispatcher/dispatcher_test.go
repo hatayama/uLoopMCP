@@ -78,6 +78,36 @@ func TestFindUnityProjectRootWithinFindsNestedLaunchProject(t *testing.T) {
 	}
 }
 
+func TestResolveProjectRootForLaunchUsesPositionalProjectPath(t *testing.T) {
+	// Verifies that launch can target a project outside the current directory before core dispatch.
+	workspaceRoot := t.TempDir()
+	projectRoot := filepath.Join(t.TempDir(), "Game")
+	createUnityProject(t, projectRoot)
+
+	resolved, err := resolveProjectRoot(workspaceRoot, "", []string{"launch", projectRoot})
+	if err != nil {
+		t.Fatalf("resolveProjectRoot failed: %v", err)
+	}
+	if resolved != projectRoot {
+		t.Fatalf("project root mismatch: %s", resolved)
+	}
+}
+
+func TestResolveProjectRootForLaunchSkipsOptionValuesBeforePositionalProjectPath(t *testing.T) {
+	// Verifies that launch option values are not mistaken for the project path used for core dispatch.
+	workspaceRoot := t.TempDir()
+	projectRoot := filepath.Join(t.TempDir(), "Game")
+	createUnityProject(t, projectRoot)
+
+	resolved, err := resolveProjectRoot(workspaceRoot, "", []string{"launch", "--platform", "iOS", projectRoot})
+	if err != nil {
+		t.Fatalf("resolveProjectRoot failed: %v", err)
+	}
+	if resolved != projectRoot {
+		t.Fatalf("project root mismatch: %s", resolved)
+	}
+}
+
 func TestRunCompletionScriptDoesNotRequireUnityProject(t *testing.T) {
 	// Verifies that shell completion stays a dispatcher-owned global command.
 	changeDirectory(t, t.TempDir())

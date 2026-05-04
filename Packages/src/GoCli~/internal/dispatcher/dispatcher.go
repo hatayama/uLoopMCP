@@ -144,9 +144,37 @@ func resolveProjectRoot(startPath string, explicitProjectPath string, args []str
 		return projectRoot, nil
 	}
 	if len(args) > 0 && args[0] == "launch" {
+		projectPath := launchPositionalProjectPath(args[1:])
+		if projectPath != "" {
+			projectRoot, err := filepath.Abs(projectPath)
+			if err != nil {
+				return "", err
+			}
+			if !isUnityProject(projectRoot) {
+				return "", fmt.Errorf("not a Unity project: %s", projectRoot)
+			}
+			return projectRoot, nil
+		}
 		return findUnityProjectRootWithin(startPath, launchMaxDepth(args[1:]))
 	}
 	return findProjectRoot(startPath)
+}
+
+func launchPositionalProjectPath(args []string) string {
+	for index := 0; index < len(args); index++ {
+		arg := args[index]
+		if arg == "-p" || arg == "--platform" || arg == "--max-depth" {
+			if index+1 < len(args) {
+				index++
+			}
+			continue
+		}
+		if strings.HasPrefix(arg, "-") {
+			continue
+		}
+		return arg
+	}
+	return ""
 }
 
 func launchMaxDepth(args []string) int {
