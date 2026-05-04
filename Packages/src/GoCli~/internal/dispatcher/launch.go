@@ -18,6 +18,9 @@ const (
 	launchCommandName        = "launch"
 	launchPathPollInterval   = 500 * time.Millisecond
 	launchCoreReadyTimeout   = 180 * time.Second
+	launchReadinessTimeout   = 180 * time.Second
+	launchReadinessPoll      = 1 * time.Second
+	launchProbeTimeout       = 5 * time.Second
 	launchLockfileTimeout    = 5 * time.Second
 	projectVersionFilePath   = "ProjectSettings/ProjectVersion.txt"
 	recoveryDirectoryPath    = "Assets/_Recovery"
@@ -94,6 +97,10 @@ func runLaunchBootstrap(ctx context.Context, args []string, projectRoot string, 
 		writeError(stderr, internalError(err.Error(), projectRoot))
 		return 1
 	}
+	if err := waitForLaunchReady(ctx, projectRoot); err != nil {
+		writeError(stderr, internalError(err.Error(), projectRoot))
+		return 1
+	}
 	return 0
 }
 
@@ -122,14 +129,21 @@ func parseLaunchBootstrapOptions(args []string) (launchBootstrapOptions, error) 
 		case strings.HasPrefix(arg, "--platform="):
 			options.platform = strings.TrimPrefix(arg, "--platform=")
 		case arg == "--max-depth":
-			_, consumed, err := readLaunchOptionValue(arg, args, index)
+			value, consumed, err := readLaunchOptionValue(arg, args, index)
 			if err != nil {
 				return launchBootstrapOptions{}, err
+			}
+			if _, err := strconv.Atoi(value); err != nil {
+				return launchBootstrapOptions{}, fmt.Errorf("--max-depth requires an integer value: %s", value)
 			}
 			if consumed {
 				index++
 			}
 		case strings.HasPrefix(arg, "--max-depth="):
+			value := strings.TrimPrefix(arg, "--max-depth=")
+			if _, err := strconv.Atoi(value); err != nil {
+				return launchBootstrapOptions{}, fmt.Errorf("--max-depth requires an integer value: %s", value)
+			}
 			continue
 		case strings.HasPrefix(arg, "-"):
 			return launchBootstrapOptions{}, fmt.Errorf("unknown launch option: %s", arg)
@@ -148,10 +162,21 @@ func readLaunchOptionValue(option string, args []string, index int) (string, boo
 		}
 		return parts[1], false, nil
 	}
-	if index+1 >= len(args) || strings.HasPrefix(args[index+1], "-") {
+	if index+1 >= len(args) || isInvalidLaunchOptionValue(option, args[index+1]) {
 		return "", false, fmt.Errorf("%s requires a value", option)
 	}
 	return args[index+1], true, nil
+}
+
+func isInvalidLaunchOptionValue(option string, value string) bool {
+	if option != "--max-depth" {
+		return strings.HasPrefix(value, "-")
+	}
+	if !strings.HasPrefix(value, "-") {
+		return false
+	}
+	_, err := strconv.Atoi(value)
+	return err != nil
 }
 
 func resolveUnityExecutablePath(projectRoot string) (string, error) {

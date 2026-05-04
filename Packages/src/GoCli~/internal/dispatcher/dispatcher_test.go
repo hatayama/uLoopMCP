@@ -104,6 +104,14 @@ func TestParseLaunchBootstrapOptionsPreservesQuitAndRestart(t *testing.T) {
 	}
 }
 
+func TestParseLaunchBootstrapOptionsAcceptsNegativeMaxDepth(t *testing.T) {
+	// Verifies that bootstrap launch accepts the same unlimited search depth value as core launch.
+	_, err := parseLaunchBootstrapOptions([]string{"--max-depth", "-1"})
+	if err != nil {
+		t.Fatalf("parseLaunchBootstrapOptions failed: %v", err)
+	}
+}
+
 func TestWaitForPathReturnsWhenPathExists(t *testing.T) {
 	// Verifies that bootstrap launch can block on project-local core creation without timing out.
 	targetPath := filepath.Join(t.TempDir(), "uloop-core")
