@@ -45,8 +45,16 @@ function Invoke-UloopCapture {
         $arguments = @($arguments | ForEach-Object { $_.Replace('"', '\"') })
     }
 
-    [object[]]$output = & uloop @arguments 2>&1
-    [int]$exitCode = $LASTEXITCODE
+    [string]$previousErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+        [object[]]$output = & uloop @arguments 2>&1
+        [int]$exitCode = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+    }
+
     [string]$text = ($output | ForEach-Object { $_.ToString() }) -join [Environment]::NewLine
 
     return [pscustomobject]@{

@@ -4,6 +4,7 @@ E2E verification: human plays freely, then CLI replays and verifies.
 Usage:
   powershell -NoProfile -ExecutionPolicy Bypass -File .\Assets\Tests\Demo\scripts\verify-replay-via-cli.ps1
   powershell -NoProfile -ExecutionPolicy Bypass -File .\Assets\Tests\Demo\scripts\verify-replay-via-cli.ps1 -ProjectPath C:\path\to\project
+  powershell -NoProfile -ExecutionPolicy Bypass -File .\Assets\Tests\Demo\scripts\verify-replay-via-cli.ps1 -AutomatedInput
 
 Prerequisites:
   - Unity Editor running with InputReplayVerificationScene loaded
@@ -14,7 +15,8 @@ Prerequisites:
 param(
     [string]$ProjectPath = "",
     [int]$UnityWaitAttempts = 15,
-    [int]$ReplayTimeoutSeconds = 60
+    [int]$ReplayTimeoutSeconds = 60,
+    [switch]$AutomatedInput
 )
 
 Set-StrictMode -Version Latest
@@ -22,6 +24,7 @@ $ErrorActionPreference = "Stop"
 
 $RecordingLogPath = ".uloop/outputs/InputRecordings/recording-event-log.txt"
 $ReplayLogPath = ".uloop/outputs/InputRecordings/replay-event-log.txt"
+$ScenePath = "Assets/Scenes/InputReplayVerificationScene.unity"
 
 function Get-UloopArguments {
     param(
@@ -41,8 +44,21 @@ function Invoke-UloopCapture {
     )
 
     [string[]]$arguments = Get-UloopArguments -CommandArguments $CommandArguments
-    [object[]]$output = & uloop @arguments 2>&1
-    [int]$exitCode = $LASTEXITCODE
+    if ($PSVersionTable.PSVersion.Major -lt 6) {
+        # Windows PowerShell strips embedded quote characters from native arguments unless they are escaped.
+        $arguments = @($arguments | ForEach-Object { $_.Replace('"', '\"') })
+    }
+
+    [string]$previousErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+        [object[]]$output = & uloop @arguments 2>&1
+        [int]$exitCode = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+    }
+
     [string]$text = ($output | ForEach-Object { $_.ToString() }) -join [Environment]::NewLine
 
     return [pscustomobject]@{
@@ -83,12 +99,37 @@ function Wait-UnityReady {
     throw "Unity not responding"
 }
 
+function Initialize-ReplayScene {
+    [pscustomobject]$stopResult = Invoke-UloopCapture -CommandArguments @("control-play-mode", "--action", "Stop")
+    if ($stopResult.ExitCode -ne 0 -and -not [string]::IsNullOrWhiteSpace($stopResult.Text)) {
+        Write-Host $stopResult.Text
+    }
+
+    [string]$code = @"
+using UnityEditor.SceneManagement;
+using UnityEngine.SceneManagement;
+string scenePath = "$ScenePath";
+if (SceneManager.GetActiveScene().path != scenePath)
+{
+    EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
+}
+return SceneManager.GetActiveScene().path;
+"@
+
+    [string]$resultText = Invoke-Uloop -CommandArguments @("execute-dynamic-code", "--code", $code)
+    [pscustomobject]$result = $resultText | ConvertFrom-Json
+    if ($result.Success -ne $true -or $result.Result -ne $ScenePath) {
+        throw "Failed to load ${ScenePath}: $resultText"
+    }
+}
+
 function Invoke-ActivateForRecord {
     Invoke-Uloop -CommandArguments @(
         "execute-dynamic-code",
         "--code",
         @'
-var cube = GameObject.Find("VerificationCube");
+using UnityEngine;
+GameObject cube = GameObject.Find("VerificationCube");
 if (cube == null) return "ERROR: VerificationCube not found";
 cube.SendMessage("ActivateForExternalControl");
 return "OK: activated for recording";
@@ -101,12 +142,22 @@ function Invoke-ActivateForReplay {
         "execute-dynamic-code",
         "--code",
         @'
-var cube = GameObject.Find("VerificationCube");
+using UnityEngine;
+GameObject cube = GameObject.Find("VerificationCube");
 if (cube == null) return "ERROR: VerificationCube not found";
 cube.SendMessage("ActivateForExternalReplay");
 return "OK: activated for replay";
 '@
     ) | Out-Null
+}
+
+function Invoke-AutomatedInput {
+    Invoke-Uloop -CommandArguments @("simulate-mouse-input", "--action", "SmoothDelta", "--delta-x", "96", "--delta-y", "0", "--duration", "0.25") | Out-Null
+    Start-Sleep -Milliseconds 300
+    Invoke-Uloop -CommandArguments @("simulate-mouse-input", "--action", "Click", "--x", "400", "--y", "300") | Out-Null
+    Start-Sleep -Milliseconds 300
+    Invoke-Uloop -CommandArguments @("simulate-mouse-input", "--action", "Scroll", "--scroll-y", "120") | Out-Null
+    Start-Sleep -Milliseconds 500
 }
 
 function Save-EventLog {
@@ -115,13 +166,56 @@ function Save-EventLog {
     )
 
     [string]$code = @"
-var cube = GameObject.Find("VerificationCube");
+using UnityEngine;
+GameObject cube = GameObject.Find("VerificationCube");
 if (cube == null) return "ERROR: VerificationCube not found";
 cube.SendMessage("SaveLog", "$Path");
 return "OK: log saved";
 "@
 
     Invoke-Uloop -CommandArguments @("execute-dynamic-code", "--code", $code) | Out-Null
+}
+
+function Restart-PlayMode {
+    Invoke-Uloop -CommandArguments @("control-play-mode", "--action", "Stop") | Out-Null
+    Start-Sleep -Seconds 3
+    Invoke-Uloop -CommandArguments @("control-play-mode", "--action", "Play") | Out-Null
+    Write-Host "  Waiting for Unity..."
+    Start-Sleep -Seconds 6
+    Wait-UnityReady
+}
+
+function Invoke-ReplayToLog {
+    param(
+        [string]$LogPath,
+        [string]$InputPath
+    )
+
+    Restart-PlayMode
+    Invoke-ActivateForReplay
+    Write-Host "  Starting replay..."
+
+    [string[]]$replayStartArgs = @("replay-input", "--action", "Start")
+    if (-not [string]::IsNullOrWhiteSpace($InputPath)) {
+        $replayStartArgs += @("--input-path", $InputPath)
+    }
+    if ($AutomatedInput) {
+        $replayStartArgs += @("--no-show-overlay")
+    }
+
+    [pscustomobject]$replayResult = Invoke-UloopCapture -CommandArguments $replayStartArgs
+    Write-Host "  $($replayResult.Text)"
+    if ($replayResult.ExitCode -ne 0) {
+        throw "replay-input Start failed"
+    }
+
+    Write-Host "  Waiting for replay to finish..."
+    Start-Sleep -Seconds 2
+    Wait-ReplayCompleted
+    Write-Host ""
+
+    Start-Sleep -Seconds 1
+    Save-EventLog -Path $LogPath
 }
 
 function Get-ReplayStatus {
@@ -176,7 +270,7 @@ function Get-NormalizedFrames {
         [string]$Path
     )
 
-    [string[]]$lines = Get-Content -LiteralPath $Path
+    [string[]]$lines = @(Get-Content -LiteralPath $Path)
     if ($lines.Count -eq 0) {
         throw "Log file is empty: $Path"
     }
@@ -245,6 +339,9 @@ Write-Host "  Input Record/Replay E2E Verification"
 Write-Host "========================================="
 
 Write-Host ""
+Write-Host "[0/8] Loading replay verification scene..."
+Initialize-ReplayScene
+
 Write-Host "[1/8] Starting PlayMode..."
 Invoke-Uloop -CommandArguments @("control-play-mode", "--action", "Play") | Out-Null
 Write-Host "  Waiting for Unity..."
@@ -255,61 +352,79 @@ Write-Host "[2/8] Activating controller..."
 Invoke-ActivateForRecord
 
 Write-Host "[3/8] Starting recording via CLI..."
-Invoke-Uloop -CommandArguments @("record-input", "--action", "Start") | Out-Null
+[string[]]$recordStartArgs = @("record-input", "--action", "Start")
+if ($AutomatedInput) {
+    $recordStartArgs += @("--delay-seconds", "0", "--no-show-overlay")
+}
 
-Write-Host ""
-Write-Host "========================================="
-Write-Host "  Recording is active!"
-Write-Host "  Go to the Unity Game View and play."
-Write-Host ""
-Write-Host "  WASD: move | Mouse: rotate"
-Write-Host "  Left click: red | Right click: blue"
-Write-Host "  Scroll: scale"
-Write-Host ""
-Write-Host "  Press ENTER here when done."
-Write-Host "========================================="
-Write-Host ""
-Read-Host | Out-Null
+Invoke-Uloop -CommandArguments $recordStartArgs | Out-Null
 
-Write-Host "[4/8] Saving event log + deactivating controller..."
-Invoke-Uloop -CommandArguments @(
-    "execute-dynamic-code",
-    "--code",
-    @'
-var cube = GameObject.Find("VerificationCube");
-if (cube == null) return "ERROR: VerificationCube not found";
-cube.SendMessage("SaveLog", ".uloop/outputs/InputRecordings/recording-event-log.txt");
-cube.SendMessage("ClearLog");
-return "OK: log saved, controller deactivated";
-'@
-) | Out-Null
+if ($AutomatedInput) {
+    Write-Host "  Running automated input sequence..."
+    Start-Sleep -Milliseconds 500
+    Invoke-AutomatedInput
+} else {
+    Write-Host ""
+    Write-Host "========================================="
+    Write-Host "  Recording is active!"
+    Write-Host "  Go to the Unity Game View and play."
+    Write-Host ""
+    Write-Host "  WASD: move | Mouse: rotate"
+    Write-Host "  Left click: red | Right click: blue"
+    Write-Host "  Scroll: scale"
+    Write-Host ""
+    Write-Host "  Press ENTER here when done."
+    Write-Host "========================================="
+    Write-Host ""
+    Read-Host | Out-Null
+}
 
-Write-Host "  Stopping recording via CLI..."
-Invoke-Uloop -CommandArguments @("record-input", "--action", "Stop") | Out-Null
+Write-Host "[4/8] Stopping recording via CLI..."
+[pscustomobject]$recordStopResult = Invoke-UloopCapture -CommandArguments @("record-input", "--action", "Stop")
+Write-Host "  $($recordStopResult.Text)"
+if ($recordStopResult.ExitCode -ne 0) {
+    throw "record-input Stop failed"
+}
 
-Write-Host "[5/8] Restarting PlayMode..."
-Invoke-Uloop -CommandArguments @("control-play-mode", "--action", "Stop") | Out-Null
-Start-Sleep -Seconds 3
-Invoke-Uloop -CommandArguments @("control-play-mode", "--action", "Play") | Out-Null
-Write-Host "  Waiting for Unity..."
-Start-Sleep -Seconds 6
-Wait-UnityReady
+[pscustomobject]$recordStopJson = $recordStopResult.Text | ConvertFrom-Json
+if ($recordStopJson.Success -ne $true) {
+    throw "record-input Stop reported failure: $($recordStopResult.Text)"
+}
 
-Write-Host "[6/8] Activating controller + starting replay via CLI..."
-Invoke-ActivateForReplay
-Write-Host "  Starting replay..."
-[pscustomobject]$replayResult = Invoke-UloopCapture -CommandArguments @("replay-input", "--action", "Start")
-Write-Host "  $($replayResult.Text)"
+[string]$recordingInputPath = ""
+if ($null -ne $recordStopJson.OutputPath) {
+    $recordingInputPath = $recordStopJson.OutputPath.ToString()
+}
 
-Write-Host "  Waiting for replay to finish..."
-Start-Sleep -Seconds 2
-Wait-ReplayCompleted
-Write-Host ""
+if ($AutomatedInput) {
+    Write-Host "[5/8] Creating replay reference from recorded input..."
+    Invoke-ReplayToLog -LogPath $RecordingLogPath -InputPath $recordingInputPath
 
-Start-Sleep -Seconds 1
+    Write-Host "[6/8] Replaying recorded input again via CLI..."
+    Invoke-ReplayToLog -LogPath $ReplayLogPath -InputPath $recordingInputPath
+} else {
+    Write-Host "[5/8] Restarting PlayMode..."
+    Restart-PlayMode
 
-Write-Host "[7/8] Saving replay event log..."
-Save-EventLog -Path $ReplayLogPath
+    Write-Host "[6/8] Activating controller + starting replay via CLI..."
+    Invoke-ActivateForReplay
+    Write-Host "  Starting replay..."
+    [pscustomobject]$replayResult = Invoke-UloopCapture -CommandArguments @("replay-input", "--action", "Start")
+    Write-Host "  $($replayResult.Text)"
+    if ($replayResult.ExitCode -ne 0) {
+        throw "replay-input Start failed"
+    }
+
+    Write-Host "  Waiting for replay to finish..."
+    Start-Sleep -Seconds 2
+    Wait-ReplayCompleted
+    Write-Host ""
+
+    Start-Sleep -Seconds 1
+
+    Write-Host "[7/8] Saving replay event log..."
+    Save-EventLog -Path $ReplayLogPath
+}
 
 Write-Host ""
 Write-Host "[8/8] Comparing logs..."
