@@ -48,6 +48,27 @@ func TestRunMissingProjectLocalCoreReportsStructuredError(t *testing.T) {
 	}
 }
 
+func TestRunLaunchWithoutProjectLocalCoreUsesBootstrapLaunch(t *testing.T) {
+	// Verifies that first-run launch does not fail at the project-local core existence check.
+	projectRoot := t.TempDir()
+	createUnityProject(t, projectRoot)
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	code := Run(context.Background(), []string{"--project-path", projectRoot, "launch"}, &stdout, &stderr)
+
+	if code != 1 {
+		t.Fatalf("exit code mismatch: %d stdout=%s stderr=%s", code, stdout.String(), stderr.String())
+	}
+	var envelope cliErrorEnvelope
+	if err := json.Unmarshal(stderr.Bytes(), &envelope); err != nil {
+		t.Fatalf("stderr is not valid JSON: %v\n%s", err, stderr.String())
+	}
+	if envelope.Error.ErrorCode == errorCodeProjectLocalCLIMissing {
+		t.Fatalf("launch should bootstrap before requiring project-local core: %#v", envelope.Error)
+	}
+}
+
 func TestParseProjectPathAcceptsValueForm(t *testing.T) {
 	// Verifies that dispatcher parsing preserves the global --project-path contract.
 	remaining, projectPath, err := parseProjectPath([]string{"--project-path=/tmp/project", "list"})
@@ -191,6 +212,31 @@ func TestRunCompletionListsCompletionCommandOptions(t *testing.T) {
 	}
 }
 
+func TestLoadCachedToolsFiltersInternalSkillTools(t *testing.T) {
+	// Verifies that dispatcher help and completion do not advertise tools the core will reject.
+	projectRoot := t.TempDir()
+	createUnityProject(t, projectRoot)
+	createSkill(t, projectRoot, "Assets/Editor/InternalTool/Skill", `---
+name: uloop-internal-tool
+internal: true
+---
+
+# internal
+`)
+	createToolCache(t, projectRoot)
+
+	cache, ok := loadCachedTools(projectRoot)
+	if !ok {
+		t.Fatal("expected cached tools")
+	}
+	if containsCachedTool(cache, "internal-tool") {
+		t.Fatalf("internal tool was not filtered: %#v", cache.Tools)
+	}
+	if !containsCachedTool(cache, "compile") {
+		t.Fatalf("public tool was filtered: %#v", cache.Tools)
+	}
+}
+
 func createUnityProject(t *testing.T, projectRoot string) {
 	t.Helper()
 
@@ -199,6 +245,13 @@ func createUnityProject(t *testing.T, projectRoot string) {
 	}
 	if err := os.MkdirAll(filepath.Join(projectRoot, projectSettingsDirectory), 0o755); err != nil {
 		t.Fatalf("failed to create ProjectSettings: %v", err)
+	}
+	if err := os.WriteFile(
+		filepath.Join(projectRoot, projectSettingsDirectory, "ProjectVersion.txt"),
+		[]byte("m_EditorVersion: 9999.9.9f9\n"),
+		0o644,
+	); err != nil {
+		t.Fatalf("failed to write ProjectVersion.txt: %v", err)
 	}
 }
 
@@ -211,6 +264,13 @@ func createToolCache(t *testing.T, projectRoot string) {
 	}
 	content := `{
   "tools": [
+    {
+      "name": "internal-tool",
+      "description": "Internal",
+      "inputSchema": {
+        "properties": {}
+      }
+    },
     {
       "name": "compile",
       "description": "Compile Unity scripts",
@@ -226,6 +286,27 @@ func createToolCache(t *testing.T, projectRoot string) {
 	if err := os.WriteFile(cachePath, []byte(content), 0o644); err != nil {
 		t.Fatalf("failed to write tool cache: %v", err)
 	}
+}
+
+func createSkill(t *testing.T, projectRoot string, relativePath string, content string) {
+	t.Helper()
+
+	skillPath := filepath.Join(projectRoot, relativePath, skillFileName)
+	if err := os.MkdirAll(filepath.Dir(skillPath), 0o755); err != nil {
+		t.Fatalf("failed to create skill directory: %v", err)
+	}
+	if err := os.WriteFile(skillPath, []byte(content), 0o644); err != nil {
+		t.Fatalf("failed to write skill: %v", err)
+	}
+}
+
+func containsCachedTool(cache cachedTools, name string) bool {
+	for _, tool := range cache.Tools {
+		if tool.Name == name {
+			return true
+		}
+	}
+	return false
 }
 
 func changeDirectory(t *testing.T, path string) {

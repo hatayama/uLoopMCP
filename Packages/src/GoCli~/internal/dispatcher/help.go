@@ -120,7 +120,7 @@ func loadCachedTools(projectRoot string) (cachedTools, bool) {
 	if json.Unmarshal(content, &cache) != nil {
 		return cachedTools{}, false
 	}
-	return cache, true
+	return filterInternalSkillTools(projectRoot, cache), true
 }
 
 func isNativeCommandName(name string) bool {

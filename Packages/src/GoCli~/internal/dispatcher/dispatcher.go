@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
-	"strconv"
 	"strings"
 	"syscall"
 
@@ -68,6 +67,10 @@ func Run(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer)
 		printHelpForResolvedProject(stdout, startPath, explicitProjectPath)
 		return 0
 	}
+	if isLaunchHelpRequest(remainingArgs) {
+		printLaunchHelp(stdout)
+		return 0
+	}
 
 	projectRoot, err := resolveProjectRoot(startPath, explicitProjectPath, remainingArgs)
 	if err != nil {
@@ -77,6 +80,9 @@ func Run(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer)
 
 	localPath := projectLocalPath(projectRoot)
 	if _, err := os.Stat(localPath); err != nil {
+		if isLaunchCommand(remainingArgs) {
+			return runLaunchBootstrap(ctx, remainingArgs[1:], projectRoot, stdout, stderr)
+		}
 		writeError(stderr, projectLocalCLIMissingError(localPath, projectRoot, commandName(remainingArgs)))
 		return 1
 	}
@@ -175,27 +181,6 @@ func launchPositionalProjectPath(args []string) string {
 		return arg
 	}
 	return ""
-}
-
-func launchMaxDepth(args []string) int {
-	for index := 0; index < len(args); index++ {
-		arg := args[index]
-		if arg == "--max-depth" && index+1 < len(args) {
-			depth, err := strconv.Atoi(args[index+1])
-			if err == nil {
-				return depth
-			}
-			return defaultLaunchMaxDepth
-		}
-		if strings.HasPrefix(arg, "--max-depth=") {
-			depth, err := strconv.Atoi(strings.TrimPrefix(arg, "--max-depth="))
-			if err == nil {
-				return depth
-			}
-			return defaultLaunchMaxDepth
-		}
-	}
-	return defaultLaunchMaxDepth
 }
 
 func findProjectRoot(startPath string) (string, error) {
