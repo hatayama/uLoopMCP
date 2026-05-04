@@ -24,7 +24,7 @@ detect_asset_name() {
 
   case "$os" in
     Darwin) os_name="darwin" ;;
-    MINGW*|MSYS*|CYGWIN*) os_name="windows" ;;
+    MINGW*|MSYS*) os_name="windows" ;;
     *)
       echo "Unsupported OS: $os" >&2
       exit 1
@@ -41,7 +41,11 @@ detect_asset_name() {
   esac
 
   if [ "$os_name" = "windows" ]; then
-    echo "uloop-$os_name-$arch_name.zip"
+    if [ "$arch_name" != "amd64" ]; then
+      echo "Unsupported Windows architecture: $arch" >&2
+      exit 1
+    fi
+    echo "uloop-windows-amd64.zip"
     return
   fi
 
