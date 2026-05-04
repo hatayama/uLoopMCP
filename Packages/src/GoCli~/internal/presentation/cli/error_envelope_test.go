@@ -6,7 +6,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/unity"
+	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/adapters/unity"
+	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/domain"
 )
 
 func TestWriteErrorEnvelopeWritesMachineReadableJSON(t *testing.T) {
@@ -117,7 +118,7 @@ func TestWriteToolFailureClassifiesDispatchedDisconnect(t *testing.T) {
 	writeToolFailure(
 		&stderr,
 		errors.New("EOF"),
-		unity.SendOutcome{RequestDispatched: true},
+		domain.UnitySendOutcome{RequestDispatched: true},
 		errorContext{projectRoot: "/tmp/MyProject", command: "execute-dynamic-code"},
 	)
 

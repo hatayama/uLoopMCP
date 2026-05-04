@@ -6,7 +6,8 @@ import (
 	"io"
 	"strings"
 
-	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/unity"
+	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/adapters/unity"
+	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/domain"
 )
 
 const (
@@ -69,7 +70,7 @@ func writeClassifiedError(writer io.Writer, err error, context errorContext) {
 	writeErrorEnvelope(writer, classifyError(err, context))
 }
 
-func writeToolFailure(writer io.Writer, err error, outcome unity.SendOutcome, context errorContext) {
+func writeToolFailure(writer io.Writer, err error, outcome domain.UnitySendOutcome, context errorContext) {
 	if err != nil && outcome.RequestDispatched && isTransportDisconnectError(err) {
 		writeErrorEnvelope(writer, disconnectedAfterDispatchError(err, context))
 		return
