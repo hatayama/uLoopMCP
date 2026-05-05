@@ -28,10 +28,29 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/v3-beta'
     steps:
+      - name: Resolve checkout ref
+        id: checkout
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_REF: ${{ github.ref }}
+          EVENT_SHA: ${{ github.sha }}
+          INPUT_REF: ${{ inputs.ref }}
+        run: |
+          set -eu
+
+          if [ "${EVENT_NAME}" = "workflow_dispatch" ]; then
+            CHECKOUT_REF="${INPUT_REF:-${EVENT_REF}}"
+          else
+            CHECKOUT_REF="${EVENT_SHA}"
+          fi
+
+          echo "ref=${CHECKOUT_REF}" >> "$GITHUB_OUTPUT"
+          echo "Checkout ref: ${CHECKOUT_REF}"
+
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.ref || github.ref }}
+          ref: ${{ steps.checkout.outputs.ref }}
           fetch-depth: 0
 
       - name: Resolve release target
