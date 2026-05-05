@@ -68,6 +68,19 @@ func runLaunchBootstrap(ctx context.Context, args []string, projectRoot string, 
 		}
 	}
 
+	removedStaleTemp, err := cleanStaleUnityTemp(projectRoot)
+	if err != nil {
+		writeError(stderr, internalError(err.Error(), projectRoot))
+		return 1
+	}
+	if removedStaleTemp {
+		writeFormat(stdout, "UnityLockfile found without active Unity process: %s\n", unityLockfilePath(projectRoot))
+		writeLine(stdout, "Assuming previous crash. Cleaning Temp directory and continuing launch.")
+		writeLine(stdout, "Deleted Temp directory.")
+		writeLine(stdout, "Deleted UnityLockfile.")
+		writeLine(stdout, "")
+	}
+
 	unityPath, err := resolveUnityExecutablePath(projectRoot)
 	if err != nil {
 		writeError(stderr, internalError(err.Error(), projectRoot))
@@ -156,6 +169,18 @@ func parseLaunchBootstrapOptions(args []string) (launchBootstrapOptions, error) 
 		}
 	}
 	return options, nil
+}
+
+func cleanStaleUnityTemp(projectRoot string) (bool, error) {
+	lockfilePath := unityLockfilePath(projectRoot)
+	if _, err := os.Stat(lockfilePath); err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return true, os.RemoveAll(filepath.Join(projectRoot, launchTempDirectoryName))
 }
 
 func readLaunchOptionValue(option string, args []string, index int) (string, bool, error) {

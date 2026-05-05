@@ -141,6 +141,30 @@ func TestRunLaunchWithoutProjectLocalCoreUsesBootstrapLaunch(t *testing.T) {
 	}
 }
 
+func TestRunLaunchBootstrapCleansStaleTempBeforeResolvingUnity(t *testing.T) {
+	// Verifies that first-run launch preserves the core launch stale Temp cleanup contract.
+	projectRoot := t.TempDir()
+	createUnityProject(t, projectRoot)
+	tempPath := filepath.Join(projectRoot, launchTempDirectoryName)
+	if err := os.MkdirAll(tempPath, 0o755); err != nil {
+		t.Fatalf("failed to create Temp: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(tempPath, unityLockfileName), []byte{}, 0o644); err != nil {
+		t.Fatalf("failed to create UnityLockfile: %v", err)
+	}
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	code := Run(context.Background(), []string{"--project-path", projectRoot, "launch"}, &stdout, &stderr)
+
+	if code != 1 {
+		t.Fatalf("exit code mismatch: %d stdout=%s stderr=%s", code, stdout.String(), stderr.String())
+	}
+	if _, err := os.Stat(tempPath); !os.IsNotExist(err) {
+		t.Fatalf("Temp still exists after bootstrap cleanup: %v", err)
+	}
+}
+
 func TestRunLaunchQuitWithoutProjectLocalCoreDoesNotOpenUnity(t *testing.T) {
 	// Verifies that bootstrap launch rejects quit instead of silently starting Unity.
 	projectRoot := t.TempDir()
