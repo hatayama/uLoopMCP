@@ -3,8 +3,8 @@ package application
 import (
 	"context"
 
-	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/domain"
-	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/ports"
+	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/core/ports"
+	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/shared/domain"
 )
 
 type ToolDispatchRequest struct {

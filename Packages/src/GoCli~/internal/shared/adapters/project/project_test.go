@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/domain"
+	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/shared/domain"
 )
 
 func TestCreateEndpointUsesStableProjectHash(t *testing.T) {

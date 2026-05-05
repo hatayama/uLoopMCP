@@ -48,6 +48,30 @@ func TestOnionLayerDependencies(t *testing.T) {
 	}
 }
 
+// Tests that production packages make the core, dispatcher, and shared boundaries visible in the tree.
+func TestInternalPackagesStayInsideExplicitRuntimeBoundaries(t *testing.T) {
+	moduleRoot := findModuleRoot(t)
+	packages := listPackages(t, moduleRoot)
+	for _, goPackage := range packages {
+		if !strings.HasPrefix(goPackage.ImportPath, modulePath+"/internal/") {
+			continue
+		}
+		if goPackage.ImportPath == modulePath+"/internal/architecture" {
+			continue
+		}
+		if strings.HasPrefix(goPackage.ImportPath, modulePath+"/internal/core/") {
+			continue
+		}
+		if strings.HasPrefix(goPackage.ImportPath, modulePath+"/internal/shared/") {
+			continue
+		}
+		if strings.HasPrefix(goPackage.ImportPath, modulePath+"/internal/dispatcher") {
+			continue
+		}
+		t.Fatalf("internal package must live under core, dispatcher, or shared: %s", goPackage.ImportPath)
+	}
+}
+
 // Tests that production files stay small enough to keep each file focused on one responsibility.
 func TestProductionGoFilesStayFocused(t *testing.T) {
 	moduleRoot := findModuleRoot(t)
@@ -82,7 +106,7 @@ func TestProductionGoFilesStayFocused(t *testing.T) {
 	}
 }
 
-// Tests that the global dispatcher binary stays independent from project-local core implementation packages.
+// Tests that the global dispatcher binary stays independent from all project-local core packages.
 func TestDispatcherCommandDoesNotDependOnCorePackages(t *testing.T) {
 	moduleRoot := findModuleRoot(t)
 	command := exec.Command("go", "list", "-deps", "./cmd/uloop-dispatcher")
@@ -93,11 +117,7 @@ func TestDispatcherCommandDoesNotDependOnCorePackages(t *testing.T) {
 	}
 
 	for _, dependency := range strings.Split(strings.TrimSpace(string(output)), "\n") {
-		switch dependency {
-		case modulePath + "/internal/app",
-			modulePath + "/internal/presentation/cli",
-			modulePath + "/internal/adapters/unity",
-			modulePath + "/internal/application":
+		if strings.HasPrefix(dependency, modulePath+"/internal/core/") {
 			t.Fatalf("dispatcher command must not depend on core package %s", dependency)
 		}
 	}
@@ -130,17 +150,23 @@ func listPackages(t *testing.T, moduleRoot string) []goPackage {
 
 func layerOf(importPath string) string {
 	switch {
-	case strings.Contains(importPath, "/internal/domain"):
+	case strings.Contains(importPath, "/internal/shared/domain"):
 		return "domain"
-	case strings.Contains(importPath, "/internal/application"):
+	case strings.Contains(importPath, "/internal/shared/version"):
+		return "version"
+	case strings.Contains(importPath, "/internal/shared/adapters"):
+		return "shared-adapters"
+	case strings.Contains(importPath, "/internal/dispatcher"):
+		return "dispatcher"
+	case strings.Contains(importPath, "/internal/core/application"):
 		return "application"
-	case strings.Contains(importPath, "/internal/ports"):
+	case strings.Contains(importPath, "/internal/core/ports"):
 		return "ports"
-	case strings.Contains(importPath, "/internal/adapters"):
-		return "adapters"
-	case strings.Contains(importPath, "/internal/presentation"):
+	case strings.Contains(importPath, "/internal/core/adapters"):
+		return "core-adapters"
+	case strings.Contains(importPath, "/internal/core/presentation"):
 		return "presentation"
-	case strings.Contains(importPath, "/internal/app"):
+	case strings.Contains(importPath, "/internal/core/app"):
 		return "app"
 	case strings.Contains(importPath, "/cmd/"):
 		return "cmd"
@@ -153,18 +179,24 @@ func isAllowedDependency(sourceLayer string, targetLayer string, importedPath st
 	switch sourceLayer {
 	case "domain":
 		return targetLayer == "domain"
+	case "version":
+		return targetLayer == "version"
+	case "shared-adapters":
+		return targetLayer == "domain" || targetLayer == "shared-adapters"
+	case "dispatcher":
+		return targetLayer == "domain" || targetLayer == "version" || targetLayer == "shared-adapters" || targetLayer == "dispatcher"
 	case "application":
 		return targetLayer == "domain" || targetLayer == "ports" || targetLayer == "application"
 	case "ports":
 		return targetLayer == "domain" || targetLayer == "ports"
-	case "adapters":
-		return targetLayer == "domain" || targetLayer == "ports" || targetLayer == "application" || targetLayer == "adapters"
+	case "core-adapters":
+		return targetLayer == "domain" || targetLayer == "ports" || targetLayer == "application" || targetLayer == "shared-adapters" || targetLayer == "core-adapters"
 	case "presentation":
-		return targetLayer == "domain" || targetLayer == "ports" || targetLayer == "application" || targetLayer == "adapters" || targetLayer == "presentation"
+		return targetLayer == "domain" || targetLayer == "version" || targetLayer == "ports" || targetLayer == "application" || targetLayer == "shared-adapters" || targetLayer == "core-adapters" || targetLayer == "presentation"
 	case "app":
-		return targetLayer == "domain" || targetLayer == "ports" || targetLayer == "application" || targetLayer == "adapters" || targetLayer == "presentation"
+		return targetLayer == "domain" || targetLayer == "version" || targetLayer == "ports" || targetLayer == "application" || targetLayer == "shared-adapters" || targetLayer == "core-adapters" || targetLayer == "presentation"
 	case "cmd":
-		return targetLayer == "app" || importedPath == modulePath+"/internal/app"
+		return targetLayer == "app" || targetLayer == "dispatcher" || importedPath == modulePath+"/internal/core/app"
 	default:
 		return true
 	}

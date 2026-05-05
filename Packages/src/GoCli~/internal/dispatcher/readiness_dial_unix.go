@@ -6,7 +6,7 @@ import (
 	"context"
 	"net"
 
-	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/domain"
+	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/shared/domain"
 )
 
 func dialLaunchReadyEndpoint(ctx context.Context, endpoint domain.Endpoint) (net.Conn, error) {

@@ -10,7 +10,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/domain"
+	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/shared/domain"
 )
 
 const (

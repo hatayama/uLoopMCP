@@ -3,7 +3,7 @@ package ports
 import (
 	"context"
 
-	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/domain"
+	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/shared/domain"
 )
 
 type UnityBridge interface {

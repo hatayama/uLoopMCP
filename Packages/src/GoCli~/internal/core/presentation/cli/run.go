@@ -8,11 +8,11 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/adapters/project"
-	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/adapters/unity"
-	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/application"
-	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/domain"
-	cliversion "github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/version"
+	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/core/adapters/unity"
+	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/core/application"
+	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/shared/adapters/project"
+	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/shared/domain"
+	cliversion "github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/shared/version"
 )
 
 func RunProjectLocal(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer) int {

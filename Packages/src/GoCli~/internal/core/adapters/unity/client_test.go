@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/domain"
+	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/shared/domain"
 )
 
 func TestFormatConnectionAttemptErrorExplainsDialFailureWithoutDisconnectClaim(t *testing.T) {

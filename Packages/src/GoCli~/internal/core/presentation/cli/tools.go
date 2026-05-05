@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/domain"
-	cliversion "github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/version"
+	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/shared/domain"
+	cliversion "github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/shared/version"
 )
 
 //go:embed default-tools.json

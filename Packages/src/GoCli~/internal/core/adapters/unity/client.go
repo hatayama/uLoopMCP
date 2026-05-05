@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/adapters/framing"
-	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/domain"
+	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/shared/adapters/framing"
+	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/shared/domain"
 )
 
 const requestTimeout = 180 * time.Second

@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/adapters/project"
+	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/shared/adapters/project"
 )
 
 const (

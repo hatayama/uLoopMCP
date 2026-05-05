@@ -7,7 +7,7 @@ import (
 	"net"
 
 	"github.com/Microsoft/go-winio"
-	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/domain"
+	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/shared/domain"
 )
 
 func dialEndpoint(ctx context.Context, endpoint domain.Endpoint) (net.Conn, error) {

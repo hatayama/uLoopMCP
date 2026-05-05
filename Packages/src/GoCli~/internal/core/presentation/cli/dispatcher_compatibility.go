@@ -1,7 +1,7 @@
 package cli
 
 import (
-	cliversion "github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/version"
+	cliversion "github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/shared/version"
 )
 
 func isRequiredDispatcherVersionRequest(args []string) bool {

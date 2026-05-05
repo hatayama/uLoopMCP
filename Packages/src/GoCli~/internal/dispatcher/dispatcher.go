@@ -13,7 +13,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/version"
+	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/shared/version"
 )
 
 const (

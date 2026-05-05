@@ -14,8 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/adapters/project"
-	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/adapters/unity"
+	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/core/adapters/unity"
+	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/shared/adapters/project"
 )
 
 const (

@@ -56,7 +56,7 @@ func collectInternalSkillToolNames(projectRoot string) map[string]bool {
 
 func internalSkillSourceRoots(projectRoot string) []string {
 	sourceRoots := []string{
-		filepath.Join(projectRoot, "Packages/src/GoCli~/internal/presentation/cli/skill-definitions/cli-only"),
+		filepath.Join(projectRoot, "Packages/src/GoCli~/internal/core/presentation/cli/skill-definitions/cli-only"),
 		filepath.Join(projectRoot, "Assets"),
 	}
 	sourceRoots = append(sourceRoots, childDirectories(filepath.Join(projectRoot, "Packages"))...)

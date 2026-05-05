@@ -13,8 +13,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/adapters/framing"
-	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/adapters/project"
+	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/shared/adapters/framing"
+	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/shared/adapters/project"
 )
 
 func TestWaitForLaunchReadyProbesUnityServer(t *testing.T) {

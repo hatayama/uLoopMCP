@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/version"
+	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/shared/version"
 )
 
 type nativeCommandEntry struct {

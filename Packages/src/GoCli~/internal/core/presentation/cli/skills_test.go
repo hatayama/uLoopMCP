@@ -13,13 +13,13 @@ import (
 // Tests that CLI-only skill discovery excludes skills marked as internal.
 func TestCollectSkillDefinitionsIncludesCliOnlyAndSkipsInternal(t *testing.T) {
 	projectRoot := t.TempDir()
-	writeTestSkill(t, projectRoot, "Packages/src/GoCli~/internal/presentation/cli/skill-definitions/cli-only/uloop-launch/Skill", `---
+	writeTestSkill(t, projectRoot, "Packages/src/GoCli~/internal/core/presentation/cli/skill-definitions/cli-only/uloop-launch/Skill", `---
 name: uloop-launch
 ---
 
 # uloop launch
 `)
-	writeTestSkill(t, projectRoot, "Packages/src/GoCli~/internal/presentation/cli/skill-definitions/cli-only/uloop-internal/Skill", `---
+	writeTestSkill(t, projectRoot, "Packages/src/GoCli~/internal/core/presentation/cli/skill-definitions/cli-only/uloop-internal/Skill", `---
 name: uloop-internal
 internal: true
 ---
@@ -49,7 +49,7 @@ name: uloop-compile
 
 # package
 `)
-	writeTestSkill(t, projectRoot, "Packages/src/GoCli~/internal/presentation/cli/skill-definitions/cli-only/uloop-launch/Skill", `---
+	writeTestSkill(t, projectRoot, "Packages/src/GoCli~/internal/core/presentation/cli/skill-definitions/cli-only/uloop-launch/Skill", `---
 name: uloop-launch
 ---
 
@@ -115,7 +115,7 @@ name: uloop-project
 
 # package project
 `)
-	writeTestSkill(t, projectRoot, "Packages/src/GoCli~/internal/presentation/cli/skill-definitions/cli-only/uloop-launch/Skill", `---
+	writeTestSkill(t, projectRoot, "Packages/src/GoCli~/internal/core/presentation/cli/skill-definitions/cli-only/uloop-launch/Skill", `---
 name: uloop-launch
 ---
 

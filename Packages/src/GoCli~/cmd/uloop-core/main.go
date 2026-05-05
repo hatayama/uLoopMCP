@@ -4,7 +4,7 @@ import (
 	"context"
 	"os"
 
-	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/app"
+	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/core/app"
 )
 
 func main() {

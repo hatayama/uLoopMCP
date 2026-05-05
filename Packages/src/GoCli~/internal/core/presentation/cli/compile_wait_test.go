@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/domain"
+	"github.com/hatayama/unity-cli-loop/Packages/src/GoCli/internal/shared/domain"
 )
 
 func TestEnsureCompileRequestIDPreservesSafeValue(t *testing.T) {
