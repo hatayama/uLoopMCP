@@ -407,6 +407,15 @@ func TestWaitForPathReturnsWhenPathExists(t *testing.T) {
 	}
 }
 
+func TestNewUnityLaunchCommandIsNotContextCancelable(t *testing.T) {
+	// Verifies that bootstrap launch does not tie Unity process lifetime to the CLI context.
+	command := newUnityLaunchCommand("/bin/echo", []string{"hello"})
+
+	if command.Cancel != nil {
+		t.Fatal("Unity launch command must not be killed when the CLI context is canceled")
+	}
+}
+
 func TestParseProjectPathAcceptsValueForm(t *testing.T) {
 	// Verifies that dispatcher parsing preserves the global --project-path contract.
 	remaining, projectPath, err := parseProjectPath([]string{"--project-path=/tmp/project", "list"})

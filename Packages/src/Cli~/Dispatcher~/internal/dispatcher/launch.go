@@ -118,7 +118,7 @@ func runLaunchBootstrap(ctx context.Context, args []string, explicitProjectPath 
 	writeFormat(stdout, "Project Path: %s\n", projectRoot)
 	writeFormat(stdout, "Detected Unity version: %s\n", readUnityVersionForLog(projectRoot))
 
-	command := newUnityLaunchCommand(ctx, unityPath, launchArgs)
+	command := newUnityLaunchCommand(unityPath, launchArgs)
 	if err := command.Start(); err != nil {
 		writeError(stderr, internalError(err.Error(), projectRoot))
 		return 1
@@ -358,8 +358,8 @@ func windowsUnityExecutableCandidates(version string) []string {
 	return candidates
 }
 
-func newUnityLaunchCommand(ctx context.Context, unityPath string, launchArgs []string) *exec.Cmd {
-	command := exec.CommandContext(ctx, unityPath, launchArgs...)
+func newUnityLaunchCommand(unityPath string, launchArgs []string) *exec.Cmd {
+	command := exec.Command(unityPath, launchArgs...)
 	command.Env = append(os.Environ(), "MSYS_NO_PATHCONV=1")
 	configureDetachedUnityLaunchCommand(command)
 	return command
