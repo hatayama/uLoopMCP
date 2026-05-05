@@ -32,6 +32,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
         [Test]
         public void GetProjectCliBundlePath_UsesPackagedCoreBinary()
         {
+            // Verifies that project-local installs use the packaged core binary, not the global dispatcher.
             string result = ProjectLocalCliInstaller.GetProjectCliBundlePath();
 
             Assert.That(result, Does.Contain(Path.Combine("Cli~", "Core~", "dist")));
@@ -167,6 +168,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
         [Test]
         public void DetectCliOutput_WithRequiredDispatcherVersionFlag_ReturnsRequirement()
         {
+            // Verifies that setup can query the bundled core for its required dispatcher version.
             string sourceBundlePath = Path.Combine(_temporaryRoot, "source-cli.cjs");
             File.WriteAllText(sourceBundlePath, BuildVersionScript("3.0.0-beta.1", "source"));
 

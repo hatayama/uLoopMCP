@@ -23,6 +23,19 @@ const (
 	pwshProfileSubpath       = "Documents/PowerShell/Microsoft.PowerShell_profile.ps1"
 )
 
+var nativeCommandOptions = map[string][]string{
+	completionCommand: {installCompletionFlag, shellFlag},
+	launchCommandName: {
+		"--" + projectPathFlagName,
+		"--delete-recovery",
+		"--max-depth",
+		"--platform",
+		"--quit",
+		"--restart",
+	},
+	updateCommandName: {},
+}
+
 type completionRequest struct {
 	install bool
 	shell   string
@@ -179,12 +192,9 @@ func printCompletionCommandNames(stdout io.Writer) {
 }
 
 func printCompletionOptions(command string, stdout io.Writer) {
-	if command == completionCommand {
-		writeLine(stdout, strings.Join([]string{installCompletionFlag, shellFlag}, "\n"))
-		return
-	}
-	if isNativeCommandName(command) {
-		writeLine(stdout, "--project-path")
+	options, ok := nativeCommandOptions[command]
+	if ok {
+		writeLine(stdout, strings.Join(options, "\n"))
 		return
 	}
 

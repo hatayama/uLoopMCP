@@ -446,6 +446,41 @@ func TestRunCompletionListsCompletionCommandOptions(t *testing.T) {
 	}
 }
 
+func TestRunCompletionListsLaunchNativeOptions(t *testing.T) {
+	// Verifies that dispatcher-owned launch completion reflects bootstrap launch flags.
+	changeDirectory(t, t.TempDir())
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	code := Run(context.Background(), []string{"--list-options", launchCommandName}, &stdout, &stderr)
+
+	if code != 0 {
+		t.Fatalf("exit code mismatch: %d stderr=%s", code, stderr.String())
+	}
+	output := stdout.String()
+	for _, option := range []string{"--project-path", "--restart", "--quit", "--delete-recovery", "--platform", "--max-depth"} {
+		if !strings.Contains(output, option) {
+			t.Fatalf("launch option %s was not listed: %s", option, output)
+		}
+	}
+}
+
+func TestRunCompletionListsNoUpdateOptions(t *testing.T) {
+	// Verifies that update completion does not advertise unsupported dispatcher options.
+	changeDirectory(t, t.TempDir())
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	code := Run(context.Background(), []string{"--list-options", updateCommandName}, &stdout, &stderr)
+
+	if code != 0 {
+		t.Fatalf("exit code mismatch: %d stderr=%s", code, stderr.String())
+	}
+	if strings.TrimSpace(stdout.String()) != "" {
+		t.Fatalf("update should not list options: %s", stdout.String())
+	}
+}
+
 func TestRunLauncherPrintsHelpAfterProjectPathOption(t *testing.T) {
 	// Verifies that dispatcher help handles --project-path before dispatching to project-local core.
 	var stdout bytes.Buffer

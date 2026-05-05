@@ -13,23 +13,24 @@ import (
 const (
 	installerScriptURL          = "https://raw.githubusercontent.com/hatayama/unity-cli-loop/main/scripts/install.sh"
 	windowsInstallerScriptURL   = "https://raw.githubusercontent.com/hatayama/unity-cli-loop/main/scripts/install.ps1"
+	updateCommandName           = "update"
 	updateUnsupportedOSMessage  = "native update is only supported on macOS and Windows"
 	updateUnsupportedArgMessage = "update does not accept options yet"
 	windowsPowerShellCommand    = "powershell"
 )
 
 func tryHandleUpdateRequest(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer) (bool, int) {
-	if len(args) == 0 || args[0] != "update" {
+	if len(args) == 0 || args[0] != updateCommandName {
 		return false, 0
 	}
 	if len(args) > 1 {
-		writeError(stderr, argumentError(updateUnsupportedArgMessage, "update"))
+		writeError(stderr, argumentError(updateUnsupportedArgMessage, updateCommandName))
 		return true, 1
 	}
 
 	commandName, commandArgs, err := updateCommandForOS(runtime.GOOS)
 	if err != nil {
-		writeError(stderr, argumentError(err.Error(), "update"))
+		writeError(stderr, argumentError(err.Error(), updateCommandName))
 		return true, 1
 	}
 
@@ -41,7 +42,7 @@ func tryHandleUpdateRequest(ctx context.Context, args []string, stdout io.Writer
 		updateError := internalError("Update failed: "+err.Error(), "")
 		updateError.Retryable = true
 		updateError.SafeToRetry = true
-		updateError.Command = "update"
+		updateError.Command = updateCommandName
 		updateError.NextActions = []string{"Retry `uloop update` after checking network access to GitHub."}
 		updateError.Details = map[string]any{"cause": err.Error()}
 		writeError(stderr, updateError)
