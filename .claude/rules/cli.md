@@ -4,7 +4,7 @@ paths: Packages/src/Cli~/**
 
 # uloop CLI
 
-The uloop CLI is the native Go command surface for communicating with Unity Editor. It is independent from the MCP server (`TypeScriptServer~`).
+The uloop CLI is the native Go command surface for communicating with Unity Editor.
 
 ## Architecture
 
@@ -32,7 +32,7 @@ Cli~/
 
 ## Build and Validation
 
-Use the repository scripts instead of npm commands:
+Use the repository scripts:
 
 ```bash
 scripts/check-go-cli.sh
