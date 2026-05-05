@@ -28,6 +28,7 @@ namespace io.github.hatayama.UnityCliLoop
         public const string SKILL_DIR_PREFIX = "uloop-";
         public const string SKILL_DIR_GLOB = "uloop-*";
         public const string CLI_PACKAGE_DIR_NAME = "Cli~";
+        public const string LEGACY_GO_CLI_PACKAGE_DIR_NAME = "GoCli~";
         public const string GO_CLI_CORE_DIR_NAME = "Core~";
         public const string GO_CLI_DISPATCHER_DIR_NAME = "Dispatcher~";
         public const string GO_CLI_SHARED_DIR_NAME = "Shared~";

@@ -995,7 +995,12 @@ namespace io.github.hatayama.UnityCliLoop
                 CliConstants.CLI_PACKAGE_DIR_NAME,
                 CliConstants.GO_CLI_DISPATCHER_DIR_NAME,
                 CliConstants.DIST_DIR_NAME);
-            return ContainsPathWithEitherSeparator(content, dispatcherDirectory)
+            string legacyDispatcherDirectory = Path.Combine(
+                CliConstants.LEGACY_GO_CLI_PACKAGE_DIR_NAME,
+                CliConstants.DIST_DIR_NAME);
+            bool containsDispatcherPath = ContainsPathWithEitherSeparator(content, dispatcherDirectory)
+                || ContainsPathWithEitherSeparator(content, legacyDispatcherDirectory);
+            return containsDispatcherPath
                 && (ContainsIgnoreCase(content, CliConstants.GLOBAL_DISPATCHER_WINDOWS_BUNDLE_NAME)
                     || ContainsIgnoreCase(content, CliConstants.GLOBAL_DISPATCHER_UNIX_BUNDLE_NAME));
         }

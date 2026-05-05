@@ -582,6 +582,47 @@ namespace io.github.hatayama.UnityCliLoop.Tests
         }
 
         [Test]
+        public void CleanupLegacyCommandShimsInDirectory_WhenLegacyGoCliDispatcherShimExistsDeletesIt()
+        {
+            // Verifies that stale package-owned GoCli dispatcher shims do not remain earlier in PATH.
+            string tempRoot = Path.Combine(
+                Path.GetTempPath(),
+                "uloop-native-installer-tests",
+                System.Guid.NewGuid().ToString("N"));
+            string legacyBinDirectory = Path.Combine(tempRoot, "npm");
+            string nativeUloopPath = Path.Combine(tempRoot, "native", "uloop.exe");
+            string commandShimPath = Path.Combine(legacyBinDirectory, "uloop.cmd");
+            string legacyDispatcherPath = Path.Combine(
+                "Packages",
+                "src",
+                CliConstants.LEGACY_GO_CLI_PACKAGE_DIR_NAME,
+                CliConstants.DIST_DIR_NAME,
+                "windows-amd64",
+                CliConstants.GLOBAL_DISPATCHER_WINDOWS_BUNDLE_NAME);
+
+            Directory.CreateDirectory(legacyBinDirectory);
+            Directory.CreateDirectory(Path.GetDirectoryName(nativeUloopPath));
+            File.WriteAllText(commandShimPath, $"@\"{legacyDispatcherPath}\" %*");
+
+            try
+            {
+                CliInstallResult result = NativeCliInstaller.CleanupLegacyCommandShimsInDirectory(
+                    legacyBinDirectory,
+                    nativeUloopPath);
+
+                Assert.That(result.Success, Is.True, result.ErrorOutput);
+                Assert.That(File.Exists(commandShimPath), Is.False);
+            }
+            finally
+            {
+                if (Directory.Exists(tempRoot))
+                {
+                    Directory.Delete(tempRoot, true);
+                }
+            }
+        }
+
+        [Test]
         public void CleanupLegacyCommandShimsInDirectory_WhenCommandIsNotPackageOwnedPreservesFile()
         {
             // Verifies that unrelated user commands are not overwritten by legacy cleanup.
