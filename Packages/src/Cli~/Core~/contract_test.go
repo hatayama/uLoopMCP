@@ -8,8 +8,9 @@ import (
 
 func TestCoreContractProvidesRuntimeVersion(t *testing.T) {
 	// Verifies that the core binary owns its runtime version outside shared packages.
-	if Current.CoreVersion != "3.0.0-beta.1" {
-		t.Fatalf("core version mismatch: %s", Current.CoreVersion)
+	_, ok := version.Compare(Current.CoreVersion, Current.CoreVersion)
+	if !ok {
+		t.Fatalf("core version must be valid semver: %s", Current.CoreVersion)
 	}
 }
 

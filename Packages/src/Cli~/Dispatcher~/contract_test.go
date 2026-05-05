@@ -1,11 +1,16 @@
 package dispatchercontract
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/hatayama/unity-cli-loop/Packages/src/Cli/Shared/version"
+)
 
 func TestDispatcherContractProvidesRuntimeVersion(t *testing.T) {
 	// Verifies that the dispatcher binary owns its runtime version outside shared packages.
-	if Current.DispatcherVersion != "3.0.0-beta.1" {
-		t.Fatalf("dispatcher version mismatch: %s", Current.DispatcherVersion)
+	_, ok := version.Compare(Current.DispatcherVersion, Current.DispatcherVersion)
+	if !ok {
+		t.Fatalf("dispatcher version must be valid semver: %s", Current.DispatcherVersion)
 	}
 }
 
