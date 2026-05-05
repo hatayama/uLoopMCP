@@ -125,6 +125,35 @@ function Invoke-UloopJsonChecked {
     return $json
 }
 
+function Assert-DynamicCodeResult {
+    param(
+        [pscustomobject]$Result,
+        [string]$ExpectedResult,
+        [string]$Context
+    )
+
+    [string]$actualResult = ""
+    if ($null -ne $Result.Result) {
+        $actualResult = $Result.Result.ToString()
+    }
+
+    if ($actualResult -eq $ExpectedResult) {
+        return
+    }
+
+    throw "${Context} failed: $($Result | ConvertTo-Json -Depth 10)"
+}
+
+function Remove-EventLogIfExists {
+    param(
+        [string]$Path
+    )
+
+    if (Test-Path -LiteralPath $Path -PathType Leaf) {
+        Remove-Item -LiteralPath $Path -Force
+    }
+}
+
 function Wait-UnityReady {
     for ([int]$attempt = 0; $attempt -lt $UnityWaitAttempts; $attempt++) {
         [pscustomobject]$result = Invoke-UloopCapture -CommandArguments @("get-logs", "--max-count", "1")
@@ -162,7 +191,7 @@ return SceneManager.GetActiveScene().path;
 }
 
 function Invoke-ActivateForRecord {
-    Invoke-UloopJsonChecked -CommandArguments @(
+    [pscustomobject]$result = Invoke-UloopJsonChecked -CommandArguments @(
         "execute-dynamic-code",
         "--code",
         @'
@@ -172,11 +201,13 @@ if (cube == null) return "ERROR: VerificationCube not found";
 cube.SendMessage("ActivateForExternalControl");
 return "OK: activated for recording";
 '@
-    ) | Out-Null
+    )
+
+    Assert-DynamicCodeResult -Result $result -ExpectedResult "OK: activated for recording" -Context "Activate recording controller"
 }
 
 function Invoke-ActivateForReplay {
-    Invoke-UloopJsonChecked -CommandArguments @(
+    [pscustomobject]$result = Invoke-UloopJsonChecked -CommandArguments @(
         "execute-dynamic-code",
         "--code",
         @'
@@ -186,7 +217,9 @@ if (cube == null) return "ERROR: VerificationCube not found";
 cube.SendMessage("ActivateForExternalReplay");
 return "OK: activated for replay";
 '@
-    ) | Out-Null
+    )
+
+    Assert-DynamicCodeResult -Result $result -ExpectedResult "OK: activated for replay" -Context "Activate replay controller"
 }
 
 function Invoke-AutomatedInput {
@@ -203,6 +236,8 @@ function Save-EventLog {
         [string]$Path
     )
 
+    Remove-EventLogIfExists -Path $Path
+
     [string]$escapedPath = $Path.Replace("\", "\\").Replace('"', '\"')
     [string]$code = @"
 using UnityEngine;
@@ -212,7 +247,12 @@ cube.SendMessage("SaveLog", "$escapedPath");
 return "OK: log saved";
 "@
 
-    Invoke-UloopJsonChecked -CommandArguments @("execute-dynamic-code", "--code", $code) | Out-Null
+    [pscustomobject]$result = Invoke-UloopJsonChecked -CommandArguments @("execute-dynamic-code", "--code", $code)
+    Assert-DynamicCodeResult -Result $result -ExpectedResult "OK: log saved" -Context "Save event log"
+
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        throw "Save event log did not create ${Path}"
+    }
 }
 
 function Restart-PlayMode {
