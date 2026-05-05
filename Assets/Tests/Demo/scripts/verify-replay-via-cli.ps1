@@ -242,23 +242,30 @@ function Invoke-ReplayToLog {
         $replayStartArgs += @("--no-show-overlay")
     }
 
-    [pscustomobject]$replayResult = Invoke-UloopCapture -CommandArguments $replayStartArgs
-    Write-Host "  $($replayResult.Text)"
-    if ($replayResult.ExitCode -ne 0) {
-        throw "replay-input Start failed"
-    }
-    [pscustomobject]$replayStartJson = $replayResult.Text | ConvertFrom-Json
-    if ($replayStartJson.Success -ne $true) {
-        throw "replay-input Start reported failure: $($replayResult.Text)"
-    }
+    [bool]$replayStartAccepted = Start-ReplayInput -ReplayStartArgs $replayStartArgs
 
     Write-Host "  Waiting for replay to finish..."
     Start-Sleep -Seconds 2
-    Wait-ReplayCompleted
+    Wait-ReplayCompleted -ReplayStartAccepted $replayStartAccepted
     Write-Host ""
 
     Start-Sleep -Seconds 1
     Save-EventLog -Path $LogPath
+}
+
+function Start-ReplayInput {
+    param(
+        [string[]]$ReplayStartArgs
+    )
+
+    [pscustomobject]$replayResult = Invoke-UloopCapture -CommandArguments $ReplayStartArgs
+    Write-Host "  $($replayResult.Text)"
+    if ($replayResult.ExitCode -ne 0) {
+        return $false
+    }
+
+    [pscustomobject]$replayStartJson = $replayResult.Text | ConvertFrom-Json
+    return $replayStartJson.Success -eq $true
 }
 
 function Get-ReplayStatus {
@@ -272,6 +279,14 @@ function Get-ReplayStatus {
     }
 
     [pscustomobject]$status = $result.Text | ConvertFrom-Json
+    if ($status.PSObject.Properties.Name -contains "Success" -and $status.Success -ne $true) {
+        return [pscustomobject]@{
+            IsReplaying = $null
+            Progress = $null
+            RawText = $result.Text
+        }
+    }
+
     return [pscustomobject]@{
         IsReplaying = $status.IsReplaying
         Progress = $status.Progress
@@ -280,13 +295,28 @@ function Get-ReplayStatus {
 }
 
 function Wait-ReplayCompleted {
+    param(
+        [bool]$ReplayStartAccepted
+    )
+
     [string]$lastStatusText = ""
+    [bool]$observedReplay = $ReplayStartAccepted
 
     for ([int]$waitedSeconds = 0; $waitedSeconds -lt $ReplayTimeoutSeconds; $waitedSeconds++) {
         [pscustomobject]$status = Get-ReplayStatus
         $lastStatusText = $status.RawText
 
+        if ($status.IsReplaying -eq $true) {
+            $observedReplay = $true
+        }
+
         if ($status.IsReplaying -eq $false) {
+            if (-not $observedReplay) {
+                Write-Host "ERROR: Replay did not start"
+                Write-Host "  Last status: $lastStatusText"
+                throw "Replay did not start"
+            }
+
             Write-Host "  Replay completed."
             return
         }
@@ -455,19 +485,11 @@ if ($AutomatedInput) {
     Write-Host "[6/8] Activating controller + starting replay via CLI..."
     Invoke-ActivateForReplay
     Write-Host "  Starting replay..."
-    [pscustomobject]$replayResult = Invoke-UloopCapture -CommandArguments @("replay-input", "--action", "Start")
-    Write-Host "  $($replayResult.Text)"
-    if ($replayResult.ExitCode -ne 0) {
-        throw "replay-input Start failed"
-    }
-    [pscustomobject]$replayStartJson = $replayResult.Text | ConvertFrom-Json
-    if ($replayStartJson.Success -ne $true) {
-        throw "replay-input Start reported failure: $($replayResult.Text)"
-    }
+    [bool]$replayStartAccepted = Start-ReplayInput -ReplayStartArgs @("replay-input", "--action", "Start")
 
     Write-Host "  Waiting for replay to finish..."
     Start-Sleep -Seconds 2
-    Wait-ReplayCompleted
+    Wait-ReplayCompleted -ReplayStartAccepted $replayStartAccepted
     Write-Host ""
 
     Start-Sleep -Seconds 1
