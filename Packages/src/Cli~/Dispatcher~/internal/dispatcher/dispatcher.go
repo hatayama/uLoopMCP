@@ -90,7 +90,7 @@ func Run(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer)
 	}
 	if !exists {
 		if isLaunchCommand(remainingArgs) {
-			return runLaunchBootstrap(ctx, remainingArgs[1:], projectRoot, stdout, stderr)
+			return runLaunchBootstrap(ctx, remainingArgs[1:], explicitProjectPath, projectRoot, stdout, stderr)
 		}
 		writeError(stderr, projectLocalCLIMissingError(localPath, projectRoot, commandName(remainingArgs)))
 		return 1

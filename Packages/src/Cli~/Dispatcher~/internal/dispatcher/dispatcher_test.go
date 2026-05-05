@@ -165,6 +165,44 @@ func TestRunLaunchBootstrapCleansStaleTempBeforeResolvingUnity(t *testing.T) {
 	}
 }
 
+func TestRunLaunchBootstrapKeepsTempWhenUnityIsRunning(t *testing.T) {
+	// Verifies that bootstrap launch does not delete Temp while the same Unity project is active.
+	projectRoot := t.TempDir()
+	createUnityProject(t, projectRoot)
+	tempPath := filepath.Join(projectRoot, launchTempDirectoryName)
+	if err := os.MkdirAll(tempPath, 0o755); err != nil {
+		t.Fatalf("failed to create Temp: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(tempPath, unityLockfileName), []byte{}, 0o644); err != nil {
+		t.Fatalf("failed to create UnityLockfile: %v", err)
+	}
+	previousList := listUnityProcessesForLaunch
+	listUnityProcessesForLaunch = func(context.Context) ([]unityProcess, error) {
+		return []unityProcess{{pid: 123, projectPath: projectRoot}}, nil
+	}
+	t.Cleanup(func() {
+		listUnityProcessesForLaunch = previousList
+	})
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	code := Run(context.Background(), []string{"--project-path", projectRoot, "launch"}, &stdout, &stderr)
+
+	if code != 1 {
+		t.Fatalf("exit code mismatch: %d stdout=%s stderr=%s", code, stdout.String(), stderr.String())
+	}
+	if _, err := os.Stat(tempPath); err != nil {
+		t.Fatalf("Temp should remain while Unity is running: %v", err)
+	}
+	var envelope cliErrorEnvelope
+	if err := json.Unmarshal(stderr.Bytes(), &envelope); err != nil {
+		t.Fatalf("stderr is not valid JSON: %v\n%s", err, stderr.String())
+	}
+	if envelope.Error.ErrorCode != errorCodeProjectLocalCLIMissing {
+		t.Fatalf("error code mismatch: %#v", envelope.Error)
+	}
+}
+
 func TestRunLaunchQuitWithoutProjectLocalCoreDoesNotOpenUnity(t *testing.T) {
 	// Verifies that bootstrap launch rejects quit instead of silently starting Unity.
 	projectRoot := t.TempDir()
@@ -188,7 +226,7 @@ func TestRunLaunchQuitWithoutProjectLocalCoreDoesNotOpenUnity(t *testing.T) {
 
 func TestParseLaunchBootstrapOptionsPreservesQuitAndRestart(t *testing.T) {
 	// Verifies that bootstrap launch does not discard lifecycle flags before deciding whether to run.
-	options, err := parseLaunchBootstrapOptions([]string{"--quit", "--restart"})
+	options, err := parseLaunchBootstrapOptions([]string{"--quit", "--restart"}, "")
 	if err != nil {
 		t.Fatalf("parseLaunchBootstrapOptions failed: %v", err)
 	}
@@ -202,7 +240,7 @@ func TestParseLaunchBootstrapOptionsPreservesQuitAndRestart(t *testing.T) {
 
 func TestParseLaunchBootstrapOptionsAcceptsNegativeMaxDepth(t *testing.T) {
 	// Verifies that bootstrap launch accepts the same unlimited search depth value as core launch.
-	_, err := parseLaunchBootstrapOptions([]string{"--max-depth", "-1"})
+	_, err := parseLaunchBootstrapOptions([]string{"--max-depth", "-1"}, "")
 	if err != nil {
 		t.Fatalf("parseLaunchBootstrapOptions failed: %v", err)
 	}
@@ -210,10 +248,28 @@ func TestParseLaunchBootstrapOptionsAcceptsNegativeMaxDepth(t *testing.T) {
 
 func TestParseLaunchBootstrapOptionsRejectsEmptyPlatformValueForm(t *testing.T) {
 	// Verifies that bootstrap launch does not silently discard an empty platform value.
-	_, err := parseLaunchBootstrapOptions([]string{"--platform="})
+	_, err := parseLaunchBootstrapOptions([]string{"--platform="}, "")
 
 	if err == nil {
 		t.Fatal("empty platform value should fail")
+	}
+}
+
+func TestParseLaunchBootstrapOptionsRejectsDuplicateProjectPaths(t *testing.T) {
+	// Verifies that bootstrap launch preserves the core launch single project path contract.
+	_, err := parseLaunchBootstrapOptions([]string{"/tmp/project-a", "/tmp/project-b"}, "")
+
+	if err == nil {
+		t.Fatal("duplicate project paths should fail")
+	}
+}
+
+func TestParseLaunchBootstrapOptionsRejectsProjectPathAfterGlobalProjectPath(t *testing.T) {
+	// Verifies that bootstrap launch rejects positional project paths when --project-path already selected one.
+	_, err := parseLaunchBootstrapOptions([]string{"/tmp/project-b"}, "/tmp/project-a")
+
+	if err == nil {
+		t.Fatal("positional project path after --project-path should fail")
 	}
 }
 

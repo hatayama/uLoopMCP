@@ -75,6 +75,26 @@ func projectLocalCLIMissingError(localPath string, projectRoot string, command s
 	}
 }
 
+func activeUnityWithoutProjectLocalCoreError(pid int, localPath string, projectRoot string) cliError {
+	return cliError{
+		ErrorCode:   errorCodeProjectLocalCLIMissing,
+		Phase:       errorPhaseDispatch,
+		Message:     "Unity is already running for this project, but project-local uloop-core CLI was not found.",
+		Retryable:   false,
+		SafeToRetry: false,
+		ProjectRoot: projectRoot,
+		Command:     launchCommandName,
+		NextActions: []string{
+			"Restart Unity so the package can install the project-local CLI.",
+			"Reinstall or update Unity CLI Loop in this project if the file is still missing.",
+		},
+		Details: map[string]any{
+			"path": localPath,
+			"pid":  pid,
+		},
+	}
+}
+
 func internalError(message string, projectRoot string) cliError {
 	return cliError{
 		ErrorCode:   errorCodeInternalError,

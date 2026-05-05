@@ -34,6 +34,7 @@ var editorVersionPattern = regexp.MustCompile(`(?m)^m_EditorVersion:\s*(.+)$`)
 type launchBootstrapOptions struct {
 	deleteRecovery bool
 	platform       string
+	projectPath    string
 	quit           bool
 	restart        bool
 }
@@ -46,8 +47,8 @@ func isLaunchHelpRequest(args []string) bool {
 	return len(args) == 2 && args[0] == launchCommandName && isHelpRequest(args[1:])
 }
 
-func runLaunchBootstrap(ctx context.Context, args []string, projectRoot string, stdout io.Writer, stderr io.Writer) int {
-	options, err := parseLaunchBootstrapOptions(args)
+func runLaunchBootstrap(ctx context.Context, args []string, explicitProjectPath string, projectRoot string, stdout io.Writer, stderr io.Writer) int {
+	options, err := parseLaunchBootstrapOptions(args, explicitProjectPath)
 	if err != nil {
 		writeError(stderr, argumentError(err.Error(), launchCommandName))
 		return 1
@@ -66,6 +67,16 @@ func runLaunchBootstrap(ctx context.Context, args []string, projectRoot string, 
 			writeError(stderr, internalError(err.Error(), projectRoot))
 			return 1
 		}
+	}
+
+	runningProcess, err := findRunningUnityProcess(ctx, projectRoot)
+	if err != nil {
+		writeError(stderr, internalError(err.Error(), projectRoot))
+		return 1
+	}
+	if runningProcess != nil {
+		writeError(stderr, activeUnityWithoutProjectLocalCoreError(runningProcess.pid, projectLocalPath(projectRoot), projectRoot))
+		return 1
 	}
 
 	removedStaleTemp, err := cleanStaleUnityTemp(projectRoot)
@@ -117,8 +128,10 @@ func runLaunchBootstrap(ctx context.Context, args []string, projectRoot string, 
 	return 0
 }
 
-func parseLaunchBootstrapOptions(args []string) (launchBootstrapOptions, error) {
-	options := launchBootstrapOptions{}
+func parseLaunchBootstrapOptions(args []string, explicitProjectPath string) (launchBootstrapOptions, error) {
+	options := launchBootstrapOptions{
+		projectPath: explicitProjectPath,
+	}
 	for index := 0; index < len(args); index++ {
 		arg := args[index]
 		switch {
@@ -165,7 +178,10 @@ func parseLaunchBootstrapOptions(args []string) (launchBootstrapOptions, error) 
 		case strings.HasPrefix(arg, "-"):
 			return launchBootstrapOptions{}, fmt.Errorf("unknown launch option: %s", arg)
 		default:
-			continue
+			if options.projectPath != "" {
+				return launchBootstrapOptions{}, fmt.Errorf("unexpected extra launch argument: %s", arg)
+			}
+			options.projectPath = arg
 		}
 	}
 	return options, nil
