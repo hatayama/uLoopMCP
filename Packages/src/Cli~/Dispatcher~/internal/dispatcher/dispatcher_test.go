@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -89,6 +91,60 @@ func TestRunMissingProjectLocalCoreReportsStructuredError(t *testing.T) {
 	}
 	if envelope.Error.ErrorCode != errorCodeProjectLocalCLIMissing {
 		t.Fatalf("error code mismatch: %#v", envelope.Error)
+	}
+}
+
+func TestRunSkillsHelpDoesNotResolveProject(t *testing.T) {
+	// Verifies that skills help remains available before a Unity project is selected.
+	changeDirectory(t, t.TempDir())
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	code := Run(context.Background(), []string{"skills", "--help"}, &stdout, &stderr)
+
+	if code != 0 {
+		t.Fatalf("exit code mismatch: %d stdout=%s stderr=%s", code, stdout.String(), stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "uloop skills list") {
+		t.Fatalf("skills help missing list usage: %s", stdout.String())
+	}
+}
+
+func TestRunSkillsUsesBundledCoreWhenProjectLocalCoreIsMissing(t *testing.T) {
+	// Verifies that dispatcher-owned skills commands can run before .uloop/bin/uloop-core exists.
+	projectRoot := t.TempDir()
+	createUnityProject(t, projectRoot)
+	expectedCorePath := createBundledCorePlaceholder(t, projectRoot)
+	previousExec := execCoreForDispatch
+	executedCorePath := ""
+	executedProjectRoot := ""
+	executedArgs := []string{}
+	execCoreForDispatch = func(_ context.Context, localPath string, args []string, projectRoot string, _ io.Writer) int {
+		executedCorePath = localPath
+		executedProjectRoot = projectRoot
+		executedArgs = append([]string{}, args...)
+		return 0
+	}
+	t.Cleanup(func() {
+		execCoreForDispatch = previousExec
+	})
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	code := Run(context.Background(), []string{"--project-path", projectRoot, "skills", "list"}, &stdout, &stderr)
+
+	if code != 0 {
+		t.Fatalf("exit code mismatch: %d stdout=%s stderr=%s", code, stdout.String(), stderr.String())
+	}
+	if executedCorePath != expectedCorePath {
+		t.Fatalf("core path mismatch: %s", executedCorePath)
+	}
+	if executedProjectRoot != projectRoot {
+		t.Fatalf("project root mismatch: %s", executedProjectRoot)
+	}
+	expectedArgs := []string{"skills", "list", "--project-path", projectRoot}
+	if strings.Join(executedArgs, "\n") != strings.Join(expectedArgs, "\n") {
+		t.Fatalf("args mismatch: %#v", executedArgs)
 	}
 }
 
@@ -784,6 +840,27 @@ func createUnityProject(t *testing.T, projectRoot string) {
 	); err != nil {
 		t.Fatalf("failed to write ProjectVersion.txt: %v", err)
 	}
+}
+
+func createBundledCorePlaceholder(t *testing.T, projectRoot string) string {
+	t.Helper()
+
+	packageRoot := filepath.Join(projectRoot, "Packages", "src")
+	if err := os.MkdirAll(packageRoot, 0o755); err != nil {
+		t.Fatalf("failed to create package root: %v", err)
+	}
+	manifest := `{"name":"io.github.hatayama.uloopmcp"}`
+	if err := os.WriteFile(filepath.Join(packageRoot, "package.json"), []byte(manifest), 0o644); err != nil {
+		t.Fatalf("failed to write package manifest: %v", err)
+	}
+	corePath := filepath.Join(packageRoot, "Cli~", "Core~", "dist", runtime.GOOS+"-"+runtime.GOARCH, coreBinaryName())
+	if err := os.MkdirAll(filepath.Dir(corePath), 0o755); err != nil {
+		t.Fatalf("failed to create bundled core directory: %v", err)
+	}
+	if err := os.WriteFile(corePath, []byte("placeholder"), 0o755); err != nil {
+		t.Fatalf("failed to write bundled core placeholder: %v", err)
+	}
+	return corePath
 }
 
 func createToolCache(t *testing.T, projectRoot string) {

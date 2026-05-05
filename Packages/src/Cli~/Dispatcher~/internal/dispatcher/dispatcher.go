@@ -36,6 +36,8 @@ var excludedProjectSearchDirs = map[string]bool{
 	"obj":          true,
 }
 
+var execCoreForDispatch = execProjectLocal
+
 func Run(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer) int {
 	if isVersionRequest(args) {
 		writeLine(stdout, dispatchercontract.Current.DispatcherVersion)
@@ -75,6 +77,10 @@ func Run(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer)
 		printLaunchHelp(stdout)
 		return 0
 	}
+	if isSkillsHelpRequest(remainingArgs) {
+		printSkillsHelp(stdout)
+		return 0
+	}
 	if err := validateProjectResolutionArgs(remainingArgs, explicitProjectPath); err != nil {
 		writeError(stderr, argumentError(err.Error(), commandName(remainingArgs)))
 		return 1
@@ -96,12 +102,23 @@ func Run(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer)
 		if isLaunchCommand(remainingArgs) {
 			return runLaunchBootstrap(ctx, remainingArgs[1:], explicitProjectPath, projectRoot, stdout, stderr)
 		}
+		if isSkillsCommand(remainingArgs) {
+			bundledCorePath, err := findBundledCorePath(projectRoot)
+			if err != nil {
+				writeError(stderr, internalError(err.Error(), projectRoot))
+				return 1
+			}
+			if bundledCorePath != "" {
+				forwardedArgs := forwardedProjectLocalArgs(remainingArgs, explicitProjectPath, projectRoot)
+				return execCoreForDispatch(ctx, bundledCorePath, forwardedArgs, projectRoot, stderr)
+			}
+		}
 		writeError(stderr, projectLocalCLIMissingError(localPath, projectRoot, commandName(remainingArgs)))
 		return 1
 	}
 
 	forwardedArgs := forwardedProjectLocalArgs(remainingArgs, explicitProjectPath, projectRoot)
-	return execProjectLocal(ctx, localPath, forwardedArgs, projectRoot, stderr)
+	return execCoreForDispatch(ctx, localPath, forwardedArgs, projectRoot, stderr)
 }
 
 func validateProjectResolutionArgs(args []string, explicitProjectPath string) error {
