@@ -1,4 +1,4 @@
-# uLoopMCP Unity Editor-Side Architecture
+# Unity CLI Loop Unity Editor-Side Architecture
 
 ## 1. Overview
 
@@ -125,7 +125,7 @@ Content-Length: 120
   "id": 1647834567890,
   "method": "ping",
   "params": {
-    "Message": "Hello Unity MCP!"
+    "Message": "Hello Unity CLI Loop!"
   }
 }
 ```
@@ -136,7 +136,7 @@ Content-Length: 120
   "jsonrpc": "2.0",
   "id": 1647834567890,
   "result": {
-    "Message": "Unity MCP Bridge received: Hello Unity MCP!",
+    "Message": "Unity CLI Loop bridge received: Hello Unity CLI Loop!",
     "ExecutionTimeMs": 5
   }
 }
@@ -162,7 +162,7 @@ Content-Length: 120
 #### Connection Lifecycle
 
 1. **Initial Connection**
-   - TypeScript UnityClient connects to Unity McpBridgeServer
+   - `uloop` CLI connects to Unity `McpBridgeServer`
    - TCP socket established on localhost:8700
    - Connection test with ping command
 
@@ -195,8 +195,8 @@ Its primary responsibilities are:
 2.  **Executing Unity Operations**: Processes received tool requests to perform actions within the Unity Editor, such as compiling the project, running tests, or retrieving logs.
 3.  **Security Management**: Validates and controls tool execution through `McpSecurityChecker` to prevent unauthorized operations.
 4.  **Session Management**: Maintains server session state through `McpSessionManager`.
-5.  **Providing a User Interface (`McpEditorWindow`)**: Offers a GUI within the Unity Editor for developers to manage and monitor the MCP server.
-6.  **Managing Configuration**: Handles the setup of `mcp.json` files required by LLM tools like Cursor, Claude, and VSCode.
+5.  **Providing a User Interface (`McpEditorWindow`)**: Offers a GUI within the Unity Editor for developers to manage the CLI setup, skills, security settings, and project IPC server state.
+6.  **Managing Configuration**: Persists Unity CLI Loop settings and skill installation state for supported AI tools.
 
 ## 2. Core Architectural Principles
 
@@ -215,8 +215,8 @@ The system is centered around **Domain-Driven Design** integrated **UseCase + To
 - **Unified Service Results**: All services return results via `ServiceResult<T>`
 - **Examples**: `CompilationExecutionService`, `LogRetrievalService`, `TestExecutionService`
 
-#### Tool Layer (MCP Interface)
-- **`IUnityTool`**: Common interface for all tools (MCP connection point)
+#### Tool Layer (CLI Command Interface)
+- **`IUnityTool`**: Common interface for all tools exposed through the CLI command dispatcher
 - **`AbstractUnityTool<TSchema, TResponse>`**: Provides type-safe handling of parameters and responses
 - **`McpToolAttribute`**: Attribute for automatic tool registration
 - **Tool Implementation**: Each tool calls UseCases to execute business logic
@@ -378,8 +378,8 @@ This design eliminates inconsistencies between the server and client and provide
 - **Single Responsibility Principle (SRP)**: Each class has a well-defined responsibility.
     - `McpBridgeServer`: Handles raw TCP communication.
     - `McpServerController`: Manages the server's lifecycle and state across domain reloads.
-    - `McpConfigRepository`: Handles file I/O for configuration.
-    - `McpConfigService`: Implements the business logic for configuration.
+    - `McpEditorSettings`: Handles Editor window preference persistence.
+    - `ToolSkillSynchronizer`: Handles skill installation file updates.
     - `JsonRpcProcessor`: Deals exclusively with parsing and formatting JSON-RPC 2.0 messages.
     - **UI Layer Examples**:
         - `McpEditorModel`: Manages application state and business logic only.
@@ -398,7 +398,7 @@ The UI layer implements a sophisticated **MVP (Model-View-Presenter) + Helper Pa
 - **Helper Classes**: Specialized components that handle specific aspects of functionality:
   - Event management (`McpEditorWindowEventHandler`)
   - Server operations (`McpServerOperations`)
-  - Configuration services (`McpConfigServiceFactory`)
+  - Skill installation services (`ToolSkillSynchronizer`)
 
 #### Benefits of This Architecture
 1. **Separation of Concerns**: Each component has a single, clear responsibility
@@ -468,7 +468,7 @@ Several UseCases and Tools are subject to security restrictions and can be disab
 - **`McpServerShutdownUseCase`**: Manages proper server shutdown processing
 - **`DomainReloadRecoveryUseCase`**: Completely orchestrates state management before/after domain reloads
 
-These UseCases are not directly exposed as MCP Tools but are called internally by `McpServerController` to manage the system lifecycle.
+These UseCases are not directly exposed as CLI tools but are called internally by `McpServerController` to manage the system lifecycle.
 
 ## 4. Key Components (Directory Breakdown)
 
@@ -530,10 +530,12 @@ This MVP + Helper pattern provides:
 - **Reduced Complexity**: The main Presenter went from 1247 lines to 503 lines (59% reduction) through proper responsibility distribution
 
 ### `/Config`
-Manages the creation and modification of `mcp.json` configuration files.
-- **`UnityMcpPathResolver.cs`**: A utility to find the correct path for configuration files for different editors (Cursor, VSCode, etc.).
-- **`McpConfigRepository.cs`**: Handles the direct reading and writing of the `mcp.json` file.
-- **`McpConfigService.cs`**: Contains the logic for auto-configuring the `mcp.json` file with the correct command, arguments, and environment variables based on the user's settings in the `McpEditorWindow`.
+Manages Unity CLI Loop Editor settings, tool access settings, skill installation, and project path resolution.
+- **`McpEditorSettings.cs`**: Persists Editor window state and setup preferences.
+- **`ULoopSettings.cs`**: Persists CLI-related setup and security-adjacent settings.
+- **`ToolSettings.cs`**: Stores per-tool access settings used by the security layer.
+- **`ToolSkillSynchronizer.cs`**: Installs generated skill files into supported AI tool directories.
+- **`UnityMcpPathResolver.cs`**: Resolves the Unity project root and package paths. The class name is historical.
 
 ### `/Tools`
 Contains higher-level utilities that wrap core Unity Editor functionality.
@@ -548,7 +550,7 @@ Contains higher-level utilities that wrap core Unity Editor functionality.
 Contains low-level, general-purpose helper classes.
 - **`MainThreadSwitcher.cs`**: A crucial utility that provides an `awaitable` object to switch execution from a background thread (like the TCP server's) back to Unity's main thread. This is essential because most Unity APIs can only be called from the main thread.
 - **`EditorDelay.cs`**: A custom, `async/await`-compatible implementation of a frame-based delay, useful for waiting a few frames for the Editor to reach a stable state, especially after domain reloads.
-- **`McpLogger.cs`**: A simple, unified logging wrapper to prefix all package-related logs with `[uLoopMCP]`.
+- **`VibeLogger.cs`**: AI-friendly structured logger for Unity CLI Loop diagnostics.
 
 ## 5. Key Workflows
 
@@ -556,8 +558,8 @@ Contains low-level, general-purpose helper classes.
 
 ```mermaid
 sequenceDiagram
-    box TypeScript CLIENT
-    participant TS as TypeScript Client<br/>unity-client.ts
+    box CLI CLIENT
+    participant CLI as uloop CLI
     end
     
     box Unity TCP SERVER
@@ -572,7 +574,7 @@ sequenceDiagram
     participant AS as Application Service<br/>*Service.cs
     end
 
-    TS->>MB: JSON String
+    CLI->>MB: JSON String
     MB->>JP: ProcessRequest(json)
     JP->>JP: Deserialize to JsonRpcRequest
     JP->>UA: ExecuteToolAsync(name, params)
@@ -598,7 +600,7 @@ sequenceDiagram
     UA-->>JP: Response
     JP->>JP: Serialize to JSON
     JP-->>MB: JSON Response
-    MB-->>TS: Send Response
+    MB-->>CLI: Send Response
 ```
 
 ### 5.2. UI Interaction Flow (MVP + Helper Pattern)
@@ -608,7 +610,7 @@ sequenceDiagram
 4.  **Complex Operations**: For complex operations (server start/stop, validation), Presenter delegates to specialized helper classes:
     - `McpServerOperations` for server-related operations
     - `McpEditorWindowEventHandler` for event management
-    - `McpConfigServiceFactory` for configuration operations
+    - `ToolSkillSynchronizer` for skill installation operations
 5.  **View Data Preparation**: Model state is packaged into `McpEditorWindowViewData` transfer objects.
 6.  **UI Rendering**: `McpEditorWindowView` receives the transfer objects and renders the interface.
 7.  **Event Propagation**: `McpEditorWindowEventHandler` manages Unity Editor events and updates the Model accordingly.

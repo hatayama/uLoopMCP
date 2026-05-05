@@ -674,7 +674,7 @@ namespace io.github.hatayama.UnityCliLoop
             {
                 // Don't suppress this exception - corrupted settings should be reported
                 throw new InvalidOperationException(
-                    $"Failed to load MCP Editor settings from: {SettingsFilePath}. Settings file may be corrupted.", ex);
+                    $"Failed to load Unity CLI Loop Editor settings from: {SettingsFilePath}. Settings file may be corrupted.", ex);
             }
         }
 
