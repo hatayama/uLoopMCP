@@ -15,18 +15,17 @@ import (
 )
 
 const (
-	launchCommandName        = "launch"
-	launchPathPollInterval   = 500 * time.Millisecond
-	launchCoreReadyTimeout   = 180 * time.Second
-	launchReadinessTimeout   = 180 * time.Second
-	launchReadinessPoll      = 1 * time.Second
-	launchProbeTimeout       = 5 * time.Second
-	launchLockfileTimeout    = 5 * time.Second
-	projectVersionFilePath   = "ProjectSettings/ProjectVersion.txt"
-	recoveryDirectoryPath    = "Assets/_Recovery"
-	launchTempDirectoryName  = "Temp"
-	unityLockfileName        = "UnityLockfile"
-	unsupportedBootstrapFlag = "requires project-local uloop-core and cannot run before the core is generated"
+	launchCommandName       = "launch"
+	launchPathPollInterval  = 500 * time.Millisecond
+	launchCoreReadyTimeout  = 180 * time.Second
+	launchReadinessTimeout  = 180 * time.Second
+	launchReadinessPoll     = 1 * time.Second
+	launchProbeTimeout      = 5 * time.Second
+	launchLockfileTimeout   = 5 * time.Second
+	projectVersionFilePath  = "ProjectSettings/ProjectVersion.txt"
+	recoveryDirectoryPath   = "Assets/_Recovery"
+	launchTempDirectoryName = "Temp"
+	unityLockfileName       = "UnityLockfile"
 )
 
 var editorVersionPattern = regexp.MustCompile(`(?m)^m_EditorVersion:\s*(.+)$`)
@@ -58,14 +57,6 @@ func runLaunchBootstrap(ctx context.Context, args []string, explicitProjectPath 
 		writeError(stderr, argumentError(err.Error(), launchCommandName))
 		return 1
 	}
-	if options.quit {
-		writeError(stderr, argumentError("--quit "+unsupportedBootstrapFlag, launchCommandName))
-		return 1
-	}
-	if options.restart {
-		writeError(stderr, argumentError("--restart "+unsupportedBootstrapFlag, launchCommandName))
-		return 1
-	}
 
 	if options.deleteRecovery {
 		if err := os.RemoveAll(filepath.Join(projectRoot, recoveryDirectoryPath)); err != nil {
@@ -80,8 +71,23 @@ func runLaunchBootstrap(ctx context.Context, args []string, explicitProjectPath 
 		return 1
 	}
 	if runningProcess != nil {
-		writeError(stderr, activeUnityWithoutProjectLocalCoreError(runningProcess.pid, projectLocalPath(projectRoot), projectRoot))
-		return 1
+		if !options.restart && !options.quit {
+			_ = focusUnityProcessForLaunch(ctx, runningProcess.pid)
+			writeFormat(stdout, "Unity is already running for %s (PID: %d)\n", projectRoot, runningProcess.pid)
+			return 0
+		}
+		if err := killUnityProcessForLaunch(runningProcess.pid); err != nil {
+			writeError(stderr, internalError(err.Error(), projectRoot))
+			return 1
+		}
+		if options.quit {
+			writeFormat(stdout, "Unity process stopped (PID: %d)\n", runningProcess.pid)
+			return 0
+		}
+	}
+	if options.quit {
+		writeLine(stdout, "No Unity process is running for this project.")
+		return 0
 	}
 
 	removedStaleTemp, err := cleanStaleUnityTemp(projectRoot)

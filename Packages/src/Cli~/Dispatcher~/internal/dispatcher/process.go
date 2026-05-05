@@ -3,6 +3,7 @@ package dispatcher
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
@@ -18,6 +19,8 @@ var (
 	projectPathFlagPattern        = regexp.MustCompile(`(?i)-projectpath(?:=|\s+)(.+)$`)
 	nextUnityFlagPattern          = regexp.MustCompile(`\s-[A-Za-z][A-Za-z0-9-]*(?:=|\s|$)`)
 	listUnityProcessesForLaunch   = listUnityProcesses
+	focusUnityProcessForLaunch    = focusUnityProcess
+	killUnityProcessForLaunch     = killUnityProcess
 )
 
 type unityProcess struct {
@@ -188,4 +191,60 @@ func normalizeComparablePath(path string) (string, error) {
 		return "", err
 	}
 	return strings.ToLower(filepath.ToSlash(filepath.Clean(absolutePath))), nil
+}
+
+func focusUnityProcess(ctx context.Context, pid int) error {
+	switch runtime.GOOS {
+	case "darwin":
+		return focusUnityProcessMac(ctx, pid)
+	case "windows":
+		return focusUnityProcessWindows(ctx, pid)
+	default:
+		return fmt.Errorf("focus-window is not supported on %s", runtime.GOOS)
+	}
+}
+
+func focusUnityProcessMac(ctx context.Context, pid int) error {
+	script := fmt.Sprintf(`tell application "System Events" to set frontmost of (first process whose unix id is %d) to true`, pid)
+	return exec.CommandContext(ctx, "osascript", "-e", script).Run()
+}
+
+func focusUnityProcessWindows(ctx context.Context, pid int) error {
+	script := buildFocusUnityProcessWindowsScript(pid)
+	return exec.CommandContext(ctx, windowsPowerShellCommand, "-NoProfile", "-Command", script).Run()
+}
+
+func buildFocusUnityProcessWindowsScript(pid int) string {
+	addTypeLines := []string{
+		"Add-Type -TypeDefinition @\"",
+		"using System;",
+		"using System.Runtime.InteropServices;",
+		"public static class Win32Interop {",
+		"  [DllImport(\"user32.dll\")] public static extern bool SetForegroundWindow(IntPtr hWnd);",
+		"  [DllImport(\"user32.dll\")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);",
+		"}",
+		"\"@",
+	}
+	scriptLines := []string{
+		"$ErrorActionPreference = 'Stop'",
+	}
+	scriptLines = append(scriptLines, addTypeLines...)
+	scriptLines = append(scriptLines,
+		fmt.Sprintf("try { $process = Get-Process -Id %d -ErrorAction Stop } catch { throw 'Unity process was not found: %d' }", pid, pid),
+		"$handle = $process.MainWindowHandle",
+		fmt.Sprintf("if ($handle -eq 0) { throw 'Unity process has no main window handle: %d' }", pid),
+		"$shown = [Win32Interop]::ShowWindowAsync($handle, 9)",
+		"if (-not $shown) { throw 'Failed to show Unity window' }",
+		"$focused = [Win32Interop]::SetForegroundWindow($handle)",
+		"if (-not $focused) { throw 'Failed to focus Unity window' }",
+	)
+	return strings.Join(scriptLines, "\n")
+}
+
+func killUnityProcess(pid int) error {
+	process, err := os.FindProcess(pid)
+	if err != nil {
+		return err
+	}
+	return process.Kill()
 }

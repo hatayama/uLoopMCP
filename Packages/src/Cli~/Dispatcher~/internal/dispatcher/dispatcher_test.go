@@ -165,8 +165,8 @@ func TestRunLaunchBootstrapCleansStaleTempBeforeResolvingUnity(t *testing.T) {
 	}
 }
 
-func TestRunLaunchBootstrapKeepsTempWhenUnityIsRunning(t *testing.T) {
-	// Verifies that bootstrap launch does not delete Temp while the same Unity project is active.
+func TestRunLaunchBootstrapFocusesRunningUnityWithoutDeletingTemp(t *testing.T) {
+	// Verifies that bootstrap launch preserves the existing lifecycle shortcut for an active Unity process.
 	projectRoot := t.TempDir()
 	createUnityProject(t, projectRoot)
 	tempPath := filepath.Join(projectRoot, launchTempDirectoryName)
@@ -183,28 +183,36 @@ func TestRunLaunchBootstrapKeepsTempWhenUnityIsRunning(t *testing.T) {
 	t.Cleanup(func() {
 		listUnityProcessesForLaunch = previousList
 	})
+	focusedPID := 0
+	previousFocus := focusUnityProcessForLaunch
+	focusUnityProcessForLaunch = func(_ context.Context, pid int) error {
+		focusedPID = pid
+		return nil
+	}
+	t.Cleanup(func() {
+		focusUnityProcessForLaunch = previousFocus
+	})
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
 	code := Run(context.Background(), []string{"--project-path", projectRoot, "launch"}, &stdout, &stderr)
 
-	if code != 1 {
+	if code != 0 {
 		t.Fatalf("exit code mismatch: %d stdout=%s stderr=%s", code, stdout.String(), stderr.String())
 	}
 	if _, err := os.Stat(tempPath); err != nil {
 		t.Fatalf("Temp should remain while Unity is running: %v", err)
 	}
-	var envelope cliErrorEnvelope
-	if err := json.Unmarshal(stderr.Bytes(), &envelope); err != nil {
-		t.Fatalf("stderr is not valid JSON: %v\n%s", err, stderr.String())
+	if focusedPID != 123 {
+		t.Fatalf("focused PID mismatch: %d", focusedPID)
 	}
-	if envelope.Error.ErrorCode != errorCodeProjectLocalCLIMissing {
-		t.Fatalf("error code mismatch: %#v", envelope.Error)
+	if !strings.Contains(stdout.String(), "Unity is already running") {
+		t.Fatalf("stdout should report running Unity: %s", stdout.String())
 	}
 }
 
-func TestRunLaunchQuitWithoutProjectLocalCoreDoesNotOpenUnity(t *testing.T) {
-	// Verifies that bootstrap launch rejects quit instead of silently starting Unity.
+func TestRunLaunchQuitWithoutProjectLocalCoreReturnsSuccessWhenUnityIsNotRunning(t *testing.T) {
+	// Verifies that bootstrap quit preserves the core launch no-running-process contract.
 	projectRoot := t.TempDir()
 	createUnityProject(t, projectRoot)
 	var stdout bytes.Buffer
@@ -212,14 +220,86 @@ func TestRunLaunchQuitWithoutProjectLocalCoreDoesNotOpenUnity(t *testing.T) {
 
 	code := Run(context.Background(), []string{"--project-path", projectRoot, "launch", "--quit"}, &stdout, &stderr)
 
+	if code != 0 {
+		t.Fatalf("exit code mismatch: %d stdout=%s stderr=%s", code, stdout.String(), stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "No Unity process is running") {
+		t.Fatalf("stdout should report no running Unity: %s", stdout.String())
+	}
+}
+
+func TestRunLaunchQuitWithoutProjectLocalCoreStopsRunningUnity(t *testing.T) {
+	// Verifies that bootstrap quit can stop an active Unity process without project-local core.
+	projectRoot := t.TempDir()
+	createUnityProject(t, projectRoot)
+	previousList := listUnityProcessesForLaunch
+	listUnityProcessesForLaunch = func(context.Context) ([]unityProcess, error) {
+		return []unityProcess{{pid: 123, projectPath: projectRoot}}, nil
+	}
+	t.Cleanup(func() {
+		listUnityProcessesForLaunch = previousList
+	})
+	killedPID := 0
+	previousKill := killUnityProcessForLaunch
+	killUnityProcessForLaunch = func(pid int) error {
+		killedPID = pid
+		return nil
+	}
+	t.Cleanup(func() {
+		killUnityProcessForLaunch = previousKill
+	})
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	code := Run(context.Background(), []string{"--project-path", projectRoot, "launch", "--quit"}, &stdout, &stderr)
+
+	if code != 0 {
+		t.Fatalf("exit code mismatch: %d stdout=%s stderr=%s", code, stdout.String(), stderr.String())
+	}
+	if killedPID != 123 {
+		t.Fatalf("killed PID mismatch: %d", killedPID)
+	}
+	if !strings.Contains(stdout.String(), "Unity process stopped") {
+		t.Fatalf("stdout should report stopped Unity: %s", stdout.String())
+	}
+}
+
+func TestRunLaunchRestartWithoutProjectLocalCoreStopsRunningUnityBeforeLaunch(t *testing.T) {
+	// Verifies that bootstrap restart stops Unity before continuing with launch bootstrap.
+	projectRoot := t.TempDir()
+	createUnityProject(t, projectRoot)
+	previousList := listUnityProcessesForLaunch
+	listUnityProcessesForLaunch = func(context.Context) ([]unityProcess, error) {
+		return []unityProcess{{pid: 123, projectPath: projectRoot}}, nil
+	}
+	t.Cleanup(func() {
+		listUnityProcessesForLaunch = previousList
+	})
+	killedPID := 0
+	previousKill := killUnityProcessForLaunch
+	killUnityProcessForLaunch = func(pid int) error {
+		killedPID = pid
+		return nil
+	}
+	t.Cleanup(func() {
+		killUnityProcessForLaunch = previousKill
+	})
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	code := Run(context.Background(), []string{"--project-path", projectRoot, "launch", "--restart"}, &stdout, &stderr)
+
 	if code != 1 {
 		t.Fatalf("exit code mismatch: %d stdout=%s stderr=%s", code, stdout.String(), stderr.String())
+	}
+	if killedPID != 123 {
+		t.Fatalf("killed PID mismatch: %d", killedPID)
 	}
 	var envelope cliErrorEnvelope
 	if err := json.Unmarshal(stderr.Bytes(), &envelope); err != nil {
 		t.Fatalf("stderr is not valid JSON: %v\n%s", err, stderr.String())
 	}
-	if envelope.Error.ErrorCode != errorCodeInvalidArgument {
+	if envelope.Error.ErrorCode != errorCodeInternalError {
 		t.Fatalf("error code mismatch: %#v", envelope.Error)
 	}
 }
