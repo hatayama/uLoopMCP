@@ -288,21 +288,6 @@ func loadDefaultCompletionCache() (cachedTools, bool) {
 	return cache, true
 }
 
-func detectShell() string {
-	if runtime.GOOS == "windows" {
-		return "powershell"
-	}
-
-	shellPath := os.Getenv("SHELL")
-	if strings.Contains(shellPath, "zsh") {
-		return "zsh"
-	}
-	if strings.Contains(shellPath, "bash") {
-		return "bash"
-	}
-	return ""
-}
-
 func getShellConfigPath(shellName string) (string, error) {
 	home, err := getHomeDirectoryForShell(shellName, runtime.GOOS, getHomeDirectory, os.UserHomeDir)
 	if err != nil {

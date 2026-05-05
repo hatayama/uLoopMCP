@@ -37,6 +37,25 @@ func TestWaitForLaunchReadyProbesUnityServer(t *testing.T) {
 	assertLaunchReadyProbeServed(t, served)
 }
 
+func TestWaitForLaunchReadyUsesVersionProbeWhenToolCacheIsMissing(t *testing.T) {
+	// Verifies that unknown core capabilities fall back to the always-supported version probe.
+	projectRoot := t.TempDir()
+	createUnityProject(t, projectRoot)
+	listener, endpointPath := listenOnProjectEndpoint(t, projectRoot)
+	defer func() {
+		_ = listener.Close()
+		_ = os.Remove(endpointPath)
+	}()
+	served := make(chan error, 1)
+	go serveLaunchReadyProbe(listener, "get-version", map[string]any{"version": "test"}, served)
+
+	if err := waitForLaunchReady(context.Background(), projectRoot); err != nil {
+		t.Fatalf("waitForLaunchReady failed: %v", err)
+	}
+
+	assertLaunchReadyProbeServed(t, served)
+}
+
 func TestWaitForLaunchReadyUsesDynamicCodeProbeWhenToolExists(t *testing.T) {
 	// Verifies that first-run launch mirrors core launch readiness when dynamic code is available.
 	projectRoot := t.TempDir()

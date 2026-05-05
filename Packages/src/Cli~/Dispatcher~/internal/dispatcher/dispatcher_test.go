@@ -538,6 +538,22 @@ func TestFindUnityProjectRootWithinFindsNestedLaunchProject(t *testing.T) {
 	}
 }
 
+func TestFindUnityProjectRootWithinRejectsAmbiguousNestedProjects(t *testing.T) {
+	// Verifies that global launch does not silently choose one nested Unity project.
+	workspaceRoot := t.TempDir()
+	createUnityProject(t, filepath.Join(workspaceRoot, "first", "Game"))
+	createUnityProject(t, filepath.Join(workspaceRoot, "second", "Game"))
+
+	_, err := resolveProjectRoot(workspaceRoot, "", []string{"launch"})
+
+	if err == nil {
+		t.Fatal("expected ambiguous project error")
+	}
+	if !strings.Contains(err.Error(), "--project-path") {
+		t.Fatalf("error should ask for --project-path: %v", err)
+	}
+}
+
 func TestResolveProjectRootForLaunchUsesPositionalProjectPath(t *testing.T) {
 	// Verifies that launch can target a project outside the current directory before core dispatch.
 	workspaceRoot := t.TempDir()
@@ -742,6 +758,31 @@ func TestRunCompletionListsNoUpdateOptions(t *testing.T) {
 	}
 }
 
+func TestDetectShellForPlatformPrefersPwshOnWindows(t *testing.T) {
+	// Verifies that Windows completion install targets PowerShell 7 when it is available.
+	shell := detectShellForPlatform("windows", "", func(name string) (string, error) {
+		if name == "pwsh" {
+			return filepath.Join("bin", "pwsh"), nil
+		}
+		return "", os.ErrNotExist
+	})
+
+	if shell != "pwsh" {
+		t.Fatalf("shell mismatch: %s", shell)
+	}
+}
+
+func TestDetectShellForPlatformHonorsWindowsPowerShellEnvironment(t *testing.T) {
+	// Verifies that Windows PowerShell is not mistaken for a pwsh profile.
+	shell := detectShellForPlatform("windows", `C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe`, func(string) (string, error) {
+		return "", os.ErrNotExist
+	})
+
+	if shell != "powershell" {
+		t.Fatalf("shell mismatch: %s", shell)
+	}
+}
+
 func TestRunLauncherPrintsHelpAfterProjectPathOption(t *testing.T) {
 	// Verifies that dispatcher help handles --project-path before dispatching to project-local core.
 	var stdout bytes.Buffer
@@ -843,11 +884,11 @@ internal: true
 
 # internal
 `)
-	writeProjectManifest(t, projectRoot, `{
-  "dependencies": {
-    "com.example.local": "file:`+localPackageRoot+`"
-  }
-}`)
+	writeProjectManifestData(t, projectRoot, map[string]any{
+		"dependencies": map[string]string{
+			"com.example.local": "file:" + localPackageRoot,
+		},
+	})
 	writeToolCache(t, projectRoot, `{
   "version": "test",
   "tools": [
@@ -876,6 +917,28 @@ internal: true
 	}
 }
 
+func TestResolveLocalDependencyPathPreservesUNCPath(t *testing.T) {
+	// Verifies that local package discovery does not corrupt UNC-style file URLs.
+	projectRoot := filepath.Join("workspace", "Project")
+
+	resolved := resolveLocalDependencyPath("file://server/share/Package", projectRoot)
+
+	if resolved != "//server/share/Package" {
+		t.Fatalf("UNC path mismatch: %s", resolved)
+	}
+}
+
+func TestResolveLocalDependencyPathAcceptsTripleSlashAbsolutePath(t *testing.T) {
+	// Verifies that file URLs with POSIX absolute paths keep resolving as absolute paths.
+	projectRoot := filepath.Join("workspace", "Project")
+
+	resolved := resolveLocalDependencyPath("file:///Applications/Package", projectRoot)
+
+	if resolved != "/Applications/Package" {
+		t.Fatalf("absolute path mismatch: %s", resolved)
+	}
+}
+
 func TestReadInternalSkillToolNameDerivesMissingNameFromSkillDirectory(t *testing.T) {
 	// Verifies that legacy internal skills without frontmatter names still hide their cached tools.
 	projectRoot := t.TempDir()
@@ -894,6 +957,63 @@ internal: true
 	}
 	if toolName != "derived-internal" {
 		t.Fatalf("tool name mismatch: %s", toolName)
+	}
+}
+
+func TestReadInternalSkillToolNameAcceptsSingleQuotedFrontmatter(t *testing.T) {
+	// Verifies that YAML single-quoted frontmatter does not expose internal tools.
+	projectRoot := t.TempDir()
+	createSkill(t, projectRoot, "Assets/Editor/Secret/Skill", `---
+name: 'uloop-secret'
+internal: 'true'
+---
+
+# internal
+`)
+	skillDirectory := filepath.Join(projectRoot, "Assets/Editor/Secret/Skill")
+
+	toolName, ok := readInternalSkillToolName(skillDirectory)
+
+	if !ok {
+		t.Fatal("internal skill tool name was not discovered")
+	}
+	if toolName != "secret" {
+		t.Fatalf("tool name mismatch: %s", toolName)
+	}
+}
+
+func TestResolveExistingUnityExecutablePathReportsSearchedCandidates(t *testing.T) {
+	// Verifies that missing Unity installs fail before command execution with actionable paths.
+	missingPath := filepath.Join(t.TempDir(), "Unity")
+
+	_, err := resolveExistingUnityExecutablePath("9999.9.9f9", []string{missingPath})
+
+	if err == nil {
+		t.Fatal("expected missing Unity executable error")
+	}
+	if !strings.Contains(err.Error(), missingPath) {
+		t.Fatalf("error should include searched candidate: %v", err)
+	}
+}
+
+func TestUpdateCommandForDarwinDownloadsBeforeExecutingInstaller(t *testing.T) {
+	// Verifies that curl failures do not become successful empty shell executions.
+	commandName, args, err := updateCommandForOS("darwin")
+	if err != nil {
+		t.Fatalf("updateCommandForOS failed: %v", err)
+	}
+
+	if commandName != "sh" {
+		t.Fatalf("command mismatch: %s", commandName)
+	}
+	joinedArgs := strings.Join(args, " ")
+	for _, expected := range []string{"mktemp", "curl -fSL", "-o \"$tmp\"", "sh \"$tmp\"", "exit $ec"} {
+		if !strings.Contains(joinedArgs, expected) {
+			t.Fatalf("update command missing %q: %s", expected, joinedArgs)
+		}
+	}
+	if strings.Contains(joinedArgs, "curl -fsSL") || strings.Contains(joinedArgs, "| sh") {
+		t.Fatalf("update command still hides curl failures: %s", joinedArgs)
 	}
 }
 
@@ -998,6 +1118,16 @@ func writeProjectManifest(t *testing.T, projectRoot string, content string) {
 	if err := os.WriteFile(manifestPath, []byte(content), 0o644); err != nil {
 		t.Fatalf("failed to write project manifest: %v", err)
 	}
+}
+
+func writeProjectManifestData(t *testing.T, projectRoot string, data any) {
+	t.Helper()
+
+	content, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		t.Fatalf("failed to encode project manifest: %v", err)
+	}
+	writeProjectManifest(t, projectRoot, string(content))
 }
 
 func writeToolCache(t *testing.T, projectRoot string, content string) {

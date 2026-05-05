@@ -154,7 +154,7 @@ func sendLaunchReadyRequest(ctx context.Context, connection domain.Connection, m
 func isExecuteDynamicCodeAvailable(projectRoot string) bool {
 	cache, ok := loadCachedTools(projectRoot)
 	if !ok {
-		return true
+		return false
 	}
 	for _, tool := range cache.Tools {
 		if tool.Name == "execute-dynamic-code" {

@@ -97,7 +97,9 @@ func resolveLocalDependencyPath(dependencyValue string, projectRoot string) stri
 	if rawPath == "" {
 		return ""
 	}
-	rawPath = strings.TrimPrefix(rawPath, "//")
+	if strings.HasPrefix(rawPath, "///") {
+		rawPath = strings.TrimPrefix(rawPath, "//")
+	}
 	if filepath.IsAbs(rawPath) {
 		return rawPath
 	}

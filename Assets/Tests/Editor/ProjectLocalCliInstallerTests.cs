@@ -169,6 +169,11 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
         public void DetectCliOutput_WithRequiredDispatcherVersionFlag_ReturnsRequirement()
         {
             // Verifies that setup can query the bundled core for its required dispatcher version.
+            if (Application.platform == RuntimePlatform.WindowsEditor)
+            {
+                Assert.Ignore("This test uses a POSIX shell stub and is not executable on Windows.");
+            }
+
             string sourceBundlePath = Path.Combine(_temporaryRoot, "source-cli.cjs");
             File.WriteAllText(sourceBundlePath, BuildVersionScript("3.0.0-beta.1", "source"));
 

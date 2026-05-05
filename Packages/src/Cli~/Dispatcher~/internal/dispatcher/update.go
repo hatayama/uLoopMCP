@@ -55,7 +55,8 @@ func tryHandleUpdateRequest(ctx context.Context, args []string, stdout io.Writer
 func updateCommandForOS(goos string) (string, []string, error) {
 	switch goos {
 	case "darwin":
-		return "sh", []string{"-c", fmt.Sprintf("curl -fsSL %s | sh", shellQuote(installerScriptURL))}, nil
+		script := fmt.Sprintf(`tmp=$(mktemp) && curl -fSL %s -o "$tmp" && sh "$tmp"; ec=$?; rm -f "$tmp"; exit $ec`, shellQuote(installerScriptURL))
+		return "sh", []string{"-c", script}, nil
 	case "windows":
 		return windowsPowerShellCommand, []string{
 			"-NoProfile",

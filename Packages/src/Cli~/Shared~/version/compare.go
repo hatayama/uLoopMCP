@@ -39,9 +39,12 @@ func Compare(left string, right string) (int, bool) {
 func parseSemanticVersion(value string) (semanticVersion, bool) {
 	trimmed := trimVersionPrefix(value)
 	withoutBuildMetadata, _, _ := strings.Cut(trimmed, "+")
-	versionPart, prerelease, _ := strings.Cut(withoutBuildMetadata, "-")
+	versionPart, prerelease, hasPrerelease := strings.Cut(withoutBuildMetadata, "-")
 	parts := strings.Split(versionPart, ".")
 	if len(parts) != 3 {
+		return semanticVersion{}, false
+	}
+	if hasPrerelease && !isValidPrerelease(prerelease) {
 		return semanticVersion{}, false
 	}
 
@@ -78,11 +81,67 @@ func parseVersionPart(value string) (int, bool) {
 	if value == "" {
 		return 0, false
 	}
+	if hasLeadingZero(value) {
+		return 0, false
+	}
+	if !containsOnlyDigits(value) {
+		return 0, false
+	}
 	parsed, err := strconv.Atoi(value)
 	if err != nil {
 		return 0, false
 	}
 	return parsed, true
+}
+
+func isValidPrerelease(value string) bool {
+	if value == "" {
+		return false
+	}
+	for _, identifier := range strings.Split(value, ".") {
+		if identifier == "" {
+			return false
+		}
+		if !containsOnlyPrereleaseCharacters(identifier) {
+			return false
+		}
+		if containsOnlyDigits(identifier) && hasLeadingZero(identifier) {
+			return false
+		}
+	}
+	return true
+}
+
+func hasLeadingZero(value string) bool {
+	return len(value) > 1 && strings.HasPrefix(value, "0")
+}
+
+func containsOnlyDigits(value string) bool {
+	for _, character := range value {
+		if character < '0' || character > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+func containsOnlyPrereleaseCharacters(value string) bool {
+	for _, character := range value {
+		if character >= '0' && character <= '9' {
+			continue
+		}
+		if character >= 'A' && character <= 'Z' {
+			continue
+		}
+		if character >= 'a' && character <= 'z' {
+			continue
+		}
+		if character == '-' {
+			continue
+		}
+		return false
+	}
+	return true
 }
 
 func compareInt(left int, right int) int {

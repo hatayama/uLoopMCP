@@ -20,11 +20,6 @@
         },
         {
           "type": "json",
-          "path": "Cli~/Core~/contract.json",
-          "jsonpath": "$.minimumRequiredDispatcherVersion"
-        },
-        {
-          "type": "json",
           "path": "Cli~/Dispatcher~/contract.json",
           "jsonpath": "$.dispatcherVersion"
         },

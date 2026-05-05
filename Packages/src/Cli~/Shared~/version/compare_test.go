@@ -26,9 +26,20 @@ func TestIsLessThanHandlesPrereleaseVersions(t *testing.T) {
 
 func TestCompareRejectsInvalidVersion(t *testing.T) {
 	// Verifies that malformed dispatcher versions do not pass compatibility checks.
-	_, ok := Compare("not-a-version", "3.0.0-beta.1")
+	cases := []string{
+		"not-a-version",
+		"1.2.3-",
+		"1.2.3-alpha..1",
+		"01.2.3",
+		"1.02.3",
+		"1.2.03",
+		"1.2.3-alpha.01",
+	}
 
-	if ok {
-		t.Fatal("invalid version should not compare successfully")
+	for _, value := range cases {
+		_, ok := Compare(value, "3.0.0-beta.1")
+		if ok {
+			t.Fatalf("invalid version %q should not compare successfully", value)
+		}
 	}
 }
