@@ -92,6 +92,34 @@ func TestRunMissingProjectLocalCoreReportsStructuredError(t *testing.T) {
 	}
 }
 
+func TestRunProjectLocalCoreStatErrorReportsInternalError(t *testing.T) {
+	// Verifies that only a missing project-local core is reported as install-required.
+	projectRoot := t.TempDir()
+	createUnityProject(t, projectRoot)
+	localPath := projectLocalPath(projectRoot)
+	if err := os.MkdirAll(filepath.Dir(localPath), 0o755); err != nil {
+		t.Fatalf("failed to create project-local core directory: %v", err)
+	}
+	if err := os.Symlink(filepath.Base(localPath), localPath); err != nil {
+		t.Skipf("symlink unavailable: %v", err)
+	}
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	code := Run(context.Background(), []string{"--project-path", projectRoot, "list"}, &stdout, &stderr)
+
+	if code != 1 {
+		t.Fatalf("exit code mismatch: %d stdout=%s stderr=%s", code, stdout.String(), stderr.String())
+	}
+	var envelope cliErrorEnvelope
+	if err := json.Unmarshal(stderr.Bytes(), &envelope); err != nil {
+		t.Fatalf("stderr is not valid JSON: %v\n%s", err, stderr.String())
+	}
+	if envelope.Error.ErrorCode != errorCodeInternalError {
+		t.Fatalf("error code mismatch: %#v", envelope.Error)
+	}
+}
+
 func TestRunLaunchWithoutProjectLocalCoreUsesBootstrapLaunch(t *testing.T) {
 	// Verifies that first-run launch does not fail at the project-local core existence check.
 	projectRoot := t.TempDir()
@@ -153,6 +181,15 @@ func TestParseLaunchBootstrapOptionsAcceptsNegativeMaxDepth(t *testing.T) {
 	_, err := parseLaunchBootstrapOptions([]string{"--max-depth", "-1"})
 	if err != nil {
 		t.Fatalf("parseLaunchBootstrapOptions failed: %v", err)
+	}
+}
+
+func TestParseLaunchBootstrapOptionsRejectsEmptyPlatformValueForm(t *testing.T) {
+	// Verifies that bootstrap launch does not silently discard an empty platform value.
+	_, err := parseLaunchBootstrapOptions([]string{"--platform="})
+
+	if err == nil {
+		t.Fatal("empty platform value should fail")
 	}
 }
 
@@ -415,6 +452,27 @@ internal: true
 	}
 	if !containsCachedTool(cache, "compile") {
 		t.Fatalf("public tool was filtered: %#v", cache.Tools)
+	}
+}
+
+func TestReadInternalSkillToolNameDerivesMissingNameFromSkillDirectory(t *testing.T) {
+	// Verifies that legacy internal skills without frontmatter names still hide their cached tools.
+	projectRoot := t.TempDir()
+	createSkill(t, projectRoot, "Assets/Editor/uloop-derived-internal/Skill", `---
+internal: true
+---
+
+# internal
+`)
+	skillDirectory := filepath.Join(projectRoot, "Assets/Editor/uloop-derived-internal/Skill")
+
+	toolName, ok := readInternalSkillToolName(skillDirectory)
+
+	if !ok {
+		t.Fatal("internal skill tool name was not discovered")
+	}
+	if toolName != "derived-internal" {
+		t.Fatalf("tool name mismatch: %s", toolName)
 	}
 }
 

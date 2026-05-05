@@ -13,6 +13,7 @@ func TestIsLessThanHandlesPrereleaseVersions(t *testing.T) {
 		{left: "3.0.0-beta.1", right: "3.0.0-beta.1", expected: false},
 		{left: "3.0.0", right: "3.0.0-beta.1", expected: false},
 		{left: "v3.0.0-beta.0", right: "3.0.0-beta.1", expected: true},
+		{left: "V3.0.0-beta.0", right: "3.0.0-beta.1", expected: true},
 	}
 
 	for _, tt := range cases {

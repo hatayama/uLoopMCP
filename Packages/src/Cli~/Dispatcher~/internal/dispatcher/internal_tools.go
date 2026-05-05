@@ -125,6 +125,20 @@ func readInternalSkillToolName(skillDirectory string) (string, bool) {
 		return frontmatter[skillToolNameMarker], true
 	}
 	name := frontmatter[skillNameMarker]
+	if name == "" {
+		name = deriveSkillNameFromDirectory(skillDirectory)
+	}
+	return toolNameFromSkillName(name)
+}
+
+func deriveSkillNameFromDirectory(skillDirectory string) string {
+	if filepath.Base(skillDirectory) == skillDirectoryName {
+		return filepath.Base(filepath.Dir(skillDirectory))
+	}
+	return filepath.Base(skillDirectory)
+}
+
+func toolNameFromSkillName(name string) (string, bool) {
 	if strings.HasPrefix(name, uloopSkillPrefix) {
 		return strings.TrimPrefix(name, uloopSkillPrefix), true
 	}

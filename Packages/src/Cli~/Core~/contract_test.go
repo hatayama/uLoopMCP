@@ -8,24 +8,12 @@ import (
 
 func TestCoreContractProvidesRuntimeVersion(t *testing.T) {
 	// Verifies that the core binary owns its runtime version outside shared packages.
-	_, ok := version.Compare(Current.CoreVersion, Current.CoreVersion)
-	if !ok {
-		t.Fatalf("core version must be valid semver: %s", Current.CoreVersion)
-	}
+	requireValidContractVersion(t, "coreVersion", Current.CoreVersion)
 }
 
 func TestCoreContractProvidesDispatcherRequirement(t *testing.T) {
 	// Verifies that core owns the minimum dispatcher version needed to execute this binary.
-	if Current.MinimumRequiredDispatcherVersion == "" {
-		t.Fatal("minimum required dispatcher version must not be empty")
-	}
-	comparison, ok := version.Compare(Current.CoreVersion, Current.MinimumRequiredDispatcherVersion)
-	if !ok {
-		t.Fatalf("contract versions are not valid semver: %#v", Current)
-	}
-	if comparison < 0 {
-		t.Fatalf("core version %s must not be lower than required dispatcher version %s", Current.CoreVersion, Current.MinimumRequiredDispatcherVersion)
-	}
+	requireValidContractVersion(t, "minimumRequiredDispatcherVersion", Current.MinimumRequiredDispatcherVersion)
 }
 
 func TestCoreContractProvidesRequiredDispatcherVersionFlag(t *testing.T) {
@@ -39,5 +27,17 @@ func TestCoreContractProvidesDispatcherVersionEnvironment(t *testing.T) {
 	// Verifies that core declares the environment key it accepts from the dispatcher.
 	if Current.DispatcherVersionEnv != "ULOOP_DISPATCHER_VERSION" {
 		t.Fatalf("dispatcher version env mismatch: %s", Current.DispatcherVersionEnv)
+	}
+}
+
+func requireValidContractVersion(t *testing.T, label string, value string) {
+	t.Helper()
+
+	if value == "" {
+		t.Fatalf("%s must not be empty", label)
+	}
+	_, ok := version.Compare(value, value)
+	if !ok {
+		t.Fatalf("%s must be valid semver: %s", label, value)
 	}
 }

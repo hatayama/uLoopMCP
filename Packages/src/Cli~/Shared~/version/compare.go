@@ -37,7 +37,7 @@ func Compare(left string, right string) (int, bool) {
 }
 
 func parseSemanticVersion(value string) (semanticVersion, bool) {
-	trimmed := strings.TrimPrefix(strings.TrimSpace(value), "v")
+	trimmed := trimVersionPrefix(value)
 	withoutBuildMetadata, _, _ := strings.Cut(trimmed, "+")
 	versionPart, prerelease, _ := strings.Cut(withoutBuildMetadata, "-")
 	parts := strings.Split(versionPart, ".")
@@ -64,6 +64,14 @@ func parseSemanticVersion(value string) (semanticVersion, bool) {
 		patch:      patch,
 		prerelease: prerelease,
 	}, true
+}
+
+func trimVersionPrefix(value string) string {
+	trimmed := strings.TrimSpace(value)
+	if strings.HasPrefix(trimmed, "v") || strings.HasPrefix(trimmed, "V") {
+		return trimmed[1:]
+	}
+	return trimmed
 }
 
 func parseVersionPart(value string) (int, bool) {

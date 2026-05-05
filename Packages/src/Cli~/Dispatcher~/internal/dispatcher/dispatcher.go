@@ -83,7 +83,12 @@ func Run(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer)
 	}
 
 	localPath := projectLocalPath(projectRoot)
-	if _, err := os.Stat(localPath); err != nil {
+	exists, err := projectLocalCoreExists(localPath)
+	if err != nil {
+		writeError(stderr, internalError(err.Error(), projectRoot))
+		return 1
+	}
+	if !exists {
 		if isLaunchCommand(remainingArgs) {
 			return runLaunchBootstrap(ctx, remainingArgs[1:], projectRoot, stdout, stderr)
 		}
@@ -93,6 +98,17 @@ func Run(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer)
 
 	forwardedArgs := forwardedProjectLocalArgs(remainingArgs, explicitProjectPath, projectRoot)
 	return execProjectLocal(ctx, localPath, forwardedArgs, projectRoot, stderr)
+}
+
+func projectLocalCoreExists(localPath string) (bool, error) {
+	_, err := os.Stat(localPath)
+	if err == nil {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return false, err
 }
 
 func commandName(args []string) string {
