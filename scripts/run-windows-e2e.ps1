@@ -128,6 +128,35 @@ function Wait-UnityReady {
     throw "Unity did not become ready"
 }
 
+function Get-UnityProcessIdsForProject {
+    [int[]]$processIds = @()
+    [object[]]$processes = @(Get-CimInstance Win32_Process -Filter "Name = 'Unity.exe'" | Where-Object { $_.CommandLine })
+    foreach ($process in $processes) {
+        [string]$commandLine = $process.CommandLine
+        if ($commandLine.IndexOf($ResolvedProjectPath, [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
+            continue
+        }
+
+        $processIds += [int]$process.ProcessId
+    }
+
+    return $processIds
+}
+
+function Wait-UnityStopped {
+    for ([int]$attempt = 0; $attempt -lt 60; $attempt++) {
+        [int[]]$processIds = @(Get-UnityProcessIdsForProject)
+        if ($processIds.Count -eq 0) {
+            return
+        }
+
+        Start-Sleep -Seconds 1
+    }
+
+    [string]$remainingProcessIds = (@(Get-UnityProcessIdsForProject)) -join ", "
+    throw "Unity did not stop for ${ResolvedProjectPath}: PID $remainingProcessIds"
+}
+
 function Wait-PlayMode {
     for ([int]$attempt = 0; $attempt -lt 30; $attempt++) {
         [pscustomobject]$probe = Invoke-UloopCapture -CommandArguments @(
@@ -252,6 +281,7 @@ function Invoke-LaunchSmoke {
     }
 
     Invoke-UloopChecked -CommandArguments @("launch", "-q") | Out-Host
+    Wait-UnityStopped
     Invoke-UloopChecked -CommandArguments @("launch") | Out-Host
     Wait-UnityReady
     [pscustomobject]$result = Invoke-DynamicCode -Code 'return "windows-launch-smoke";'
@@ -261,9 +291,9 @@ function Invoke-LaunchSmoke {
 }
 
 function Invoke-CoreToolSmoke {
+    Ensure-UnityReady
     Invoke-UloopChecked -CommandArguments @("list") | Out-Null
     Invoke-UloopChecked -CommandArguments @("sync") | Out-Null
-    Ensure-UnityReady
     Invoke-UloopJsonChecked -CommandArguments @("hello-world") | Out-Null
     Invoke-UloopJsonChecked -CommandArguments @("focus-window") | Out-Null
     Invoke-UloopJsonChecked -CommandArguments @("clear-console") | Out-Null
