@@ -440,10 +440,10 @@ if ($null -ne $recordStopJson.OutputPath) {
 }
 
 if ($AutomatedInput) {
-    Write-Host "[5/8] Creating replay reference from recorded input..."
-    Invoke-ReplayToLog -LogPath $RecordingLogPath -InputPath $recordingInputPath
+    Write-Host "[5/8] Saving recording event log..."
+    Save-EventLog -Path $RecordingLogPath
 
-    Write-Host "[6/8] Replaying recorded input again via CLI..."
+    Write-Host "[6/8] Replaying recorded input via CLI..."
     Invoke-ReplayToLog -LogPath $ReplayLogPath -InputPath $recordingInputPath
 } else {
     Write-Host "[5/8] Saving recording event log..."
