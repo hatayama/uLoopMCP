@@ -4,7 +4,7 @@ paths: Packages/src/Cli~/**
 
 # uloop CLI
 
-The uloop CLI is the native Go command surface for communicating with Unity Editor. It is independent from the MCP server (`TypeScriptServer~`) and is not published to npm.
+The uloop CLI is the native Go command surface for communicating with Unity Editor. It is independent from the MCP server (`TypeScriptServer~`).
 
 ## Architecture
 
@@ -51,7 +51,7 @@ scripts/verify-native-cli-release-assets.sh
 
 The v3 CLI is released through GitHub Release assets built by `native-cli-publish.yml`.
 
-Do not add npm publish or npm version-check workflows for the v3 CLI. The v3 CLI is distributed through native GitHub Release assets, not npm.
+Do not add npm publish or npm version-check workflows for the v3 CLI.
 
 Expected release assets:
 
