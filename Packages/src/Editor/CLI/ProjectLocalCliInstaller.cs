@@ -95,7 +95,8 @@ namespace io.github.hatayama.UnityCliLoop
         {
             return Path.Combine(
                 McpConstants.PackageResolvedPath,
-                CliConstants.GO_CLI_PACKAGE_DIR_NAME,
+                CliConstants.CLI_PACKAGE_DIR_NAME,
+                CliConstants.GO_CLI_CORE_DIR_NAME,
                 CliConstants.DIST_DIR_NAME,
                 GetNativeCliPlatformDir(),
                 GetNativeCliFileName());

@@ -27,7 +27,9 @@ namespace io.github.hatayama.UnityCliLoop
         public const string RELEASE_TAG_PREFIX = "v";
         public const string SKILL_DIR_PREFIX = "uloop-";
         public const string SKILL_DIR_GLOB = "uloop-*";
-        public const string GO_CLI_PACKAGE_DIR_NAME = "GoCli~";
+        public const string CLI_PACKAGE_DIR_NAME = "Cli~";
+        public const string GO_CLI_CORE_DIR_NAME = "Core~";
+        public const string GO_CLI_DISPATCHER_DIR_NAME = "Dispatcher~";
         public const string DIST_DIR_NAME = "dist";
         public const string GLOBAL_UNIX_COMMAND_NAME = EXECUTABLE_NAME;
         public const string GLOBAL_WINDOWS_COMMAND_NAME = EXECUTABLE_NAME + ".exe";

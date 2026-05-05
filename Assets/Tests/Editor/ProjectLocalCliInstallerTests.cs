@@ -29,6 +29,18 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
         }
 
         [Test]
+        public void GetProjectCliBundlePath_UsesPackagedCoreBinary()
+        {
+            string result = ProjectLocalCliInstaller.GetProjectCliBundlePath();
+
+            Assert.That(result, Does.Contain(Path.Combine("Cli~", "Core~", "dist")));
+            string expectedFileName = Application.platform == RuntimePlatform.WindowsEditor
+                ? "uloop-core.exe"
+                : "uloop-core";
+            Assert.That(Path.GetFileName(result), Is.EqualTo(expectedFileName));
+        }
+
+        [Test]
         public void InstallProjectLocalCliFromBundle_CopiesNativeCli()
         {
             string sourceBundlePath = Path.Combine(_temporaryRoot, "source-cli");

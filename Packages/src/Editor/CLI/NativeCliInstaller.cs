@@ -235,7 +235,8 @@ namespace io.github.hatayama.UnityCliLoop
 
             return Path.Combine(
                 packageResolvedPath,
-                CliConstants.GO_CLI_PACKAGE_DIR_NAME,
+                CliConstants.CLI_PACKAGE_DIR_NAME,
+                CliConstants.GO_CLI_DISPATCHER_DIR_NAME,
                 CliConstants.DIST_DIR_NAME,
                 GetNativeCliPlatformDir(platform, architecture),
                 GetGlobalCliBundleFileName(platform));
@@ -991,7 +992,8 @@ namespace io.github.hatayama.UnityCliLoop
         private static bool ContainsPackagedDispatcherReference(string content)
         {
             string dispatcherDirectory = Path.Combine(
-                CliConstants.GO_CLI_PACKAGE_DIR_NAME,
+                CliConstants.CLI_PACKAGE_DIR_NAME,
+                CliConstants.GO_CLI_DISPATCHER_DIR_NAME,
                 CliConstants.DIST_DIR_NAME);
             return ContainsPathWithEitherSeparator(content, dispatcherDirectory)
                 && (ContainsIgnoreCase(content, CliConstants.GLOBAL_DISPATCHER_WINDOWS_BUNDLE_NAME)

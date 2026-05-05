@@ -78,7 +78,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests
 
             Assert.That(result, Is.EqualTo(Path.Combine(
                 "/package",
-                "GoCli~",
+                "Cli~",
+                "Dispatcher~",
                 "dist",
                 "darwin-arm64",
                 "uloop-dispatcher")));
@@ -95,7 +96,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests
 
             Assert.That(result, Is.EqualTo(Path.Combine(
                 "C:\\package",
-                "GoCli~",
+                "Cli~",
+                "Dispatcher~",
                 "dist",
                 "windows-amd64",
                 "uloop-dispatcher.exe")));
