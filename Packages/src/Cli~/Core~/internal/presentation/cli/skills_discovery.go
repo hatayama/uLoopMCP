@@ -224,6 +224,9 @@ func readInternalSkillToolName(skillDirectory string) (string, bool) {
 		return frontmatter["toolName"], true
 	}
 	name := frontmatter["name"]
+	if name == "" {
+		name = fallbackSkillName(skillDirectory)
+	}
 	if strings.HasPrefix(name, "uloop-") {
 		return strings.TrimPrefix(name, "uloop-"), true
 	}

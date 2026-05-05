@@ -39,6 +39,11 @@ type launchBootstrapOptions struct {
 	restart        bool
 }
 
+type launchProjectResolutionOptions struct {
+	maxDepth    int
+	projectPath string
+}
+
 func isLaunchCommand(args []string) bool {
 	return len(args) > 0 && args[0] == launchCommandName
 }
@@ -187,6 +192,60 @@ func parseLaunchBootstrapOptions(args []string, explicitProjectPath string) (lau
 	return options, nil
 }
 
+func parseLaunchProjectResolutionOptions(args []string, explicitProjectPath string) (launchProjectResolutionOptions, error) {
+	options := launchProjectResolutionOptions{
+		maxDepth:    defaultLaunchMaxDepth,
+		projectPath: explicitProjectPath,
+	}
+	for index := 0; index < len(args); index++ {
+		arg := args[index]
+		switch {
+		case arg == "-r" || arg == "--restart" || arg == "-q" || arg == "--quit" || arg == "-d" || arg == "--delete-recovery":
+			continue
+		case arg == "-a" || arg == "-f" || arg == "--add-unity-hub" || arg == "--favorite" || arg == "--unity-hub-entry":
+			return launchProjectResolutionOptions{}, fmt.Errorf("native launch does not support Unity Hub registration option: %s", arg)
+		case arg == "-p" || arg == "--platform":
+			_, consumed, err := readLaunchOptionValue(arg, args, index)
+			if err != nil {
+				return launchProjectResolutionOptions{}, err
+			}
+			if consumed {
+				index++
+			}
+		case strings.HasPrefix(arg, "--platform="):
+			continue
+		case arg == "--max-depth":
+			value, consumed, err := readLaunchOptionValue(arg, args, index)
+			if err != nil {
+				return launchProjectResolutionOptions{}, err
+			}
+			depth, err := strconv.Atoi(value)
+			if err != nil {
+				return launchProjectResolutionOptions{}, fmt.Errorf("--max-depth requires an integer value: %s", value)
+			}
+			options.maxDepth = depth
+			if consumed {
+				index++
+			}
+		case strings.HasPrefix(arg, "--max-depth="):
+			value := strings.TrimPrefix(arg, "--max-depth=")
+			depth, err := strconv.Atoi(value)
+			if err != nil {
+				return launchProjectResolutionOptions{}, fmt.Errorf("--max-depth requires an integer value: %s", value)
+			}
+			options.maxDepth = depth
+		case strings.HasPrefix(arg, "-"):
+			return launchProjectResolutionOptions{}, fmt.Errorf("unknown launch option: %s", arg)
+		default:
+			if options.projectPath != "" {
+				return launchProjectResolutionOptions{}, fmt.Errorf("unexpected extra launch argument: %s", arg)
+			}
+			options.projectPath = arg
+		}
+	}
+	return options, nil
+}
+
 func cleanStaleUnityTemp(projectRoot string) (bool, error) {
 	lockfilePath := unityLockfilePath(projectRoot)
 	if _, err := os.Stat(lockfilePath); err != nil {
@@ -327,27 +386,6 @@ func waitForPath(ctx context.Context, targetPath string, timeout time.Duration) 
 		case <-ticker.C:
 		}
 	}
-}
-
-func launchMaxDepth(args []string) int {
-	for index := 0; index < len(args); index++ {
-		arg := args[index]
-		if arg == "--max-depth" && index+1 < len(args) {
-			depth, err := strconv.Atoi(args[index+1])
-			if err == nil {
-				return depth
-			}
-			return defaultLaunchMaxDepth
-		}
-		if strings.HasPrefix(arg, "--max-depth=") {
-			depth, err := strconv.Atoi(strings.TrimPrefix(arg, "--max-depth="))
-			if err == nil {
-				return depth
-			}
-			return defaultLaunchMaxDepth
-		}
-	}
-	return defaultLaunchMaxDepth
 }
 
 func printLaunchHelp(stdout io.Writer) {

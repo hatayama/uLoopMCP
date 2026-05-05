@@ -224,6 +224,48 @@ func TestRunLaunchQuitWithoutProjectLocalCoreDoesNotOpenUnity(t *testing.T) {
 	}
 }
 
+func TestRunLaunchBootstrapRejectsUnknownOptionBeforeProjectResolution(t *testing.T) {
+	// Verifies that malformed launch options are not interpreted as positional project paths.
+	projectRoot := t.TempDir()
+	createUnityProject(t, projectRoot)
+	changeDirectory(t, projectRoot)
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	code := Run(context.Background(), []string{"launch", "--unknown", "foo"}, &stdout, &stderr)
+
+	if code != 1 {
+		t.Fatalf("exit code mismatch: %d stdout=%s stderr=%s", code, stdout.String(), stderr.String())
+	}
+	var envelope cliErrorEnvelope
+	if err := json.Unmarshal(stderr.Bytes(), &envelope); err != nil {
+		t.Fatalf("stderr is not valid JSON: %v\n%s", err, stderr.String())
+	}
+	if envelope.Error.ErrorCode != errorCodeInvalidArgument {
+		t.Fatalf("error code mismatch: %#v", envelope.Error)
+	}
+}
+
+func TestRunLaunchBootstrapRejectsInvalidMaxDepthBeforeProjectResolution(t *testing.T) {
+	// Verifies that malformed launch option values fail before project discovery.
+	changeDirectory(t, t.TempDir())
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	code := Run(context.Background(), []string{"launch", "--max-depth", "nope"}, &stdout, &stderr)
+
+	if code != 1 {
+		t.Fatalf("exit code mismatch: %d stdout=%s stderr=%s", code, stdout.String(), stderr.String())
+	}
+	var envelope cliErrorEnvelope
+	if err := json.Unmarshal(stderr.Bytes(), &envelope); err != nil {
+		t.Fatalf("stderr is not valid JSON: %v\n%s", err, stderr.String())
+	}
+	if envelope.Error.ErrorCode != errorCodeInvalidArgument {
+		t.Fatalf("error code mismatch: %#v", envelope.Error)
+	}
+}
+
 func TestParseLaunchBootstrapOptionsPreservesQuitAndRestart(t *testing.T) {
 	// Verifies that bootstrap launch does not discard lifecycle flags before deciding whether to run.
 	options, err := parseLaunchBootstrapOptions([]string{"--quit", "--restart"}, "")

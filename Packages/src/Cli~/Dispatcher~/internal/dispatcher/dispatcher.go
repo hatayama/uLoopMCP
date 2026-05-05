@@ -75,6 +75,10 @@ func Run(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer)
 		printLaunchHelp(stdout)
 		return 0
 	}
+	if err := validateProjectResolutionArgs(remainingArgs, explicitProjectPath); err != nil {
+		writeError(stderr, argumentError(err.Error(), commandName(remainingArgs)))
+		return 1
+	}
 
 	projectRoot, err := resolveProjectRoot(startPath, explicitProjectPath, remainingArgs)
 	if err != nil {
@@ -98,6 +102,14 @@ func Run(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer)
 
 	forwardedArgs := forwardedProjectLocalArgs(remainingArgs, explicitProjectPath, projectRoot)
 	return execProjectLocal(ctx, localPath, forwardedArgs, projectRoot, stderr)
+}
+
+func validateProjectResolutionArgs(args []string, explicitProjectPath string) error {
+	if !isLaunchCommand(args) {
+		return nil
+	}
+	_, err := parseLaunchProjectResolutionOptions(args[1:], explicitProjectPath)
+	return err
 }
 
 func projectLocalCoreExists(localPath string) (bool, error) {
@@ -185,6 +197,26 @@ func parseProjectPath(args []string) ([]string, string, error) {
 }
 
 func resolveProjectRoot(startPath string, explicitProjectPath string, args []string) (string, error) {
+	if len(args) > 0 && args[0] == "launch" {
+		options, err := parseLaunchProjectResolutionOptions(args[1:], explicitProjectPath)
+		if err != nil {
+			return "", err
+		}
+		if options.projectPath != "" {
+			projectRoot, err := filepath.Abs(options.projectPath)
+			if err != nil {
+				return "", err
+			}
+			if !isUnityProject(projectRoot) {
+				if explicitProjectPath != "" {
+					return "", fmt.Errorf("--project-path does not point to a Unity project: %s", projectRoot)
+				}
+				return "", fmt.Errorf("not a Unity project: %s", projectRoot)
+			}
+			return projectRoot, nil
+		}
+		return findUnityProjectRootWithin(startPath, options.maxDepth)
+	}
 	if explicitProjectPath != "" {
 		projectRoot, err := filepath.Abs(explicitProjectPath)
 		if err != nil {
@@ -195,38 +227,7 @@ func resolveProjectRoot(startPath string, explicitProjectPath string, args []str
 		}
 		return projectRoot, nil
 	}
-	if len(args) > 0 && args[0] == "launch" {
-		projectPath := launchPositionalProjectPath(args[1:])
-		if projectPath != "" {
-			projectRoot, err := filepath.Abs(projectPath)
-			if err != nil {
-				return "", err
-			}
-			if !isUnityProject(projectRoot) {
-				return "", fmt.Errorf("not a Unity project: %s", projectRoot)
-			}
-			return projectRoot, nil
-		}
-		return findUnityProjectRootWithin(startPath, launchMaxDepth(args[1:]))
-	}
 	return findProjectRoot(startPath)
-}
-
-func launchPositionalProjectPath(args []string) string {
-	for index := 0; index < len(args); index++ {
-		arg := args[index]
-		if arg == "-p" || arg == "--platform" || arg == "--max-depth" {
-			if index+1 < len(args) {
-				index++
-			}
-			continue
-		}
-		if strings.HasPrefix(arg, "-") {
-			continue
-		}
-		return arg
-	}
-	return ""
 }
 
 func findProjectRoot(startPath string) (string, error) {

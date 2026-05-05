@@ -124,6 +124,44 @@ internal: true
 	}
 }
 
+// Tests that internal skills without frontmatter names are filtered by their directory-derived tool names.
+func TestLoadToolsFiltersDerivedInternalSkillToolNameFromCache(t *testing.T) {
+	projectRoot := t.TempDir()
+	writeTestSkill(t, projectRoot, "Assets/Editor/uloop-derived-internal/Skill", `---
+internal: true
+---
+
+# internal
+`)
+	writeToolCache(t, projectRoot, `{
+  "version": "test",
+  "tools": [
+    {
+      "name": "derived-internal",
+      "description": "internal",
+      "inputSchema": {"type": "object", "properties": {}}
+    },
+    {
+      "name": "public-tool",
+      "description": "public",
+      "inputSchema": {"type": "object", "properties": {}}
+    }
+  ]
+}`)
+
+	cache, err := loadTools(projectRoot)
+	if err != nil {
+		t.Fatalf("loadTools failed: %v", err)
+	}
+
+	if _, ok := findTool(cache, "derived-internal"); ok {
+		t.Fatalf("derived internal tool was not filtered: %#v", cache.Tools)
+	}
+	if _, ok := findTool(cache, "public-tool"); !ok {
+		t.Fatalf("public tool was filtered: %#v", cache.Tools)
+	}
+}
+
 // Tests that cached tools written by the Unity Editor remain usable by the native CLI.
 func TestLoadToolsAcceptsEditorParameterSchemaCache(t *testing.T) {
 	projectRoot := t.TempDir()
