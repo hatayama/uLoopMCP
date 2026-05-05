@@ -232,7 +232,7 @@ jobs:
           echo "release_published=false" >> "$GITHUB_OUTPUT"
 
       - name: Upload native CLI assets
-        if: steps.release.outputs.publish == 'true' && steps.release.outputs.dry_run != 'true' && steps.draft.outputs.release_published != 'true'
+        if: steps.release.outputs.publish == 'true' && steps.release.outputs.dry_run != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ steps.release.outputs.tag }}
