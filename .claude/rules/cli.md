@@ -51,7 +51,7 @@ scripts/verify-native-cli-release-assets.sh
 
 The v3 CLI is released through GitHub Release assets built by `native-cli-publish.yml`.
 
-Do not add npm publish or npm version-check workflows for the v3 CLI. TypeScript CLI publishing is obsolete on the v3 beta line.
+Do not add npm publish or npm version-check workflows for the v3 CLI. The v3 CLI is distributed through native GitHub Release assets, not npm.
 
 Expected release assets:
 
