@@ -119,6 +119,10 @@ extract_asset() {
         exit 1
       fi
       unzip -q "$tmp_dir/$asset_name" -d "$tmp_dir"
+      if [ ! -f "$tmp_dir/$installed_command_name" ]; then
+        echo "Expected $installed_command_name at archive root after extracting $asset_name." >&2
+        exit 1
+      fi
       return
       ;;
     *)
