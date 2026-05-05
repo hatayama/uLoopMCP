@@ -1,18 +1,19 @@
 package cli
 
 import (
+	corecontract "github.com/hatayama/unity-cli-loop/Packages/src/Cli/Core"
 	cliversion "github.com/hatayama/unity-cli-loop/Packages/src/Cli/Shared/version"
 )
 
 func isRequiredDispatcherVersionRequest(args []string) bool {
-	return len(args) == 1 && args[0] == cliversion.RequiredDispatcherVersionFlag
+	return len(args) == 1 && args[0] == corecontract.Current.RequiredDispatcherVersionFlag
 }
 
 func isDispatcherCompatible(dispatcherVersion string) bool {
 	if dispatcherVersion == "" {
 		return false
 	}
-	comparison, ok := cliversion.Compare(dispatcherVersion, cliversion.MinimumRequiredDispatcher)
+	comparison, ok := cliversion.Compare(dispatcherVersion, corecontract.Current.MinimumRequiredDispatcherVersion)
 	return ok && comparison >= 0
 }
 

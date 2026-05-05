@@ -149,6 +149,8 @@ func layerOf(importPath string) string {
 		return "version"
 	case strings.HasPrefix(importPath, sharedModulePath+"/adapters"):
 		return "shared-adapters"
+	case importPath == coreModulePath:
+		return "contract"
 	case strings.HasPrefix(importPath, coreModulePath+"/internal/application"):
 		return "application"
 	case strings.HasPrefix(importPath, coreModulePath+"/internal/ports"):
@@ -174,6 +176,8 @@ func isAllowedDependency(sourceLayer string, targetLayer string, importedPath st
 		return targetLayer == "version"
 	case "shared-adapters":
 		return targetLayer == "domain" || targetLayer == "shared-adapters"
+	case "contract":
+		return targetLayer == "contract"
 	case "application":
 		return targetLayer == "domain" || targetLayer == "ports" || targetLayer == "application"
 	case "ports":
@@ -181,9 +185,9 @@ func isAllowedDependency(sourceLayer string, targetLayer string, importedPath st
 	case "core-adapters":
 		return targetLayer == "domain" || targetLayer == "ports" || targetLayer == "application" || targetLayer == "shared-adapters" || targetLayer == "core-adapters"
 	case "presentation":
-		return targetLayer == "domain" || targetLayer == "version" || targetLayer == "ports" || targetLayer == "application" || targetLayer == "shared-adapters" || targetLayer == "core-adapters" || targetLayer == "presentation"
+		return targetLayer == "domain" || targetLayer == "version" || targetLayer == "contract" || targetLayer == "ports" || targetLayer == "application" || targetLayer == "shared-adapters" || targetLayer == "core-adapters" || targetLayer == "presentation"
 	case "app":
-		return targetLayer == "domain" || targetLayer == "version" || targetLayer == "ports" || targetLayer == "application" || targetLayer == "shared-adapters" || targetLayer == "core-adapters" || targetLayer == "presentation"
+		return targetLayer == "domain" || targetLayer == "version" || targetLayer == "contract" || targetLayer == "ports" || targetLayer == "application" || targetLayer == "shared-adapters" || targetLayer == "core-adapters" || targetLayer == "presentation"
 	case "cmd":
 		return targetLayer == "app" || importedPath == coreModulePath+"/internal/app"
 	default:

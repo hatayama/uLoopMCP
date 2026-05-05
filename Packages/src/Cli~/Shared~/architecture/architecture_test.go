@@ -23,6 +23,39 @@ type goPackage struct {
 	Imports    []string
 }
 
+type layoutContract struct {
+	SchemaVersion int            `json:"schemaVersion"`
+	Layout        layoutSection  `json:"layout"`
+	Binaries      binariesLayout `json:"binaries"`
+}
+
+type layoutSection struct {
+	CliDir             string `json:"cliDir"`
+	CoreDir            string `json:"coreDir"`
+	DispatcherDir      string `json:"dispatcherDir"`
+	SharedDir          string `json:"sharedDir"`
+	DistDir            string `json:"distDir"`
+	ProjectLocalBinDir string `json:"projectLocalBinDir"`
+}
+
+type binariesLayout struct {
+	Core       binaryNames `json:"core"`
+	Dispatcher binaryNames `json:"dispatcher"`
+}
+
+type binaryNames struct {
+	Unix    string `json:"unix"`
+	Windows string `json:"windows"`
+}
+
+type coreContract struct {
+	DispatcherVersionEnv string `json:"dispatcherVersionEnv"`
+}
+
+type dispatcherContract struct {
+	DispatcherVersionEnv string `json:"dispatcherVersionEnv"`
+}
+
 // Tests that shared packages do not depend on runtime-specific modules.
 func TestSharedPackagesDoNotImportRuntimeModules(t *testing.T) {
 	moduleRoot := findModuleRoot(t)
@@ -47,6 +80,42 @@ func TestSharedPackagesDoNotUseInternalDirectories(t *testing.T) {
 		if strings.Contains(goPackage.ImportPath, "/internal/") {
 			t.Fatalf("shared package must not use internal visibility: %s", goPackage.ImportPath)
 		}
+	}
+}
+
+// Tests that the parent CLI layout manifest matches repository paths used by tooling.
+func TestLayoutContractMatchesRepositoryPaths(t *testing.T) {
+	moduleRoot := findModuleRoot(t)
+	cliRoot := filepath.Dir(moduleRoot)
+	repositoryRoot := findRepositoryRoot(t, cliRoot)
+	contract := readLayoutContract(t, filepath.Join(cliRoot, "layout-contract.json"))
+
+	if contract.SchemaVersion != 1 {
+		t.Fatalf("layout contract schema version mismatch: %d", contract.SchemaVersion)
+	}
+	assertDirectoryName(t, cliRoot, contract.Layout.CliDir)
+	assertPathExists(t, filepath.Join(cliRoot, contract.Layout.CoreDir))
+	assertPathExists(t, filepath.Join(cliRoot, contract.Layout.DispatcherDir))
+	assertPathExists(t, filepath.Join(cliRoot, contract.Layout.SharedDir))
+	assertPathExists(t, filepath.Join(cliRoot, contract.Layout.CoreDir, contract.Layout.DistDir))
+	assertPathExists(t, filepath.Join(cliRoot, contract.Layout.DispatcherDir, contract.Layout.DistDir))
+	assertTextContains(t, filepath.Join(repositoryRoot, "scripts", "build-go-cli.sh"), packagePath(contract, contract.Layout.CoreDir))
+	assertTextContains(t, filepath.Join(repositoryRoot, "scripts", "build-go-cli.sh"), packagePath(contract, contract.Layout.DispatcherDir))
+	assertTextContains(t, filepath.Join(repositoryRoot, "scripts", "verify-go-cli-dist.sh"), filepath.ToSlash(filepath.Join(packagePath(contract, contract.Layout.CoreDir), contract.Layout.DistDir, "darwin-arm64", contract.Binaries.Core.Unix)))
+	assertTextContains(t, filepath.Join(repositoryRoot, ".github", "workflows", "security-scan.yml"), packagePath(contract, contract.Layout.SharedDir))
+	assertTextContains(t, filepath.Join(repositoryRoot, ".github", "workflows", "security-scan.yml"), packagePath(contract, contract.Layout.CoreDir))
+	assertTextContains(t, filepath.Join(repositoryRoot, ".github", "workflows", "security-scan.yml"), packagePath(contract, contract.Layout.DispatcherDir))
+}
+
+// Tests that core and dispatcher agree on the environment key used for compatibility handoff.
+func TestRuntimeContractsShareDispatcherVersionProtocol(t *testing.T) {
+	moduleRoot := findModuleRoot(t)
+	cliRoot := filepath.Dir(moduleRoot)
+	core := readCoreContract(t, filepath.Join(cliRoot, "Core~", "contract.json"))
+	dispatcher := readDispatcherContract(t, filepath.Join(cliRoot, "Dispatcher~", "contract.json"))
+
+	if core.DispatcherVersionEnv != dispatcher.DispatcherVersionEnv {
+		t.Fatalf("dispatcher version env mismatch: core=%s dispatcher=%s", core.DispatcherVersionEnv, dispatcher.DispatcherVersionEnv)
 	}
 }
 
@@ -109,6 +178,74 @@ func listPackages(t *testing.T, moduleRoot string) []goPackage {
 	return packages
 }
 
+func readLayoutContract(t *testing.T, path string) layoutContract {
+	t.Helper()
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("failed to read layout contract: %v", err)
+	}
+	var contract layoutContract
+	if err := json.Unmarshal(content, &contract); err != nil {
+		t.Fatalf("failed to parse layout contract: %v", err)
+	}
+	return contract
+}
+
+func readCoreContract(t *testing.T, path string) coreContract {
+	t.Helper()
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("failed to read core contract: %v", err)
+	}
+	var contract coreContract
+	if err := json.Unmarshal(content, &contract); err != nil {
+		t.Fatalf("failed to parse core contract: %v", err)
+	}
+	return contract
+}
+
+func readDispatcherContract(t *testing.T, path string) dispatcherContract {
+	t.Helper()
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("failed to read dispatcher contract: %v", err)
+	}
+	var contract dispatcherContract
+	if err := json.Unmarshal(content, &contract); err != nil {
+		t.Fatalf("failed to parse dispatcher contract: %v", err)
+	}
+	return contract
+}
+
+func packagePath(contract layoutContract, childDir string) string {
+	return filepath.ToSlash(filepath.Join("Packages", "src", contract.Layout.CliDir, childDir))
+}
+
+func assertDirectoryName(t *testing.T, path string, expectedName string) {
+	t.Helper()
+	if filepath.Base(path) != expectedName {
+		t.Fatalf("directory name mismatch: %s", path)
+	}
+}
+
+func assertPathExists(t *testing.T, path string) {
+	t.Helper()
+	if _, err := os.Stat(path); err != nil {
+		t.Fatalf("expected path to exist: %s", path)
+	}
+}
+
+func assertTextContains(t *testing.T, path string, expected string) {
+	t.Helper()
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("failed to read %s: %v", path, err)
+	}
+	if !strings.Contains(string(content), expected) {
+		t.Fatalf("%s must contain %s", path, expected)
+	}
+}
+
 func findModuleRoot(t *testing.T) string {
 	t.Helper()
 	currentPath, err := os.Getwd()
@@ -122,6 +259,21 @@ func findModuleRoot(t *testing.T) string {
 		parentPath := filepath.Dir(currentPath)
 		if parentPath == currentPath {
 			t.Fatal("go.mod not found")
+		}
+		currentPath = parentPath
+	}
+}
+
+func findRepositoryRoot(t *testing.T, startPath string) string {
+	t.Helper()
+	currentPath := startPath
+	for {
+		if _, err := os.Stat(filepath.Join(currentPath, ".git")); err == nil {
+			return currentPath
+		}
+		parentPath := filepath.Dir(currentPath)
+		if parentPath == currentPath {
+			t.Fatal(".git not found")
 		}
 		currentPath = parentPath
 	}

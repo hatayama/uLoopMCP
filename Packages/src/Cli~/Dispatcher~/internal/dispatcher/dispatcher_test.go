@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hatayama/unity-cli-loop/Packages/src/Cli/Shared/version"
+	dispatchercontract "github.com/hatayama/unity-cli-loop/Packages/src/Cli/Dispatcher"
 )
 
 func TestRunVersionPrintsDispatcherVersion(t *testing.T) {
@@ -22,7 +22,7 @@ func TestRunVersionPrintsDispatcherVersion(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("exit code mismatch: %d stderr=%s", code, stderr.String())
 	}
-	if strings.TrimSpace(stdout.String()) != version.Dispatcher {
+	if strings.TrimSpace(stdout.String()) != dispatchercontract.Current.DispatcherVersion {
 		t.Fatalf("dispatcher version mismatch: %s", stdout.String())
 	}
 }
@@ -39,7 +39,7 @@ func TestRunVersionAfterProjectPathPrintsDispatcherVersion(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("exit code mismatch: %d stderr=%s", code, stderr.String())
 	}
-	if strings.TrimSpace(stdout.String()) != version.Dispatcher {
+	if strings.TrimSpace(stdout.String()) != dispatchercontract.Current.DispatcherVersion {
 		t.Fatalf("dispatcher version mismatch: %s", stdout.String())
 	}
 }
@@ -48,13 +48,13 @@ func TestDispatcherEnvironmentOverridesExistingDispatcherVersion(t *testing.T) {
 	// Verifies that nested dispatcher invocations cannot pass stale compatibility versions to core.
 	environment := dispatcherEnvironment([]string{
 		"PATH=/bin",
-		version.DispatcherVersionEnv + "=0.0.0",
+		dispatchercontract.Current.DispatcherVersionEnv + "=0.0.0",
 		"HOME=/tmp/home",
 	})
 
 	matches := 0
 	actual := ""
-	prefix := version.DispatcherVersionEnv + "="
+	prefix := dispatchercontract.Current.DispatcherVersionEnv + "="
 	for _, entry := range environment {
 		if !strings.HasPrefix(entry, prefix) {
 			continue
@@ -66,7 +66,7 @@ func TestDispatcherEnvironmentOverridesExistingDispatcherVersion(t *testing.T) {
 	if matches != 1 {
 		t.Fatalf("dispatcher version env count mismatch: %d in %#v", matches, environment)
 	}
-	if actual != version.Dispatcher {
+	if actual != dispatchercontract.Current.DispatcherVersion {
 		t.Fatalf("dispatcher version mismatch: %s", actual)
 	}
 }

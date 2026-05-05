@@ -30,7 +30,12 @@ namespace io.github.hatayama.UnityCliLoop
         public const string CLI_PACKAGE_DIR_NAME = "Cli~";
         public const string GO_CLI_CORE_DIR_NAME = "Core~";
         public const string GO_CLI_DISPATCHER_DIR_NAME = "Dispatcher~";
+        public const string GO_CLI_SHARED_DIR_NAME = "Shared~";
         public const string DIST_DIR_NAME = "dist";
+        public const string CLI_LAYOUT_CONTRACT_FILE_NAME = "layout-contract.json";
+        public const string CLI_CONTRACT_FILE_NAME = "contract.json";
+        public const string CLI_CONTRACT_MINIMUM_REQUIRED_DISPATCHER_VERSION_KEY = "minimumRequiredDispatcherVersion";
+        public const string CLI_CONTRACT_REQUIRED_DISPATCHER_VERSION_FLAG_KEY = "requiredDispatcherVersionFlag";
         public const string GLOBAL_UNIX_COMMAND_NAME = EXECUTABLE_NAME;
         public const string GLOBAL_WINDOWS_COMMAND_NAME = EXECUTABLE_NAME + ".exe";
         public const string WINDOWS_CMD_SHIM_NAME = EXECUTABLE_NAME + ".cmd";

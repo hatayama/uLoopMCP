@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/hatayama/unity-cli-loop/Packages/src/Cli/Shared/version"
+	dispatchercontract "github.com/hatayama/unity-cli-loop/Packages/src/Cli/Dispatcher"
 )
 
 type nativeCommandEntry struct {
@@ -63,7 +63,7 @@ func printHelpForResolvedProject(stdout io.Writer, startPath string, explicitPro
 }
 
 func printMainHelp(stdout io.Writer, cache cachedTools, hasProjectToolCache bool) {
-	writeFormat(stdout, "uloop %s\n\n", version.Dispatcher)
+	writeFormat(stdout, "uloop %s\n\n", dispatchercontract.Current.DispatcherVersion)
 	writeLine(stdout, "Usage:")
 	writeLine(stdout, "  uloop <command> [options]")
 	writeLine(stdout, "")

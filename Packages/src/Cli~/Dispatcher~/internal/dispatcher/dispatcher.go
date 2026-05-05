@@ -13,7 +13,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/hatayama/unity-cli-loop/Packages/src/Cli/Shared/version"
+	dispatchercontract "github.com/hatayama/unity-cli-loop/Packages/src/Cli/Dispatcher"
 )
 
 const (
@@ -38,7 +38,7 @@ var excludedProjectSearchDirs = map[string]bool{
 
 func Run(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer) int {
 	if isVersionRequest(args) {
-		writeLine(stdout, version.Dispatcher)
+		writeLine(stdout, dispatchercontract.Current.DispatcherVersion)
 		return 0
 	}
 	if handled, code := tryHandleCompletionRequest(args, stdout, stderr); handled {
@@ -68,7 +68,7 @@ func Run(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer)
 		return 0
 	}
 	if isVersionRequest(remainingArgs) {
-		writeLine(stdout, version.Dispatcher)
+		writeLine(stdout, dispatchercontract.Current.DispatcherVersion)
 		return 0
 	}
 	if isLaunchHelpRequest(remainingArgs) {
@@ -323,7 +323,7 @@ func execProjectLocal(ctx context.Context, localPath string, args []string, proj
 }
 
 func dispatcherEnvironment(baseEnvironment []string) []string {
-	prefix := version.DispatcherVersionEnv + "="
+	prefix := dispatchercontract.Current.DispatcherVersionEnv + "="
 	environment := make([]string, 0, len(baseEnvironment)+1)
 	for _, entry := range baseEnvironment {
 		if strings.HasPrefix(entry, prefix) {
@@ -331,7 +331,7 @@ func dispatcherEnvironment(baseEnvironment []string) []string {
 		}
 		environment = append(environment, entry)
 	}
-	return append(environment, prefix+version.Dispatcher)
+	return append(environment, prefix+dispatchercontract.Current.DispatcherVersion)
 }
 
 func writeLine(writer io.Writer, value string) {

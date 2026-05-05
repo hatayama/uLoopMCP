@@ -8,15 +8,16 @@ import (
 	"strconv"
 	"strings"
 
+	corecontract "github.com/hatayama/unity-cli-loop/Packages/src/Cli/Core"
 	"github.com/hatayama/unity-cli-loop/Packages/src/Cli/Shared/domain"
-	cliversion "github.com/hatayama/unity-cli-loop/Packages/src/Cli/Shared/version"
 )
 
 //go:embed default-tools.json
 var embeddedTools embed.FS
 
+var version = corecontract.Current.CoreVersion
+
 const (
-	version             = cliversion.Core
 	cacheDirectoryName  = ".uloop"
 	cacheFileName       = "tools.json"
 	defaultToolsFile    = "default-tools.json"

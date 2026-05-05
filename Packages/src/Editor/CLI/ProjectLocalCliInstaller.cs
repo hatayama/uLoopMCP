@@ -34,10 +34,22 @@ namespace io.github.hatayama.UnityCliLoop
         public static string DetectBundledRequiredDispatcherVersion()
         {
             string sourceBinaryPath = GetProjectCliBundlePath();
-            return DetectCliOutput(
+            string requiredDispatcherVersionFlag = CliContractReader.GetBundledRequiredDispatcherVersionFlag();
+            if (string.IsNullOrEmpty(requiredDispatcherVersionFlag))
+            {
+                requiredDispatcherVersionFlag = CliConstants.REQUIRED_DISPATCHER_VERSION_FLAG;
+            }
+
+            string detectedVersion = DetectCliOutput(
                 sourceBinaryPath,
                 McpConstants.PackageResolvedPath,
-                CliConstants.REQUIRED_DISPATCHER_VERSION_FLAG);
+                requiredDispatcherVersionFlag);
+            if (!string.IsNullOrEmpty(detectedVersion))
+            {
+                return detectedVersion;
+            }
+
+            return CliContractReader.GetBundledMinimumRequiredDispatcherVersion();
         }
 
         internal static bool IsProjectLocalCliCurrentForBundle(
