@@ -97,12 +97,18 @@ function Wait-UnityReady {
 
 function Wait-PlayMode {
     for ([int]$attempt = 0; $attempt -lt $PlayModeWaitSeconds; $attempt++) {
-        [pscustomobject]$result = Invoke-UloopJson -CommandArguments @(
+        [pscustomobject]$probe = Invoke-UloopCapture -CommandArguments @(
             "execute-dynamic-code",
             "--code",
             "using UnityEngine; return Application.isPlaying;"
         )
 
+        if ($probe.ExitCode -ne 0) {
+            Start-Sleep -Seconds 1
+            continue
+        }
+
+        [pscustomobject]$result = $probe.Text | ConvertFrom-Json
         if ($result.Success -eq $true -and $result.Result -eq "True") {
             return
         }

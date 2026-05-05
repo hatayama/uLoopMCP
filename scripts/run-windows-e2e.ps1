@@ -158,7 +158,6 @@ return SceneManager.GetActiveScene().path;
 
 function Start-PlayMode {
     Invoke-UloopJsonChecked -CommandArguments @("control-play-mode", "--action", "Play") | Out-Null
-    Invoke-DynamicCode -Code "using UnityEditor; EditorApplication.isPaused = false; return EditorApplication.isPaused;" | Out-Null
     Start-Sleep -Seconds 2
     Wait-UnityReady
 }

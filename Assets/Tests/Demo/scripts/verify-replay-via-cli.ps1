@@ -22,9 +22,34 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$RecordingLogPath = ".uloop/outputs/InputRecordings/recording-event-log.txt"
-$ReplayLogPath = ".uloop/outputs/InputRecordings/replay-event-log.txt"
+$RecordingLogRelativePath = ".uloop/outputs/InputRecordings/recording-event-log.txt"
+$ReplayLogRelativePath = ".uloop/outputs/InputRecordings/replay-event-log.txt"
 $ScenePath = "Assets/Scenes/InputReplayVerificationScene.unity"
+
+function Get-ResolvedProjectPath {
+    if (-not [string]::IsNullOrWhiteSpace($ProjectPath)) {
+        return (Resolve-Path -LiteralPath $ProjectPath).Path
+    }
+
+    return (Resolve-Path -LiteralPath ".").Path
+}
+
+$ResolvedProjectPath = Get-ResolvedProjectPath
+
+function Resolve-ProjectRelativePath {
+    param(
+        [string]$RelativePath
+    )
+
+    if ([System.IO.Path]::IsPathRooted($RelativePath)) {
+        return [System.IO.Path]::GetFullPath($RelativePath)
+    }
+
+    return [System.IO.Path]::GetFullPath((Join-Path $ResolvedProjectPath $RelativePath))
+}
+
+$RecordingLogPath = Resolve-ProjectRelativePath -RelativePath $RecordingLogRelativePath
+$ReplayLogPath = Resolve-ProjectRelativePath -RelativePath $ReplayLogRelativePath
 
 function Get-UloopArguments {
     param(
@@ -35,7 +60,7 @@ function Get-UloopArguments {
         return $CommandArguments
     }
 
-    return @($CommandArguments + @("--project-path", $ProjectPath))
+    return @($CommandArguments + @("--project-path", $ResolvedProjectPath))
 }
 
 function Invoke-UloopCapture {
@@ -165,11 +190,12 @@ function Save-EventLog {
         [string]$Path
     )
 
+    [string]$escapedPath = $Path.Replace("\", "\\").Replace('"', '\"')
     [string]$code = @"
 using UnityEngine;
 GameObject cube = GameObject.Find("VerificationCube");
 if (cube == null) return "ERROR: VerificationCube not found";
-cube.SendMessage("SaveLog", "$Path");
+cube.SendMessage("SaveLog", "$escapedPath");
 return "OK: log saved";
 "@
 
