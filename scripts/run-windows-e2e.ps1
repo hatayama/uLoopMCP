@@ -128,6 +128,35 @@ function Wait-UnityReady {
     throw "Unity did not become ready"
 }
 
+function Wait-PlayMode {
+    for ([int]$attempt = 0; $attempt -lt 30; $attempt++) {
+        [pscustomobject]$probe = Invoke-UloopCapture -CommandArguments @(
+            "execute-dynamic-code",
+            "--code",
+            "using UnityEngine; return Application.isPlaying;"
+        )
+
+        if ($probe.ExitCode -ne 0) {
+            Start-Sleep -Seconds 1
+            continue
+        }
+
+        [pscustomobject]$result = $probe.Text | ConvertFrom-Json
+        [string]$isPlaying = ""
+        if ($null -ne $result.Result) {
+            $isPlaying = $result.Result.ToString()
+        }
+
+        if ($result.Success -eq $true -and $isPlaying -eq "True") {
+            return
+        }
+
+        Start-Sleep -Seconds 1
+    }
+
+    throw "Unity did not enter PlayMode"
+}
+
 function Ensure-UnityReady {
     [pscustomobject]$result = Invoke-UloopCapture -CommandArguments @("get-logs", "--max-count", "1")
     if ($result.ExitCode -eq 0) {
@@ -170,8 +199,7 @@ return SceneManager.GetActiveScene().path;
 
 function Start-PlayMode {
     Invoke-UloopJsonChecked -CommandArguments @("control-play-mode", "--action", "Play") | Out-Null
-    Start-Sleep -Seconds 2
-    Wait-UnityReady
+    Wait-PlayMode
 }
 
 function Stop-PlayMode {

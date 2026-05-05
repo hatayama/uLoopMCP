@@ -111,6 +111,20 @@ function Invoke-Uloop {
     throw "$commandText failed with exit code $($result.ExitCode)"
 }
 
+function Invoke-UloopJsonChecked {
+    param(
+        [string[]]$CommandArguments
+    )
+
+    [string]$text = Invoke-Uloop -CommandArguments $CommandArguments
+    [pscustomobject]$json = $text | ConvertFrom-Json
+    if ($json.PSObject.Properties.Name -contains "Success" -and $json.Success -ne $true) {
+        throw "uloop $($CommandArguments -join " ") returned Success=false: $text"
+    }
+
+    return $json
+}
+
 function Wait-UnityReady {
     for ([int]$attempt = 0; $attempt -lt $UnityWaitAttempts; $attempt++) {
         [pscustomobject]$result = Invoke-UloopCapture -CommandArguments @("get-logs", "--max-count", "1")
@@ -141,15 +155,14 @@ if (SceneManager.GetActiveScene().path != scenePath)
 return SceneManager.GetActiveScene().path;
 "@
 
-    [string]$resultText = Invoke-Uloop -CommandArguments @("execute-dynamic-code", "--code", $code)
-    [pscustomobject]$result = $resultText | ConvertFrom-Json
-    if ($result.Success -ne $true -or $result.Result -ne $ScenePath) {
-        throw "Failed to load ${ScenePath}: $resultText"
+    [pscustomobject]$result = Invoke-UloopJsonChecked -CommandArguments @("execute-dynamic-code", "--code", $code)
+    if ($result.Result -ne $ScenePath) {
+        throw "Failed to load ${ScenePath}: $($result | ConvertTo-Json -Depth 10)"
     }
 }
 
 function Invoke-ActivateForRecord {
-    Invoke-Uloop -CommandArguments @(
+    Invoke-UloopJsonChecked -CommandArguments @(
         "execute-dynamic-code",
         "--code",
         @'
@@ -163,7 +176,7 @@ return "OK: activated for recording";
 }
 
 function Invoke-ActivateForReplay {
-    Invoke-Uloop -CommandArguments @(
+    Invoke-UloopJsonChecked -CommandArguments @(
         "execute-dynamic-code",
         "--code",
         @'
@@ -177,11 +190,11 @@ return "OK: activated for replay";
 }
 
 function Invoke-AutomatedInput {
-    Invoke-Uloop -CommandArguments @("simulate-mouse-input", "--action", "SmoothDelta", "--delta-x", "96", "--delta-y", "0", "--duration", "0.25") | Out-Null
+    Invoke-UloopJsonChecked -CommandArguments @("simulate-mouse-input", "--action", "SmoothDelta", "--delta-x", "96", "--delta-y", "0", "--duration", "0.25") | Out-Null
     Start-Sleep -Milliseconds 300
-    Invoke-Uloop -CommandArguments @("simulate-mouse-input", "--action", "Click", "--x", "400", "--y", "300") | Out-Null
+    Invoke-UloopJsonChecked -CommandArguments @("simulate-mouse-input", "--action", "Click", "--x", "400", "--y", "300") | Out-Null
     Start-Sleep -Milliseconds 300
-    Invoke-Uloop -CommandArguments @("simulate-mouse-input", "--action", "Scroll", "--scroll-y", "120") | Out-Null
+    Invoke-UloopJsonChecked -CommandArguments @("simulate-mouse-input", "--action", "Scroll", "--scroll-y", "120") | Out-Null
     Start-Sleep -Milliseconds 500
 }
 
@@ -199,13 +212,13 @@ cube.SendMessage("SaveLog", "$escapedPath");
 return "OK: log saved";
 "@
 
-    Invoke-Uloop -CommandArguments @("execute-dynamic-code", "--code", $code) | Out-Null
+    Invoke-UloopJsonChecked -CommandArguments @("execute-dynamic-code", "--code", $code) | Out-Null
 }
 
 function Restart-PlayMode {
-    Invoke-Uloop -CommandArguments @("control-play-mode", "--action", "Stop") | Out-Null
+    Invoke-UloopJsonChecked -CommandArguments @("control-play-mode", "--action", "Stop") | Out-Null
     Start-Sleep -Seconds 3
-    Invoke-Uloop -CommandArguments @("control-play-mode", "--action", "Play") | Out-Null
+    Invoke-UloopJsonChecked -CommandArguments @("control-play-mode", "--action", "Play") | Out-Null
     Write-Host "  Waiting for Unity..."
     Start-Sleep -Seconds 6
     Wait-UnityReady
@@ -233,6 +246,10 @@ function Invoke-ReplayToLog {
     Write-Host "  $($replayResult.Text)"
     if ($replayResult.ExitCode -ne 0) {
         throw "replay-input Start failed"
+    }
+    [pscustomobject]$replayStartJson = $replayResult.Text | ConvertFrom-Json
+    if ($replayStartJson.Success -ne $true) {
+        throw "replay-input Start reported failure: $($replayResult.Text)"
     }
 
     Write-Host "  Waiting for replay to finish..."
@@ -369,7 +386,7 @@ Write-Host "[0/8] Loading replay verification scene..."
 Initialize-ReplayScene
 
 Write-Host "[1/8] Starting PlayMode..."
-Invoke-Uloop -CommandArguments @("control-play-mode", "--action", "Play") | Out-Null
+Invoke-UloopJsonChecked -CommandArguments @("control-play-mode", "--action", "Play") | Out-Null
 Write-Host "  Waiting for Unity..."
 Start-Sleep -Seconds 6
 Wait-UnityReady
@@ -383,7 +400,7 @@ if ($AutomatedInput) {
     $recordStartArgs += @("--delay-seconds", "0", "--no-show-overlay")
 }
 
-Invoke-Uloop -CommandArguments $recordStartArgs | Out-Null
+Invoke-UloopJsonChecked -CommandArguments $recordStartArgs | Out-Null
 
 if ($AutomatedInput) {
     Write-Host "  Running automated input sequence..."
@@ -442,6 +459,10 @@ if ($AutomatedInput) {
     Write-Host "  $($replayResult.Text)"
     if ($replayResult.ExitCode -ne 0) {
         throw "replay-input Start failed"
+    }
+    [pscustomobject]$replayStartJson = $replayResult.Text | ConvertFrom-Json
+    if ($replayStartJson.Success -ne $true) {
+        throw "replay-input Start reported failure: $($replayResult.Text)"
     }
 
     Write-Host "  Waiting for replay to finish..."
