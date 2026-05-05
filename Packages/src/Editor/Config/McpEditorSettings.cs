@@ -51,7 +51,6 @@ namespace io.github.hatayama.UnityCliLoop
         public bool compileWindowHasData = false;
         public string[] pendingCompileRequestIds = new string[0];
         public CompileRequestData[] compileRequests = new CompileRequestData[0];
-        public ConnectedLLMToolData[] connectedLLMTools = new ConnectedLLMToolData[0];
     }
 
     /// <summary>
@@ -69,7 +68,8 @@ namespace io.github.hatayama.UnityCliLoop
             "Port",
             "serverTransportKind",
             "projectRootPath",
-            "serverSessionId"
+            "serverSessionId",
+            "connectedLLMTools"
         };
 
         private static McpEditorSettingsData _cachedSettings;
@@ -624,76 +624,6 @@ namespace io.github.hatayama.UnityCliLoop
                 System.Array.Copy(pendingIds, index + 1, newPendingIds, index, pendingIds.Length - index - 1);
                 SetPendingCompileRequestIds(newPendingIds);
             }
-        }
-
-        // Connected LLM Tools management methods
-
-        /// <summary>
-        /// Gets the connected LLM tools.
-        /// </summary>
-        public static ConnectedLLMToolData[] GetConnectedLLMTools()
-        {
-            return GetSettings().connectedLLMTools;
-        }
-
-        /// <summary>
-        /// Sets the connected LLM tools.
-        /// </summary>
-        public static void SetConnectedLLMTools(ConnectedLLMToolData[] connectedLLMTools)
-        {
-            McpEditorSettingsData settings = GetSettings();
-            McpEditorSettingsData newSettings = settings with { connectedLLMTools = connectedLLMTools };
-            SaveSettings(newSettings);
-        }
-
-        /// <summary>
-        /// Adds a connected LLM tool.
-        /// </summary>
-        public static void AddConnectedLLMTool(ConnectedLLMToolData toolData)
-        {
-            if (toolData == null || string.IsNullOrEmpty(toolData.Name))
-            {
-                return;
-            }
-
-            ConnectedLLMToolData[] tools = GetConnectedLLMTools();
-            
-            // Remove existing tool with same name if present
-            ConnectedLLMToolData[] filteredTools = System.Array.FindAll(tools, t => t.Name != toolData.Name);
-            
-            // Add new tool
-            ConnectedLLMToolData[] newTools = new ConnectedLLMToolData[filteredTools.Length + 1];
-            System.Array.Copy(filteredTools, newTools, filteredTools.Length);
-            newTools[filteredTools.Length] = toolData;
-            
-            SetConnectedLLMTools(newTools);
-        }
-
-        /// <summary>
-        /// Removes a connected LLM tool by name.
-        /// </summary>
-        public static void RemoveConnectedLLMTool(string toolName)
-        {
-            if (string.IsNullOrEmpty(toolName))
-            {
-                return;
-            }
-
-            ConnectedLLMToolData[] tools = GetConnectedLLMTools();
-            ConnectedLLMToolData[] newTools = System.Array.FindAll(tools, t => t.Name != toolName);
-            
-            if (newTools.Length != tools.Length)
-            {
-                SetConnectedLLMTools(newTools);
-            }
-        }
-
-        /// <summary>
-        /// Clears all connected LLM tools.
-        /// </summary>
-        public static void ClearConnectedLLMTools()
-        {
-            SetConnectedLLMTools(new ConnectedLLMToolData[0]);
         }
 
         /// <summary>

@@ -2,58 +2,37 @@
 
 ## 1. Overview
 
-This document details the architecture of the C# code within the `Packages/src/Editor` directory. This code runs inside the Unity Editor and serves as the bridge between the Unity environment and the external TypeScript-based MCP (Model-Context-Protocol) server.
+This document details the architecture of the C# code within the `Packages/src/Editor` directory. This code runs inside the Unity Editor and serves as the bridge between the Unity environment and the external `uloop` CLI.
 
 ### System Architecture Overview
 
 ```mermaid
 graph TB
-    subgraph "1. LLM Tools (MCP Clients)"
-        Claude[Claude Code<br/>MCP Client]
-        Cursor[Cursor<br/>MCP Client]
-        VSCode[VSCode<br/>MCP Client]
+    subgraph "1. CLI Caller"
+        Agent[AI Agent or Developer Shell]
+        CLI[uloop CLI]
     end
     
-    subgraph "2. TypeScript Server (MCP Server + Unity TCP Client)"
-        MCP[UnityMcpServer<br/>MCP Protocol Server<br/>server.ts]
-        UC[UnityClient<br/>TypeScript TCP Client<br/>unity-client.ts]
-        UCM[UnityConnectionManager<br/>Connection Orchestrator<br/>unity-connection-manager.ts]
-        UD[UnityDiscovery<br/>Unity Port Scanner<br/>unity-discovery.ts]
-    end
-    
-    subgraph "3. Unity Editor (TCP Server)"
-        MB[McpBridgeServer<br/>TCP Server<br/>McpBridgeServer.cs]
+    subgraph "2. Unity Editor (Project IPC Server)"
+        MB[McpBridgeServer<br/>Project IPC Server<br/>McpBridgeServer.cs]
         CMD[Tool System<br/>UnityApiHandler.cs]
         UI[McpEditorWindow<br/>GUI<br/>McpEditorWindow.cs]
-        CTMS[ConnectedToolsMonitoringService<br/>Auto-startup Tool Monitoring<br/>ConnectedToolsMonitoringService.cs]
         API[Unity APIs]
         SM[McpSessionManager<br/>McpSessionManager.cs]
     end
     
-    Claude -.->|MCP Protocol<br/>stdio/TCP| MCP
-    Cursor -.->|MCP Protocol<br/>stdio/TCP| MCP
-    VSCode -.->|MCP Protocol<br/>stdio/TCP| MCP
-    
-    MCP <--> UC
-    UCM --> UC
-    UCM --> UD
-    UD -.->|Port Discovery<br/>Polling| MB
-    UC <-->|TCP/JSON-RPC<br/>UNITY_TCP_PORT| MB
-    UC -->|setClientName| MB
+    Agent -->|executes command| CLI
+    CLI <-->|Project IPC JSON-RPC| MB
     MB <--> CMD
     CMD <--> API
-    UI --> CTMS
-    CTMS --> MB
     MB --> SM
-    CTMS --> SM
     
     classDef client fill:#e1f5fe,stroke:#01579b,stroke-width:2px
     classDef server fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
     classDef bridge fill:#fff3e0,stroke:#e65100,stroke-width:2px
     
-    class Claude,Cursor,VSCode client
-    class MCP,MB server
-    class UC,UD,UCM bridge
+    class Agent,CLI client
+    class MB server
 ```
 
 ### Client-Server Relationship Breakdown
@@ -61,80 +40,64 @@ graph TB
 ```mermaid
 graph LR
     subgraph "Communication Layers"
-        LLM[LLM Tools<br/>CLIENT]
-        TS[TypeScript Server<br/>SERVER for MCP<br/>CLIENT for Unity]
-        Unity[Unity Editor<br/>SERVER for TCP]
+        CLI[uloop CLI<br/>CLIENT]
+        Unity[Unity Editor<br/>PROJECT IPC SERVER]
     end
     
-    LLM -->|"MCP Protocol<br/>stdio/TCP<br/>Port: Various"| TS
-    TS -->|"TCP/JSON-RPC<br/>Port: 8700-9100"| Unity
+    CLI -->|"Project IPC JSON-RPC<br/>Port: 8700-9100"| Unity
     
     classDef client fill:#e1f5fe,stroke:#01579b,stroke-width:2px
     classDef server fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
     classDef hybrid fill:#fff3e0,stroke:#e65100,stroke-width:2px
     
-    class LLM client
+    class CLI client
     class Unity server
-    class TS hybrid
 ```
 
 ### Protocol and Communication Details
 
 ```mermaid
 sequenceDiagram
-    participant LLM as LLM Tool<br/>(CLIENT)
-    participant TS as TypeScript Server<br/>(MCP SERVER)
-    participant UC as UnityClient<br/>(TypeScript TCP CLIENT)<br/>unity-client.ts
-    participant Unity as Unity Editor<br/>(TCP SERVER)<br/>McpBridgeServer.cs
+    participant Agent as AI Agent or Developer
+    participant CLI as uloop CLI<br/>(CLIENT)
+    participant Unity as Unity Editor<br/>(PROJECT IPC SERVER)<br/>McpBridgeServer.cs
     
-    Note over LLM, Unity: 1. MCP Protocol Layer (stdio/TCP)
-    LLM->>TS: MCP initialize request
-    TS->>LLM: MCP initialize response
+    Agent->>CLI: uloop command
+    CLI->>Unity: Project IPC JSON-RPC request
+    Unity->>CLI: Project IPC JSON-RPC response
+    CLI->>Agent: command output
     
-    Note over LLM, Unity: 2. TCP Protocol Layer (JSON-RPC)
-    LLM->>TS: MCP tools/call request
-    TS->>UC: Parse and forward
-    UC->>Unity: TCP JSON-RPC request
-    Unity->>UC: TCP JSON-RPC response
-    UC->>TS: Parse and forward
-    TS->>LLM: MCP tools/call response
-    
-    Note over LLM, Unity: Client-Server Roles:
-    Note over LLM: CLIENT: Initiates requests
-    Note over TS: SERVER: Serves MCP protocol
-    Note over UC: TypeScript TCP CLIENT: Connects to Unity
-    Note over Unity: SERVER: Accepts TCP connections
+    Note over CLI, Unity: Client-Server Roles:
+    Note over CLI: CLIENT: opens short-lived command sessions
+    Note over Unity: SERVER: accepts project IPC requests
 ```
 
 ### Communication Protocol Summary
 
 | Component | Role | Protocol | Port | Connection Type |
 |-----------|------|----------|------|----------------|
-| **LLM Tools** (Claude, Cursor, VSCode) | **CLIENT** | MCP Protocol | stdio/Various | Initiates MCP requests |
-| **TypeScript Server** | **SERVER** (for MCP)<br/>**CLIENT** (for Unity) | MCP ↔ TCP/JSON-RPC | stdio ↔ 8700-9100 | Bridge between protocols |
-| **Unity Editor** | **SERVER** | TCP/JSON-RPC | 8700-9100 | Accepts TCP connections |
+| **uloop CLI** | **CLIENT** | Project IPC JSON-RPC | 8700-9100 | Initiates Unity tool requests |
+| **Unity Editor** | **SERVER** | Project IPC JSON-RPC | 8700-9100 | Accepts local project IPC connections |
 
 ### Communication Flow Details
 
-#### Layer 1: LLM Tools ↔ TypeScript Server (MCP Protocol)
-- **Protocol**: Model Context Protocol (MCP)
-- **Transport**: stdio or TCP
-- **Data Format**: JSON-RPC 2.0 with MCP extensions
-- **Connection**: LLM tools act as MCP clients
-- **Lifecycle**: Managed by LLM tool (Claude, Cursor, VSCode)
+#### Layer 1: Caller ↔ uloop CLI
+- **Protocol**: Command line invocation
+- **Transport**: Local process execution
+- **Connection**: A caller starts `uloop` commands as needed
+- **Lifecycle**: Managed by the caller process
 
-#### Layer 2: TypeScript Server ↔ Unity Editor (TCP Protocol)
+#### Layer 2: uloop CLI ↔ Unity Editor (Project IPC Protocol)
 - **Protocol**: Custom TCP with JSON-RPC 2.0
 - **Transport**: TCP Socket
 - **Ports**: UNITY_TCP_PORT environment variable specified port (auto-discovery)
-- **Connection**: TypeScript server acts as TCP client
-- **Lifecycle**: Managed by UnityConnectionManager with automatic reconnection
+- **Connection**: `uloop` acts as the project IPC client
+- **Lifecycle**: Managed per command invocation
 
 #### Key Architectural Points:
-1. **TypeScript Server serves as a Protocol Bridge**: Converts MCP protocol to TCP/JSON-RPC
-2. **Unity Editor is the final TCP Server**: Processes tool requests and executes Unity operations
-3. **LLM Tools are pure MCP Clients**: Send tool requests through standard MCP protocol
-4. **Automatic Discovery**: TypeScript server discovers Unity instances through port scanning
+1. **uloop CLI is the external entry point**: Commands are translated into project IPC JSON-RPC requests.
+2. **Unity Editor is the project IPC server**: Processes tool requests and executes Unity operations.
+3. **Automatic Discovery**: The CLI discovers the matching Unity instance for the current project.
 
 ### TCP/JSON-RPC Communication Specification
 
@@ -203,58 +166,15 @@ Content-Length: 120
    - TCP socket established on localhost:8700
    - Connection test with ping command
 
-2. **Client Registration**
-   - `set-client-name` command sent immediately after connection
-   - Client identity stored in Unity session manager
-   - UI updated to show connected client
-
-3. **Command Processing**
+2. **Command Processing**
    - JSON-RPC requests processed through UnityApiHandler
    - Security validation via McpSecurityChecker
    - Tool execution through UnityCommandRegistry
 
-4. **Connection Monitoring**
+3. **Connection Lifecycle**
    - Automatic reconnection on connection loss
    - Periodic health checks via ping commands
    - SafeTimer cleanup on process termination
-
-#### Push Notifications
-
-Unity can send real-time push notifications to all connected TypeScript clients when tools or system state changes occur:
-
-**Notification Format:**
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "notifications/tools/list_changed",
-  "params": {
-    "timestamp": "2025-07-16T12:34:56.789Z",
-    "message": "Unity tools have been updated"
-  }
-}
-```
-
-**Notification Triggers:**
-- Assembly reloads/recompilation
-- Custom tool registration
-- Manual tool change notifications via `TriggerToolChangeNotification()`
-
-**Broadcast Mechanism:**
-- Sent to all connected clients simultaneously
-- Uses same TCP/JSON-RPC communication channel
-- Message terminated with newline character (`\n`)
-
-**TypeScript Client Reception:**
-```typescript
-// TypeScript clients receive notifications via:
-socket.on('data', (buffer: Buffer) => {
-  const message = buffer.toString('utf8');
-  if (message.includes('"method":"notifications/tools/list_changed"')) {
-    // Handle tool list update
-    this.refreshToolList();
-  }
-});
-```
 
 #### Error Handling
 
@@ -271,10 +191,10 @@ socket.on('data', (buffer: Buffer) => {
 - **Session Management**: Client isolation and state tracking
 
 Its primary responsibilities are:
-1.  **Running a TCP Server (`McpBridgeServer`)**: Listens for connections from the TypeScript server to receive tool requests.
+1.  **Running a Project IPC Server (`McpBridgeServer`)**: Listens for local `uloop` CLI connections to receive tool requests.
 2.  **Executing Unity Operations**: Processes received tool requests to perform actions within the Unity Editor, such as compiling the project, running tests, or retrieving logs.
 3.  **Security Management**: Validates and controls tool execution through `McpSecurityChecker` to prevent unauthorized operations.
-4.  **Session Management**: Maintains client sessions and connection state through `McpSessionManager`.
+4.  **Session Management**: Maintains server session state through `McpSessionManager`.
 5.  **Providing a User Interface (`McpEditorWindow`)**: Offers a GUI within the Unity Editor for developers to manage and monitor the MCP server.
 6.  **Managing Configuration**: Handles the setup of `mcp.json` files required by LLM tools like Cursor, Claude, and VSCode.
 
@@ -500,7 +420,6 @@ A significant challenge in the Unity Editor is the "domain reload," which resets
 - **`DomainReloadRecoveryUseCase`**: Orchestrates the entire domain reload workflow
 - **`DomainReloadDetectionService`**: Detects and determines domain reload state
 - **`SessionRecoveryService`**: Handles session state preservation and restoration
-- **`ClientNotificationService`**: Manages client notification processing
 
 #### McpServerController Integration
 - **`McpServerController`**: Uses `[InitializeOnLoad]` to hook into Editor lifecycle events
@@ -511,19 +430,17 @@ A significant challenge in the Unity Editor is the "domain reload," which resets
 #### Orchestrated Workflow
 1. **Before Reload**: `DomainReloadRecoveryUseCase.ExecuteBeforeDomainReload()` saves server state
 2. **After Reload**: `DomainReloadRecoveryUseCase.ExecuteAfterDomainReloadAsync()` restores state
-3. **Client Notification**: Automatic tool list change notifications ensure seamless experience
 
 This UseCase integration ensures domain reload processing is managed as a single business workflow, improving maintainability and reliability.
 
 ## 3. Implemented UseCases and Tools
 
-The system currently implements 13 production-ready features using **Domain-Driven Design** architecture with **UseCase + Tool Pattern**. Each feature provides business workflow orchestration through UseCases, single-function implementation through Application Services, and MCP interface through Tools:
+The system currently implements 12 production-ready features using **Domain-Driven Design** architecture with **UseCase + Tool Pattern**. Each feature provides business workflow orchestration through UseCases, single-function implementation through Application Services, and CLI-facing tool commands:
 
 ### 3.1. Core System UseCases and Tools
 - **`PingTool`**: Connection health check and latency testing
 - **`CompileUseCase` + `CompileTool`**: Compilation state validation and execution separated by Application Services, with detailed error reporting
 - **`ClearConsoleTool`**: Unity Console log clearing with confirmation
-- **`SetClientNameTool`**: Client identification and session management
 - **`GetCommandDetailsTool`**: Tool introspection and metadata retrieval
 
 ### 3.2. Information Retrieval UseCases and Tools
@@ -576,22 +493,19 @@ This is the heart of the command processing logic.
         - **`AbstractUnityCommand.cs`**: The generic base class that simplifies command creation by handling the boilerplate of parameter deserialization and response creation.
         - **`UnityCommandRegistry.cs`**: Discovers all classes with the `[McpTool]` attribute and registers them in a dictionary, mapping a command name to its implementation.
         - **`McpToolAttribute.cs`**: A simple attribute used to mark a class for automatic registration as a command.
-    - **Command-specific folders**: Each of the 13 implemented commands has its own folder containing:
+    - **Command-specific folders**: Each implemented command has its own folder containing:
         - `*Command.cs`: The main command implementation
         - `*Schema.cs`: Type-safe parameter definition
         - `*Response.cs`: Structured response format
-        - Commands include: `/Compile`, `/RunTests`, `/GetLogs`, `/Ping`, `/ClearConsole`, `/FindGameObjects`, `/GetHierarchy`, `/GetMenuItems`, `/ExecuteMenuItem`, `/SetClientName`, `/UnitySearch`, `/GetProviderDetails`, `/GetCommandDetails`
+        - Commands include: `/Compile`, `/RunTests`, `/GetLogs`, `/Ping`, `/ClearConsole`, `/FindGameObjects`, `/GetHierarchy`, `/GetMenuItems`, `/ExecuteMenuItem`, `/UnitySearch`, `/GetProviderDetails`, `/GetCommandDetails`
 - **`JsonRpcProcessor.cs`**: Responsible for parsing incoming JSON strings into `JsonRpcRequest` objects and serializing response objects back into JSON strings, adhering to the JSON-RPC 2.0 specification.
 - **`UnityApiHandler.cs`**: The entry point for API calls. It receives the method name and parameters from the `JsonRpcProcessor` and uses the `UnityCommandRegistry` to execute the appropriate command. Integrates with `McpSecurityChecker` for permission validation.
 
 ### `/Core`
 Contains core infrastructure components for session and state management.
 
-#### Application Services Directory
-- **`ConnectedToolsMonitoringService.cs`**: Auto-startup service for ConnectedLLMTools monitoring and management with `[InitializeOnLoad]` attribute. Operates even when editor window is closed, handling connected tools state management, server event processing, and settings file synchronization. Provides proper separation between presentation layer and business logic.
-
 #### Session Management
-- **`McpSessionManager.cs`**: Singleton session manager implemented as `ScriptableSingleton` that maintains client connection state, session metadata, and survives domain reloads. Provides centralized client identification and connection tracking.
+- **`McpSessionManager.cs`**: Singleton session manager implemented as `ScriptableSingleton` that maintains server session metadata and survives domain reloads.
 
 ### `/UI`
 Contains the code for the user-facing Editor Window, implemented using the **MVP (Model-View-Presenter) + Helper Pattern**.
@@ -603,7 +517,7 @@ Contains the code for the user-facing Editor Window, implemented using the **MVP
 - **`McpEditorWindowViewData.cs`**: Data transfer object that carries all necessary information from the Model to the View, ensuring clean separation of concerns.
 
 #### Specialized Helper Classes
-- **`McpEditorWindowEventHandler.cs`**: Manages Unity Editor events (194 lines). Handles `EditorApplication.update`, `McpCommunicationLogger.OnLogUpdated`, server connection events, and state change detection. Completely isolates event management logic from the main window.
+- **`McpEditorWindowEventHandler.cs`**: Manages Unity Editor events. Handles `EditorApplication.update`, `McpCommunicationLogger.OnLogUpdated`, server lifecycle events, and state change detection. Completely isolates event management logic from the main window.
 - **`McpServerOperations.cs`**: Handles complex server operations (131 lines). Contains server validation, starting, and stopping logic. Supports both user-interactive and internal operation modes with comprehensive error handling.
 - **`McpCommunicationLog.cs`**: Manages the in-memory and `SessionState`-backed log of requests and responses displayed in the "Developer Tools" section of the window.
 
