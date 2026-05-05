@@ -29,6 +29,18 @@ function Get-ResolvedProjectPath {
 
 $ResolvedProjectPath = Get-ResolvedProjectPath
 
+function Resolve-ProjectRelativePath {
+    param(
+        [string]$RelativePath
+    )
+
+    if ([System.IO.Path]::IsPathRooted($RelativePath)) {
+        return [System.IO.Path]::GetFullPath($RelativePath)
+    }
+
+    return [System.IO.Path]::GetFullPath((Join-Path $ResolvedProjectPath $RelativePath))
+}
+
 function Get-UloopArguments {
     param(
         [string[]]$CommandArguments
@@ -302,14 +314,14 @@ try {
         Stop-PlayMode
     }
     Invoke-Step -Name "Input Record Replay E2E" -Body {
-        Invoke-ScriptChecked -ScriptPath ".\Assets\Tests\Demo\scripts\verify-replay-via-cli.ps1" -Arguments @(
+        Invoke-ScriptChecked -ScriptPath (Resolve-ProjectRelativePath -RelativePath "Assets\Tests\Demo\scripts\verify-replay-via-cli.ps1") -Arguments @(
             "-ProjectPath",
             $ResolvedProjectPath,
             "-AutomatedInput"
         )
     }
     Invoke-Step -Name "Simulate Mouse UI E2E" -Body {
-        Invoke-ScriptChecked -ScriptPath ".\scripts\test-simulate-mouse-demo.ps1" -Arguments @(
+        Invoke-ScriptChecked -ScriptPath (Resolve-ProjectRelativePath -RelativePath "scripts\test-simulate-mouse-demo.ps1") -Arguments @(
             "-ProjectPath",
             $ResolvedProjectPath
         )

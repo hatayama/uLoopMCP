@@ -429,6 +429,9 @@ if ($AutomatedInput) {
     Write-Host "[6/8] Replaying recorded input again via CLI..."
     Invoke-ReplayToLog -LogPath $ReplayLogPath -InputPath $recordingInputPath
 } else {
+    Write-Host "[5/8] Saving recording event log..."
+    Save-EventLog -Path $RecordingLogPath
+
     Write-Host "[5/8] Restarting PlayMode..."
     Restart-PlayMode
 
