@@ -1,6 +1,8 @@
 package dispatcher
 
 import (
+	_ "embed"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -22,6 +24,9 @@ const (
 	powerShellProfileSubpath = "Documents/WindowsPowerShell/Microsoft.PowerShell_profile.ps1"
 	pwshProfileSubpath       = "Documents/PowerShell/Microsoft.PowerShell_profile.ps1"
 )
+
+//go:embed default-tools.json
+var embeddedDefaultTools []byte
 
 var nativeCommandOptions = map[string][]string{
 	completionCommand: {installCompletionFlag, shellFlag},
@@ -262,13 +267,25 @@ func pascalToKebab(value string) string {
 func loadCompletionCache() (cachedTools, bool) {
 	startPath, err := os.Getwd()
 	if err != nil {
-		return cachedTools{}, false
+		return loadDefaultCompletionCache()
 	}
 	projectRoot, err := resolveProjectRoot(startPath, "", []string{"help"})
 	if err != nil {
+		return loadDefaultCompletionCache()
+	}
+	cache, ok := loadCachedTools(projectRoot)
+	if ok {
+		return cache, true
+	}
+	return loadDefaultCompletionCache()
+}
+
+func loadDefaultCompletionCache() (cachedTools, bool) {
+	var cache cachedTools
+	if json.Unmarshal(embeddedDefaultTools, &cache) != nil {
 		return cachedTools{}, false
 	}
-	return loadCachedTools(projectRoot)
+	return cache, true
 }
 
 func detectShell() string {

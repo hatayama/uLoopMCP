@@ -148,6 +148,42 @@ func TestRunSkillsUsesBundledCoreWhenProjectLocalCoreIsMissing(t *testing.T) {
 	}
 }
 
+func TestRunSkillsUsesBundledCoreFromLegacyPackageAlias(t *testing.T) {
+	// Verifies that bundled core fallback preserves the legacy package-name alias.
+	projectRoot := t.TempDir()
+	createUnityProject(t, projectRoot)
+	packageRoot := filepath.Join(projectRoot, "Packages", packageNameAlias)
+	expectedCorePath := createBundledCorePlaceholderAt(t, packageRoot, packageNameAlias)
+	previousExec := execCoreForDispatch
+	executedCorePath := ""
+	execCoreForDispatch = func(_ context.Context, localPath string, _ []string, _ string, _ io.Writer) int {
+		executedCorePath = localPath
+		return 0
+	}
+	t.Cleanup(func() {
+		execCoreForDispatch = previousExec
+	})
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	code := Run(context.Background(), []string{"--project-path", projectRoot, "skills", "list"}, &stdout, &stderr)
+
+	if code != 0 {
+		t.Fatalf("exit code mismatch: %d stdout=%s stderr=%s", code, stdout.String(), stderr.String())
+	}
+	normalizedExecutedCorePath, err := normalizeComparablePath(executedCorePath)
+	if err != nil {
+		t.Fatalf("failed to normalize executed core path: %v", err)
+	}
+	normalizedExpectedCorePath, err := normalizeComparablePath(expectedCorePath)
+	if err != nil {
+		t.Fatalf("failed to normalize expected core path: %v", err)
+	}
+	if normalizedExecutedCorePath != normalizedExpectedCorePath {
+		t.Fatalf("core path mismatch: %s", executedCorePath)
+	}
+}
+
 func TestRunProjectLocalCoreStatErrorReportsInternalError(t *testing.T) {
 	// Verifies that only a missing project-local core is reported as install-required.
 	projectRoot := t.TempDir()
@@ -592,6 +628,44 @@ func TestRunCompletionInstallDoesNotRequireUnityProject(t *testing.T) {
 	}
 }
 
+func TestRunCompletionListsDefaultToolCommandsWithoutProject(t *testing.T) {
+	// Verifies that dispatcher completion preserves default Unity tool command suggestions outside a project.
+	changeDirectory(t, t.TempDir())
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	code := Run(context.Background(), []string{"--list-commands"}, &stdout, &stderr)
+
+	if code != 0 {
+		t.Fatalf("exit code mismatch: %d stderr=%s", code, stderr.String())
+	}
+	output := stdout.String()
+	for _, command := range []string{"compile", "get-logs", "run-tests"} {
+		if !strings.Contains(output, command) {
+			t.Fatalf("command %s was not listed: %s", command, output)
+		}
+	}
+}
+
+func TestRunCompletionListsDefaultToolOptionsWithoutProject(t *testing.T) {
+	// Verifies that dispatcher completion preserves default Unity tool options outside a project.
+	changeDirectory(t, t.TempDir())
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	code := Run(context.Background(), []string{"--list-options", "compile"}, &stdout, &stderr)
+
+	if code != 0 {
+		t.Fatalf("exit code mismatch: %d stderr=%s", code, stderr.String())
+	}
+	output := stdout.String()
+	for _, option := range []string{"--force-recompile", "--wait-for-domain-reload"} {
+		if !strings.Contains(output, option) {
+			t.Fatalf("option %s was not listed: %s", option, output)
+		}
+	}
+}
+
 func TestRunCompletionListsCachedToolOptions(t *testing.T) {
 	// Verifies that dispatcher completion probes can use project-local tool cache without importing core packages.
 	projectRoot := t.TempDir()
@@ -757,6 +831,51 @@ internal: true
 	}
 }
 
+func TestLoadCachedToolsFiltersManifestLocalInternalSkillTools(t *testing.T) {
+	// Verifies that dispatcher filtering follows manifest local package skill roots.
+	projectRoot := t.TempDir()
+	createUnityProject(t, projectRoot)
+	localPackageRoot := filepath.Join(t.TempDir(), "LocalPackage")
+	createSkillAt(t, filepath.Join(localPackageRoot, "Editor", "SecretTool", "Skill"), `---
+name: uloop-secret
+internal: true
+---
+
+# internal
+`)
+	writeProjectManifest(t, projectRoot, `{
+  "dependencies": {
+    "com.example.local": "file:`+localPackageRoot+`"
+  }
+}`)
+	writeToolCache(t, projectRoot, `{
+  "version": "test",
+  "tools": [
+    {
+      "name": "secret",
+      "description": "internal",
+      "inputSchema": {"type": "object", "properties": {}}
+    },
+    {
+      "name": "public-tool",
+      "description": "public",
+      "inputSchema": {"type": "object", "properties": {}}
+    }
+  ]
+}`)
+
+	cache, ok := loadCachedTools(projectRoot)
+	if !ok {
+		t.Fatal("expected cached tools")
+	}
+	if containsCachedTool(cache, "secret") {
+		t.Fatalf("manifest-local internal tool was not filtered: %#v", cache.Tools)
+	}
+	if !containsCachedTool(cache, "public-tool") {
+		t.Fatalf("public tool was filtered: %#v", cache.Tools)
+	}
+}
+
 func TestReadInternalSkillToolNameDerivesMissingNameFromSkillDirectory(t *testing.T) {
 	// Verifies that legacy internal skills without frontmatter names still hide their cached tools.
 	projectRoot := t.TempDir()
@@ -846,10 +965,16 @@ func createBundledCorePlaceholder(t *testing.T, projectRoot string) string {
 	t.Helper()
 
 	packageRoot := filepath.Join(projectRoot, "Packages", "src")
+	return createBundledCorePlaceholderAt(t, packageRoot, packageName)
+}
+
+func createBundledCorePlaceholderAt(t *testing.T, packageRoot string, manifestPackageName string) string {
+	t.Helper()
+
 	if err := os.MkdirAll(packageRoot, 0o755); err != nil {
 		t.Fatalf("failed to create package root: %v", err)
 	}
-	manifest := `{"name":"io.github.hatayama.uloopmcp"}`
+	manifest := `{"name":"` + manifestPackageName + `"}`
 	if err := os.WriteFile(filepath.Join(packageRoot, "package.json"), []byte(manifest), 0o644); err != nil {
 		t.Fatalf("failed to write package manifest: %v", err)
 	}
@@ -861,6 +986,30 @@ func createBundledCorePlaceholder(t *testing.T, projectRoot string) string {
 		t.Fatalf("failed to write bundled core placeholder: %v", err)
 	}
 	return corePath
+}
+
+func writeProjectManifest(t *testing.T, projectRoot string, content string) {
+	t.Helper()
+
+	manifestPath := filepath.Join(projectRoot, "Packages", manifestFileName)
+	if err := os.MkdirAll(filepath.Dir(manifestPath), 0o755); err != nil {
+		t.Fatalf("failed to create manifest directory: %v", err)
+	}
+	if err := os.WriteFile(manifestPath, []byte(content), 0o644); err != nil {
+		t.Fatalf("failed to write project manifest: %v", err)
+	}
+}
+
+func writeToolCache(t *testing.T, projectRoot string, content string) {
+	t.Helper()
+
+	cachePath := filepath.Join(projectRoot, ".uloop", "tools.json")
+	if err := os.MkdirAll(filepath.Dir(cachePath), 0o755); err != nil {
+		t.Fatalf("failed to create tool cache directory: %v", err)
+	}
+	if err := os.WriteFile(cachePath, []byte(content), 0o644); err != nil {
+		t.Fatalf("failed to write tool cache: %v", err)
+	}
 }
 
 func createToolCache(t *testing.T, projectRoot string) {
@@ -899,7 +1048,13 @@ func createToolCache(t *testing.T, projectRoot string) {
 func createSkill(t *testing.T, projectRoot string, relativePath string, content string) {
 	t.Helper()
 
-	skillPath := filepath.Join(projectRoot, relativePath, skillFileName)
+	createSkillAt(t, filepath.Join(projectRoot, relativePath), content)
+}
+
+func createSkillAt(t *testing.T, skillDirectory string, content string) {
+	t.Helper()
+
+	skillPath := filepath.Join(skillDirectory, skillFileName)
 	if err := os.MkdirAll(filepath.Dir(skillPath), 0o755); err != nil {
 		t.Fatalf("failed to create skill directory: %v", err)
 	}

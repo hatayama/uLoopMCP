@@ -9,6 +9,7 @@ import (
 
 const (
 	packageName             = "io.github.hatayama.uloopmcp"
+	packageNameAlias        = "io.github.hatayama.uLoopMCP"
 	packageManifestFileName = "package.json"
 	cliDirectoryName        = "Cli~"
 	coreDirectoryName       = "Core~"
@@ -37,8 +38,11 @@ func bundledPackageRoots(projectRoot string) []string {
 	candidates := []string{
 		filepath.Join(projectRoot, "Packages", "src"),
 		filepath.Join(projectRoot, "Packages", packageName),
+		filepath.Join(projectRoot, "Packages", packageNameAlias),
 	}
 	candidates = append(candidates, childDirectories(filepath.Join(projectRoot, "Packages"))...)
+	candidates = append(candidates, resolveManifestLocalPackageRoots(projectRoot)...)
+	candidates = append(candidates, resolveDependencyPackageCacheRoots(projectRoot)...)
 	candidates = append(candidates, childDirectories(filepath.Join(projectRoot, "Library", "PackageCache"))...)
 
 	roots := []string{}
@@ -62,7 +66,7 @@ func isULoopPackageRoot(candidate string) bool {
 	if json.Unmarshal(content, &manifest) != nil {
 		return false
 	}
-	return manifest.Name == packageName
+	return manifest.Name == packageName || manifest.Name == packageNameAlias
 }
 
 func coreBinaryName() string {

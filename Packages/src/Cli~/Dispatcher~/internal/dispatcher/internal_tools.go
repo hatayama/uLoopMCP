@@ -60,6 +60,8 @@ func internalSkillSourceRoots(projectRoot string) []string {
 		filepath.Join(projectRoot, "Assets"),
 	}
 	sourceRoots = append(sourceRoots, childDirectories(filepath.Join(projectRoot, "Packages"))...)
+	sourceRoots = append(sourceRoots, resolveManifestLocalPackageRoots(projectRoot)...)
+	sourceRoots = append(sourceRoots, resolveDependencyPackageCacheRoots(projectRoot)...)
 	sourceRoots = append(sourceRoots, childDirectories(filepath.Join(projectRoot, "Library", "PackageCache"))...)
 	return sourceRoots
 }
