@@ -12,11 +12,6 @@ namespace io.github.hatayama.UnityCliLoop
     /// <summary>
     /// AI-friendly structured logger for Unity CLI Loop.
     /// 
-    /// Related classes:
-    /// - McpLogger: Traditional Unity logger that this class replaces
-    /// - McpServerController: Uses this logger for domain reload tracking
-    /// - UnityMcpServer: Uses this logger for connection event tracking
-    /// 
     /// Key features:
     /// - Structured JSON logging with operation, context, correlation_id
     /// - AI-friendly format for Claude Code analysis

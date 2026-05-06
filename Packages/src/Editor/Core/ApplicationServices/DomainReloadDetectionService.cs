@@ -6,7 +6,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// <summary>
     /// Application service responsible for Domain Reload detection and state management
     /// Single responsibility: Domain Reload lifecycle management
-    /// Related classes: McpSessionManager, McpServerController
+    /// Related classes: UnityCliLoopEditorSettings, McpServerController
     /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - Application Service Layer (Single Function Implementation)
     /// </summary>
     [InitializeOnLoad]

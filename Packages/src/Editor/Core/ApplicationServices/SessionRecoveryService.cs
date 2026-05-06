@@ -7,7 +7,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// <summary>
     /// Application service responsible for session recovery processing
     /// Single responsibility: Server session recovery and retry control
-    /// Related classes: McpSessionManager, McpBridgeServer
+    /// Related classes: UnityCliLoopEditorSettings, McpBridgeServer
     /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - Application Service Layer (Single Function Implementation)
     /// </summary>
     public static class SessionRecoveryService

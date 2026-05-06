@@ -315,6 +315,24 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
+        public void ProductionSources_WhenLoaded_DoNotReferenceRemovedLegacyMcpTypes()
+        {
+            // Tests that comments and docs in production source do not point to removed legacy types.
+            string[] legacyNames =
+            {
+                "Mcp" + "SessionManager",
+                "Mcp" + "Logger",
+                "Unity" + "McpServer"
+            };
+            string[] offendingReferences = ReadProductionSourcePaths()
+                .SelectMany(path => FindForbiddenReferences(path, legacyNames))
+                .OrderBy(reference => reference)
+                .ToArray();
+
+            Assert.That(offendingReferences, Is.Empty);
+        }
+
+        [Test]
         public void EditorUiFiles_WhenLoaded_DoNotUseLegacyMcpSettingsWindowNames()
         {
             // Tests that settings-window UI code uses UnityCLILoop naming instead of legacy MCP naming.

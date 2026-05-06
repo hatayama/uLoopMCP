@@ -36,7 +36,6 @@ namespace io.github.hatayama.UnityCliLoop
         // Default to flat installation so first-time setup does not add an extra grouping layer unless requested.
         public bool installSkillsFlat = true;
         
-        // Session State Settings (moved from McpSessionManager)
         // Default to true so the server starts automatically on fresh install
         public bool isServerRunning = true;
         public bool isAfterCompile = false;
@@ -241,8 +240,6 @@ namespace io.github.hatayama.UnityCliLoop
             SaveSettings(newSettings);
         }
 
-        // Session State Settings Methods (moved from McpSessionManager)
-
         /// <summary>
         /// Gets the server running state.
         /// </summary>
@@ -368,8 +365,6 @@ namespace io.github.hatayama.UnityCliLoop
             UnityCliLoopEditorSettingsData newSettings = settings with { compileWindowHasData = compileWindowHasData };
             SaveSettings(newSettings);
         }
-
-        // Helper methods that mirror McpSessionManager functionality
 
         /// <summary>
         /// Clear server session.

@@ -16,8 +16,6 @@ namespace io.github.hatayama.UnityCliLoop
     /// </summary>
     public class McpBridgeServer : IDisposable
     {
-        // Note: Domain reload progress is now tracked via McpSessionManager
-        
         // Events for server lifecycle notifications
         public static event System.Action OnServerStopping;
         public static event System.Action OnServerStarted;

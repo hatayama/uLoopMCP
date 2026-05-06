@@ -6,7 +6,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// <summary>
     /// UseCase responsible for temporal cohesion of server shutdown processing
     /// Processing sequence: 1. Server stop, 2. Session state clear, 3. Resource disposal
-    /// Related classes: McpServerStartupService, McpSessionManager
+    /// Related classes: McpServerStartupService, UnityCliLoopEditorSettings
     /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - UseCase + Tool Pattern (DDD Integration)
     /// </summary>
     public class McpServerShutdownUseCase : AbstractUseCase<ServerShutdownSchema, ServerShutdownResponse>

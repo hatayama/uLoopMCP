@@ -10,8 +10,6 @@ namespace io.github.hatayama.UnityCliLoop
     /// </summary>
     public static class CompileSessionState
     {
-        // Note: Compile requests are now managed via McpSessionManager
-
         /// <summary>
         /// Forced recompilation request information
         /// </summary>
@@ -89,8 +87,6 @@ namespace io.github.hatayama.UnityCliLoop
             UnityCliLoopEditorSettings.RemovePendingCompileRequest(requestId);
             
         }
-
-        // Note: RemoveFromPendingRequests is now handled by McpSessionManager
 
         /// <summary>
         /// Start forced recompilation

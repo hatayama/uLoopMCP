@@ -6,7 +6,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// 
     /// Related classes:
     /// - McpBridgeServer: The actual server instance being managed
-    /// - McpSessionManager: Manages server session state
+    /// - UnityCliLoopEditorSettings: Stores server session state
     /// - McpServerController: Coordinates overall server management
     /// </summary>
     public class McpServerStartupService
