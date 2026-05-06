@@ -58,6 +58,15 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
+        public void CompilationDiagnosticMessageParser_WhenLoaded_CompilesUnderDomainAssembly()
+        {
+            // Tests that diagnostic-message parsing lives in the domain layer.
+            string parserAssemblyName = typeof(CompilationDiagnosticMessageParser).Assembly.GetName().Name;
+
+            Assert.That(parserAssemblyName, Is.EqualTo(DomainAssemblyName));
+        }
+
+        [Test]
         public void ToolContractsAsmdef_WhenLoaded_HasNoProjectAssemblyReferences()
         {
             // Tests that the public tool contract assembly stays independent from implementation assemblies.
