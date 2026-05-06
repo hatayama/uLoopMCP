@@ -56,7 +56,7 @@ namespace io.github.hatayama.UnityCliLoop
                 };
             }
 
-            if (exception is McpSecurityException securityException)
+            if (exception is UnityCliLoopSecurityException securityException)
             {
                 return new TranslationOutput
                 {
@@ -184,7 +184,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             if (exception != null)
             {
-                if (exception is McpSecurityException)
+                if (exception is UnityCliLoopSecurityException)
                 {
                     return ErrorSeverity.High;
                 }

@@ -1,13 +1,8 @@
 namespace io.github.hatayama.UnityCliLoop
 {
     /// <summary>
-    /// Defines enum for security settings types
-    /// Each security setting controls the execution of specific commands
-    /// 
-    /// Related classes:
-    /// - McpSecurityChecker: Main security check logic
-    /// - UnityCliLoopToolAttribute: Attribute to specify command security settings
-    /// - RunTestsTool: Test execution tool
+    /// Security categories that can be attached to tool metadata.
+    /// New values should only be added with matching execution policy and UI behavior.
     /// </summary>
     public enum UnityCliLoopSecuritySetting
     {

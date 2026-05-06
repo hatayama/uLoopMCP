@@ -295,7 +295,7 @@ namespace io.github.hatayama.UnityCliLoop
             string errorMessage = exceptionResponse.FriendlyMessage;
 
             JsonRpcErrorData errorData;
-            if (ex is McpSecurityException secEx)
+            if (ex is UnityCliLoopSecurityException secEx)
             {
                 errorData = new SecurityBlockedErrorData(secEx.ToolName, secEx.SecurityReason, exceptionResponse.Explanation ?? ex.Message);
             }

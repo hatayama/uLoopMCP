@@ -130,7 +130,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <param name="paramsToken">Parameters</param>
         /// <returns>Execution result</returns>
         /// <exception cref="ArgumentException">When tool is unknown</exception>
-        /// <exception cref="McpSecurityException">When tool is blocked by security settings</exception>
+        /// <exception cref="UnityCliLoopSecurityException">When tool is blocked by security settings</exception>
         public async Task<UnityCliLoopToolResponse> ExecuteToolAsync(string toolName, JToken paramsToken)
         {
             if (!_tools.TryGetValue(toolName, out IUnityCliLoopTool tool))
@@ -143,10 +143,9 @@ namespace io.github.hatayama.UnityCliLoop
                 throw new ToolDisabledException(toolName);
             }
 
-            // Security check - validate tool before execution
-            if (!McpSecurityChecker.IsToolAllowed(toolName))
+            if (!UnityCliLoopSecurityChecker.IsToolAllowed(toolName))
             {
-                throw new McpSecurityException(toolName, "Tool is blocked by security settings");
+                throw new UnityCliLoopSecurityException(toolName, "Tool is blocked by security settings");
             }
 
             Stopwatch mainThreadHopStopwatch = Stopwatch.StartNew();
