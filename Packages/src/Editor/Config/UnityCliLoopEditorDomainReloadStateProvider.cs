@@ -17,7 +17,7 @@ namespace io.github.hatayama.UnityCliLoop
         }
     }
 
-    public static class McpEditorDomainReloadStateRegistration
+    public static class UnityCliLoopEditorDomainReloadStateRegistration
     {
         [InitializeOnLoadMethod]
         private static void Register()
