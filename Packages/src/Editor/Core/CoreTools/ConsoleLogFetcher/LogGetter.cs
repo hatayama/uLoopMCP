@@ -27,29 +27,29 @@ namespace io.github.hatayama.UnityCliLoop
             LogRetriever = new ConsoleLogRetriever();
         }
 
-        private static string NormalizeMcpLogType(string mcpLogType)
+        private static string NormalizeUnityCliLoopLogType(string unityCliLoopLogType)
         {
-            if (string.Equals(mcpLogType, McpLogType.Error, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(unityCliLoopLogType, UnityCliLoopLogType.Error, StringComparison.OrdinalIgnoreCase))
             {
-                return McpLogType.Error;
+                return UnityCliLoopLogType.Error;
             }
 
-            if (string.Equals(mcpLogType, McpLogType.Warning, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(unityCliLoopLogType, UnityCliLoopLogType.Warning, StringComparison.OrdinalIgnoreCase))
             {
-                return McpLogType.Warning;
+                return UnityCliLoopLogType.Warning;
             }
 
-            if (string.Equals(mcpLogType, McpLogType.Log, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(unityCliLoopLogType, UnityCliLoopLogType.Log, StringComparison.OrdinalIgnoreCase))
             {
-                return McpLogType.Log;
+                return UnityCliLoopLogType.Log;
             }
 
-            if (string.Equals(mcpLogType, McpLogType.All, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(unityCliLoopLogType, UnityCliLoopLogType.All, StringComparison.OrdinalIgnoreCase))
             {
-                return McpLogType.All;
+                return UnityCliLoopLogType.All;
             }
 
-            return McpLogType.Log;
+            return UnityCliLoopLogType.Log;
         }
 
         private static bool IsAssertionLikeEntry(LogEntryDto entry)
@@ -89,7 +89,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return false;
             }
 
-            if (!string.Equals(entry.LogType, McpLogType.Log, StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(entry.LogType, UnityCliLoopLogType.Log, StringComparison.OrdinalIgnoreCase))
             {
                 return false;
             }
@@ -104,7 +104,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return false;
             }
 
-            if (string.Equals(entry.LogType, McpLogType.Error, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(entry.LogType, UnityCliLoopLogType.Error, StringComparison.OrdinalIgnoreCase))
             {
                 return true;
             }
@@ -124,7 +124,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return false;
             }
 
-            if (string.Equals(entry.LogType, McpLogType.Warning, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(entry.LogType, UnityCliLoopLogType.Warning, StringComparison.OrdinalIgnoreCase))
             {
                 return true;
             }
@@ -159,45 +159,45 @@ namespace io.github.hatayama.UnityCliLoop
             return familyEntries;
         }
 
-        private static List<LogEntryDto> GetLogsByMcpLogType(string logType)
+        private static List<LogEntryDto> GetLogsByUnityCliLoopLogType(string logType)
         {
-            string normalizedLogType = NormalizeMcpLogType(logType);
+            string normalizedLogType = NormalizeUnityCliLoopLogType(logType);
 
-            if (string.Equals(normalizedLogType, McpLogType.All, StringComparison.Ordinal))
+            if (string.Equals(normalizedLogType, UnityCliLoopLogType.All, StringComparison.Ordinal))
             {
                 return LogRetriever.GetAllLogs();
             }
 
-            if (string.Equals(normalizedLogType, McpLogType.Error, StringComparison.Ordinal))
+            if (string.Equals(normalizedLogType, UnityCliLoopLogType.Error, StringComparison.Ordinal))
             {
                 List<LogEntryDto> allEntries = LogRetriever.GetAllLogs();
-                return GetFamilyEntries(allEntries, IsErrorFamilyEntry, McpLogType.Error);
+                return GetFamilyEntries(allEntries, IsErrorFamilyEntry, UnityCliLoopLogType.Error);
             }
 
-            if (string.Equals(normalizedLogType, McpLogType.Warning, StringComparison.Ordinal))
+            if (string.Equals(normalizedLogType, UnityCliLoopLogType.Warning, StringComparison.Ordinal))
             {
                 List<LogEntryDto> allEntries = LogRetriever.GetAllLogs();
-                return GetFamilyEntries(allEntries, IsWarningFamilyEntry, McpLogType.Warning);
+                return GetFamilyEntries(allEntries, IsWarningFamilyEntry, UnityCliLoopLogType.Warning);
             }
 
-            UnityEngine.LogType unityLogType = ConvertMcpLogTypeToLogType(normalizedLogType);
+            UnityEngine.LogType unityLogType = ConvertUnityCliLoopLogTypeToLogType(normalizedLogType);
             return LogRetriever.GetLogsByType(unityLogType);
         }
 
         /// <summary>
-        /// Converts McpLogType to Unity's LogType
+        /// Converts UnityCliLoopLogType to Unity's LogType
         /// </summary>
-        /// <param name="mcpLogType">Unity console log type</param>
+        /// <param name="unityCliLoopLogType">Unity console log type</param>
         /// <returns>Corresponding Unity LogType</returns>
-        private static LogType ConvertMcpLogTypeToLogType(string mcpLogType)
+        private static LogType ConvertUnityCliLoopLogTypeToLogType(string unityCliLoopLogType)
         {
-            string normalizedLogType = NormalizeMcpLogType(mcpLogType);
+            string normalizedLogType = NormalizeUnityCliLoopLogType(unityCliLoopLogType);
 
             return normalizedLogType switch
             {
-                McpLogType.Error => LogType.Error,
-                McpLogType.Warning => LogType.Warning,
-                McpLogType.Log => LogType.Log,
+                UnityCliLoopLogType.Error => LogType.Error,
+                UnityCliLoopLogType.Warning => LogType.Warning,
+                UnityCliLoopLogType.Log => LogType.Log,
                 _ => LogType.Log  // Default for unknown types, None will be handled separately
             };
         }
@@ -228,7 +228,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <returns>The filtered log data.</returns>
         public static LogDisplayDto GetConsoleLogsByType(string logType)
         {
-            List<LogEntryDto> allEntries = GetLogsByMcpLogType(logType);
+            List<LogEntryDto> allEntries = GetLogsByUnityCliLoopLogType(logType);
             return new LogDisplayDto(allEntries.ToArray(), allEntries.Count);
         }
 
@@ -243,7 +243,7 @@ namespace io.github.hatayama.UnityCliLoop
         public static LogDisplayDto SearchConsoleLogs(string logType, string searchText, bool useRegex, bool searchInStackTrace)
         {
             // Get logs based on type
-            List<LogEntryDto> allEntries = GetLogsByMcpLogType(logType);
+            List<LogEntryDto> allEntries = GetLogsByUnityCliLoopLogType(logType);
             
             // Filter by search text if provided
             if (!string.IsNullOrEmpty(searchText))

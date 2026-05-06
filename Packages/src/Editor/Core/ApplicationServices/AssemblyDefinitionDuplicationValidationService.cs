@@ -25,7 +25,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             LogRetrievalService retrievalService = new();
             LogDisplayDto logData = retrievalService.GetLogsWithSearch(
-                McpLogType.Error,
+                UnityCliLoopLogType.Error,
                 "Assembly with name '",
                 useRegex: false,
                 searchInStackTrace: false

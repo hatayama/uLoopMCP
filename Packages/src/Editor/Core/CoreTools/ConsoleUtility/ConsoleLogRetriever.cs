@@ -81,18 +81,18 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         /// <summary>
-        /// Converts Unity LogType to McpLogType
+        /// Converts Unity LogType to UnityCliLoopLogType
         /// </summary>
-        private string ConvertLogTypeToMcpLogType(LogType logType)
+        private string ConvertLogTypeToUnityCliLoopLogType(LogType logType)
         {
             return logType switch
             {
-                LogType.Error => McpLogType.Error,
-                LogType.Assert => McpLogType.Error,
-                LogType.Exception => McpLogType.Error,
-                LogType.Warning => McpLogType.Warning,
-                LogType.Log => McpLogType.Log,
-                _ => McpLogType.Log  // Default unknown types to Log
+                LogType.Error => UnityCliLoopLogType.Error,
+                LogType.Assert => UnityCliLoopLogType.Error,
+                LogType.Exception => UnityCliLoopLogType.Error,
+                LogType.Warning => UnityCliLoopLogType.Warning,
+                LogType.Log => UnityCliLoopLogType.Log,
+                _ => UnityCliLoopLogType.Log  // Default unknown types to Log
             };
         }
 
@@ -120,12 +120,12 @@ namespace io.github.hatayama.UnityCliLoop
 
                 List<LogEntryDto> logs = new();
                 int logCount = GetLogCount();
-                string targetMcpLogType = ConvertLogTypeToMcpLogType(logType);
+                string targetUnityCliLoopLogType = ConvertLogTypeToUnityCliLoopLogType(logType);
 
                 for (int i = 0; i < logCount; i++)
                 {
                     LogEntryDto entry = GetLogEntryAt(i);
-                    if (entry != null && entry.LogType == targetMcpLogType)
+                    if (entry != null && entry.LogType == targetUnityCliLoopLogType)
                     {
                         logs.Add(entry);
                     }
@@ -266,8 +266,8 @@ namespace io.github.hatayama.UnityCliLoop
             // Separate message and stack trace using Unity's internal boundary
             (string message, string stackTrace) = SeparateMessageAndStackTrace(fullMessage, callstackTextStart);
 
-            string mcpLogType = ConvertLogTypeToMcpLogType(logType);
-            return new LogEntryDto(mcpLogType, message, stackTrace);
+            string unityCliLoopLogType = ConvertLogTypeToUnityCliLoopLogType(logType);
+            return new LogEntryDto(unityCliLoopLogType, message, stackTrace);
         }
 
         /// <summary>

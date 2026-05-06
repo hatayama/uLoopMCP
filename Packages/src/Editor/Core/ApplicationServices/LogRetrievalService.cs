@@ -17,7 +17,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <returns>Log data</returns>
         public LogDisplayDto GetLogs(string logType)
         {
-            if (string.Equals(logType, McpLogType.All, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(logType, UnityCliLoopLogType.All, StringComparison.OrdinalIgnoreCase))
             {
                 return LogGetter.GetAllConsoleLogs();
             }

@@ -67,13 +67,13 @@ namespace io.github.hatayama.UnityCliLoop
                     {
                         switch (log.LogType)
                         {
-                            case McpLogType.Error:
+                            case UnityCliLoopLogType.Error:
                                 errorCount++;
                                 break;
-                            case McpLogType.Warning:
+                            case UnityCliLoopLogType.Warning:
                                 warningCount++;
                                 break;
-                            case McpLogType.Log:
+                            case UnityCliLoopLogType.Log:
                                 logCount++;
                                 break;
                         }

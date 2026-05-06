@@ -19,7 +19,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             LogDisplayDto displayData;
             
-            if (logType == McpLogType.All)
+            if (logType == UnityCliLoopLogType.All)
             {
                 displayData = LogGetter.GetAllConsoleLogs();
             }

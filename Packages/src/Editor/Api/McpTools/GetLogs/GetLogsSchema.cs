@@ -5,7 +5,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// <summary>
     /// Supported log types for filtering: Log, Warning, Error, All
     /// </summary>
-    public static class McpLogType
+    public static class UnityCliLoopLogType
     {
         public const string Log = "Log";
         public const string Warning = "Warning";
@@ -23,7 +23,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// Log type to filter (Error, Warning, Log, All)
         /// </summary>
         [Description("Log type to filter (Error, Warning, Log, All)")]
-        public string LogType { get; set; } = McpLogType.All;
+        public string LogType { get; set; } = UnityCliLoopLogType.All;
 
         /// <summary>
         /// Maximum number of logs to retrieve

@@ -96,7 +96,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             // Log should be retrieved correctly
             Assert.IsNotNull(logTypeLogs);
-            Assert.IsTrue(logTypeLogs.Any(log => log.Message.Contains(testLogMessage) && log.LogType == McpLogType.Log));
+            Assert.IsTrue(logTypeLogs.Any(log => log.Message.Contains(testLogMessage) && log.LogType == UnityCliLoopLogType.Log));
         }
 
         [Test]
@@ -273,7 +273,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             // Assert - Error should have message and stack trace separated
             LogEntryDto testLog = logs.FirstOrDefault(log => 
-                log.LogType == McpLogType.Error && log.Message.Contains(testErrorMessage));
+                log.LogType == UnityCliLoopLogType.Error && log.Message.Contains(testErrorMessage));
             Assert.IsNotNull(testLog, "Test error log should be found");
             
             // Message should be clean
