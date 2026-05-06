@@ -137,6 +137,19 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
+        public void DynamicCompilationPorts_WhenLoaded_CompileUnderApplicationAssembly()
+        {
+            // Tests that dynamic-code compilation ports are owned by the application layer.
+            string serviceAssemblyName = typeof(IDynamicCompilationService).Assembly.GetName().Name;
+            string factoryAssemblyName = typeof(IDynamicCompilationServiceFactory).Assembly.GetName().Name;
+            string registryAssemblyName = typeof(DynamicCompilationServiceRegistry).Assembly.GetName().Name;
+
+            Assert.That(serviceAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+            Assert.That(factoryAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+            Assert.That(registryAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+        }
+
+        [Test]
         public void PresentationAsmdef_WhenLoaded_DependsOnApplicationAndDoesNotReferenceInfrastructure()
         {
             // Tests that presentation and infrastructure remain sibling outer layers.
