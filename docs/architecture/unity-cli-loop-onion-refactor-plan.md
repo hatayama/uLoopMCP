@@ -53,6 +53,7 @@
 - Moved concrete dynamic-code compilation service factory into `UnityCLILoop.Infrastructure`; `UnityCLILoop.CompositionRoot.Editor` still owns registration, while Infrastructure owns the factory that creates the compiler service.
 - Moved Unity Console clear host-service implementation into `UnityCLILoop.Infrastructure`; `clear-console` receives the capability through `ToolContracts` and the composition root wires the concrete adapter.
 - Moved project-root identity matching into `UnityCLILoop.Domain` as a platform safety rule; JSON-RPC request validation now delegates to the domain rule and only converts failures into tool parameter errors.
+- Moved project-root canonicalization into `UnityCLILoop.Domain` so Application code can validate project identity without depending on project IPC transport types.
 - Moved CLI version ordering into `UnityCLILoop.Domain` because dispatcher compatibility checks are pure platform rules with no Unity Editor, file-system, or protocol dependency.
 - Moved compilation diagnostic message parsing into `UnityCLILoop.Domain` because it is a pure diagnostic normalization rule with no Unity Editor, file-system, or protocol dependency.
 - Moved dynamic-code default namespace and class-name constants into `UnityCLILoop.Domain` because they are platform defaults shared by compilation and execution policies.
@@ -65,6 +66,16 @@
 - Moved preload metadata validation contracts and registry into `uLoopMCP.Editor.MetadataValidation` so the metadata validation module exposes its own facade instead of depending on `uLoopMCP.Editor.Shared`.
 - Removed `uLoopMCP.Editor.Shared` as a production assembly after moving its remaining constants, logging, and domain-reload registry types into `UnityCLILoop.Application`.
 - Removed stale references to the deleted shared assembly GUID from dev and editor test asmdefs.
+- Added `UnityCliLoopServerApplicationFacade` so Presentation code observes and controls server lifecycle through Application instead of depending on server/controller internals.
+- Added `IUnityCliLoopServerInstance` so Application use cases expose an application-owned server handle instead of returning the project IPC bridge implementation.
+- Added server instance factory and lifecycle registries in `UnityCLILoop.Application`; `UnityCLILoop.CompositionRoot.Editor` registers the concrete bridge implementation.
+- Moved project IPC implementation into `UnityCLILoop.Infrastructure`:
+  - `UnityCliLoopBridgeServer`
+  - `BridgeTransportEndpoint`
+  - `BridgeTransportListener`
+  - `DynamicBufferManager`
+  - `FrameParser`
+  - `MessageReassembler`
 - Added registry tests proving:
   - bundled tools are discovered through the attribute path.
   - `get-logs` is registered from `UnityCLILoop.FirstPartyTools.Editor`.
@@ -149,6 +160,9 @@
   - public tool source files now live under `Packages/src/Editor/Api/Tools` instead of the legacy `Packages/src/Editor/Api/McpTools` folder.
   - pure platform values `DynamicCodeSecurityLevel`, `ToolDisabledException`, `ValidationResult`, and `ServiceResult<T>` now compile under `UnityCLILoop.Domain`.
   - dynamic-code compiler factory registration now compiles under `UnityCLILoop.CompositionRoot.Editor`.
+  - server lifecycle facade, server handle, server factory registry, and server lifecycle registry compile under `UnityCLILoop.Application`.
+  - project IPC transport implementation compiles under `UnityCLILoop.Infrastructure`.
+  - Application source files do not reference project IPC implementation classes directly.
 - Added asmdef dependency tests proving:
   - `Domain` and `ToolContracts` have no project assembly references.
   - `Application` references the inward contracts and does not reference outer onion layers.
@@ -175,10 +189,8 @@
 ## Remaining Migration Steps
 
 - Continue moving cohesive platform rules into `UnityCLILoop.Domain` when they have no Unity or file-system dependency.
-- Move hosting/catalog/execution policies into `UnityCLILoop.Application`.
-- Move remaining editor UI into `UnityCLILoop.Presentation` after adding the necessary Application facades.
-- Move Unity Editor, IPC, file system, dynamic compilation, and protocol adapters into `UnityCLILoop.Infrastructure`.
-- Continue moving bundled tool implementations into `UnityCLILoop.FirstPartyTools.Editor` once their dependencies are either internal to that plugin or exposed through stable contracts.
+- Continue moving concrete dynamic-code compilation collaborators into `UnityCLILoop.Infrastructure`. The factory is already in Infrastructure, but the compiler collaborators still share runtime composition through `DynamicCodeServices`, so this should be split behind stable Application ports before moving files.
+- Continue moving Unity Editor and file-system adapters into `UnityCLILoop.Infrastructure` when Application facades or ports are available.
 - Continue splitting internal bridge commands from public tool registration when more CLI-only commands are identified.
 - Continue moving startup/DI wiring into `UnityCLILoop.CompositionRoot.Editor` as additional concrete service composition points are identified.
 - Extend asmdef dependency tests after each physical move, so the dependency direction is enforced by Unity assemblies instead of documentation alone.
