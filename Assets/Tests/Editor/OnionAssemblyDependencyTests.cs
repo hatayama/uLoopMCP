@@ -150,6 +150,23 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
+        public void DynamicCompilationDtos_WhenLoaded_CompileUnderApplicationAssembly()
+        {
+            // Tests that dynamic-code compilation DTOs are owned by the application layer.
+            string requestAssemblyName = typeof(CompilationRequest).Assembly.GetName().Name;
+            string resultAssemblyName = typeof(CompilationResult).Assembly.GetName().Name;
+            string errorAssemblyName = typeof(CompilationError).Assembly.GetName().Name;
+            string backendKindAssemblyName = typeof(DynamicCompilationBackendKind).Assembly.GetName().Name;
+            string cacheManagerAssemblyName = typeof(CompilationCacheManager).Assembly.GetName().Name;
+
+            Assert.That(requestAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+            Assert.That(resultAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+            Assert.That(errorAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+            Assert.That(backendKindAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+            Assert.That(cacheManagerAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+        }
+
+        [Test]
         public void PresentationAsmdef_WhenLoaded_DependsOnApplicationAndDoesNotReferenceInfrastructure()
         {
             // Tests that presentation and infrastructure remain sibling outer layers.

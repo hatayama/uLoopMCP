@@ -53,6 +53,7 @@
 - Moved dynamic-code security result values and the dangerous API catalog into `UnityCLILoop.Domain` because they are platform safety policy values shared by compilation and metadata validation.
 - Moved source-level dynamic-code security scanning into `UnityCLILoop.Domain` because it is a pure platform safety policy over source text.
 - Moved dynamic-code compilation service ports and their registry into `UnityCLILoop.Application` because Application owns the dynamic-code execution flow while Infrastructure supplies the concrete compiler factory.
+- Moved dynamic-code compilation DTOs and compilation cache management into `UnityCLILoop.Application` because they belong to the application execution flow rather than a shared cross-layer bucket.
 - Added registry tests proving:
   - bundled tools are discovered through the attribute path.
   - `get-logs` is registered from `UnityCLILoop.FirstPartyTools.Editor`.
@@ -84,6 +85,7 @@
   - dynamic-code dangerous API policy compiles under `UnityCLILoop.Domain`.
   - source-level dynamic-code security scanning compiles under `UnityCLILoop.Domain`.
   - dynamic-code compilation service ports and registry compile under `UnityCLILoop.Application`.
+  - dynamic-code compilation DTOs and cache management compile under `UnityCLILoop.Application`.
   - the sample extension asmdef references only `UnityCLILoop.ToolContracts`.
   - the sample `hello-world` extension executes through the same typed contract path as bundled tools.
   - `UnityCLILoop.FirstPartyTools.Editor` references only `UnityCLILoop.ToolContracts`.
