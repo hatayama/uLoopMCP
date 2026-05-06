@@ -27,13 +27,13 @@ namespace io.github.hatayama.UnityCliLoop
     /// 
     /// Related classes:
     /// - UnityApiHandler: Executes Unity commands based on JSON-RPC requests
-    /// - UnityCliLoopBridgeServer: Project IPC bridge that receives JSON-RPC messages from CLI clients
+    /// - Project IPC server: Receives JSON-RPC messages from CLI clients
     /// - MainThreadSwitcher: Ensures Unity API calls run on the main thread
     /// - JsonRpcRequest: Request model for JSON-RPC 2.0 protocol
     /// - ClientExecutionContext: Thread-local context for tracking current client
     /// 
     /// Processing flow:
-    /// 1. Receives JSON message from UnityCliLoopBridgeServer
+    /// 1. Receives JSON message from the project IPC server
     /// 2. Parses and validates JSON-RPC 2.0 format
     /// 3. Sets client context for the current thread
     /// 4. Delegates to UnityApiHandler for command execution
@@ -213,7 +213,7 @@ namespace io.github.hatayama.UnityCliLoop
         private static string GetCurrentProjectRoot()
         {
             string projectRoot = UnityCliLoopPathResolver.GetProjectRoot();
-            return BridgeTransportEndpoint.CanonicalizeProjectRoot(projectRoot);
+            return ProjectRootCanonicalizer.Canonicalize(projectRoot);
         }
 
         private static void LogUnityCliLoopToolParameterValidationException(UnityCliLoopToolParameterValidationException exception)

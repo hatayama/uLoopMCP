@@ -42,7 +42,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static void OnAfterAssemblyReload()
         {
-            // Lock file is deleted by UnityCliLoopBridgeServer when server startup completes
+            // Lock file is deleted when server startup completes.
             // to avoid a gap between domain reload end and server ready
         }
 
@@ -115,7 +115,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return;
             }
 
-            // Lock file is deleted by UnityCliLoopBridgeServer when server startup completes
+            // Lock file is deleted when server startup completes.
             // to avoid a gap between domain reload completion and server ready
 
             // Clear Domain Reload completion flag

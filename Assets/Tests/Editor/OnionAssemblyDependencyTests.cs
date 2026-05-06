@@ -50,6 +50,15 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
+        public void ProjectRootCanonicalizer_WhenLoaded_CompilesUnderDomainAssembly()
+        {
+            // Tests that project-root identity normalization stays with the domain policy.
+            string canonicalizerAssemblyName = typeof(ProjectRootCanonicalizer).Assembly.GetName().Name;
+
+            Assert.That(canonicalizerAssemblyName, Is.EqualTo(DomainAssemblyName));
+        }
+
+        [Test]
         public void CliVersionComparer_WhenLoaded_CompilesUnderDomainAssembly()
         {
             // Tests that CLI compatibility version ordering lives in the domain layer.
@@ -424,6 +433,27 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
+        public void ApplicationSources_WhenLoaded_DoNotReferenceProjectIpcInfrastructure()
+        {
+            // Tests that application code depends on server ports instead of project IPC implementation classes.
+            string[] forbiddenReferences =
+            {
+                "UnityCliLoopBridgeServer",
+                "BridgeTransportEndpoint",
+                "BridgeTransportListener",
+                "MessageReassembler",
+                "DynamicBufferManager",
+                "FrameParser"
+            };
+            string[] offendingReferences = ReadApplicationSourcePaths()
+                .SelectMany(path => FindForbiddenReferences(path, forbiddenReferences))
+                .OrderBy(reference => reference)
+                .ToArray();
+
+            Assert.That(offendingReferences, Is.Empty);
+        }
+
+        [Test]
         public void CompositionRootAsmdef_WhenLoaded_ReferencesAllOnionAssemblies()
         {
             // Tests that the composition root is the assembly allowed to wire every layer together.
@@ -456,6 +486,29 @@ namespace io.github.hatayama.UnityCliLoop
             string factoryAssemblyName = typeof(DynamicCodeCompilationServiceFactory).Assembly.GetName().Name;
 
             Assert.That(factoryAssemblyName, Is.EqualTo(InfrastructureAssemblyName));
+        }
+
+        [Test]
+        public void ProjectIpcInfrastructure_WhenLoaded_CompilesUnderInfrastructureAssembly()
+        {
+            // Tests that project IPC transport implementation is owned by infrastructure.
+            Type endpointType = Type.GetType(
+                "io.github.hatayama.UnityCliLoop.BridgeTransportEndpoint, " + InfrastructureAssemblyName);
+            Type listenerFactoryType = Type.GetType(
+                "io.github.hatayama.UnityCliLoop.BridgeTransportListenerFactory, " + InfrastructureAssemblyName);
+            string bridgeAssemblyName = typeof(UnityCliLoopBridgeServer).Assembly.GetName().Name;
+            string reassemblerAssemblyName = typeof(MessageReassembler).Assembly.GetName().Name;
+            string bufferAssemblyName = typeof(DynamicBufferManager).Assembly.GetName().Name;
+            string parserAssemblyName = typeof(FrameParser).Assembly.GetName().Name;
+
+            Assert.That(endpointType, Is.Not.Null);
+            Assert.That(listenerFactoryType, Is.Not.Null);
+            Assert.That(bridgeAssemblyName, Is.EqualTo(InfrastructureAssemblyName));
+            Assert.That(endpointType.Assembly.GetName().Name, Is.EqualTo(InfrastructureAssemblyName));
+            Assert.That(listenerFactoryType.Assembly.GetName().Name, Is.EqualTo(InfrastructureAssemblyName));
+            Assert.That(reassemblerAssemblyName, Is.EqualTo(InfrastructureAssemblyName));
+            Assert.That(bufferAssemblyName, Is.EqualTo(InfrastructureAssemblyName));
+            Assert.That(parserAssemblyName, Is.EqualTo(InfrastructureAssemblyName));
         }
 
         [Test]
@@ -913,6 +966,30 @@ namespace io.github.hatayama.UnityCliLoop
         {
             string editorRoot = Path.Combine(UnityCliLoopPathResolver.GetProjectRoot(), "Packages", "src", "Editor");
             return Directory.GetFiles(editorRoot, "*.cs", SearchOption.AllDirectories);
+        }
+
+        private static string[] ReadApplicationSourcePaths()
+        {
+            string[] excludedDirectories =
+            {
+                "Packages/src/Editor/CompositionRoot/",
+                "Packages/src/Editor/Domain/",
+                "Packages/src/Editor/FirstPartyTools/",
+                "Packages/src/Editor/Infrastructure/",
+                "Packages/src/Editor/InternalAPIBridge/",
+                "Packages/src/Editor/MetadataValidation/",
+                "Packages/src/Editor/Presentation/",
+                "Packages/src/Editor/ToolContracts/"
+            };
+
+            return ReadProductionSourcePaths()
+                .Where(path =>
+                {
+                    string relativePath = Path.GetRelativePath(UnityCliLoopPathResolver.GetProjectRoot(), path);
+                    string normalizedPath = relativePath.Replace(Path.DirectorySeparatorChar, '/');
+                    return !excludedDirectories.Any(normalizedPath.Contains);
+                })
+                .ToArray();
         }
 
         private static string[] FindForbiddenReferences(string path, string[] forbiddenReferences)

@@ -221,10 +221,6 @@ namespace io.github.hatayama.UnityCliLoop
         }
     }
 
-    // Related classes:
-    // - UnityCliLoopBridgeServer: The bridge server instance that this class manages.
-    // - UnityCliLoopSettingsWindow: The UI for starting and stopping the server.
-    // - AssemblyReloadEvents: Used to handle server state across domain reloads.
     /// <summary>
     /// Manages the Unity CLI bridge server state and restores it after assembly reload.
     /// </summary>

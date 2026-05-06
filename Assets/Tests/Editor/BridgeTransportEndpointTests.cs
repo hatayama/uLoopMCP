@@ -10,7 +10,8 @@ namespace io.github.hatayama.UnityCliLoop
         {
             string filesystemRoot = Path.GetPathRoot(Directory.GetCurrentDirectory());
 
-            string canonicalProjectRoot = BridgeTransportEndpoint.CanonicalizeProjectRoot(filesystemRoot);
+            // Tests that root path canonicalization keeps the filesystem root stable.
+            string canonicalProjectRoot = ProjectRootCanonicalizer.Canonicalize(filesystemRoot);
 
             Assert.That(canonicalProjectRoot, Is.EqualTo(filesystemRoot));
         }
