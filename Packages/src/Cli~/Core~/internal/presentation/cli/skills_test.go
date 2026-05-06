@@ -43,7 +43,7 @@ internal: true
 // Tests that skill discovery includes package, CLI-only, project-local, and cached package skill roots.
 func TestCollectSkillDefinitionsIncludesProjectAndPackageRoots(t *testing.T) {
 	projectRoot := t.TempDir()
-	writeTestSkill(t, projectRoot, "Packages/src/Editor/Api/McpTools/Compile/Skill", `---
+	writeTestSkill(t, projectRoot, "Packages/src/Editor/Api/Tools/Compile/Skill", `---
 name: uloop-compile
 ---
 
@@ -103,13 +103,13 @@ name: uloop-cached-package
 // Tests that CLI-only and project-local skills win over package-root duplicates.
 func TestCollectSkillDefinitionsUsesUnitySideSourcePrecedence(t *testing.T) {
 	projectRoot := t.TempDir()
-	writeTestSkill(t, projectRoot, "Packages/src/Editor/Api/McpTools/Compile/Skill", `---
+	writeTestSkill(t, projectRoot, "Packages/src/Editor/Api/Tools/Compile/Skill", `---
 name: uloop-launch
 ---
 
 # package launch
 `)
-	writeTestSkill(t, projectRoot, "Packages/src/Editor/Api/McpTools/ProjectDuplicate/Skill", `---
+	writeTestSkill(t, projectRoot, "Packages/src/Editor/Api/Tools/ProjectDuplicate/Skill", `---
 name: uloop-project
 ---
 

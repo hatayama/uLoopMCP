@@ -195,6 +195,21 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
+        public void EditorUiFiles_WhenLoaded_DoNotUseLegacyMcpSettingsWindowPath()
+        {
+            // Tests that the settings window does not return under the legacy MCP UI file path.
+            string legacyUiFilePath = Path.Combine(
+                UnityCliLoopPathResolver.GetProjectRoot(),
+                "Packages",
+                "src",
+                "Editor",
+                "UI",
+                "Mcp" + "EditorWindow.cs");
+
+            Assert.That(File.Exists(legacyUiFilePath), Is.False);
+        }
+
+        [Test]
         public void ProductionSources_WhenLoaded_DoNotUseLegacyMcpCommunicationLogTypes()
         {
             // Tests that the removed MCP communication log utility does not return under a legacy public name.
@@ -209,6 +224,18 @@ namespace io.github.hatayama.UnityCliLoop
                 .ToArray();
 
             Assert.That(offendingReferences, Is.Empty);
+        }
+
+        [Test]
+        public void ToolSourceFolders_WhenLoaded_DoNotUseLegacyMcpToolsFolder()
+        {
+            // Tests that public tool implementations are not grouped under the legacy MCP folder name.
+            string editorApiRoot = Path.Combine(UnityCliLoopPathResolver.GetProjectRoot(), "Packages", "src", "Editor", "Api");
+            string legacyToolFolder = Path.Combine(editorApiRoot, "Mcp" + "Tools");
+            string currentToolFolder = Path.Combine(editorApiRoot, "Tools");
+
+            Assert.That(Directory.Exists(legacyToolFolder), Is.False);
+            Assert.That(Directory.Exists(currentToolFolder), Is.True);
         }
 
         [Test]

@@ -66,6 +66,7 @@
   - package version, tool security, console log filter, shared constants, and server config now use `UnityCliLoop*` naming instead of legacy MCP names.
   - project IPC server lifecycle types now use `UnityCliLoop*` naming instead of legacy MCP names.
   - presentation USS, UXML, and C# style class names now use `unity-cli-loop-*` prefixes instead of the legacy `mcp-*` prefix.
+  - public tool source files now live under `Packages/src/Editor/Api/Tools` instead of the legacy `Packages/src/Editor/Api/McpTools` folder.
   - pure platform values `DynamicCodeSecurityLevel`, `ToolDisabledException`, `ValidationResult`, and `ServiceResult<T>` now compile under `UnityCLILoop.Domain`.
   - dynamic-code compiler factory registration now compiles under `UnityCLILoop.CompositionRoot.Editor`.
 - Added asmdef dependency tests proving:

@@ -36,8 +36,8 @@ The key design rule is:
 Start with these files in order:
 
 1. `docs/architecture/execute-dynamic-code-rebuild.md`
-2. `Packages/src/Editor/Api/McpTools/ExecuteDynamicCode/ExecuteDynamicCodeTool.cs`
-3. `Packages/src/Editor/Api/McpTools/UseCases/Tools/ExecuteDynamicCodeUseCase.cs`
+2. `Packages/src/Editor/Api/Tools/ExecuteDynamicCode/ExecuteDynamicCodeTool.cs`
+3. `Packages/src/Editor/Api/Tools/UseCases/Tools/ExecuteDynamicCodeUseCase.cs`
 4. `Packages/src/Editor/Execution/DynamicCodeExecutionFacade.cs`
 5. `Packages/src/Editor/Compilation/DynamicCodeCompiler.cs`
 6. `Packages/src/Editor/Compilation/CompiledAssemblyBuilder.cs`
