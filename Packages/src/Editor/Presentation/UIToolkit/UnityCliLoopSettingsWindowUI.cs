@@ -12,9 +12,9 @@ namespace io.github.hatayama.UnityCliLoop
     /// </summary>
     public class UnityCliLoopSettingsWindowUI : IDisposable
     {
-        private const string UXML_RELATIVE_PATH = "Editor/UI/UIToolkit/UnityCliLoopSettingsWindow.uxml";
-        private const string USS_RELATIVE_PATH = "Editor/UI/UIToolkit/UnityCliLoopSettingsWindow.uss";
-        private const string GITHUB_ICON_RELATIVE_PATH = "Editor/UI/Setup/GitHub_Invertocat_White.png";
+        private const string UXML_RELATIVE_PATH = "Editor/Presentation/UIToolkit/UnityCliLoopSettingsWindow.uxml";
+        private const string USS_RELATIVE_PATH = "Editor/Presentation/UIToolkit/UnityCliLoopSettingsWindow.uss";
+        private const string GITHUB_ICON_RELATIVE_PATH = "Editor/Presentation/Setup/GitHub_Invertocat_White.png";
 
         private readonly VisualElement _root;
 

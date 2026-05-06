@@ -4,7 +4,8 @@
     "references": [
         "UnityCLILoop.Application",
         "UnityCLILoop.Domain",
-        "UnityCLILoop.ToolContracts"
+        "UnityCLILoop.ToolContracts",
+        "uLoopMCP.Editor.Shared"
     ],
     "includePlatforms": [
         "Editor"

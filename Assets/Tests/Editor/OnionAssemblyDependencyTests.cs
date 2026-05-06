@@ -15,6 +15,7 @@ namespace io.github.hatayama.UnityCliLoop
         private const string FirstPartyToolsAssemblyName = "UnityCLILoop.FirstPartyTools.Editor";
         private const string InfrastructureAssemblyName = "UnityCLILoop.Infrastructure";
         private const string PresentationAssemblyName = "UnityCLILoop.Presentation";
+        private const string SharedAssemblyName = "uLoopMCP.Editor.Shared";
         private const string ToolContractsAssemblyName = "UnityCLILoop.ToolContracts";
 
         [Test]
@@ -59,6 +60,7 @@ namespace io.github.hatayama.UnityCliLoop
             {
                 ApplicationAssemblyName,
                 DomainAssemblyName,
+                SharedAssemblyName,
                 ToolContractsAssemblyName
             }));
         }
@@ -135,7 +137,7 @@ namespace io.github.hatayama.UnityCliLoop
                 "UnityCliLoopToolRegistry",
                 "ToolSettingsCatalogItem"
             };
-            string[] offendingReferences = ReadEditorUiSourcePaths()
+            string[] offendingReferences = ReadPresentationSourcePaths()
                 .SelectMany(path => FindForbiddenReferences(path, forbiddenReferences))
                 .OrderBy(reference => reference)
                 .ToArray();
@@ -148,7 +150,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             // Tests that settings-window UI code uses UnityCLILoop naming instead of legacy MCP naming.
             string legacySettingsWindowName = "Mcp" + "EditorWindow";
-            string[] offendingReferences = ReadEditorUiSourcePaths()
+            string[] offendingReferences = ReadPresentationSourcePaths()
                 .SelectMany(path => FindForbiddenReferences(path, new[] { legacySettingsWindowName }))
                 .OrderBy(reference => reference)
                 .ToArray();
@@ -190,10 +192,10 @@ namespace io.github.hatayama.UnityCliLoop
             return Directory.GetFiles(editorRoot, "*.asmdef", SearchOption.AllDirectories);
         }
 
-        private static string[] ReadEditorUiSourcePaths()
+        private static string[] ReadPresentationSourcePaths()
         {
-            string uiRoot = Path.Combine(UnityMcpPathResolver.GetProjectRoot(), "Packages", "src", "Editor", "UI");
-            return Directory.GetFiles(uiRoot, "*.cs", SearchOption.AllDirectories);
+            string presentationRoot = Path.Combine(UnityMcpPathResolver.GetProjectRoot(), "Packages", "src", "Editor", "Presentation");
+            return Directory.GetFiles(presentationRoot, "*.cs", SearchOption.AllDirectories);
         }
 
         private static string[] FindForbiddenReferences(string path, string[] forbiddenReferences)

@@ -1,6 +1,9 @@
+using System.Runtime.CompilerServices;
 using Unity.Profiling;
 using UnityEditor;
 using UnityEngine;
+
+[assembly: InternalsVisibleTo("uLoopMCP.Tests.Editor")]
 
 namespace io.github.hatayama.UnityCliLoop
 {

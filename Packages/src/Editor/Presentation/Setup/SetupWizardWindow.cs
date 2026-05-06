@@ -14,9 +14,9 @@ namespace io.github.hatayama.UnityCliLoop
     public class SetupWizardWindow : EditorWindow
     {
         private const string WindowTitle = "Unity CLI Loop Setup";
-        private const string UXML_RELATIVE_PATH = "Editor/UI/Setup/SetupWizardWindow.uxml";
-        private const string USS_RELATIVE_PATH = "Editor/UI/Setup/SetupWizardWindow.uss";
-        private const string GITHUB_ICON_RELATIVE_PATH = "Editor/UI/Setup/GitHub_Invertocat_White.png";
+        private const string UXML_RELATIVE_PATH = "Editor/Presentation/Setup/SetupWizardWindow.uxml";
+        private const string USS_RELATIVE_PATH = "Editor/Presentation/Setup/SetupWizardWindow.uss";
+        private const string GITHUB_ICON_RELATIVE_PATH = "Editor/Presentation/Setup/GitHub_Invertocat_White.png";
         private const int PreferredWrappedTextLineCount = 2;
         private const bool ForceFlatSkillInstall = true;
         private static readonly Vector2 MinimumWindowSize = new(360f, 380f);

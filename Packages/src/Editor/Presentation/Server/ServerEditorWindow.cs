@@ -10,8 +10,8 @@ namespace io.github.hatayama.UnityCliLoop
     /// </summary>
     public class ServerEditorWindow : EditorWindow
     {
-        private const string UXML_RELATIVE_PATH = "Editor/UI/Server/ServerEditorWindow.uxml";
-        private const string USS_RELATIVE_PATH = "Editor/UI/Server/ServerEditorWindow.uss";
+        private const string UXML_RELATIVE_PATH = "Editor/Presentation/Server/ServerEditorWindow.uxml";
+        private const string USS_RELATIVE_PATH = "Editor/Presentation/Server/ServerEditorWindow.uss";
 
         private ServerStatusSection _serverStatusSection;
         private ServerControlsSection _serverControlsSection;
