@@ -2,33 +2,6 @@ using System.ComponentModel;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    /// <summary>
-    /// Window name matching modes for FindWindowsByName
-    /// </summary>
-    public enum WindowMatchMode
-    {
-        /// <summary>
-        /// Exact match (case-insensitive)
-        /// </summary>
-        exact = 0,
-
-        /// <summary>
-        /// Prefix match (case-insensitive)
-        /// </summary>
-        prefix = 1,
-
-        /// <summary>
-        /// Contains match (case-insensitive)
-        /// </summary>
-        contains = 2
-    }
-
-    public enum CaptureMode
-    {
-        window = 0,
-        rendering = 1
-    }
-
     public class ScreenshotSchema : UnityCliLoopToolSchema
     {
         [Description("Window name to capture (e.g., 'Game', 'Scene', 'Console', 'Inspector', 'Project', 'Hierarchy', or any EditorWindow title). Ignored when CaptureMode is rendering.")]

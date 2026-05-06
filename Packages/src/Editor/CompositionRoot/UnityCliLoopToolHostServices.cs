@@ -12,6 +12,7 @@ namespace io.github.hatayama.UnityCliLoop
         public IUnityCliLoopHierarchyService Hierarchy { get; }
         public IUnityCliLoopTestExecutionService TestExecution { get; }
         public IUnityCliLoopGameObjectSearchService GameObjectSearch { get; }
+        public IUnityCliLoopScreenshotService Screenshot { get; }
 
         public UnityCliLoopToolHostServices()
         {
@@ -22,6 +23,7 @@ namespace io.github.hatayama.UnityCliLoop
             Hierarchy = new GetHierarchyUseCase(new HierarchyService(), new HierarchySerializer());
             TestExecution = new RunTestsUseCase();
             GameObjectSearch = new FindGameObjectsUseCase(new GameObjectFinderService(), new ComponentSerializer());
+            Screenshot = new ScreenshotUseCase();
         }
     }
 }

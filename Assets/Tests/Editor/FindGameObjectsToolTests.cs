@@ -749,6 +749,7 @@ namespace io.github.hatayama.UnityCliLoop
             public IUnityCliLoopHierarchyService Hierarchy => throw new System.NotSupportedException();
             public IUnityCliLoopTestExecutionService TestExecution => throw new System.NotSupportedException();
             public IUnityCliLoopGameObjectSearchService GameObjectSearch { get; }
+            public IUnityCliLoopScreenshotService Screenshot => throw new System.NotSupportedException();
 
             public ToolHostServicesForTests(IUnityCliLoopGameObjectSearchService gameObjectSearch)
             {

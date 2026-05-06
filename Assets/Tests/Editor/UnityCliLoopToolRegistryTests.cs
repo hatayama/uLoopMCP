@@ -22,6 +22,7 @@ namespace io.github.hatayama.UnityCliLoop
             Assert.That(registry.IsToolRegistered("get-hierarchy"), Is.True);
             Assert.That(registry.IsToolRegistered("run-tests"), Is.True);
             Assert.That(registry.IsToolRegistered("find-game-objects"), Is.True);
+            Assert.That(registry.IsToolRegistered("screenshot"), Is.True);
         }
 
         [Test]
@@ -126,6 +127,19 @@ namespace io.github.hatayama.UnityCliLoop
             Assert.That(toolType, Is.Not.Null);
             Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo("UnityCLILoop.FirstPartyTools.Editor"));
             Assert.That(registry.IsThirdPartyTool("find-game-objects"), Is.False);
+        }
+
+        [Test]
+        public void GetToolType_WhenScreenshotComesFromFirstPartyToolsAssembly_ReturnsBundledPluginType()
+        {
+            // Tests that screenshot is a bundled plugin instead of an application-layer tool.
+            UnityCliLoopToolRegistry registry = new UnityCliLoopToolRegistry();
+
+            System.Type toolType = registry.GetToolType("screenshot");
+
+            Assert.That(toolType, Is.Not.Null);
+            Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo("UnityCLILoop.FirstPartyTools.Editor"));
+            Assert.That(registry.IsThirdPartyTool("screenshot"), Is.False);
         }
 
         [Test]

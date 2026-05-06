@@ -34,6 +34,7 @@ namespace io.github.hatayama.UnityCliLoop
         IUnityCliLoopHierarchyService Hierarchy { get; }
         IUnityCliLoopTestExecutionService TestExecution { get; }
         IUnityCliLoopGameObjectSearchService GameObjectSearch { get; }
+        IUnityCliLoopScreenshotService Screenshot { get; }
     }
 
     /// <summary>

@@ -113,6 +113,7 @@ namespace io.github.hatayama.UnityCliLoop
             public IUnityCliLoopTestExecutionService TestExecution => throw new System.NotSupportedException();
             public IUnityCliLoopGameObjectSearchService GameObjectSearch { get; } =
                 new FindGameObjectsUseCase(new GameObjectFinderService(), new ComponentSerializer());
+            public IUnityCliLoopScreenshotService Screenshot => throw new System.NotSupportedException();
         }
     }
 }

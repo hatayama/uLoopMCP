@@ -8,15 +8,15 @@ using UnityEditor;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    [UnityCliLoopTool]
-    public class ScreenshotTool : UnityCliLoopTool<ScreenshotSchema, ScreenshotResponse>
+    /// <summary>
+    /// Captures Unity Editor windows or GameView rendering for the bundled screenshot tool.
+    /// </summary>
+    public class ScreenshotUseCase : IUnityCliLoopScreenshotService
     {
         private const int ANNOTATION_OVERLAY_RENDER_WAIT_FRAMES = 2;
 
-        public override string ToolName => "screenshot";
-
-        protected override async Task<ScreenshotResponse> ExecuteAsync(
-            ScreenshotSchema parameters,
+        public async Task<UnityCliLoopScreenshotResult> CaptureAsync(
+            UnityCliLoopScreenshotRequest request,
             CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
@@ -26,24 +26,24 @@ namespace io.github.hatayama.UnityCliLoop
             VibeLogger.LogInfo(
                 "screenshot_start",
                 "Unity window screenshot started",
-                new { WindowName = parameters.WindowName, ResolutionScale = parameters.ResolutionScale, MatchMode = parameters.MatchMode.ToString(), OutputDirectory = parameters.OutputDirectory },
+                new { WindowName = request.WindowName, ResolutionScale = request.ResolutionScale, MatchMode = request.MatchMode.ToString(), OutputDirectory = request.OutputDirectory },
                 correlationId: correlationId,
                 humanNote: "User requested Unity window screenshot",
                 aiTodo: "Monitor capture performance and file size"
             );
 
-            ValidateParameters(parameters);
+            ValidateParameters(request);
 
-            if (parameters.CaptureMode == CaptureMode.rendering)
+            if (request.CaptureMode == CaptureMode.rendering)
             {
-                return await CaptureRenderingAsync(parameters, correlationId, ct);
+                return await CaptureRenderingAsync(request, correlationId, ct);
             }
 
-            return await CaptureWindowsAsync(parameters, correlationId, ct);
+            return await CaptureWindowsAsync(request, correlationId, ct);
         }
 
-        private async Task<ScreenshotResponse> CaptureRenderingAsync(
-            ScreenshotSchema parameters, string correlationId, CancellationToken ct)
+        private async Task<UnityCliLoopScreenshotResult> CaptureRenderingAsync(
+            UnityCliLoopScreenshotRequest request, string correlationId, CancellationToken ct)
         {
             if (!EditorApplication.isPlaying)
             {
@@ -52,24 +52,27 @@ namespace io.github.hatayama.UnityCliLoop
                     "CaptureMode.rendering requires PlayMode",
                     correlationId: correlationId
                 );
-                return new ScreenshotResponse();
+                return new UnityCliLoopScreenshotResult();
             }
 
             List<UIElementInfo> annotatedElements = new List<UIElementInfo>();
 
-            if (parameters.AnnotateElements)
+            if (request.AnnotateElements)
             {
                 annotatedElements = UIElementAnnotator.CollectInteractiveElements();
                 UIElementAnnotator.AssignLabels(annotatedElements);
             }
 
-            if (parameters.ElementsOnly)
+            if (request.ElementsOnly)
             {
                 UIElementAnnotator.ConvertToSimCoordinates(annotatedElements, (int)Handles.GetMainGameViewSize().y);
-                ScreenshotInfo elementsOnlyInfo = new ScreenshotInfo();
-                elementsOnlyInfo.CoordinateSystem = UnityCliLoopConstants.COORDINATE_SYSTEM_GAME_VIEW;
+                UnityCliLoopScreenshotInfo elementsOnlyInfo = new UnityCliLoopScreenshotInfo();
+                elementsOnlyInfo.CoordinateSystem = UnityCliLoopScreenshotCoordinateSystem.GameView;
                 elementsOnlyInfo.AnnotatedElements = annotatedElements;
-                return new ScreenshotResponse(new List<ScreenshotInfo> { elementsOnlyInfo });
+                return new UnityCliLoopScreenshotResult
+                {
+                    Screenshots = new List<UnityCliLoopScreenshotInfo> { elementsOnlyInfo }
+                };
             }
 
             GameObject annotationOverlay = null;
@@ -77,18 +80,18 @@ namespace io.github.hatayama.UnityCliLoop
             int yOffset;
             try
             {
-                if (parameters.AnnotateElements)
+                if (request.AnnotateElements)
                 {
                     annotationOverlay = UIElementAnnotator.CreateAnnotationOverlay(
                         annotatedElements,
-                        parameters.ResolutionScale);
+                        request.ResolutionScale);
                     Canvas.ForceUpdateCanvases();
                     // Chained CLI calls can read the previous GameView RT before overlay rendering catches up.
                     await EditorDelay.DelayFrame(ANNOTATION_OVERLAY_RENDER_WAIT_FRAMES, ct);
                 }
 
                 (texture, yOffset) = await EditorWindowCaptureUtility.CaptureGameRenderingAsync(
-                    parameters.ResolutionScale, ct);
+                    request.ResolutionScale, ct);
             }
             finally
             {
@@ -104,26 +107,33 @@ namespace io.github.hatayama.UnityCliLoop
                     "GameView RenderTexture is not available. Open the Game view and wait for a frame before retrying.",
                     correlationId: correlationId
                 );
-                return new ScreenshotResponse();
+                return new UnityCliLoopScreenshotResult();
             }
 
             int width = texture.width;
             int height = texture.height;
-            List<ScreenshotInfo> screenshots = new List<ScreenshotInfo>();
+            List<UnityCliLoopScreenshotInfo> screenshots = new List<UnityCliLoopScreenshotInfo>();
 
             try
             {
-                string outputDirectory = EnsureOutputDirectoryExists(parameters.OutputDirectory);
+                string outputDirectory = EnsureOutputDirectoryExists(request.OutputDirectory);
                 string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss_fff");
                 string savedPath = Path.Combine(outputDirectory, $"Rendering_{timestamp}.png");
 
                 SaveTextureAsPng(texture, savedPath);
 
                 FileInfo savedFileInfo = new FileInfo(savedPath);
-                ScreenshotInfo info = new ScreenshotInfo(
-                    savedPath, savedFileInfo.Length, width, height,
-                    UnityCliLoopConstants.COORDINATE_SYSTEM_GAME_VIEW, parameters.ResolutionScale, yOffset);
-                info.AnnotatedElements = annotatedElements;
+                UnityCliLoopScreenshotInfo info = new UnityCliLoopScreenshotInfo
+                {
+                    ImagePath = savedPath,
+                    FileSizeBytes = savedFileInfo.Length,
+                    Width = width,
+                    Height = height,
+                    CoordinateSystem = UnityCliLoopScreenshotCoordinateSystem.GameView,
+                    ResolutionScale = request.ResolutionScale,
+                    YOffset = yOffset,
+                    AnnotatedElements = annotatedElements,
+                };
                 screenshots.Add(info);
             }
             catch (Exception ex)
@@ -150,32 +160,32 @@ namespace io.github.hatayama.UnityCliLoop
                 );
             }
 
-            return new ScreenshotResponse(screenshots);
+            return new UnityCliLoopScreenshotResult { Screenshots = screenshots };
         }
 
-        private async Task<ScreenshotResponse> CaptureWindowsAsync(
-            ScreenshotSchema parameters, string correlationId, CancellationToken ct)
+        private async Task<UnityCliLoopScreenshotResult> CaptureWindowsAsync(
+            UnityCliLoopScreenshotRequest request, string correlationId, CancellationToken ct)
         {
-            EditorWindow[] windows = EditorWindowCaptureUtility.FindWindowsByName(parameters.WindowName, parameters.MatchMode);
+            EditorWindow[] windows = EditorWindowCaptureUtility.FindWindowsByName(request.WindowName, request.MatchMode);
             if (windows.Length == 0)
             {
                 VibeLogger.LogError(
                     "screenshot_window_not_found",
-                    $"Window '{parameters.WindowName}' not found (MatchMode: {parameters.MatchMode})",
+                    $"Window '{request.WindowName}' not found (MatchMode: {request.MatchMode})",
                     correlationId: correlationId
                 );
-                return new ScreenshotResponse();
+                return new UnityCliLoopScreenshotResult();
             }
 
-            string outputDirectory = EnsureOutputDirectoryExists(parameters.OutputDirectory);
-            string safeWindowName = SanitizeFileName(parameters.WindowName);
+            string outputDirectory = EnsureOutputDirectoryExists(request.OutputDirectory);
+            string safeWindowName = SanitizeFileName(request.WindowName);
             string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss_fff");
-            List<ScreenshotInfo> screenshots = new List<ScreenshotInfo>();
+            List<UnityCliLoopScreenshotInfo> screenshots = new List<UnityCliLoopScreenshotInfo>();
 
             for (int i = 0; i < windows.Length; i++)
             {
                 EditorWindow window = windows[i];
-                Texture2D texture = await EditorWindowCaptureUtility.CaptureWindowAsync(window, parameters.ResolutionScale, ct);
+                Texture2D texture = await EditorWindowCaptureUtility.CaptureWindowAsync(window, request.ResolutionScale, ct);
                 if (texture == null)
                 {
                     VibeLogger.LogWarning(
@@ -199,7 +209,13 @@ namespace io.github.hatayama.UnityCliLoop
                     SaveTextureAsPng(texture, savedPath);
 
                     FileInfo savedFileInfo = new FileInfo(savedPath);
-                    screenshots.Add(new ScreenshotInfo(savedPath, savedFileInfo.Length, width, height));
+                    screenshots.Add(new UnityCliLoopScreenshotInfo
+                    {
+                        ImagePath = savedPath,
+                        FileSizeBytes = savedFileInfo.Length,
+                        Width = width,
+                        Height = height,
+                    });
                 }
                 catch (Exception ex)
                 {
@@ -219,42 +235,42 @@ namespace io.github.hatayama.UnityCliLoop
             VibeLogger.LogInfo(
                 "screenshot_success",
                 $"Captured {screenshots.Count} window(s)",
-                new { WindowName = parameters.WindowName, ScreenshotCount = screenshots.Count },
+                new { WindowName = request.WindowName, ScreenshotCount = screenshots.Count },
                 correlationId: correlationId
             );
 
-            return new ScreenshotResponse(screenshots);
+            return new UnityCliLoopScreenshotResult { Screenshots = screenshots };
         }
 
-        private void ValidateParameters(ScreenshotSchema parameters)
+        private void ValidateParameters(UnityCliLoopScreenshotRequest request)
         {
-            if (parameters.CaptureMode != CaptureMode.rendering &&
-                string.IsNullOrEmpty(parameters.WindowName))
+            if (request.CaptureMode != CaptureMode.rendering &&
+                string.IsNullOrEmpty(request.WindowName))
             {
                 throw new UnityCliLoopToolParameterValidationException("WindowName cannot be null or empty");
             }
 
-            if (parameters.ResolutionScale < 0.1f || parameters.ResolutionScale > 1.0f)
+            if (request.ResolutionScale < 0.1f || request.ResolutionScale > 1.0f)
             {
                 throw new UnityCliLoopToolParameterValidationException(
-                    $"ResolutionScale must be between 0.1 and 1.0, got: {parameters.ResolutionScale}");
+                    $"ResolutionScale must be between 0.1 and 1.0, got: {request.ResolutionScale}");
             }
 
             // AnnotateElements and ElementsOnly rely on PlayMode rendering pipeline
-            if (parameters.CaptureMode != CaptureMode.rendering)
+            if (request.CaptureMode != CaptureMode.rendering)
             {
-                if (parameters.AnnotateElements)
+                if (request.AnnotateElements)
                 {
                     throw new UnityCliLoopToolParameterValidationException("AnnotateElements is only supported when CaptureMode=rendering");
                 }
 
-                if (parameters.ElementsOnly)
+                if (request.ElementsOnly)
                 {
                     throw new UnityCliLoopToolParameterValidationException("ElementsOnly is only supported when CaptureMode=rendering");
                 }
             }
 
-            if (parameters.ElementsOnly && !parameters.AnnotateElements)
+            if (request.ElementsOnly && !request.AnnotateElements)
             {
                 throw new UnityCliLoopToolParameterValidationException("ElementsOnly requires AnnotateElements=true");
             }

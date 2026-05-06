@@ -44,6 +44,7 @@
 - Moved `get-hierarchy` into `UnityCLILoop.FirstPartyTools.Editor` as a bundled tool plugin that receives hierarchy export access through a `ToolContracts` host-service contract.
 - Moved `run-tests` into `UnityCLILoop.FirstPartyTools.Editor` as a bundled tool plugin that receives Unity Test Runner access through a `ToolContracts` host-service contract.
 - Moved `find-game-objects` into `UnityCLILoop.FirstPartyTools.Editor` as a bundled tool plugin that receives GameObject search access through a `ToolContracts` host-service contract.
+- Moved `screenshot` into `UnityCLILoop.FirstPartyTools.Editor` as a bundled tool plugin that receives Unity window and GameView capture access through a `ToolContracts` host-service contract.
 - Moved `execute-dynamic-code` schema and response DTOs into `UnityCLILoop.ToolContracts` because both the bundled tool and the application-side execution pipeline shape those values.
 - Moved concrete tool host-service wiring into `UnityCLILoop.CompositionRoot.Editor`; `UnityCliLoopToolRegistry` now asks an application-side provider for registered host services instead of constructing them directly.
 - Moved concrete dynamic-code compilation service factory into `UnityCLILoop.Infrastructure`; `UnityCLILoop.CompositionRoot.Editor` still owns registration, while Infrastructure owns the factory that creates the compiler service.
@@ -82,6 +83,7 @@
   - `get-hierarchy` skill discovery still works after moving under `UnityCLILoop.FirstPartyTools.Editor`.
   - `run-tests` skill discovery still works after moving under `UnityCLILoop.FirstPartyTools.Editor`.
   - `find-game-objects` skill discovery still works after moving under `UnityCLILoop.FirstPartyTools.Editor`.
+  - `screenshot` skill discovery still works after moving under `UnityCLILoop.FirstPartyTools.Editor`.
   - `get-hierarchy` is registered from `UnityCLILoop.FirstPartyTools.Editor`.
   - hierarchy host-service contracts compile under `UnityCLILoop.ToolContracts`.
   - hierarchy host-service implementation compiles under `UnityCLILoop.Application`.
@@ -91,6 +93,9 @@
   - `find-game-objects` is registered from `UnityCLILoop.FirstPartyTools.Editor`.
   - GameObject search host-service contracts compile under `UnityCLILoop.ToolContracts`.
   - GameObject search host-service implementation compiles under `UnityCLILoop.Application`.
+  - `screenshot` is registered from `UnityCLILoop.FirstPartyTools.Editor`.
+  - screenshot host-service contracts compile under `UnityCLILoop.ToolContracts`.
+  - screenshot host-service implementation compiles under `UnityCLILoop.Application`.
   - concrete tool host services compile under `UnityCLILoop.CompositionRoot.Editor`.
   - `UnityCliLoopToolRegistry` does not directly construct concrete host services.
   - concrete dynamic-code compiler factory compiles under `UnityCLILoop.Infrastructure`.

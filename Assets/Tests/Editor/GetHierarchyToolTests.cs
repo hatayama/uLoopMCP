@@ -108,6 +108,7 @@ namespace io.github.hatayama.UnityCliLoop
             public IUnityCliLoopHierarchyService Hierarchy { get; }
             public IUnityCliLoopTestExecutionService TestExecution => throw new NotSupportedException();
             public IUnityCliLoopGameObjectSearchService GameObjectSearch => throw new NotSupportedException();
+            public IUnityCliLoopScreenshotService Screenshot => throw new NotSupportedException();
 
             public FakeToolHostServices(IUnityCliLoopHierarchyService hierarchy)
             {
