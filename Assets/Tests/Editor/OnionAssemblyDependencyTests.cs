@@ -49,6 +49,15 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
+        public void CliVersionComparer_WhenLoaded_CompilesUnderDomainAssembly()
+        {
+            // Tests that CLI compatibility version ordering lives in the domain layer.
+            string comparerAssemblyName = typeof(CliVersionComparer).Assembly.GetName().Name;
+
+            Assert.That(comparerAssemblyName, Is.EqualTo(DomainAssemblyName));
+        }
+
+        [Test]
         public void ToolContractsAsmdef_WhenLoaded_HasNoProjectAssemblyReferences()
         {
             // Tests that the public tool contract assembly stays independent from implementation assemblies.

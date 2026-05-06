@@ -44,6 +44,7 @@
 - Moved concrete tool host-service wiring into `UnityCLILoop.CompositionRoot.Editor`; `UnityCliLoopToolRegistry` now asks an application-side provider for registered host services instead of constructing them directly.
 - Moved concrete dynamic-code compilation service factory into `UnityCLILoop.Infrastructure`; `UnityCLILoop.CompositionRoot.Editor` still owns registration, while Infrastructure owns the factory that creates the compiler service.
 - Moved project-root identity matching into `UnityCLILoop.Domain` as a platform safety rule; JSON-RPC request validation now delegates to the domain rule and only converts failures into tool parameter errors.
+- Moved CLI version ordering into `UnityCLILoop.Domain` because dispatcher compatibility checks are pure platform rules with no Unity Editor, file-system, or protocol dependency.
 - Added registry tests proving:
   - bundled tools are discovered through the attribute path.
   - `get-logs` is registered from `UnityCLILoop.FirstPartyTools.Editor`.
@@ -65,6 +66,7 @@
   - `UnityCliLoopToolRegistry` does not directly construct concrete host services.
   - concrete dynamic-code compiler factory compiles under `UnityCLILoop.Infrastructure`.
   - project-root identity safety policy compiles under `UnityCLILoop.Domain`.
+  - CLI version ordering compiles under `UnityCLILoop.Domain`.
   - the sample extension asmdef references only `UnityCLILoop.ToolContracts`.
   - the sample `hello-world` extension executes through the same typed contract path as bundled tools.
   - `UnityCLILoop.FirstPartyTools.Editor` references only `UnityCLILoop.ToolContracts`.

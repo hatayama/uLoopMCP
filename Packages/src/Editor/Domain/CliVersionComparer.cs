@@ -2,8 +2,8 @@ using System;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    // Compares npm-style CLI versions so Unity UI can handle prerelease dispatcher versions.
-    internal static class CliVersionComparer
+    // Compares npm-style CLI versions for platform compatibility checks.
+    public static class CliVersionComparer
     {
         public static bool IsVersionLessThan(string leftVersion, string rightVersion)
         {
