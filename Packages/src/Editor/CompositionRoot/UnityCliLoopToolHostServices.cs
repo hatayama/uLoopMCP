@@ -13,6 +13,8 @@ namespace io.github.hatayama.UnityCliLoop
         public IUnityCliLoopTestExecutionService TestExecution { get; }
         public IUnityCliLoopGameObjectSearchService GameObjectSearch { get; }
         public IUnityCliLoopScreenshotService Screenshot { get; }
+        public IUnityCliLoopRecordInputService RecordInput { get; }
+        public IUnityCliLoopReplayInputService ReplayInput { get; }
 
         public UnityCliLoopToolHostServices()
         {
@@ -24,6 +26,8 @@ namespace io.github.hatayama.UnityCliLoop
             TestExecution = new RunTestsUseCase();
             GameObjectSearch = new FindGameObjectsUseCase(new GameObjectFinderService(), new ComponentSerializer());
             Screenshot = new ScreenshotUseCase();
+            RecordInput = new RecordInputUseCase();
+            ReplayInput = new ReplayInputUseCase();
         }
     }
 }

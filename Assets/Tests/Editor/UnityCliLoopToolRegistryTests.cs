@@ -23,6 +23,8 @@ namespace io.github.hatayama.UnityCliLoop
             Assert.That(registry.IsToolRegistered("run-tests"), Is.True);
             Assert.That(registry.IsToolRegistered("find-game-objects"), Is.True);
             Assert.That(registry.IsToolRegistered("screenshot"), Is.True);
+            Assert.That(registry.IsToolRegistered("record-input"), Is.True);
+            Assert.That(registry.IsToolRegistered("replay-input"), Is.True);
         }
 
         [Test]
@@ -140,6 +142,32 @@ namespace io.github.hatayama.UnityCliLoop
             Assert.That(toolType, Is.Not.Null);
             Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo("UnityCLILoop.FirstPartyTools.Editor"));
             Assert.That(registry.IsThirdPartyTool("screenshot"), Is.False);
+        }
+
+        [Test]
+        public void GetToolType_WhenRecordInputComesFromFirstPartyToolsAssembly_ReturnsBundledPluginType()
+        {
+            // Tests that record-input is a bundled plugin instead of an application-layer tool.
+            UnityCliLoopToolRegistry registry = new UnityCliLoopToolRegistry();
+
+            System.Type toolType = registry.GetToolType("record-input");
+
+            Assert.That(toolType, Is.Not.Null);
+            Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo("UnityCLILoop.FirstPartyTools.Editor"));
+            Assert.That(registry.IsThirdPartyTool("record-input"), Is.False);
+        }
+
+        [Test]
+        public void GetToolType_WhenReplayInputComesFromFirstPartyToolsAssembly_ReturnsBundledPluginType()
+        {
+            // Tests that replay-input is a bundled plugin instead of an application-layer tool.
+            UnityCliLoopToolRegistry registry = new UnityCliLoopToolRegistry();
+
+            System.Type toolType = registry.GetToolType("replay-input");
+
+            Assert.That(toolType, Is.Not.Null);
+            Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo("UnityCLILoop.FirstPartyTools.Editor"));
+            Assert.That(registry.IsThirdPartyTool("replay-input"), Is.False);
         }
 
         [Test]

@@ -260,6 +260,40 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
+        public void InputRecordingHostServiceContract_WhenLoaded_CompilesUnderToolContractsAssembly()
+        {
+            // Tests that bundled input recording tools consume platform behavior through the public host-service boundary.
+            string recordServiceAssemblyName = typeof(IUnityCliLoopRecordInputService).Assembly.GetName().Name;
+            string recordRequestAssemblyName = typeof(UnityCliLoopRecordInputRequest).Assembly.GetName().Name;
+            string recordResultAssemblyName = typeof(UnityCliLoopRecordInputResult).Assembly.GetName().Name;
+            string replayServiceAssemblyName = typeof(IUnityCliLoopReplayInputService).Assembly.GetName().Name;
+            string replayRequestAssemblyName = typeof(UnityCliLoopReplayInputRequest).Assembly.GetName().Name;
+            string replayResultAssemblyName = typeof(UnityCliLoopReplayInputResult).Assembly.GetName().Name;
+            string recordActionAssemblyName = typeof(RecordInputAction).Assembly.GetName().Name;
+            string replayActionAssemblyName = typeof(ReplayInputAction).Assembly.GetName().Name;
+
+            Assert.That(recordServiceAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
+            Assert.That(recordRequestAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
+            Assert.That(recordResultAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
+            Assert.That(replayServiceAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
+            Assert.That(replayRequestAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
+            Assert.That(replayResultAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
+            Assert.That(recordActionAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
+            Assert.That(replayActionAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
+        }
+
+        [Test]
+        public void InputRecordingUseCases_WhenLoaded_CompileUnderApplicationAssembly()
+        {
+            // Tests that the application layer owns the record/replay host-service implementations.
+            string recordUseCaseAssemblyName = typeof(RecordInputUseCase).Assembly.GetName().Name;
+            string replayUseCaseAssemblyName = typeof(ReplayInputUseCase).Assembly.GetName().Name;
+
+            Assert.That(recordUseCaseAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+            Assert.That(replayUseCaseAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+        }
+
+        [Test]
         public void PreloadMetadataValidationPorts_WhenLoaded_CompileUnderMetadataValidationAssembly()
         {
             // Tests that preload metadata validation contracts are owned by the metadata validation module.

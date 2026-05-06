@@ -1096,6 +1096,18 @@ namespace io.github.hatayama.UnityCliLoop
 
             Assert.That(screenshotSkill.ToolName, Is.EqualTo("screenshot"));
             Assert.That(screenshotSkill.SkillFiles.Keys, Does.Contain(SkillInstallLayout.SkillFileName));
+
+            SkillInstallLayout.SkillSourceInfo recordInputSkill = skillSources
+                .Single(skill => skill.Name == "uloop-record-input");
+
+            Assert.That(recordInputSkill.ToolName, Is.EqualTo("record-input"));
+            Assert.That(recordInputSkill.SkillFiles.Keys, Does.Contain(SkillInstallLayout.SkillFileName));
+
+            SkillInstallLayout.SkillSourceInfo replayInputSkill = skillSources
+                .Single(skill => skill.Name == "uloop-replay-input");
+
+            Assert.That(replayInputSkill.ToolName, Is.EqualTo("replay-input"));
+            Assert.That(replayInputSkill.SkillFiles.Keys, Does.Contain(SkillInstallLayout.SkillFileName));
         }
 
         // Tests that internal skill metadata maps back to the hidden tool name only.

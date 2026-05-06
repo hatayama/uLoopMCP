@@ -14,17 +14,16 @@ using Newtonsoft.Json.Serialization;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    [UnityCliLoopTool]
-    public class RecordInputTool : UnityCliLoopTool<RecordInputSchema, RecordInputResponse>
+    /// <summary>
+    /// Coordinates Input System recording for the bundled record-input tool.
+    /// </summary>
+    public class RecordInputUseCase : IUnityCliLoopRecordInputService
     {
-        public override string ToolName => "record-input";
-
-        protected override
 #if !ULOOP_HAS_INPUT_SYSTEM
 #pragma warning disable CS1998
 #endif
-            async Task<RecordInputResponse> ExecuteAsync(
-            RecordInputSchema parameters,
+        public async Task<UnityCliLoopRecordInputResult> RecordInputAsync(
+            UnityCliLoopRecordInputRequest request,
             CancellationToken ct)
 #if !ULOOP_HAS_INPUT_SYSTEM
 #pragma warning restore CS1998
@@ -33,11 +32,11 @@ namespace io.github.hatayama.UnityCliLoop
             ct.ThrowIfCancellationRequested();
 
 #if !ULOOP_HAS_INPUT_SYSTEM
-            return new RecordInputResponse
+            return new UnityCliLoopRecordInputResult
             {
                 Success = false,
                 Message = "record-input requires the Input System package (com.unity.inputsystem). Install it via Package Manager and set Active Input Handling to 'Input System Package (New)' or 'Both' in Player Settings.",
-                Action = parameters.Action.ToString()
+                Action = request.Action.ToString()
             };
 #else
             string correlationId = UnityCliLoopConstants.GenerateCorrelationId();
@@ -45,30 +44,30 @@ namespace io.github.hatayama.UnityCliLoop
             VibeLogger.LogInfo(
                 "record_input_start",
                 "Record input started",
-                new { Action = parameters.Action.ToString() },
+                new { Action = request.Action.ToString() },
                 correlationId: correlationId
             );
 
-            RecordInputResponse response;
+            UnityCliLoopRecordInputResult response;
 
-            switch (parameters.Action)
+            switch (request.Action)
             {
                 case RecordInputAction.Start:
-                    response = await ExecuteStartAsync(parameters, ct);
+                    response = await ExecuteStartAsync(request, ct);
                     break;
 
                 case RecordInputAction.Stop:
-                    response = ExecuteStop(parameters);
+                    response = ExecuteStop(request);
                     break;
 
                 default:
-                    throw new ArgumentException($"Unknown record-input action: {parameters.Action}");
+                    throw new ArgumentException($"Unknown record-input action: {request.Action}");
             }
 
             VibeLogger.LogInfo(
                 "record_input_complete",
                 $"Record input completed: {response.Message}",
-                new { Action = parameters.Action.ToString(), Success = response.Success },
+                new { Action = request.Action.ToString(), Success = response.Success },
                 correlationId: correlationId
             );
 
@@ -77,11 +76,11 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
 #if ULOOP_HAS_INPUT_SYSTEM
-        private static async Task<RecordInputResponse> ExecuteStartAsync(RecordInputSchema parameters, CancellationToken ct)
+        private static async Task<UnityCliLoopRecordInputResult> ExecuteStartAsync(UnityCliLoopRecordInputRequest request, CancellationToken ct)
         {
             if (!EditorApplication.isPlaying)
             {
-                return new RecordInputResponse
+                return new UnityCliLoopRecordInputResult
                 {
                     Success = false,
                     Message = "PlayMode is not active. Use control-play-mode tool to start PlayMode first.",
@@ -91,7 +90,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             if (EditorApplication.isPaused)
             {
-                return new RecordInputResponse
+                return new UnityCliLoopRecordInputResult
                 {
                     Success = false,
                     Message = "PlayMode is paused. Resume PlayMode before recording input.",
@@ -101,7 +100,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             if (InputRecorder.IsRecording)
             {
-                return new RecordInputResponse
+                return new UnityCliLoopRecordInputResult
                 {
                     Success = false,
                     Message = "Already recording. Stop the current recording first.",
@@ -111,7 +110,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             if (InputReplayer.IsReplaying)
             {
-                return new RecordInputResponse
+                return new UnityCliLoopRecordInputResult
                 {
                     Success = false,
                     Message = "Cannot record while replaying. Stop the replay first.",
@@ -121,7 +120,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             if (RecordInputOverlayState.Phase == RecordInputOverlayPhase.Countdown)
             {
-                return new RecordInputResponse
+                return new UnityCliLoopRecordInputResult
                 {
                     Success = false,
                     Message = "Recording countdown already in progress.",
@@ -129,10 +128,10 @@ namespace io.github.hatayama.UnityCliLoop
                 };
             }
 
-            int delaySeconds = Mathf.Clamp(parameters.DelaySeconds, RecordInputConstants.MIN_DELAY_SECONDS, RecordInputConstants.MAX_DELAY_SECONDS);
-            HashSet<Key>? keyFilter = InputRecordingFileHelper.ParseKeyFilter(parameters.Keys);
+            int delaySeconds = Mathf.Clamp(request.DelaySeconds, RecordInputConstants.MIN_DELAY_SECONDS, RecordInputConstants.MAX_DELAY_SECONDS);
+            HashSet<Key>? keyFilter = InputRecordingFileHelper.ParseKeyFilter(request.Keys);
 
-            if (parameters.ShowOverlay)
+            if (request.ShowOverlay)
             {
                 OverlayCanvasFactory.EnsureExists();
                 RecordReplayOverlayFactory.EnsureRecordOverlay();
@@ -168,7 +167,7 @@ namespace io.github.hatayama.UnityCliLoop
 
                 if (!EditorApplication.isPlaying || !InputRecorder.IsRecording)
                 {
-                    return new RecordInputResponse
+                    return new UnityCliLoopRecordInputResult
                     {
                         Success = false,
                         Message = "Recording cancelled (PlayMode ended during countdown).",
@@ -182,9 +181,9 @@ namespace io.github.hatayama.UnityCliLoop
                 InputRecorder.StartRecording(keyFilter);
             }
 
-            string filterMessage = keyFilter != null ? $" (filtering: {parameters.Keys})" : "";
+            string filterMessage = keyFilter != null ? $" (filtering: {request.Keys})" : "";
             string delayMessage = delaySeconds > 0 ? $" (after {delaySeconds}s countdown)" : "";
-            return new RecordInputResponse
+            return new UnityCliLoopRecordInputResult
             {
                 Success = true,
                 Message = $"Recording started{filterMessage}{delayMessage}. Use Stop to save.",
@@ -192,12 +191,12 @@ namespace io.github.hatayama.UnityCliLoop
             };
         }
 
-        private static RecordInputResponse ExecuteStop(RecordInputSchema parameters)
+        private static UnityCliLoopRecordInputResult ExecuteStop(UnityCliLoopRecordInputRequest request)
         {
             if (RecordInputOverlayState.Phase == RecordInputOverlayPhase.Countdown)
             {
                 RecordInputOverlayState.Clear();
-                return new RecordInputResponse
+                return new UnityCliLoopRecordInputResult
                 {
                     Success = true,
                     Message = "Recording countdown cancelled.",
@@ -212,7 +211,7 @@ namespace io.github.hatayama.UnityCliLoop
                 {
                     string savedPath = InputRecorder.LastAutoSavePath;
                     InputRecorder.LastAutoSavePath = null;
-                    return new RecordInputResponse
+                    return new UnityCliLoopRecordInputResult
                     {
                         Success = true,
                         Message = $"Recording was auto-saved at duration limit: {savedPath}",
@@ -221,7 +220,7 @@ namespace io.github.hatayama.UnityCliLoop
                     };
                 }
 
-                return new RecordInputResponse
+                return new UnityCliLoopRecordInputResult
                 {
                     Success = false,
                     Message = "Not currently recording. Use Start first.",
@@ -231,13 +230,13 @@ namespace io.github.hatayama.UnityCliLoop
 
             InputRecordingData data = InputRecorder.StopRecording();
 
-            string outputPath = InputRecordingFileHelper.ResolveOutputPath(parameters.OutputPath);
+            string outputPath = InputRecordingFileHelper.ResolveOutputPath(request.OutputPath);
             InputRecordingFileHelper.Save(data, outputPath);
             InputRecorder.NotifyRecordingStopped();
 
             int eventCount = data.GetTotalEventCount();
 
-            return new RecordInputResponse
+            return new UnityCliLoopRecordInputResult
             {
                 Success = true,
                 Message = $"Recording saved: {eventCount} events across {data.Metadata.TotalFrames} frames ({data.Metadata.DurationSeconds:F1}s)",

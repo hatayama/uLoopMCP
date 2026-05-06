@@ -114,6 +114,8 @@ namespace io.github.hatayama.UnityCliLoop
             public IUnityCliLoopGameObjectSearchService GameObjectSearch { get; } =
                 new FindGameObjectsUseCase(new GameObjectFinderService(), new ComponentSerializer());
             public IUnityCliLoopScreenshotService Screenshot => throw new System.NotSupportedException();
+            public IUnityCliLoopRecordInputService RecordInput => throw new System.NotSupportedException();
+            public IUnityCliLoopReplayInputService ReplayInput => throw new System.NotSupportedException();
         }
     }
 }
