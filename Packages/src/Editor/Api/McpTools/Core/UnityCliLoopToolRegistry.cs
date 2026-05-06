@@ -36,7 +36,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// </summary>
         public UnityCliLoopToolRegistry()
         {
-            UnityCliLoopToolContractVersion.SetCurrent(McpVersion.VERSION);
+            UnityCliLoopToolContractVersion.SetCurrent(UnityCliLoopVersion.VERSION);
             Instance = this;
             RegisterDefaultTools();
         }
