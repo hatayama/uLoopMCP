@@ -76,6 +76,15 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
+        public void ScriptChangesDuringPlayOptions_WhenLoaded_CompilesUnderDomainAssembly()
+        {
+            // Tests that play-mode compilation policy values live in the domain layer.
+            string optionsAssemblyName = typeof(ScriptChangesDuringPlayOptions).Assembly.GetName().Name;
+
+            Assert.That(optionsAssemblyName, Is.EqualTo(DomainAssemblyName));
+        }
+
+        [Test]
         public void ToolContractsAsmdef_WhenLoaded_HasNoProjectAssemblyReferences()
         {
             // Tests that the public tool contract assembly stays independent from implementation assemblies.

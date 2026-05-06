@@ -49,6 +49,7 @@
 - Moved CLI version ordering into `UnityCLILoop.Domain` because dispatcher compatibility checks are pure platform rules with no Unity Editor, file-system, or protocol dependency.
 - Moved compilation diagnostic message parsing into `UnityCLILoop.Domain` because it is a pure diagnostic normalization rule with no Unity Editor, file-system, or protocol dependency.
 - Moved dynamic-code default namespace and class-name constants into `UnityCLILoop.Domain` because they are platform defaults shared by compilation and execution policies.
+- Moved script-changes-while-playing policy values into `UnityCLILoop.Domain` because they are compile safety policy values interpreted by Application services.
 - Added registry tests proving:
   - bundled tools are discovered through the attribute path.
   - `get-logs` is registered from `UnityCLILoop.FirstPartyTools.Editor`.
@@ -75,6 +76,7 @@
   - CLI version ordering compiles under `UnityCLILoop.Domain`.
   - compilation diagnostic message parsing compiles under `UnityCLILoop.Domain`.
   - dynamic-code platform defaults compile under `UnityCLILoop.Domain`.
+  - script-changes-while-playing policy values compile under `UnityCLILoop.Domain`.
   - the sample extension asmdef references only `UnityCLILoop.ToolContracts`.
   - the sample `hello-world` extension executes through the same typed contract path as bundled tools.
   - `UnityCLILoop.FirstPartyTools.Editor` references only `UnityCLILoop.ToolContracts`.
