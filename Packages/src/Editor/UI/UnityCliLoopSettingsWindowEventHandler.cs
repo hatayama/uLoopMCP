@@ -5,25 +5,25 @@ using UnityEngine;
 namespace io.github.hatayama.UnityCliLoop
 {
     /// <summary>
-    /// Event handler for McpEditorWindow - Manages Unity and server events
+    /// Event handler for UnityCliLoopSettingsWindow - Manages Unity and server events
     /// Helper class for Presenter layer in MVP architecture
     /// Related classes:
-    /// - McpEditorWindow: Main presenter that owns this handler
-    /// - McpEditorModel: Model layer for state management
+    /// - UnityCliLoopSettingsWindow: Main presenter that owns this handler
+    /// - UnityCliLoopSettingsModel: Model layer for state management
     /// - McpBridgeServer: Server that provides events
     /// - McpServerController: Server lifecycle management
     /// </summary>
-    internal class McpEditorWindowEventHandler
+    internal class UnityCliLoopSettingsWindowEventHandler
     {
         private static readonly ProfilerMarker s_onEditorUpdateMarker =
-            new ProfilerMarker("McpEditorWindow.OnEditorUpdate");
+            new ProfilerMarker("UnityCliLoopSettingsWindow.OnEditorUpdate");
         private static readonly ProfilerMarker s_refreshUiMarker =
-            new ProfilerMarker("McpEditorWindow.RefreshUI");
+            new ProfilerMarker("UnityCliLoopSettingsWindow.RefreshUI");
 
-        private readonly McpEditorModel _model;
-        private readonly McpEditorWindow _window;
+        private readonly UnityCliLoopSettingsModel _model;
+        private readonly UnityCliLoopSettingsWindow _window;
 
-        public McpEditorWindowEventHandler(McpEditorModel model, McpEditorWindow window)
+        public UnityCliLoopSettingsWindowEventHandler(UnityCliLoopSettingsModel model, UnityCliLoopSettingsWindow window)
         {
             _model = model;
             _window = window;
@@ -95,7 +95,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             using (s_onEditorUpdateMarker.Auto())
             {
-                if (!McpEditorWindowRefreshPolicy.ShouldRefreshOnEditorUpdate(_model.Runtime))
+                if (!UnityCliLoopSettingsWindowRefreshPolicy.ShouldRefreshOnEditorUpdate(_model.Runtime))
                 {
                     return;
                 }
@@ -112,7 +112,7 @@ namespace io.github.hatayama.UnityCliLoop
 
     // Post-compile recovery can stay active while UI data is unchanged, so explicit repaint
     // requests gate expensive full-section refreshes.
-    internal static class McpEditorWindowRefreshPolicy
+    internal static class UnityCliLoopSettingsWindowRefreshPolicy
     {
         public static bool ShouldRefreshOnEditorUpdate(RuntimeState runtimeState)
         {
@@ -121,13 +121,13 @@ namespace io.github.hatayama.UnityCliLoop
             return runtimeState.NeedsRepaint;
         }
 
-        public static bool ShouldRunExpensiveChecks(McpEditorWindowRefreshMode refreshMode)
+        public static bool ShouldRunExpensiveChecks(UnityCliLoopSettingsWindowRefreshMode refreshMode)
         {
-            return refreshMode == McpEditorWindowRefreshMode.Full;
+            return refreshMode == UnityCliLoopSettingsWindowRefreshMode.Full;
         }
 
         public static bool ShouldRefreshSkillInstallState(
-            McpEditorWindowRefreshMode refreshMode,
+            UnityCliLoopSettingsWindowRefreshMode refreshMode,
             bool refreshRequested)
         {
             return refreshRequested && ShouldRunExpensiveChecks(refreshMode);
@@ -170,7 +170,7 @@ namespace io.github.hatayama.UnityCliLoop
         }
     }
 
-    internal enum McpEditorWindowRefreshMode
+    internal enum UnityCliLoopSettingsWindowRefreshMode
     {
         InitialPaint,
         Full

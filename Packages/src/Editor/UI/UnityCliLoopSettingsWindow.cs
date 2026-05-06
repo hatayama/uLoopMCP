@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    public class McpEditorWindow : EditorWindow
+    public class UnityCliLoopSettingsWindow : EditorWindow
     {
         private const bool ForceFlatSkillInstall = true;
         private const double DeferredInitialRefreshDelaySeconds = 0.05;
@@ -16,9 +16,9 @@ namespace io.github.hatayama.UnityCliLoop
         private const double ToolSettingsRegistryWarmupMaxDelaySeconds = 0.8;
         private const int ToolSettingsRegistryWarmupMaxAttempts = 5;
 
-        private McpEditorWindowUI _view;
-        private McpEditorModel _model;
-        private McpEditorWindowEventHandler _eventHandler;
+        private UnityCliLoopSettingsWindowUI _view;
+        private UnityCliLoopSettingsModel _model;
+        private UnityCliLoopSettingsWindowEventHandler _eventHandler;
 
         private SkillsTarget _skillsTarget = SkillsTarget.Claude;
         private bool _installSkillsFlat;
@@ -38,7 +38,7 @@ namespace io.github.hatayama.UnityCliLoop
         [MenuItem("Window/Unity CLI Loop/Settings", priority = 0)]
         public static void ShowWindow()
         {
-            McpEditorWindow window = GetWindow<McpEditorWindow>("Unity CLI Loop");
+            UnityCliLoopSettingsWindow window = GetWindow<UnityCliLoopSettingsWindow>("Unity CLI Loop");
             window.Show();
         }
 
@@ -60,7 +60,7 @@ namespace io.github.hatayama.UnityCliLoop
         private void CreateGUI()
         {
             InitializeView();
-            RefreshAllSections(refreshMode: McpEditorWindowRefreshMode.InitialPaint);
+            RefreshAllSections(refreshMode: UnityCliLoopSettingsWindowRefreshMode.InitialPaint);
             ScheduleDeferredInitialRefresh();
         }
 
@@ -75,12 +75,12 @@ namespace io.github.hatayama.UnityCliLoop
 
         private void InitializeModel()
         {
-            _model = new McpEditorModel();
+            _model = new UnityCliLoopSettingsModel();
         }
 
         private void InitializeView()
         {
-            _view = new McpEditorWindowUI(rootVisualElement);
+            _view = new UnityCliLoopSettingsWindowUI(rootVisualElement);
             SetupViewCallbacks();
         }
 
@@ -105,7 +105,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private void InitializeEventHandler()
         {
-            _eventHandler = new McpEditorWindowEventHandler(_model, this);
+            _eventHandler = new UnityCliLoopSettingsWindowEventHandler(_model, this);
             _eventHandler.Initialize();
         }
 
@@ -194,7 +194,7 @@ namespace io.github.hatayama.UnityCliLoop
             ApplyFlatSkillInstallPreference();
             RefreshAllSections(
                 refreshSkillInstallState: false,
-                refreshMode: McpEditorWindowRefreshMode.Full);
+                refreshMode: UnityCliLoopSettingsWindowRefreshMode.Full);
             RefreshSelectedTargetInstallStateInBackground();
         }
 
@@ -213,7 +213,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             if (!_hasCompletedDeferredInitialRefresh)
             {
-                RefreshAllSections(refreshMode: McpEditorWindowRefreshMode.InitialPaint);
+                RefreshAllSections(refreshMode: UnityCliLoopSettingsWindowRefreshMode.InitialPaint);
             }
 
             ScheduleDeferredInitialRefresh();
@@ -221,18 +221,18 @@ namespace io.github.hatayama.UnityCliLoop
 
         internal void RefreshAllSections(
             bool refreshSkillInstallState = false,
-            McpEditorWindowRefreshMode refreshMode = McpEditorWindowRefreshMode.Full)
+            UnityCliLoopSettingsWindowRefreshMode refreshMode = UnityCliLoopSettingsWindowRefreshMode.Full)
         {
             if (_view == null)
             {
                 return;
             }
 
-            bool runExpensiveChecks = McpEditorWindowRefreshPolicy.ShouldRunExpensiveChecks(refreshMode);
+            bool runExpensiveChecks = UnityCliLoopSettingsWindowRefreshPolicy.ShouldRunExpensiveChecks(refreshMode);
 
             _view.UpdateConfigurationFoldout(_model.UI.ShowConfiguration);
 
-            if (McpEditorWindowRefreshPolicy.ShouldRefreshSkillInstallState(refreshMode, refreshSkillInstallState))
+            if (UnityCliLoopSettingsWindowRefreshPolicy.ShouldRefreshSkillInstallState(refreshMode, refreshSkillInstallState))
             {
                 RefreshSelectedTargetInstallStateFast();
             }
@@ -306,7 +306,7 @@ namespace io.github.hatayama.UnityCliLoop
             ToolSettingsSectionData toolSettingsData = CreateToolSettingsData();
             _view.UpdateToolSettings(toolSettingsData);
 
-            if (McpEditorWindowRefreshPolicy.ShouldKeepToolSettingsCatalogDirty(toolSettingsData))
+            if (UnityCliLoopSettingsWindowRefreshPolicy.ShouldKeepToolSettingsCatalogDirty(toolSettingsData))
             {
                 if (ScheduleToolSettingsRegistryWarmup())
                 {
@@ -420,12 +420,12 @@ namespace io.github.hatayama.UnityCliLoop
 
         private bool ScheduleToolSettingsRegistryWarmup()
         {
-            if (McpEditorWindowRefreshPolicy.ShouldStartToolSettingsRegistryWarmup(
+            if (UnityCliLoopSettingsWindowRefreshPolicy.ShouldStartToolSettingsRegistryWarmup(
                     _isToolSettingsRegistryWarmupScheduled,
                     _toolSettingsRegistryWarmupAttemptCount,
                     ToolSettingsRegistryWarmupMaxAttempts))
             {
-                double delaySeconds = McpEditorWindowRefreshPolicy.CalculateToolSettingsRegistryWarmupDelaySeconds(
+                double delaySeconds = UnityCliLoopSettingsWindowRefreshPolicy.CalculateToolSettingsRegistryWarmupDelaySeconds(
                     ToolSettingsRegistryWarmupInitialDelaySeconds,
                     ToolSettingsRegistryWarmupMaxDelaySeconds,
                     _toolSettingsRegistryWarmupAttemptCount);
@@ -489,13 +489,16 @@ namespace io.github.hatayama.UnityCliLoop
         {
             if (!enabled)
             {
-                ToolSkillSynchronizer.RemoveSkillFiles(toolName);
+                SkillSetupApplicationFacade.RemoveSkillFiles(toolName);
             }
             else
             {
-                await ToolSkillSynchronizer.InstallSkillFilesForTool(toolName, !_installSkillsFlat);
+                await SkillSetupApplicationFacade.InstallSkillFilesForToolAsync(
+                    toolName,
+                    !_installSkillsFlat,
+                    CancellationToken.None);
 
-                if (!ToolSkillSynchronizer.IsSkillInstalled(toolName))
+                if (!SkillSetupApplicationFacade.IsSkillInstalled(toolName))
                 {
                     Debug.LogWarning(
                         $"[UnityCliLoop] Skill for '{toolName}' was not installed after enabling. " +
@@ -639,10 +642,10 @@ namespace io.github.hatayama.UnityCliLoop
             SkillsTargetSelection selection = SkillsTargetSelectionResolver.Resolve(
                 _skillsTarget,
                 !_installSkillsFlat);
-            List<ToolSkillSynchronizer.SkillTargetInfo> targets = includeFreshnessCheck
-                ? ToolSkillSynchronizer.DetectTargetsForLayoutAtProjectRoot(projectRoot, !_installSkillsFlat)
-                : ToolSkillSynchronizer.DetectTargetsForLayoutFastAtProjectRoot(projectRoot, !_installSkillsFlat);
-            ToolSkillSynchronizer.SkillTargetInfo targetInfo = targets
+            List<SkillSetupApplicationFacade.SkillTargetInfo> targets = includeFreshnessCheck
+                ? SkillSetupApplicationFacade.DetectSkillTargetsForLayoutAtProjectRoot(projectRoot, !_installSkillsFlat)
+                : SkillSetupApplicationFacade.DetectSkillTargetsForLayoutFastAtProjectRoot(projectRoot, !_installSkillsFlat);
+            SkillSetupApplicationFacade.SkillTargetInfo targetInfo = targets
                 .FirstOrDefault(target => target.DirName == selection.DirectoryName);
 
             return string.IsNullOrEmpty(targetInfo.DirName)
@@ -783,15 +786,16 @@ namespace io.github.hatayama.UnityCliLoop
                 SkillsTargetSelection selection = SkillsTargetSelectionResolver.Resolve(
                     _skillsTarget,
                     !_installSkillsFlat);
-                ToolSkillSynchronizer.SkillTargetInfo target = new(
+                SkillSetupApplicationFacade.SkillTargetInfo target = new(
                     selection.DisplayName,
                     selection.DirectoryName,
                     selection.InstallFlag,
                     hasSkillsDirectory: true,
                     hasExistingSkills: false);
-                await ToolSkillSynchronizer.InstallSkillFiles(
-                    new List<ToolSkillSynchronizer.SkillTargetInfo> { target },
-                    !_installSkillsFlat);
+                await SkillSetupApplicationFacade.InstallSkillFilesAsync(
+                    new List<SkillSetupApplicationFacade.SkillTargetInfo> { target },
+                    !_installSkillsFlat,
+                    CancellationToken.None);
                 EditorDialogHelper.ShowSkillsInstalledDialog();
             }
             finally

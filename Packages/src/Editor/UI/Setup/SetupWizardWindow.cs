@@ -380,7 +380,7 @@ namespace io.github.hatayama.UnityCliLoop
             string projectRoot = UnityMcpPathResolver.GetProjectRoot();
             EnsureProjectLocalCliCurrent(projectRoot);
             bool cliInstalled = IsCliInstalled(cachedCliVersion);
-            List<ToolSkillSynchronizer.SkillTargetInfo> targets = DetectDisplayedSkillTargetsFast(projectRoot);
+            List<SkillSetupApplicationFacade.SkillTargetInfo> targets = DetectDisplayedSkillTargetsFast(projectRoot);
             bool canManageSkills = CanManageSkills(cliInstalled);
             UpdateSkillsStep(canManageSkills, targets);
             BeginRefreshDisplayedSkillTargets(canManageSkills);
@@ -431,21 +431,21 @@ namespace io.github.hatayama.UnityCliLoop
                 return;
             }
 
-            List<ToolSkillSynchronizer.SkillTargetInfo> targets = DetectDisplayedSkillTargetsFast(projectRoot);
+            List<SkillSetupApplicationFacade.SkillTargetInfo> targets = DetectDisplayedSkillTargetsFast(projectRoot);
             bool canManageSkills = CanManageSkills(cliInstalled);
             UpdateSkillsStep(canManageSkills, targets);
             BeginRefreshDisplayedSkillTargets(canManageSkills);
             ScheduleResizeToContent();
         }
 
-        private List<ToolSkillSynchronizer.SkillTargetInfo> DetectDisplayedSkillTargets(string projectRoot)
+        private List<SkillSetupApplicationFacade.SkillTargetInfo> DetectDisplayedSkillTargets(string projectRoot)
         {
-            return ToolSkillSynchronizer.DetectTargetsForLayoutAtProjectRoot(projectRoot, !_installSkillsFlat);
+            return SkillSetupApplicationFacade.DetectSkillTargetsForLayoutAtProjectRoot(projectRoot, !_installSkillsFlat);
         }
 
-        private List<ToolSkillSynchronizer.SkillTargetInfo> DetectDisplayedSkillTargetsFast(string projectRoot)
+        private List<SkillSetupApplicationFacade.SkillTargetInfo> DetectDisplayedSkillTargetsFast(string projectRoot)
         {
-            return ToolSkillSynchronizer.DetectTargetsForLayoutFastAtProjectRoot(projectRoot, !_installSkillsFlat);
+            return SkillSetupApplicationFacade.DetectSkillTargetsForLayoutFastAtProjectRoot(projectRoot, !_installSkillsFlat);
         }
 
         private void BeginRefreshDisplayedSkillTargets(bool canManageSkills)
@@ -464,7 +464,7 @@ namespace io.github.hatayama.UnityCliLoop
         private async void RefreshDisplayedSkillTargetsAsync(CancellationToken ct)
         {
             string projectRoot = UnityMcpPathResolver.GetProjectRoot();
-            List<ToolSkillSynchronizer.SkillTargetInfo> targets =
+            List<SkillSetupApplicationFacade.SkillTargetInfo> targets =
                 await Task.Run(() => DetectDisplayedSkillTargets(projectRoot));
             if (ct.IsCancellationRequested)
             {
@@ -487,8 +487,8 @@ namespace io.github.hatayama.UnityCliLoop
             _skillInstallStateRefreshCts = null;
         }
 
-        internal static List<ToolSkillSynchronizer.SkillTargetInfo> FilterInstallableSkillTargets(
-            IEnumerable<ToolSkillSynchronizer.SkillTargetInfo> targets)
+        internal static List<SkillSetupApplicationFacade.SkillTargetInfo> FilterInstallableSkillTargets(
+            IEnumerable<SkillSetupApplicationFacade.SkillTargetInfo> targets)
         {
             Debug.Assert(targets != null, "targets must not be null");
             return targets
@@ -506,7 +506,7 @@ namespace io.github.hatayama.UnityCliLoop
             return cliInstalled;
         }
 
-        internal static ToolSkillSynchronizer.SkillTargetInfo CreateFirstInstallSkillTarget(
+        internal static SkillSetupApplicationFacade.SkillTargetInfo CreateFirstInstallSkillTarget(
             SkillsTarget target,
             bool groupSkillsUnderUnityCliLoop)
         {
@@ -521,8 +521,8 @@ namespace io.github.hatayama.UnityCliLoop
                 hasExistingSkills: false);
         }
 
-        internal static ToolSkillSynchronizer.SkillTargetInfo GetSelectedSkillTargetInfo(
-            IEnumerable<ToolSkillSynchronizer.SkillTargetInfo> targets,
+        internal static SkillSetupApplicationFacade.SkillTargetInfo GetSelectedSkillTargetInfo(
+            IEnumerable<SkillSetupApplicationFacade.SkillTargetInfo> targets,
             SkillsTarget target,
             bool groupSkillsUnderUnityCliLoop)
         {
@@ -531,26 +531,26 @@ namespace io.github.hatayama.UnityCliLoop
             SkillsTargetSelection selection = SkillsTargetSelectionResolver.Resolve(
                 target,
                 groupSkillsUnderUnityCliLoop);
-            ToolSkillSynchronizer.SkillTargetInfo selectedTargetInfo = targets
+            SkillSetupApplicationFacade.SkillTargetInfo selectedTargetInfo = targets
                 .FirstOrDefault(info => info.DirName == selection.DirectoryName);
             return string.IsNullOrEmpty(selectedTargetInfo.DirName)
                 ? CreateFirstInstallSkillTarget(target, groupSkillsUnderUnityCliLoop)
                 : selectedTargetInfo;
         }
 
-        internal static List<ToolSkillSynchronizer.SkillTargetInfo> GetFirstInstallableSkillTargets(
-            IEnumerable<ToolSkillSynchronizer.SkillTargetInfo> targets,
+        internal static List<SkillSetupApplicationFacade.SkillTargetInfo> GetFirstInstallableSkillTargets(
+            IEnumerable<SkillSetupApplicationFacade.SkillTargetInfo> targets,
             SkillsTarget target,
             bool groupSkillsUnderUnityCliLoop)
         {
-            ToolSkillSynchronizer.SkillTargetInfo selectedTargetInfo = GetSelectedSkillTargetInfo(
+            SkillSetupApplicationFacade.SkillTargetInfo selectedTargetInfo = GetSelectedSkillTargetInfo(
                 targets,
                 target,
                 groupSkillsUnderUnityCliLoop);
             return selectedTargetInfo.InstallState == SkillInstallState.Installed
                    || selectedTargetInfo.InstallState == SkillInstallState.Checking
-                ? new List<ToolSkillSynchronizer.SkillTargetInfo>()
-                : new List<ToolSkillSynchronizer.SkillTargetInfo> { selectedTargetInfo };
+                ? new List<SkillSetupApplicationFacade.SkillTargetInfo>()
+                : new List<SkillSetupApplicationFacade.SkillTargetInfo> { selectedTargetInfo };
         }
 
         private void UpdateCliStep(
@@ -677,7 +677,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private void UpdateSkillsStep(
             bool canManageSkills,
-            List<ToolSkillSynchronizer.SkillTargetInfo> targets)
+            List<SkillSetupApplicationFacade.SkillTargetInfo> targets)
         {
             _skillsTargetList.Clear();
 
@@ -703,7 +703,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             if (useFirstInstallSkillsUi)
             {
-                ToolSkillSynchronizer.SkillTargetInfo selectedTargetInfo = GetSelectedSkillTargetInfo(
+                SkillSetupApplicationFacade.SkillTargetInfo selectedTargetInfo = GetSelectedSkillTargetInfo(
                     targets,
                     _skillsTarget,
                     !_installSkillsFlat);
@@ -720,9 +720,9 @@ namespace io.github.hatayama.UnityCliLoop
                 return;
             }
 
-            List<ToolSkillSynchronizer.SkillTargetInfo> installableTargets = FilterInstallableSkillTargets(targets);
+            List<SkillSetupApplicationFacade.SkillTargetInfo> installableTargets = FilterInstallableSkillTargets(targets);
 
-            foreach (ToolSkillSynchronizer.SkillTargetInfo target in installableTargets)
+            foreach (SkillSetupApplicationFacade.SkillTargetInfo target in installableTargets)
             {
                 VisualElement item = new VisualElement();
                 item.AddToClassList("setup-target-item");
@@ -904,8 +904,8 @@ namespace io.github.hatayama.UnityCliLoop
         {
             CancelSkillInstallStateRefresh();
             string projectRoot = UnityMcpPathResolver.GetProjectRoot();
-            List<ToolSkillSynchronizer.SkillTargetInfo> targets = DetectDisplayedSkillTargets(projectRoot);
-            List<ToolSkillSynchronizer.SkillTargetInfo> installableTargets = _shouldUseFirstInstallSkillsUi
+            List<SkillSetupApplicationFacade.SkillTargetInfo> targets = DetectDisplayedSkillTargets(projectRoot);
+            List<SkillSetupApplicationFacade.SkillTargetInfo> installableTargets = _shouldUseFirstInstallSkillsUi
                 ? GetFirstInstallableSkillTargets(targets, _skillsTarget, !_installSkillsFlat)
                 : FilterInstallableSkillTargets(targets);
             if (installableTargets.Count == 0) return;
@@ -915,9 +915,10 @@ namespace io.github.hatayama.UnityCliLoop
 
             try
             {
-                await ToolSkillSynchronizer.InstallSkillFiles(
+                await SkillSetupApplicationFacade.InstallSkillFilesAsync(
                     installableTargets,
-                    !_installSkillsFlat);
+                    !_installSkillsFlat,
+                    CancellationToken.None);
                 EditorDialogHelper.ShowSkillsInstalledDialog();
             }
             finally
@@ -929,7 +930,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private void HandleOpenSettings()
         {
-            McpEditorWindow.ShowWindow();
+            UnityCliLoopSettingsWindow.ShowWindow();
         }
 
         private void HandleSuppressAutoShowChanged(bool suppressAutoShow)

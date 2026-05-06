@@ -4,7 +4,7 @@ namespace io.github.hatayama.UnityCliLoop
 {
     /// <summary>
     /// UI section displaying server running status.
-    /// Part of McpEditorWindowUI's component hierarchy.
+    /// Part of UnityCliLoopSettingsWindowUI's component hierarchy.
     /// </summary>
     public class ServerStatusSection
     {

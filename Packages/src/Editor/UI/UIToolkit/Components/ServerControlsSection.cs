@@ -5,7 +5,7 @@ namespace io.github.hatayama.UnityCliLoop
 {
     /// <summary>
     /// UI section for server start/stop controls.
-    /// Part of McpEditorWindowUI's component hierarchy.
+    /// Part of UnityCliLoopSettingsWindowUI's component hierarchy.
     /// </summary>
     public class ServerControlsSection
     {

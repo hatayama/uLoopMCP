@@ -2,7 +2,7 @@ using NUnit.Framework;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor
 {
-    public class McpEditorWindowCliActionTests
+    public class UnityCliLoopSettingsWindowCliActionTests
     {
         [TestCase(null, "3.0.0", true, false)]
         [TestCase("2.9.0", "3.0.0", true, false)]
@@ -16,7 +16,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             bool expected)
         {
             // Verifies that package-owned installs route to uninstall when the dispatcher satisfies core requirements.
-            bool result = McpEditorWindow.ShouldUninstallCliFromPrimaryButton(
+            bool result = UnityCliLoopSettingsWindow.ShouldUninstallCliFromPrimaryButton(
                 cliVersion,
                 requiredDispatcherVersion,
                 canUninstallCli);
@@ -33,7 +33,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             bool expected)
         {
             // Verifies that the settings UI ignores package version drift and only updates old dispatchers.
-            bool result = McpEditorWindow.IsCliUpdateNeeded(cliVersion, requiredDispatcherVersion);
+            bool result = UnityCliLoopSettingsWindow.IsCliUpdateNeeded(cliVersion, requiredDispatcherVersion);
 
             Assert.That(result, Is.EqualTo(expected));
         }

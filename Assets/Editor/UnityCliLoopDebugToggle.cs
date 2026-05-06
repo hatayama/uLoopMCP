@@ -13,7 +13,7 @@ namespace io.github.hatayama.UnityCliLoop
     ///   These menus operate only on the currently selected BuildTargetGroup and may temporarily diverge from global policy.
     ///
     /// Related classes:
-    /// - McpEditorWindow: Uses ULOOP_DEBUG to show/hide developer tools
+    /// - UnityCliLoopSettingsWindow: Uses ULOOP_DEBUG to show/hide developer tools
     /// - McpLogger: Debug logging behavior controlled by this symbol
     /// </summary>
     public static class UnityCliLoopDebugToggle

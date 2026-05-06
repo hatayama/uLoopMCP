@@ -9,7 +9,7 @@ namespace io.github.hatayama.UnityCliLoop
 {
     // Related classes:
     // - McpBridgeServer: The bridge server instance that this class manages.
-    // - McpEditorWindow: The UI for starting and stopping the server.
+    // - UnityCliLoopSettingsWindow: The UI for starting and stopping the server.
     // - AssemblyReloadEvents: Used to handle server state across domain reloads.
     /// <summary>
     /// Manages the Unity CLI bridge server state and restores it after assembly reload.
@@ -331,7 +331,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
 
             // Centralized, coalesced startup request
-            // Store the task so McpEditorWindow can await it to prevent race conditions
+            // Store the task so UnityCliLoopSettingsWindow can await it to prevent race conditions
             return StartRecoveryIfNeededAsync(isAfterCompile, CancellationToken.None);
         }
 

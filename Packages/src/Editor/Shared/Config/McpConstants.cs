@@ -6,7 +6,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// Design document reference: Packages/src/Editor/ARCHITECTURE.md
     ///
     /// Related classes:
-    /// - McpEditorWindow: Uses SessionState keys for UI state persistence
+    /// - UnityCliLoopSettingsWindow: Uses SessionState keys for UI state persistence
     /// - McpSessionManager: Uses SessionState keys for connection state management
     /// </summary>
     public static class McpConstants

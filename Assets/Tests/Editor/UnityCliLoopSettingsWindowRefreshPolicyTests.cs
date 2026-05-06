@@ -2,14 +2,15 @@ using NUnit.Framework;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    public class McpEditorWindowRefreshPolicyTests
+    public class UnityCliLoopSettingsWindowRefreshPolicyTests
     {
         [Test]
         public void ShouldRefreshOnEditorUpdate_WhenRepaintIsRequested_ReturnsTrue()
         {
+            // Verifies that an explicit repaint request triggers the editor update refresh.
             RuntimeState runtimeState = new RuntimeState(needsRepaint: true);
 
-            bool shouldRefresh = McpEditorWindowRefreshPolicy.ShouldRefreshOnEditorUpdate(runtimeState);
+            bool shouldRefresh = UnityCliLoopSettingsWindowRefreshPolicy.ShouldRefreshOnEditorUpdate(runtimeState);
 
             Assert.That(shouldRefresh, Is.True);
         }
@@ -17,11 +18,12 @@ namespace io.github.hatayama.UnityCliLoop
         [Test]
         public void ShouldRefreshOnEditorUpdate_WhenPostCompileModeHasNoRepaintRequest_ReturnsFalse()
         {
+            // Verifies that post-compile mode alone does not force a refresh.
             RuntimeState runtimeState = new RuntimeState(
                 needsRepaint: false,
                 isPostCompileMode: true);
 
-            bool shouldRefresh = McpEditorWindowRefreshPolicy.ShouldRefreshOnEditorUpdate(runtimeState);
+            bool shouldRefresh = UnityCliLoopSettingsWindowRefreshPolicy.ShouldRefreshOnEditorUpdate(runtimeState);
 
             Assert.That(shouldRefresh, Is.False);
         }
@@ -29,8 +31,9 @@ namespace io.github.hatayama.UnityCliLoop
         [Test]
         public void ShouldRunExpensiveChecks_WhenInitialPaint_ReturnsFalse()
         {
-            bool shouldRun = McpEditorWindowRefreshPolicy.ShouldRunExpensiveChecks(
-                McpEditorWindowRefreshMode.InitialPaint);
+            // Verifies that the first paint skips expensive refresh work.
+            bool shouldRun = UnityCliLoopSettingsWindowRefreshPolicy.ShouldRunExpensiveChecks(
+                UnityCliLoopSettingsWindowRefreshMode.InitialPaint);
 
             Assert.That(shouldRun, Is.False);
         }
@@ -38,8 +41,9 @@ namespace io.github.hatayama.UnityCliLoop
         [Test]
         public void ShouldRefreshSkillInstallState_WhenInitialPaintEvenIfRequested_ReturnsFalse()
         {
-            bool shouldRefresh = McpEditorWindowRefreshPolicy.ShouldRefreshSkillInstallState(
-                McpEditorWindowRefreshMode.InitialPaint,
+            // Verifies that initial paint does not run skill freshness checks.
+            bool shouldRefresh = UnityCliLoopSettingsWindowRefreshPolicy.ShouldRefreshSkillInstallState(
+                UnityCliLoopSettingsWindowRefreshMode.InitialPaint,
                 refreshRequested: true);
 
             Assert.That(shouldRefresh, Is.False);
@@ -48,8 +52,9 @@ namespace io.github.hatayama.UnityCliLoop
         [Test]
         public void ShouldRefreshSkillInstallState_WhenFullRefreshRequested_ReturnsTrue()
         {
-            bool shouldRefresh = McpEditorWindowRefreshPolicy.ShouldRefreshSkillInstallState(
-                McpEditorWindowRefreshMode.Full,
+            // Verifies that full refresh honors an explicit skill refresh request.
+            bool shouldRefresh = UnityCliLoopSettingsWindowRefreshPolicy.ShouldRefreshSkillInstallState(
+                UnityCliLoopSettingsWindowRefreshMode.Full,
                 refreshRequested: true);
 
             Assert.That(shouldRefresh, Is.True);
@@ -58,11 +63,12 @@ namespace io.github.hatayama.UnityCliLoop
         [Test]
         public void ShouldKeepToolSettingsCatalogDirty_WhenOpenRegistryUnavailable_ReturnsTrue()
         {
+            // Verifies that an open tool section stays dirty while the registry is unavailable.
             ToolSettingsSectionData toolSettingsData = CreateToolSettingsData(
                 showToolSettings: true,
                 isRegistryAvailable: false);
 
-            bool shouldKeepDirty = McpEditorWindowRefreshPolicy.ShouldKeepToolSettingsCatalogDirty(toolSettingsData);
+            bool shouldKeepDirty = UnityCliLoopSettingsWindowRefreshPolicy.ShouldKeepToolSettingsCatalogDirty(toolSettingsData);
 
             Assert.That(shouldKeepDirty, Is.True);
         }
@@ -70,11 +76,12 @@ namespace io.github.hatayama.UnityCliLoop
         [Test]
         public void ShouldKeepToolSettingsCatalogDirty_WhenOpenRegistryAvailable_ReturnsFalse()
         {
+            // Verifies that an available registry clears the dirty catalog state.
             ToolSettingsSectionData toolSettingsData = CreateToolSettingsData(
                 showToolSettings: true,
                 isRegistryAvailable: true);
 
-            bool shouldKeepDirty = McpEditorWindowRefreshPolicy.ShouldKeepToolSettingsCatalogDirty(toolSettingsData);
+            bool shouldKeepDirty = UnityCliLoopSettingsWindowRefreshPolicy.ShouldKeepToolSettingsCatalogDirty(toolSettingsData);
 
             Assert.That(shouldKeepDirty, Is.False);
         }
@@ -82,11 +89,12 @@ namespace io.github.hatayama.UnityCliLoop
         [Test]
         public void ShouldKeepToolSettingsCatalogDirty_WhenClosedRegistryUnavailable_ReturnsFalse()
         {
+            // Verifies that a closed tool section does not keep retrying registry refreshes.
             ToolSettingsSectionData toolSettingsData = CreateToolSettingsData(
                 showToolSettings: false,
                 isRegistryAvailable: false);
 
-            bool shouldKeepDirty = McpEditorWindowRefreshPolicy.ShouldKeepToolSettingsCatalogDirty(toolSettingsData);
+            bool shouldKeepDirty = UnityCliLoopSettingsWindowRefreshPolicy.ShouldKeepToolSettingsCatalogDirty(toolSettingsData);
 
             Assert.That(shouldKeepDirty, Is.False);
         }
@@ -94,7 +102,8 @@ namespace io.github.hatayama.UnityCliLoop
         [Test]
         public void ShouldStartToolSettingsRegistryWarmup_WhenNotScheduledAndBelowMaxAttempts_ReturnsTrue()
         {
-            bool shouldStart = McpEditorWindowRefreshPolicy.ShouldStartToolSettingsRegistryWarmup(
+            // Verifies that registry warmup starts while the retry budget remains.
+            bool shouldStart = UnityCliLoopSettingsWindowRefreshPolicy.ShouldStartToolSettingsRegistryWarmup(
                 isAlreadyScheduled: false,
                 attemptCount: 4,
                 maxAttempts: 5);
@@ -105,7 +114,8 @@ namespace io.github.hatayama.UnityCliLoop
         [Test]
         public void ShouldStartToolSettingsRegistryWarmup_WhenAlreadyScheduled_ReturnsFalse()
         {
-            bool shouldStart = McpEditorWindowRefreshPolicy.ShouldStartToolSettingsRegistryWarmup(
+            // Verifies that an existing warmup schedule is not duplicated.
+            bool shouldStart = UnityCliLoopSettingsWindowRefreshPolicy.ShouldStartToolSettingsRegistryWarmup(
                 isAlreadyScheduled: true,
                 attemptCount: 0,
                 maxAttempts: 5);
@@ -116,7 +126,8 @@ namespace io.github.hatayama.UnityCliLoop
         [Test]
         public void ShouldStartToolSettingsRegistryWarmup_WhenMaxAttemptsReached_ReturnsFalse()
         {
-            bool shouldStart = McpEditorWindowRefreshPolicy.ShouldStartToolSettingsRegistryWarmup(
+            // Verifies that registry warmup stops after the retry budget is exhausted.
+            bool shouldStart = UnityCliLoopSettingsWindowRefreshPolicy.ShouldStartToolSettingsRegistryWarmup(
                 isAlreadyScheduled: false,
                 attemptCount: 5,
                 maxAttempts: 5);
@@ -134,7 +145,8 @@ namespace io.github.hatayama.UnityCliLoop
             int attemptCount,
             double expectedDelaySeconds)
         {
-            double delaySeconds = McpEditorWindowRefreshPolicy.CalculateToolSettingsRegistryWarmupDelaySeconds(
+            // Verifies that registry warmup delay doubles until the configured cap.
+            double delaySeconds = UnityCliLoopSettingsWindowRefreshPolicy.CalculateToolSettingsRegistryWarmupDelaySeconds(
                 initialDelaySeconds: 0.05,
                 maxDelaySeconds: 0.8,
                 attemptCount);

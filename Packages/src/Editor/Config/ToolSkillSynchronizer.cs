@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 using UnityEngine;
@@ -959,6 +960,126 @@ namespace io.github.hatayama.UnityCliLoop
 
                 Directory.Delete(childDirectoryPath);
             }
+        }
+    }
+
+    /// <summary>
+    /// Application facade for editor skill setup workflows.
+    /// Presentation code uses this facade instead of depending on ToolSkillSynchronizer internals directly.
+    /// </summary>
+    public static class SkillSetupApplicationFacade
+    {
+        public readonly struct SkillTargetInfo
+        {
+            public readonly string DisplayName;
+            public readonly string DirName;
+            public readonly string InstallFlag;
+            public readonly bool HasSkillsDirectory;
+            public readonly bool HasExistingSkills;
+            public readonly bool HasDifferentLayoutSkills;
+            public readonly SkillInstallState InstallState;
+
+            public SkillTargetInfo(
+                string displayName,
+                string dirName,
+                string installFlag,
+                bool hasSkillsDirectory,
+                bool hasExistingSkills,
+                bool hasDifferentLayoutSkills = false,
+                SkillInstallState installState = SkillInstallState.Missing)
+            {
+                DisplayName = displayName;
+                DirName = dirName;
+                InstallFlag = installFlag;
+                HasSkillsDirectory = hasSkillsDirectory;
+                HasExistingSkills = hasExistingSkills;
+                HasDifferentLayoutSkills = hasDifferentLayoutSkills;
+                InstallState = installState;
+            }
+        }
+
+        public static void RemoveSkillFiles(string toolName)
+        {
+            ToolSkillSynchronizer.RemoveSkillFiles(toolName);
+        }
+
+        public static bool IsSkillInstalled(string toolName)
+        {
+            return ToolSkillSynchronizer.IsSkillInstalled(toolName);
+        }
+
+        public static List<SkillTargetInfo> DetectSkillTargetsForLayoutAtProjectRoot(
+            string projectRoot,
+            bool groupSkillsUnderUnityCliLoop)
+        {
+            List<ToolSkillSynchronizer.SkillTargetInfo> targets =
+                ToolSkillSynchronizer.DetectTargetsForLayoutAtProjectRoot(
+                    projectRoot,
+                    groupSkillsUnderUnityCliLoop);
+            return targets.Select(ToFacadeInfo).ToList();
+        }
+
+        public static List<SkillTargetInfo> DetectSkillTargetsForLayoutFastAtProjectRoot(
+            string projectRoot,
+            bool groupSkillsUnderUnityCliLoop)
+        {
+            List<ToolSkillSynchronizer.SkillTargetInfo> targets =
+                ToolSkillSynchronizer.DetectTargetsForLayoutFastAtProjectRoot(
+                    projectRoot,
+                    groupSkillsUnderUnityCliLoop);
+            return targets.Select(ToFacadeInfo).ToList();
+        }
+
+        public static async Task InstallSkillFilesAsync(
+            List<SkillTargetInfo> targets,
+            bool groupSkillsUnderUnityCliLoop,
+            CancellationToken ct)
+        {
+            Debug.Assert(targets != null, "targets must not be null");
+            ct.ThrowIfCancellationRequested();
+
+            List<ToolSkillSynchronizer.SkillTargetInfo> synchronizerTargets =
+                targets.Select(ToSynchronizerInfo).ToList();
+            await ToolSkillSynchronizer.InstallSkillFiles(
+                synchronizerTargets,
+                groupSkillsUnderUnityCliLoop);
+        }
+
+        public static async Task InstallSkillFilesForToolAsync(
+            string toolName,
+            bool groupSkillsUnderUnityCliLoop,
+            CancellationToken ct)
+        {
+            Debug.Assert(!string.IsNullOrEmpty(toolName), "toolName must not be null or empty");
+            ct.ThrowIfCancellationRequested();
+
+            await ToolSkillSynchronizer.InstallSkillFilesForTool(
+                toolName,
+                groupSkillsUnderUnityCliLoop);
+        }
+
+        private static SkillTargetInfo ToFacadeInfo(ToolSkillSynchronizer.SkillTargetInfo target)
+        {
+            return new SkillTargetInfo(
+                target.DisplayName,
+                target.DirName,
+                target.InstallFlag,
+                target.HasSkillsDirectory,
+                target.HasExistingSkills,
+                target.HasDifferentLayoutSkills,
+                target.InstallState);
+        }
+
+        private static ToolSkillSynchronizer.SkillTargetInfo ToSynchronizerInfo(SkillTargetInfo target)
+        {
+            return new ToolSkillSynchronizer.SkillTargetInfo(
+                target.DisplayName,
+                target.DirName,
+                target.InstallFlag,
+                target.HasSkillsDirectory,
+                target.HasExistingSkills,
+                target.HasDifferentLayoutSkills,
+                target.InstallState);
         }
     }
 }

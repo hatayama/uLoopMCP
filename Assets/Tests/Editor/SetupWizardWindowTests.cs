@@ -242,14 +242,14 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
         [Test]
         public void FilterInstallableSkillTargets_ExcludesTargetsWithoutSkillsDirectory()
         {
-            List<ToolSkillSynchronizer.SkillTargetInfo> targets = new()
+            List<SkillSetupApplicationFacade.SkillTargetInfo> targets = new()
             {
                 new("Claude Code", ".claude", "--claude", true, true),
                 new("Cursor", ".cursor", "--cursor", false, false),
                 new("Codex CLI", ".codex", "--codex", true, false, hasDifferentLayoutSkills: true)
             };
 
-            List<ToolSkillSynchronizer.SkillTargetInfo> installableTargets =
+            List<SkillSetupApplicationFacade.SkillTargetInfo> installableTargets =
                 SetupWizardWindow.FilterInstallableSkillTargets(targets);
 
             Assert.That(installableTargets.Count, Is.EqualTo(2));
@@ -338,7 +338,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
         [Test]
         public void CreateFirstInstallSkillTarget_WhenClaudeSelected_ReturnsClaudeProjectTarget()
         {
-            ToolSkillSynchronizer.SkillTargetInfo target =
+            SkillSetupApplicationFacade.SkillTargetInfo target =
                 SetupWizardWindow.CreateFirstInstallSkillTarget(SkillsTarget.Claude, true);
 
             Assert.That(target.DisplayName, Is.EqualTo("Claude Code"));
@@ -358,7 +358,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             string expectedDirName,
             string expectedInstallFlag)
         {
-            ToolSkillSynchronizer.SkillTargetInfo target =
+            SkillSetupApplicationFacade.SkillTargetInfo target =
                 SetupWizardWindow.CreateFirstInstallSkillTarget(targetType, true);
 
             Assert.That(target.DisplayName, Is.EqualTo(expectedDisplayName));
@@ -371,7 +371,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
         [Test]
         public void CreateFirstInstallSkillTarget_WhenGroupingDisabled_KeepsTargetMetadata()
         {
-            ToolSkillSynchronizer.SkillTargetInfo target =
+            SkillSetupApplicationFacade.SkillTargetInfo target =
                 SetupWizardWindow.CreateFirstInstallSkillTarget(SkillsTarget.Claude, false);
 
             Assert.That(target.DisplayName, Is.EqualTo("Claude Code"));
@@ -382,7 +382,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
         [Test]
         public void GetSelectedSkillTargetInfo_WhenDetectedTargetExists_ReturnsDetectedState()
         {
-            List<ToolSkillSynchronizer.SkillTargetInfo> targets = new()
+            List<SkillSetupApplicationFacade.SkillTargetInfo> targets = new()
             {
                 new(
                     "Claude Code",
@@ -393,7 +393,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
                     installState: SkillInstallState.Installed)
             };
 
-            ToolSkillSynchronizer.SkillTargetInfo target = SetupWizardWindow.GetSelectedSkillTargetInfo(
+            SkillSetupApplicationFacade.SkillTargetInfo target = SetupWizardWindow.GetSelectedSkillTargetInfo(
                 targets,
                 SkillsTarget.Claude,
                 groupSkillsUnderUnityCliLoop: true);
@@ -405,7 +405,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
         [Test]
         public void GetFirstInstallableSkillTargets_WhenSelectedTargetIsInstalled_ReturnsEmpty()
         {
-            List<ToolSkillSynchronizer.SkillTargetInfo> targets = new()
+            List<SkillSetupApplicationFacade.SkillTargetInfo> targets = new()
             {
                 new(
                     "Claude Code",
@@ -416,7 +416,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
                     installState: SkillInstallState.Installed)
             };
 
-            List<ToolSkillSynchronizer.SkillTargetInfo> installableTargets =
+            List<SkillSetupApplicationFacade.SkillTargetInfo> installableTargets =
                 SetupWizardWindow.GetFirstInstallableSkillTargets(
                     targets,
                     SkillsTarget.Claude,
@@ -428,9 +428,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
         [Test]
         public void GetFirstInstallableSkillTargets_WhenSelectedTargetIsMissing_ReturnsMappedTarget()
         {
-            List<ToolSkillSynchronizer.SkillTargetInfo> installableTargets =
+            List<SkillSetupApplicationFacade.SkillTargetInfo> installableTargets =
                 SetupWizardWindow.GetFirstInstallableSkillTargets(
-                    new List<ToolSkillSynchronizer.SkillTargetInfo>(),
+                    new List<SkillSetupApplicationFacade.SkillTargetInfo>(),
                     SkillsTarget.Claude,
                     groupSkillsUnderUnityCliLoop: true);
 

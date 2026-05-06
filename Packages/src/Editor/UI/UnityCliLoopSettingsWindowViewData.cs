@@ -3,8 +3,8 @@ using UnityEngine;
 namespace io.github.hatayama.UnityCliLoop
 {
     /// <summary>
-    /// Data structures for McpEditorWindow View rendering
-    /// Related classes: McpEditorWindow, McpEditorWindowView
+    /// Data structures for UnityCliLoopSettingsWindow View rendering
+    /// Related classes: UnityCliLoopSettingsWindow, UnityCliLoopSettingsWindowUI
     /// </summary>
     
     public record ServerStatusData

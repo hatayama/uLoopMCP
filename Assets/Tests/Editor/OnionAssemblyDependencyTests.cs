@@ -127,10 +127,24 @@ namespace io.github.hatayama.UnityCliLoop
                 "ProjectLocalCliAutoInstaller",
                 "ProjectLocalCliInstaller",
                 "NativeCliInstaller",
-                "CliVersionComparer"
+                "CliVersionComparer",
+                "ToolSkillSynchronizer"
             };
             string[] offendingReferences = ReadEditorUiSourcePaths()
                 .SelectMany(path => FindForbiddenReferences(path, forbiddenReferences))
+                .OrderBy(reference => reference)
+                .ToArray();
+
+            Assert.That(offendingReferences, Is.Empty);
+        }
+
+        [Test]
+        public void EditorUiFiles_WhenLoaded_DoNotUseLegacyMcpSettingsWindowNames()
+        {
+            // Tests that settings-window UI code uses UnityCLILoop naming instead of legacy MCP naming.
+            string legacySettingsWindowName = "Mcp" + "EditorWindow";
+            string[] offendingReferences = ReadEditorUiSourcePaths()
+                .SelectMany(path => FindForbiddenReferences(path, new[] { legacySettingsWindowName }))
                 .OrderBy(reference => reference)
                 .ToArray();
 

@@ -6,14 +6,14 @@ using UnityEditor;
 namespace io.github.hatayama.UnityCliLoop
 {
     /// <summary>
-    /// View layer for McpEditorWindow in MVP architecture.
+    /// View layer for UnityCliLoopSettingsWindow in MVP architecture.
     /// Owns UI sections and forwards user interactions to presenter via events.
-    /// Related: McpEditorWindow (presenter), McpEditorModel (model)
+    /// Related: UnityCliLoopSettingsWindow (presenter), UnityCliLoopSettingsModel (model)
     /// </summary>
-    public class McpEditorWindowUI : IDisposable
+    public class UnityCliLoopSettingsWindowUI : IDisposable
     {
-        private const string UXML_RELATIVE_PATH = "Editor/UI/UIToolkit/McpEditorWindow.uxml";
-        private const string USS_RELATIVE_PATH = "Editor/UI/UIToolkit/McpEditorWindow.uss";
+        private const string UXML_RELATIVE_PATH = "Editor/UI/UIToolkit/UnityCliLoopSettingsWindow.uxml";
+        private const string USS_RELATIVE_PATH = "Editor/UI/UIToolkit/UnityCliLoopSettingsWindow.uss";
         private const string GITHUB_ICON_RELATIVE_PATH = "Editor/UI/Setup/GitHub_Invertocat_White.png";
 
         private readonly VisualElement _root;
@@ -38,7 +38,7 @@ namespace io.github.hatayama.UnityCliLoop
         public event Action<string, bool> OnToolToggled;
         public event Action<DynamicCodeSecurityLevel> OnSecurityLevelChanged;
 
-        public McpEditorWindowUI(VisualElement root)
+        public UnityCliLoopSettingsWindowUI(VisualElement root)
         {
             _root = root;
             LoadLayout();

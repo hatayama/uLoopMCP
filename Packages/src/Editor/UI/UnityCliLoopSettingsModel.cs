@@ -4,20 +4,20 @@ using UnityEngine;
 namespace io.github.hatayama.UnityCliLoop
 {
     /// <summary>
-    /// Model layer for McpEditorWindow in MVP architecture
+    /// Model layer for UnityCliLoopSettingsWindow in MVP architecture
     /// Handles state management and business logic using immutable state objects
     /// Related classes:
-    /// - McpEditorWindowState: State objects managed by this model
-    /// - McpEditorWindow: Presenter that uses this model
-    /// - McpEditorWindowView: View layer for UI rendering
+    /// - UnityCliLoopSettingsWindowState: State objects managed by this model
+    /// - UnityCliLoopSettingsWindow: Presenter that uses this model
+    /// - UnityCliLoopSettingsWindowUI: View layer for UI rendering
     /// - McpEditorSettings: Persistent settings storage
     /// </summary>
-    public class McpEditorModel
+    public class UnityCliLoopSettingsModel
     {
         public UIState UI { get; private set; }
         public RuntimeState Runtime { get; private set; }
 
-        public McpEditorModel()
+        public UnityCliLoopSettingsModel()
         {
             UI = new UIState();
             Runtime = new RuntimeState();

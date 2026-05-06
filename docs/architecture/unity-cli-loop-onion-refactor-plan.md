@@ -53,6 +53,8 @@
   - the sample `hello-world` extension executes through the same typed contract path as bundled tools.
   - `UnityCLILoop.FirstPartyTools.Editor` references only `UnityCLILoop.ToolContracts`.
   - settings/setup UI code no longer reaches CLI setup internals directly and goes through `CliSetupApplicationFacade`.
+  - settings/setup UI code no longer reaches skill setup internals directly and goes through `SkillSetupApplicationFacade`.
+  - settings-window UI source uses `UnityCliLoopSettingsWindow` naming instead of the legacy MCP settings-window name.
 - Added asmdef dependency tests proving:
   - `Domain` and `ToolContracts` have no project assembly references.
   - `Application` references the inward contracts and does not reference outer onion layers.
@@ -81,7 +83,7 @@
 - Move cohesive platform rules into `UnityCLILoop.Domain`.
 - Move hosting/catalog/execution policies into `UnityCLILoop.Application`.
 - Move settings windows and editor views into `UnityCLILoop.Presentation`.
-- Add remaining Application facades for skill installation and tool settings workflows before moving presentation files, so Presentation does not reach Application internals directly.
+- Add remaining Application facades for tool settings workflows before moving presentation files, so Presentation does not reach Application internals directly.
 - Move Unity Editor, IPC, file system, dynamic compilation, and protocol adapters into `UnityCLILoop.Infrastructure`.
 - Continue moving bundled tool implementations into `UnityCLILoop.FirstPartyTools.Editor` once their dependencies are either internal to that plugin or exposed through stable contracts.
 - Continue splitting internal bridge commands from public tool registration when more CLI-only commands are identified.

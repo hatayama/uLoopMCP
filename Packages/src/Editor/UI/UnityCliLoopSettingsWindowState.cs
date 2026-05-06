@@ -3,13 +3,13 @@ using UnityEngine;
 namespace io.github.hatayama.UnityCliLoop
 {
     /// <summary>
-    /// State management objects for McpEditorWindow
+    /// State management objects for UnityCliLoopSettingsWindow
     /// Implements State Object pattern as Model layer in MVP architecture
     /// Uses get-only properties for with expression compatibility
     /// Related classes:
-    /// - McpEditorWindow: Presenter layer that uses these state objects
-    /// - McpEditorWindowView: View layer for UI rendering
-    /// - McpEditorModel: Model layer service for managing state transitions
+    /// - UnityCliLoopSettingsWindow: Presenter layer that uses these state objects
+    /// - UnityCliLoopSettingsWindowUI: View layer for UI rendering
+    /// - UnityCliLoopSettingsModel: Model layer service for managing state transitions
     /// </summary>
 
     public enum SkillsTarget
@@ -43,7 +43,7 @@ namespace io.github.hatayama.UnityCliLoop
     }
 
     /// <summary>
-    /// Runtime state data for McpEditorWindow
+    /// Runtime state data for UnityCliLoopSettingsWindow
     /// Tracks dynamic state during editor window operation
     /// </summary>
     public record RuntimeState
