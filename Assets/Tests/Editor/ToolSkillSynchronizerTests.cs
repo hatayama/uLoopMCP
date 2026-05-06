@@ -1036,6 +1036,20 @@ namespace io.github.hatayama.UnityCliLoop
             Assert.That(skillSources.Select(skill => skill.Name), Does.Contain("uloop-launch"));
         }
 
+        // Tests that skill discovery follows bundled tools after they move into the first-party plugin assembly.
+        [Test]
+        public void GetSkillSourceInfos_WhenFirstPartyToolIsUnderFirstPartyTools_IncludesToolSkill()
+        {
+            SkillInstallLayout.SkillSourceInfo[] skillSources = SkillInstallLayout.GetSkillSourceInfos(_projectRoot)
+                .ToArray();
+
+            SkillInstallLayout.SkillSourceInfo controlPlayModeSkill = skillSources
+                .Single(skill => skill.Name == "uloop-control-play-mode");
+
+            Assert.That(controlPlayModeSkill.ToolName, Is.EqualTo("control-play-mode"));
+            Assert.That(controlPlayModeSkill.SkillFiles.Keys, Does.Contain(SkillInstallLayout.SkillFileName));
+        }
+
         // Tests that internal skill metadata maps back to the hidden tool name only.
         [Test]
         public void GetInternalSkillToolNames_WhenInternalSkillUsesSkillName_ReturnsToolName()

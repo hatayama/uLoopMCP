@@ -48,6 +48,7 @@
   - legacy MCP-era development tools are not registered.
   - `hello-world` is registered as an extension tool.
   - `control-play-mode` is registered from `UnityCLILoop.FirstPartyTools.Editor`.
+  - `control-play-mode` skill discovery still works after moving under `UnityCLILoop.FirstPartyTools.Editor`.
   - the sample extension asmdef references only `UnityCLILoop.ToolContracts`.
   - `UnityCLILoop.FirstPartyTools.Editor` references only `UnityCLILoop.ToolContracts`.
 - Added asmdef dependency tests proving:
