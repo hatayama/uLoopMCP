@@ -37,11 +37,13 @@ namespace io.github.hatayama.uLoopMCP
             // Arrange - Test the Schema object directly
             RunTestsSchema schema = new RunTestsSchema
             {
+                TestMode = RunTestMode.PlayMode,
                 FilterType = TestFilterType.regex,
                 FilterValue = "TestClass"
             };
 
             // Assert - Schema properties should match what we set
+            Assert.That(schema.TestMode, Is.EqualTo(RunTestMode.PlayMode));
             Assert.That(schema.FilterType, Is.EqualTo(TestFilterType.regex));
             Assert.That(schema.FilterValue, Is.EqualTo("TestClass"));
         }
@@ -59,6 +61,7 @@ namespace io.github.hatayama.uLoopMCP
             RunTestsSchema schema = new RunTestsSchema();
 
             // Assert - Schema should have default values
+            Assert.That(schema.TestMode, Is.EqualTo(RunTestMode.EditMode));
             Assert.That(schema.FilterType, Is.EqualTo(TestFilterType.all));
             Assert.That(schema.FilterValue ?? string.Empty, Is.EqualTo(string.Empty));
             Assert.That(schema.SaveBeforeRun, Is.False);
@@ -98,6 +101,20 @@ namespace io.github.hatayama.uLoopMCP
             {
                 filterService.CreateFilter((TestFilterType)999, "value");
             });
+        }
+
+        [Test]
+        public void CreateTestFrameworkUnavailable_ShouldReturnUnsupportedResponse()
+        {
+            RunTestsResponse response = RunTestsResponse.CreateTestFrameworkUnavailable();
+
+            Assert.That(response.Success, Is.False);
+            Assert.That(response.Message, Does.Contain("com.unity.test-framework"));
+            Assert.That(response.CompletedAt, Is.Not.Empty);
+            Assert.That(response.TestCount, Is.EqualTo(0));
+            Assert.That(response.PassedCount, Is.EqualTo(0));
+            Assert.That(response.FailedCount, Is.EqualTo(0));
+            Assert.That(response.SkippedCount, Is.EqualTo(0));
         }
     }
 } 

@@ -1,8 +1,14 @@
 using System.ComponentModel;
-using UnityEditor.TestTools.TestRunner.Api;
 
 namespace io.github.hatayama.uLoopMCP
 {
+    // Mirrors Unity Test Runner mode names without making the command schema depend on Test Framework types.
+    public enum RunTestMode
+    {
+        EditMode = 0,
+        PlayMode = 1
+    }
+
     /// <summary>
     /// Supported test filter types
     /// </summary>
@@ -24,7 +30,7 @@ namespace io.github.hatayama.uLoopMCP
         /// Test mode - EditMode(0), PlayMode(1)
         /// </summary>
         [Description("Test mode - EditMode(0), PlayMode(1)")]
-        public TestMode TestMode { get; set; } = TestMode.EditMode;
+        public RunTestMode TestMode { get; set; } = RunTestMode.EditMode;
 
         /// <summary>
         /// Type of test filter - all(0), exact(1), regex(2), assembly(3)
