@@ -15,6 +15,7 @@ namespace io.github.hatayama.UnityCliLoop
         private const string DomainAssemblyName = "UnityCLILoop.Domain";
         private const string FirstPartyToolsAssemblyName = "UnityCLILoop.FirstPartyTools.Editor";
         private const string InfrastructureAssemblyName = "UnityCLILoop.Infrastructure";
+        private const string MetadataValidationAssemblyName = "uLoopMCP.Editor.MetadataValidation";
         private const string PresentationAssemblyName = "UnityCLILoop.Presentation";
         private const string SharedAssemblyName = "uLoopMCP.Editor.Shared";
         private const string ToolContractsAssemblyName = "UnityCLILoop.ToolContracts";
@@ -164,6 +165,28 @@ namespace io.github.hatayama.UnityCliLoop
             Assert.That(errorAssemblyName, Is.EqualTo(ApplicationAssemblyName));
             Assert.That(backendKindAssemblyName, Is.EqualTo(ApplicationAssemblyName));
             Assert.That(cacheManagerAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+        }
+
+        [Test]
+        public void PreloadMetadataValidationPorts_WhenLoaded_CompileUnderMetadataValidationAssembly()
+        {
+            // Tests that preload metadata validation contracts are owned by the metadata validation module.
+            string validatorAssemblyName = typeof(IPreloadAssemblySecurityValidator).Assembly.GetName().Name;
+            string overrideAssemblyName = typeof(IOverrideDefaultPreloadAssemblySecurityValidation).Assembly.GetName().Name;
+            string registryAssemblyName = typeof(PreloadAssemblySecurityValidatorRegistry).Assembly.GetName().Name;
+
+            Assert.That(validatorAssemblyName, Is.EqualTo(MetadataValidationAssemblyName));
+            Assert.That(overrideAssemblyName, Is.EqualTo(MetadataValidationAssemblyName));
+            Assert.That(registryAssemblyName, Is.EqualTo(MetadataValidationAssemblyName));
+        }
+
+        [Test]
+        public void MetadataValidationAsmdef_WhenLoaded_DependsOnlyOnDomain()
+        {
+            // Tests that metadata validation exposes its own contracts without using Shared as a bucket.
+            string[] references = ReadResolvedReferences("Packages/src/Editor/MetadataValidation/uLoopMCP.Editor.MetadataValidation.asmdef");
+
+            Assert.That(references, Is.EquivalentTo(new[] { DomainAssemblyName }));
         }
 
         [Test]
