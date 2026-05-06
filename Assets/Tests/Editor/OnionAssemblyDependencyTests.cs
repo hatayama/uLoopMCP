@@ -117,6 +117,26 @@ namespace io.github.hatayama.UnityCliLoop
             Assert.That(offendingAssemblyNames, Is.Empty);
         }
 
+        [Test]
+        public void EditorUiFiles_WhenLoaded_DoNotReferenceCliSetupInternalsDirectly()
+        {
+            // Tests that presentation-facing UI code uses the Application facade for CLI setup workflows.
+            string[] forbiddenReferences =
+            {
+                "CliInstallationDetector",
+                "ProjectLocalCliAutoInstaller",
+                "ProjectLocalCliInstaller",
+                "NativeCliInstaller",
+                "CliVersionComparer"
+            };
+            string[] offendingReferences = ReadEditorUiSourcePaths()
+                .SelectMany(path => FindForbiddenReferences(path, forbiddenReferences))
+                .OrderBy(reference => reference)
+                .ToArray();
+
+            Assert.That(offendingReferences, Is.Empty);
+        }
+
         private static string[] ReadResolvedReferences(string relativeAsmdefPath)
         {
             string asmdefPath = Path.Combine(UnityMcpPathResolver.GetProjectRoot(), relativeAsmdefPath);
@@ -149,6 +169,30 @@ namespace io.github.hatayama.UnityCliLoop
         {
             string editorRoot = Path.Combine(UnityMcpPathResolver.GetProjectRoot(), "Packages", "src", "Editor");
             return Directory.GetFiles(editorRoot, "*.asmdef", SearchOption.AllDirectories);
+        }
+
+        private static string[] ReadEditorUiSourcePaths()
+        {
+            string uiRoot = Path.Combine(UnityMcpPathResolver.GetProjectRoot(), "Packages", "src", "Editor", "UI");
+            return Directory.GetFiles(uiRoot, "*.cs", SearchOption.AllDirectories);
+        }
+
+        private static string[] FindForbiddenReferences(string path, string[] forbiddenReferences)
+        {
+            string source = File.ReadAllText(path);
+            List<string> violations = new List<string>();
+
+            foreach (string forbiddenReference in forbiddenReferences)
+            {
+                if (!source.Contains(forbiddenReference))
+                {
+                    continue;
+                }
+
+                violations.Add($"{Path.GetFileName(path)} references {forbiddenReference}");
+            }
+
+            return violations.ToArray();
         }
 
         private static Dictionary<string, string> BuildGuidToAssemblyNameMap()

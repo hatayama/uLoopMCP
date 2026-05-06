@@ -376,7 +376,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private void RefreshSkillsSection()
         {
-            string cachedCliVersion = CliInstallationDetector.GetCachedCliVersion();
+            string cachedCliVersion = CliSetupApplicationFacade.GetCachedCliVersion();
             string projectRoot = UnityMcpPathResolver.GetProjectRoot();
             EnsureProjectLocalCliCurrent(projectRoot);
             bool cliInstalled = IsCliInstalled(cachedCliVersion);
@@ -415,8 +415,8 @@ namespace io.github.hatayama.UnityCliLoop
             ViewDataBinder.SetVisible(_nodejsWarning, false);
             ViewDataBinder.SetVisible(_nodejsOk, false);
 
-            await CliInstallationDetector.ForceRefreshCliVersionAsync(CancellationToken.None);
-            string cliVersion = CliInstallationDetector.GetCachedCliVersion();
+            await CliSetupApplicationFacade.ForceRefreshCliVersionAsync(CancellationToken.None);
+            string cliVersion = CliSetupApplicationFacade.GetCachedCliVersion();
             string projectRoot = UnityMcpPathResolver.GetProjectRoot();
             EnsureProjectLocalCliCurrent(projectRoot);
             string requiredDispatcherVersion = GetRequiredDispatcherVersion();
@@ -645,12 +645,12 @@ namespace io.github.hatayama.UnityCliLoop
                 return false;
             }
 
-            return CliVersionComparer.IsVersionGreaterThanOrEqual(cliVersion, requiredDispatcherVersion);
+            return CliSetupApplicationFacade.IsCliVersionGreaterThanOrEqual(cliVersion, requiredDispatcherVersion);
         }
 
         private static string GetRequiredDispatcherVersion()
         {
-            string requiredDispatcherVersion = ProjectLocalCliInstaller.DetectBundledRequiredDispatcherVersion();
+            string requiredDispatcherVersion = CliSetupApplicationFacade.GetRequiredDispatcherVersion(McpConstants.PackageInfo.version);
             return string.IsNullOrEmpty(requiredDispatcherVersion)
                 ? McpConstants.PackageInfo.version
                 : requiredDispatcherVersion;
@@ -663,7 +663,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static void EnsureProjectLocalCliCurrent(string projectRoot)
         {
-            CliInstallResult result = ProjectLocalCliAutoInstaller.EnsureProjectLocalCliCurrent(
+            CliInstallResult result = CliSetupApplicationFacade.EnsureProjectLocalCliCurrent(
                 projectRoot,
                 McpConstants.PackageInfo.version);
             if (result.Success)
@@ -867,19 +867,20 @@ namespace io.github.hatayama.UnityCliLoop
 
         private async void HandleInstallCli()
         {
-            bool wasCliInstalledBeforeInstall = CliInstallationDetector.IsCliInstalled();
+            bool wasCliInstalledBeforeInstall = CliSetupApplicationFacade.IsCliInstalled();
             _isInstallingCli = true;
             UpdateCliStep(false, null, GetRequiredDispatcherVersion(), false);
 
             try
             {
-                CliInstallResult result = await NativeCliInstaller.InstallAsync(
+                CliInstallResult result = await CliSetupApplicationFacade.InstallGlobalCliAsync(
                     Application.platform,
-                    McpConstants.PackageInfo.version);
+                    McpConstants.PackageInfo.version,
+                    CancellationToken.None);
 
                 if (!result.Success)
                 {
-                    NativeCliInstallCommand command = NativeCliInstaller.GetInstallCommand(
+                    NativeCliInstallCommand command = CliSetupApplicationFacade.GetGlobalCliInstallCommand(
                         Application.platform,
                         McpConstants.PackageInfo.version,
                         true);

@@ -256,12 +256,12 @@ namespace io.github.hatayama.UnityCliLoop
 
         private async void RefreshCliVersionInBackground()
         {
-            if (CliInstallationDetector.IsCheckCompleted())
+            if (CliSetupApplicationFacade.IsCliCheckCompleted())
             {
                 return;
             }
 
-            await CliInstallationDetector.RefreshCliVersionAsync(CancellationToken.None);
+            await CliSetupApplicationFacade.RefreshCliVersionAsync(CancellationToken.None);
             RefreshCliSetupSection();
             RefreshSelectedTargetInstallStateInBackground();
         }
@@ -278,7 +278,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             try
             {
-                Task forceRefresh = CliInstallationDetector.ForceRefreshCliVersionAsync(CancellationToken.None);
+                Task forceRefresh = CliSetupApplicationFacade.ForceRefreshCliVersionAsync(CancellationToken.None);
                 Task minimumDelay = Task.Delay(500);
                 await Task.WhenAll(forceRefresh, minimumDelay);
             }
@@ -529,12 +529,12 @@ namespace io.github.hatayama.UnityCliLoop
 
         private CliSetupData CreateCliSetupData(bool includeSkillDirectoryChecks = true)
         {
-            string cliVersion = CliInstallationDetector.GetCachedCliVersion();
-            string cliExecutablePath = CliInstallationDetector.GetCachedCliExecutablePath();
+            string cliVersion = CliSetupApplicationFacade.GetCachedCliVersion();
+            string cliExecutablePath = CliSetupApplicationFacade.GetCachedCliExecutablePath();
             string packageVersion = McpConstants.PackageInfo.version;
             string requiredDispatcherVersion = GetRequiredDispatcherVersion();
             string projectRoot = UnityMcpPathResolver.GetProjectRoot();
-            CliInstallResult projectLocalResult = ProjectLocalCliAutoInstaller.EnsureProjectLocalCliCurrent(
+            CliInstallResult projectLocalResult = CliSetupApplicationFacade.EnsureProjectLocalCliCurrent(
                 projectRoot,
                 packageVersion);
             if (!projectLocalResult.Success)
@@ -544,10 +544,10 @@ namespace io.github.hatayama.UnityCliLoop
             }
 
             bool isCliInstalled = cliVersion != null;
-            bool canUninstallCli = NativeCliInstaller.IsPackageOwnedCurrentUserInstallPath(
+            bool canUninstallCli = CliSetupApplicationFacade.IsPackageOwnedCurrentUserInstallPath(
                 cliExecutablePath,
                 Application.platform);
-            bool isChecking = !CliInstallationDetector.IsCheckCompleted()
+            bool isChecking = !CliSetupApplicationFacade.IsCliCheckCompleted()
                 || _isRefreshingVersion
                 || !includeSkillDirectoryChecks;
             bool needsUpdate = IsCliUpdateNeeded(cliVersion, requiredDispatcherVersion);
@@ -580,7 +580,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static string GetRequiredDispatcherVersion()
         {
-            string requiredDispatcherVersion = ProjectLocalCliInstaller.DetectBundledRequiredDispatcherVersion();
+            string requiredDispatcherVersion = CliSetupApplicationFacade.GetRequiredDispatcherVersion(McpConstants.PackageInfo.version);
             return string.IsNullOrEmpty(requiredDispatcherVersion)
                 ? McpConstants.PackageInfo.version
                 : requiredDispatcherVersion;
@@ -588,7 +588,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private void RefreshSelectedTargetInstallStateFast()
         {
-            if (!CliInstallationDetector.IsCliInstalled())
+            if (!CliSetupApplicationFacade.IsCliInstalled())
             {
                 _selectedTargetInstallState = SkillInstallState.Missing;
                 RefreshCliSetupSection();
@@ -602,7 +602,7 @@ namespace io.github.hatayama.UnityCliLoop
         private void RefreshSelectedTargetInstallStateInBackground()
         {
             CancelSkillInstallStateRefresh();
-            if (!CliInstallationDetector.IsCliInstalled() || _isRefreshingVersion || _isInstallingSkills)
+            if (!CliSetupApplicationFacade.IsCliInstalled() || _isRefreshingVersion || _isInstallingSkills)
             {
                 return;
             }
@@ -670,19 +670,20 @@ namespace io.github.hatayama.UnityCliLoop
                 return;
             }
 
-            bool wasCliInstalledBeforeInstall = CliInstallationDetector.IsCliInstalled();
+            bool wasCliInstalledBeforeInstall = CliSetupApplicationFacade.IsCliInstalled();
             _isInstallingCli = true;
             RefreshCliSetupSection();
 
             try
             {
-                CliInstallResult result = await NativeCliInstaller.InstallAsync(
+                CliInstallResult result = await CliSetupApplicationFacade.InstallGlobalCliAsync(
                     Application.platform,
-                    McpConstants.PackageInfo.version);
+                    McpConstants.PackageInfo.version,
+                    CancellationToken.None);
 
                 if (!result.Success)
                 {
-                    NativeCliInstallCommand command = NativeCliInstaller.GetInstallCommand(
+                    NativeCliInstallCommand command = CliSetupApplicationFacade.GetGlobalCliInstallCommand(
                         Application.platform,
                         McpConstants.PackageInfo.version,
                         true);
@@ -704,9 +705,9 @@ namespace io.github.hatayama.UnityCliLoop
 
         private bool ShouldUninstallCliFromPrimaryButton()
         {
-            string cliVersion = CliInstallationDetector.GetCachedCliVersion();
-            string cliExecutablePath = CliInstallationDetector.GetCachedCliExecutablePath();
-            bool canUninstallCli = NativeCliInstaller.IsPackageOwnedCurrentUserInstallPath(
+            string cliVersion = CliSetupApplicationFacade.GetCachedCliVersion();
+            string cliExecutablePath = CliSetupApplicationFacade.GetCachedCliExecutablePath();
+            bool canUninstallCli = CliSetupApplicationFacade.IsPackageOwnedCurrentUserInstallPath(
                 cliExecutablePath,
                 Application.platform);
             return ShouldUninstallCliFromPrimaryButton(
@@ -728,7 +729,7 @@ namespace io.github.hatayama.UnityCliLoop
         internal static bool IsCliUpdateNeeded(string cliVersion, string requiredDispatcherVersion)
         {
             return cliVersion != null
-                && CliVersionComparer.IsVersionLessThan(cliVersion, requiredDispatcherVersion);
+                && CliSetupApplicationFacade.IsCliVersionLessThan(cliVersion, requiredDispatcherVersion);
         }
 
         private async Task HandleUninstallCli()
@@ -743,7 +744,9 @@ namespace io.github.hatayama.UnityCliLoop
 
             try
             {
-                CliInstallResult result = await NativeCliInstaller.UninstallAsync(Application.platform);
+                CliInstallResult result = await CliSetupApplicationFacade.UninstallGlobalCliAsync(
+                    Application.platform,
+                    CancellationToken.None);
                 if (!result.Success)
                 {
                     EditorUtility.DisplayDialog(
@@ -762,7 +765,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private async void HandleInstallSkills()
         {
-            if (!CliInstallationDetector.IsCliInstalled())
+            if (!CliSetupApplicationFacade.IsCliInstalled())
             {
                 EditorUtility.DisplayDialog(
                     "CLI Not Found",

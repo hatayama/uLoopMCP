@@ -210,6 +210,106 @@ namespace io.github.hatayama.UnityCliLoop
         }
     }
 
+    /// <summary>
+    /// Application facade for editor setup UI workflows.
+    /// UI code uses this facade so presentation code does not depend on CLI installer internals.
+    /// </summary>
+    public static class CliSetupApplicationFacade
+    {
+        public static bool IsCliCheckCompleted()
+        {
+            return CliInstallationDetector.IsCheckCompleted();
+        }
+
+        public static bool IsCliInstalled()
+        {
+            return CliInstallationDetector.IsCliInstalled();
+        }
+
+        public static string GetCachedCliVersion()
+        {
+            return CliInstallationDetector.GetCachedCliVersion();
+        }
+
+        public static string GetCachedCliExecutablePath()
+        {
+            return CliInstallationDetector.GetCachedCliExecutablePath();
+        }
+
+        public static Task RefreshCliVersionAsync(CancellationToken ct)
+        {
+            return CliInstallationDetector.RefreshCliVersionAsync(ct);
+        }
+
+        public static Task ForceRefreshCliVersionAsync(CancellationToken ct)
+        {
+            return CliInstallationDetector.ForceRefreshCliVersionAsync(ct);
+        }
+
+        public static string GetRequiredDispatcherVersion(string packageVersion)
+        {
+            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(packageVersion), "packageVersion must not be null or empty");
+
+            string requiredDispatcherVersion = ProjectLocalCliInstaller.DetectBundledRequiredDispatcherVersion();
+            return string.IsNullOrEmpty(requiredDispatcherVersion)
+                ? packageVersion
+                : requiredDispatcherVersion;
+        }
+
+        public static CliInstallResult EnsureProjectLocalCliCurrent(string projectRoot, string packageVersion)
+        {
+            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(projectRoot), "projectRoot must not be null or empty");
+            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(packageVersion), "packageVersion must not be null or empty");
+
+            return ProjectLocalCliAutoInstaller.EnsureProjectLocalCliCurrent(projectRoot, packageVersion);
+        }
+
+        public static bool IsPackageOwnedCurrentUserInstallPath(
+            string cliExecutablePath,
+            RuntimePlatform platform)
+        {
+            return NativeCliInstaller.IsPackageOwnedCurrentUserInstallPath(cliExecutablePath, platform);
+        }
+
+        public static bool IsCliVersionLessThan(string leftVersion, string rightVersion)
+        {
+            return CliVersionComparer.IsVersionLessThan(leftVersion, rightVersion);
+        }
+
+        public static bool IsCliVersionGreaterThanOrEqual(string leftVersion, string rightVersion)
+        {
+            return CliVersionComparer.IsVersionGreaterThanOrEqual(leftVersion, rightVersion);
+        }
+
+        public static Task<CliInstallResult> InstallGlobalCliAsync(
+            RuntimePlatform platform,
+            string packageVersion,
+            CancellationToken ct)
+        {
+            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(packageVersion), "packageVersion must not be null or empty");
+            ct.ThrowIfCancellationRequested();
+
+            return NativeCliInstaller.InstallAsync(platform, packageVersion);
+        }
+
+        public static Task<CliInstallResult> UninstallGlobalCliAsync(RuntimePlatform platform, CancellationToken ct)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            return NativeCliInstaller.UninstallAsync(platform);
+        }
+
+        public static NativeCliInstallCommand GetGlobalCliInstallCommand(
+            RuntimePlatform platform,
+            string packageVersion,
+            bool removeLegacyLaunchers)
+        {
+            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(packageVersion), "packageVersion must not be null or empty");
+
+            return NativeCliInstaller.GetInstallCommand(platform, packageVersion, removeLegacyLaunchers);
+        }
+    }
+
     internal static class EditorTimestamp
     {
         public static double Now()
