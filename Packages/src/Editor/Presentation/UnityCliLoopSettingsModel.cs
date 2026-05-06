@@ -10,7 +10,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// - UnityCliLoopSettingsWindowState: State objects managed by this model
     /// - UnityCliLoopSettingsWindow: Presenter that uses this model
     /// - UnityCliLoopSettingsWindowUI: View layer for UI rendering
-    /// - McpEditorSettings: Persistent settings storage
+    /// - UnityCliLoopEditorSettings: Persistent settings storage
     /// </summary>
     public class UnityCliLoopSettingsModel
     {
@@ -46,7 +46,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// </summary>
         public void LoadFromSettings()
         {
-            McpEditorSettingsData settings = McpEditorSettings.GetSettings();
+            UnityCliLoopEditorSettingsData settings = UnityCliLoopEditorSettings.GetSettings();
             
             UpdateUIState(ui => new UIState(
                 mainScrollPosition: ui.MainScrollPosition,
@@ -150,7 +150,7 @@ namespace io.github.hatayama.UnityCliLoop
                 showUnityCliLoopSecuritySetting: show,
                 showToolSettings: ui.ShowToolSettings,
                 showConfiguration: ui.ShowConfiguration));
-            McpEditorSettings.SetShowUnityCliLoopSecuritySetting(show);
+            UnityCliLoopEditorSettings.SetShowUnityCliLoopSecuritySetting(show);
         }
 
         public void UpdateShowToolSettings(bool show)
@@ -160,7 +160,7 @@ namespace io.github.hatayama.UnityCliLoop
                 showUnityCliLoopSecuritySetting: ui.ShowUnityCliLoopSecuritySetting,
                 showToolSettings: show,
                 showConfiguration: ui.ShowConfiguration));
-            McpEditorSettings.SetShowToolSettings(show);
+            UnityCliLoopEditorSettings.SetShowToolSettings(show);
         }
 
         public void UpdateToolEnabled(string toolName, bool enabled)

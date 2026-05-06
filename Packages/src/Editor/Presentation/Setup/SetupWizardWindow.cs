@@ -51,7 +51,7 @@ namespace io.github.hatayama.UnityCliLoop
             if (!shouldRecordVersion) return;
 
             Debug.Assert(!string.IsNullOrEmpty(version), "version must not be null or empty");
-            McpEditorSettings.SetLastSeenSetupWizardVersion(version);
+            UnityCliLoopEditorSettings.SetLastSeenSetupWizardVersion(version);
         }
 
         internal static void MaybeRecordSuppressedVersion(bool suppressAutoShow, string version)
@@ -59,15 +59,15 @@ namespace io.github.hatayama.UnityCliLoop
             if (!suppressAutoShow) return;
 
             Debug.Assert(!string.IsNullOrEmpty(version), "version must not be null or empty");
-            McpEditorSettings.SetLastSeenSetupWizardVersion(version);
+            UnityCliLoopEditorSettings.SetLastSeenSetupWizardVersion(version);
         }
 
         private static void TryShowOnVersionChange()
         {
             string currentVersion = McpConstants.PackageInfo.version;
-            bool suppressAutoShow = McpEditorSettings.GetSuppressSetupWizardAutoShow();
+            bool suppressAutoShow = UnityCliLoopEditorSettings.GetSuppressSetupWizardAutoShow();
             MaybeRecordSuppressedVersion(suppressAutoShow, currentVersion);
-            string lastSeenVersion = McpEditorSettings.GetLastSeenSetupWizardVersion();
+            string lastSeenVersion = UnityCliLoopEditorSettings.GetLastSeenSetupWizardVersion();
             if (!ShouldAutoShowForVersion(currentVersion, lastSeenVersion, suppressAutoShow)) return;
 
             EditorApplication.delayCall += ShowWindowOnVersionChange;
@@ -90,7 +90,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return;
             }
 
-            string lastSeenSetupWizardVersionBeforeOpen = McpEditorSettings.GetLastSeenSetupWizardVersion();
+            string lastSeenSetupWizardVersionBeforeOpen = UnityCliLoopEditorSettings.GetLastSeenSetupWizardVersion();
             Rect windowPosition = CreateCenteredRect(EditorGUIUtility.GetMainWindowPosition(), MinimumWindowSize);
             SetupWizardWindow window = CreateInstance<SetupWizardWindow>();
             PrepareForOpen(window, WindowTitle, windowPosition, lastSeenSetupWizardVersionBeforeOpen);
@@ -337,7 +337,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private void RefreshAutoShowToggle()
         {
-            _suppressAutoShowToggle.SetValueWithoutNotify(McpEditorSettings.GetSuppressSetupWizardAutoShow());
+            _suppressAutoShowToggle.SetValueWithoutNotify(UnityCliLoopEditorSettings.GetSuppressSetupWizardAutoShow());
         }
 
         private void ApplyInitialCheckingState()
@@ -935,7 +935,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private void HandleSuppressAutoShowChanged(bool suppressAutoShow)
         {
-            McpEditorSettings.SetSuppressSetupWizardAutoShow(suppressAutoShow);
+            UnityCliLoopEditorSettings.SetSuppressSetupWizardAutoShow(suppressAutoShow);
             MaybeRecordSuppressedVersion(suppressAutoShow, McpConstants.PackageInfo.version);
             ScheduleResizeToContent();
         }
@@ -980,7 +980,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             // Claude Code does not resolve nested skill folders, so setup keeps every editor target on the flat layout.
             _installSkillsFlat = ForceFlatSkillInstall;
-            McpEditorSettings.SetInstallSkillsFlat(_installSkillsFlat);
+            UnityCliLoopEditorSettings.SetInstallSkillsFlat(_installSkillsFlat);
         }
 
         private void ScheduleResizeToContent()

@@ -44,8 +44,8 @@ namespace io.github.hatayama.UnityCliLoop
             CompileRequestInfo requestInfo = new CompileRequestInfo(requestId, forceRecompile, clientEndpoint);
             string json = JsonConvert.SerializeObject(requestInfo);
             
-            McpEditorSettings.SetCompileRequestJson(requestId, json);
-            McpEditorSettings.AddPendingCompileRequest(requestId);
+            UnityCliLoopEditorSettings.SetCompileRequestJson(requestId, json);
+            UnityCliLoopEditorSettings.AddPendingCompileRequest(requestId);
             
         }
 
@@ -54,7 +54,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// </summary>
         public static string[] GetPendingRequestIds()
         {
-            return McpEditorSettings.GetPendingCompileRequestIds();
+            return UnityCliLoopEditorSettings.GetPendingCompileRequestIds();
         }
 
         /// <summary>
@@ -62,7 +62,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// </summary>
         public static CompileRequestInfo GetCompileRequest(string requestId)
         {
-            string json = McpEditorSettings.GetCompileRequestJson(requestId);
+            string json = UnityCliLoopEditorSettings.GetCompileRequestJson(requestId);
             if (string.IsNullOrEmpty(json)) return null;
 
             try
@@ -85,8 +85,8 @@ namespace io.github.hatayama.UnityCliLoop
 
             requestInfo.isCompleted = true;
             string json = JsonConvert.SerializeObject(requestInfo);
-            McpEditorSettings.SetCompileRequestJson(requestId, json);
-            McpEditorSettings.RemovePendingCompileRequest(requestId);
+            UnityCliLoopEditorSettings.SetCompileRequestJson(requestId, json);
+            UnityCliLoopEditorSettings.RemovePendingCompileRequest(requestId);
             
         }
 
@@ -107,7 +107,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// </summary>
         public static void ClearAll()
         {
-            McpEditorSettings.ClearAllCompileRequests();
+            UnityCliLoopEditorSettings.ClearAllCompileRequests();
             
         }
     }

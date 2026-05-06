@@ -46,7 +46,7 @@ namespace io.github.hatayama.UnityCliLoop
             Assert.IsNotNull(method, "OnBeforeAssemblyReload method should exist");
 
             object originalServer = serverField.GetValue(null);
-            McpEditorSettingsData originalSettings = CloneSettings(McpEditorSettings.GetSettings());
+            UnityCliLoopEditorSettingsData originalSettings = CloneSettings(UnityCliLoopEditorSettings.GetSettings());
 
             try
             {
@@ -66,7 +66,7 @@ namespace io.github.hatayama.UnityCliLoop
             finally
             {
                 serverField.SetValue(null, originalServer);
-                McpEditorSettings.SaveSettings(originalSettings);
+                UnityCliLoopEditorSettings.SaveSettings(originalSettings);
                 DomainReloadDetectionService.DeleteLockFile();
                 field.SetValue(null, 0L);
             }
@@ -85,7 +85,7 @@ namespace io.github.hatayama.UnityCliLoop
             Assert.IsNotNull(method, "StopServerWithUseCaseAsync method should exist");
 
             object originalServer = serverField.GetValue(null);
-            McpEditorSettingsData originalSettings = CloneSettings(McpEditorSettings.GetSettings());
+            UnityCliLoopEditorSettingsData originalSettings = CloneSettings(UnityCliLoopEditorSettings.GetSettings());
 
             try
             {
@@ -106,15 +106,15 @@ namespace io.github.hatayama.UnityCliLoop
             finally
             {
                 serverField.SetValue(null, originalServer);
-                McpEditorSettings.SaveSettings(originalSettings);
+                UnityCliLoopEditorSettings.SaveSettings(originalSettings);
                 field.SetValue(null, 0L);
             }
         }
 
-        private static McpEditorSettingsData CloneSettings(McpEditorSettingsData settings)
+        private static UnityCliLoopEditorSettingsData CloneSettings(UnityCliLoopEditorSettingsData settings)
         {
             string json = UnityEngine.JsonUtility.ToJson(settings);
-            return UnityEngine.JsonUtility.FromJson<McpEditorSettingsData>(json);
+            return UnityEngine.JsonUtility.FromJson<UnityCliLoopEditorSettingsData>(json);
         }
     }
 }

@@ -67,7 +67,7 @@ namespace io.github.hatayama.UnityCliLoop
                 // 4. Session clear with SessionManager
                 try
                 {
-                    McpEditorSettings.ClearServerSession();
+                    UnityCliLoopEditorSettings.ClearServerSession();
                 }
                 catch (System.Exception sessionEx)
                 {

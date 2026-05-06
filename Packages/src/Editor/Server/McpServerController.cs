@@ -251,7 +251,7 @@ namespace io.github.hatayama.UnityCliLoop
                 mcpServer = null;
 
                 // Clear session state to reflect server stopped
-                McpEditorSettings.ClearServerSession();
+                UnityCliLoopEditorSettings.ClearServerSession();
                 DynamicCodeStartupTelemetry.Reset();
                 DynamicCodeForegroundWarmupState.Reset();
                 DynamicCodeServices.ResetServerScopedServices();
@@ -313,13 +313,13 @@ namespace io.github.hatayama.UnityCliLoop
                 return Task.CompletedTask;
             }
 
-            bool isAfterCompile = McpEditorSettings.GetIsAfterCompile();
+            bool isAfterCompile = UnityCliLoopEditorSettings.GetIsAfterCompile();
 
             if (mcpServer?.IsRunning == true)
             {
                 if (isAfterCompile)
                 {
-                    McpEditorSettings.ClearAfterCompileFlag();
+                    UnityCliLoopEditorSettings.ClearAfterCompileFlag();
                 }
 
                 return Task.CompletedTask;
@@ -327,7 +327,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             if (isAfterCompile)
             {
-                McpEditorSettings.ClearAfterCompileFlag();
+                UnityCliLoopEditorSettings.ClearAfterCompileFlag();
             }
 
             // Centralized, coalesced startup request
@@ -354,7 +354,7 @@ namespace io.github.hatayama.UnityCliLoop
 
                 // Clear server-side reconnecting flag on successful restoration
                 // NOTE: Do NOT clear UI display flag here - let it be cleared by timeout or client connection
-                McpEditorSettings.SetIsReconnecting(false);
+                UnityCliLoopEditorSettings.SetIsReconnecting(false);
 
             }
             catch (System.Exception)
@@ -367,7 +367,7 @@ namespace io.github.hatayama.UnityCliLoop
                 else
                 {
                     // If it ultimately fails, clear the SessionState.
-                    McpEditorSettings.ClearServerSession();
+                    UnityCliLoopEditorSettings.ClearServerSession();
                 }
             }
         }
@@ -401,7 +401,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
             DynamicCodeForegroundWarmupState.Reset();
             DynamicCodeServices.ResetServerScopedServices();
-            McpEditorSettings.ClearServerSession();
+            UnityCliLoopEditorSettings.ClearServerSession();
         }
 
         /// <summary>
@@ -442,7 +442,7 @@ namespace io.github.hatayama.UnityCliLoop
                             "server_auto_recovery_failed",
                             $"Automatic recovery after unexpected exit failed: {task.Exception?.GetBaseException().Message}"
                         );
-                        McpEditorSettings.ClearServerSession();
+                        UnityCliLoopEditorSettings.ClearServerSession();
                     }
                 }, TaskScheduler.FromCurrentSynchronizationContext());
             };
@@ -467,10 +467,10 @@ namespace io.github.hatayama.UnityCliLoop
             await EditorDelay.DelayFrame(timeoutFrames);
 
             // Check if UI flag is still set after timeout
-            bool isStillShowingUI = McpEditorSettings.GetShowReconnectingUI();
+            bool isStillShowingUI = UnityCliLoopEditorSettings.GetShowReconnectingUI();
             if (isStillShowingUI)
             {
-                McpEditorSettings.ClearReconnectingFlags();
+                UnityCliLoopEditorSettings.ClearReconnectingFlags();
             }
         }
 
@@ -576,8 +576,8 @@ namespace io.github.hatayama.UnityCliLoop
                 if (!started)
                 {
                     // Ensure session reflects stopped state on failure
-                    McpEditorSettings.ClearServerSession();
-                    McpEditorSettings.ClearReconnectingFlags();
+                    UnityCliLoopEditorSettings.ClearServerSession();
+                    UnityCliLoopEditorSettings.ClearReconnectingFlags();
                     Debug.LogError($"[{McpConstants.PROJECT_NAME}] Recovery failed: no project IPC endpoint to bind.");
                     throw new InvalidOperationException("Failed to bind recovery endpoint.");
                 }
@@ -586,8 +586,8 @@ namespace io.github.hatayama.UnityCliLoop
                 SaveRunningServerState();
 
                 // Clear reconnection-related flags on successful recovery
-                McpEditorSettings.ClearReconnectingFlags();
-                McpEditorSettings.ClearPostCompileReconnectingUI();
+                UnityCliLoopEditorSettings.ClearReconnectingFlags();
+                UnityCliLoopEditorSettings.ClearPostCompileReconnectingUI();
                 DynamicCodeStartupTelemetry.MarkServerReady();
                 UnityCliLoopToolRegistrar.WarmupRegistry();
                 DynamicCodeServices.ResetServerScopedServices();
@@ -679,7 +679,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static void SaveRunningServerState()
         {
-            McpEditorSettings.SetIsServerRunning(true);
+            UnityCliLoopEditorSettings.SetIsServerRunning(true);
         }
 
         internal static string CreateOptionalServerStartingLock(Func<string> createLockFile = null)

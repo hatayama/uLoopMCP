@@ -23,7 +23,7 @@ namespace io.github.hatayama.UnityCliLoop
         private static void Register()
         {
             McpEditorDomainReloadStateProvider.SetDomainReloadInProgressFromMainThread(
-                McpEditorSettings.GetIsDomainReloadInProgress());
+                UnityCliLoopEditorSettings.GetIsDomainReloadInProgress());
             DomainReloadStateRegistry.RegisterProvider(new McpEditorDomainReloadStateProvider());
         }
     }

@@ -173,7 +173,7 @@ namespace io.github.hatayama.UnityCliLoop
             StringAssert.DoesNotContain("\"dynamicCodeSecurityLevel\"", updatedLegacy);
             StringAssert.DoesNotContain("\"customPort\"", updatedLegacy);
 
-            McpEditorSettingsData legacySettings = JsonUtility.FromJson<McpEditorSettingsData>(updatedLegacy);
+            UnityCliLoopEditorSettingsData legacySettings = JsonUtility.FromJson<UnityCliLoopEditorSettingsData>(updatedLegacy);
             Assert.IsTrue(legacySettings.showDeveloperTools, "showDeveloperTools should be preserved");
         }
 
@@ -393,7 +393,7 @@ namespace io.github.hatayama.UnityCliLoop
         private void InvalidateBothCaches()
         {
             ULoopSettings.InvalidateCache();
-            McpEditorSettings.InvalidateCache();
+            UnityCliLoopEditorSettings.InvalidateCache();
             ToolSettings.InvalidateCache();
         }
 

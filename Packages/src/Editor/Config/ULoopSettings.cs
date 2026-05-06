@@ -184,7 +184,7 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         /// <summary>
-        /// McpEditorSettingsData no longer contains security fields, so we need
+        /// UnityCliLoopEditorSettingsData no longer contains security fields, so we need
         /// a dedicated probe class to extract them from the legacy JSON.
         /// </summary>
         [Serializable]
@@ -227,9 +227,9 @@ namespace io.github.hatayama.UnityCliLoop
             SaveSettings(_cachedSettings);
 
             // Re-save legacy file to purge security fields that are no longer in
-            // McpEditorSettingsData — JsonUtility.ToJson only serializes defined fields,
+            // UnityCliLoopEditorSettingsData — JsonUtility.ToJson only serializes defined fields,
             // so the 4 removed fields disappear from the JSON on re-serialization.
-            McpEditorSettings.SaveSettings(McpEditorSettings.GetSettings());
+            UnityCliLoopEditorSettings.SaveSettings(UnityCliLoopEditorSettings.GetSettings());
         }
 
         private static bool NormalizeLegacyDisabledDynamicCode()

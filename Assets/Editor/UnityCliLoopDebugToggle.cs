@@ -9,7 +9,7 @@ namespace io.github.hatayama.UnityCliLoop
     ///
     /// This file is intended for internal debugging convenience:
     /// - It lives under Assets/Editor/ outside Packages, so it is NOT included in the distributed UnityCliLoop package.
-    /// - In production, Roslyn define symbols are managed centrally via McpEditorSettings (see UpdateRoslynDefineSymbol).
+    /// - In production, Roslyn define symbols are managed centrally via UnityCliLoopEditorSettings (see UpdateRoslynDefineSymbol).
     ///   These menus operate only on the currently selected BuildTargetGroup and may temporarily diverge from global policy.
     ///
     /// Related classes:

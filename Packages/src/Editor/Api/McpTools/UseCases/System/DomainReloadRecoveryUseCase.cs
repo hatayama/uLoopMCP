@@ -26,7 +26,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             // 3. Fallback to session state if instance is null but session says server was running
             // Handles case where bridge server instance became null unexpectedly
-            if (currentServer == null && McpEditorSettings.GetIsServerRunning())
+            if (currentServer == null && UnityCliLoopEditorSettings.GetIsServerRunning())
             {
                 serverRunning = true;
                 VibeLogger.LogWarning(
@@ -143,7 +143,7 @@ namespace io.github.hatayama.UnityCliLoop
         private void ProcessPendingCompileRequests(string correlationId)
         {
             // Feature flag control - currently disabled, can be enabled via editor settings in the future
-            // TODO: Add McpEditorSettings.GetEnablePendingCompileProcessing() when needed
+            // TODO: Add UnityCliLoopEditorSettings.GetEnablePendingCompileProcessing() when needed
             bool enablePendingCompileProcessing = false;
             
             if (enablePendingCompileProcessing)

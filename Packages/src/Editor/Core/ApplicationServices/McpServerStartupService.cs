@@ -60,11 +60,11 @@ namespace io.github.hatayama.UnityCliLoop
         {
             if (!isRunning)
             {
-                McpEditorSettings.ClearServerSession();
+                UnityCliLoopEditorSettings.ClearServerSession();
                 return ServiceResult<bool>.SuccessResult(true);
             }
 
-            McpEditorSettings.SetIsServerRunning(true);
+            UnityCliLoopEditorSettings.SetIsServerRunning(true);
             return ServiceResult<bool>.SuccessResult(true);
         }
     }

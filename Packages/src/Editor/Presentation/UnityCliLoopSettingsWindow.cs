@@ -123,7 +123,7 @@ namespace io.github.hatayama.UnityCliLoop
         private async void HandlePostCompileMode()
         {
             _model.EnablePostCompileMode();
-            McpEditorSettings.SetShowReconnectingUI(false);
+            UnityCliLoopEditorSettings.SetShowReconnectingUI(false);
 
             Task recoveryTask = McpServerController.RecoveryTask;
             if (recoveryTask != null && !recoveryTask.IsCompleted)
@@ -131,11 +131,11 @@ namespace io.github.hatayama.UnityCliLoop
                 await recoveryTask;
             }
 
-            bool isAfterCompile = McpEditorSettings.GetIsAfterCompile();
+            bool isAfterCompile = UnityCliLoopEditorSettings.GetIsAfterCompile();
 
             if (isAfterCompile)
             {
-                McpEditorSettings.ClearAfterCompileFlag();
+                UnityCliLoopEditorSettings.ClearAfterCompileFlag();
                 return;
             }
 
@@ -818,7 +818,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             // Claude Code does not resolve nested skill folders, so editor-driven installs stay flat for every target.
             _installSkillsFlat = ForceFlatSkillInstall;
-            McpEditorSettings.SetInstallSkillsFlat(_installSkillsFlat);
+            UnityCliLoopEditorSettings.SetInstallSkillsFlat(_installSkillsFlat);
         }
 
         private void HandleRefreshSkillsState()

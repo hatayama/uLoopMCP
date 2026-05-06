@@ -14,12 +14,12 @@ namespace io.github.hatayama.UnityCliLoop
         [SetUp]
         public void SetUp()
         {
-            _originalIsServerRunning = McpEditorSettings.GetIsServerRunning();
-            _originalIsAfterCompile = McpEditorSettings.GetIsAfterCompile();
-            _originalIsDomainReloadInProgress = McpEditorSettings.GetIsDomainReloadInProgress();
-            _originalIsReconnecting = McpEditorSettings.GetIsReconnecting();
-            _originalShowReconnectingUI = McpEditorSettings.GetShowReconnectingUI();
-            _originalShowPostCompileReconnectingUI = McpEditorSettings.GetShowPostCompileReconnectingUI();
+            _originalIsServerRunning = UnityCliLoopEditorSettings.GetIsServerRunning();
+            _originalIsAfterCompile = UnityCliLoopEditorSettings.GetIsAfterCompile();
+            _originalIsDomainReloadInProgress = UnityCliLoopEditorSettings.GetIsDomainReloadInProgress();
+            _originalIsReconnecting = UnityCliLoopEditorSettings.GetIsReconnecting();
+            _originalShowReconnectingUI = UnityCliLoopEditorSettings.GetShowReconnectingUI();
+            _originalShowPostCompileReconnectingUI = UnityCliLoopEditorSettings.GetShowPostCompileReconnectingUI();
             McpEditorDomainReloadStateProvider.SetDomainReloadInProgressFromMainThread(false);
             DomainReloadDetectionService.DeleteLockFile();
         }
@@ -27,12 +27,12 @@ namespace io.github.hatayama.UnityCliLoop
         [TearDown]
         public void TearDown()
         {
-            McpEditorSettings.SetIsServerRunning(_originalIsServerRunning);
-            McpEditorSettings.SetIsAfterCompile(_originalIsAfterCompile);
-            McpEditorSettings.SetIsDomainReloadInProgress(_originalIsDomainReloadInProgress);
-            McpEditorSettings.SetIsReconnecting(_originalIsReconnecting);
-            McpEditorSettings.SetShowReconnectingUI(_originalShowReconnectingUI);
-            McpEditorSettings.SetShowPostCompileReconnectingUI(_originalShowPostCompileReconnectingUI);
+            UnityCliLoopEditorSettings.SetIsServerRunning(_originalIsServerRunning);
+            UnityCliLoopEditorSettings.SetIsAfterCompile(_originalIsAfterCompile);
+            UnityCliLoopEditorSettings.SetIsDomainReloadInProgress(_originalIsDomainReloadInProgress);
+            UnityCliLoopEditorSettings.SetIsReconnecting(_originalIsReconnecting);
+            UnityCliLoopEditorSettings.SetShowReconnectingUI(_originalShowReconnectingUI);
+            UnityCliLoopEditorSettings.SetShowPostCompileReconnectingUI(_originalShowPostCompileReconnectingUI);
             McpEditorDomainReloadStateProvider.SetDomainReloadInProgressFromMainThread(false);
             DomainReloadDetectionService.DeleteLockFile();
         }
@@ -45,23 +45,23 @@ namespace io.github.hatayama.UnityCliLoop
 
             DomainReloadDetectionService.StartDomainReload(correlationId, true);
 
-            Assert.That(McpEditorSettings.GetIsServerRunning(), Is.True);
-            Assert.That(McpEditorSettings.GetIsAfterCompile(), Is.True);
-            Assert.That(McpEditorSettings.GetIsDomainReloadInProgress(), Is.True);
-            Assert.That(McpEditorSettings.GetIsReconnecting(), Is.True);
-            Assert.That(McpEditorSettings.GetShowReconnectingUI(), Is.True);
-            Assert.That(McpEditorSettings.GetShowPostCompileReconnectingUI(), Is.True);
+            Assert.That(UnityCliLoopEditorSettings.GetIsServerRunning(), Is.True);
+            Assert.That(UnityCliLoopEditorSettings.GetIsAfterCompile(), Is.True);
+            Assert.That(UnityCliLoopEditorSettings.GetIsDomainReloadInProgress(), Is.True);
+            Assert.That(UnityCliLoopEditorSettings.GetIsReconnecting(), Is.True);
+            Assert.That(UnityCliLoopEditorSettings.GetShowReconnectingUI(), Is.True);
+            Assert.That(UnityCliLoopEditorSettings.GetShowPostCompileReconnectingUI(), Is.True);
             Assert.That(provider.IsDomainReloadInProgress(), Is.True);
             Assert.That(DomainReloadDetectionService.IsLockFilePresent(), Is.True);
 
             DomainReloadDetectionService.RollbackDomainReloadStart(correlationId);
 
-            Assert.That(McpEditorSettings.GetIsServerRunning(), Is.True);
-            Assert.That(McpEditorSettings.GetIsAfterCompile(), Is.False);
-            Assert.That(McpEditorSettings.GetIsDomainReloadInProgress(), Is.False);
-            Assert.That(McpEditorSettings.GetIsReconnecting(), Is.False);
-            Assert.That(McpEditorSettings.GetShowReconnectingUI(), Is.False);
-            Assert.That(McpEditorSettings.GetShowPostCompileReconnectingUI(), Is.False);
+            Assert.That(UnityCliLoopEditorSettings.GetIsServerRunning(), Is.True);
+            Assert.That(UnityCliLoopEditorSettings.GetIsAfterCompile(), Is.False);
+            Assert.That(UnityCliLoopEditorSettings.GetIsDomainReloadInProgress(), Is.False);
+            Assert.That(UnityCliLoopEditorSettings.GetIsReconnecting(), Is.False);
+            Assert.That(UnityCliLoopEditorSettings.GetShowReconnectingUI(), Is.False);
+            Assert.That(UnityCliLoopEditorSettings.GetShowPostCompileReconnectingUI(), Is.False);
             Assert.That(provider.IsDomainReloadInProgress(), Is.False);
             Assert.That(DomainReloadDetectionService.IsLockFilePresent(), Is.False);
         }

@@ -7,7 +7,7 @@ using UnityEngine;
 namespace io.github.hatayama.UnityCliLoop
 {
     [TestFixture]
-    public class McpEditorSettingsRecoveryTests
+    public class UnityCliLoopEditorSettingsRecoveryTests
     {
         private static readonly string SettingsFilePath =
             Path.Combine(McpConstants.USER_SETTINGS_FOLDER, McpConstants.SETTINGS_FILE_NAME);
@@ -41,7 +41,7 @@ namespace io.github.hatayama.UnityCliLoop
             DeleteIfExists(SettingsFilePath);
             DeleteIfExists(BackupFilePath);
             DeleteIfExists(TempFilePath);
-            McpEditorSettings.InvalidateCache();
+            UnityCliLoopEditorSettings.InvalidateCache();
         }
 
         [TearDown]
@@ -50,21 +50,21 @@ namespace io.github.hatayama.UnityCliLoop
             RestoreFile(SettingsFilePath, _settingsFileExisted, _settingsFileContent);
             RestoreFile(BackupFilePath, _backupFileExisted, _backupFileContent);
             RestoreFile(TempFilePath, _tempFileExisted, _tempFileContent);
-            McpEditorSettings.InvalidateCache();
+            UnityCliLoopEditorSettings.InvalidateCache();
         }
 
         [Test]
         public void RecoverSettingsFileIfNeeded_WhenPrimaryMissingAndBackupExists_ShouldRestoreBackup()
         {
-            McpEditorSettingsData backupData = new() { showDeveloperTools = true };
+            UnityCliLoopEditorSettingsData backupData = new() { showDeveloperTools = true };
             File.WriteAllText(BackupFilePath, JsonUtility.ToJson(backupData, true));
 
-            McpEditorSettings.RecoverSettingsFileIfNeeded();
+            UnityCliLoopEditorSettings.RecoverSettingsFileIfNeeded();
 
             Assert.IsTrue(File.Exists(SettingsFilePath), "Primary settings file should be restored from backup");
             Assert.IsFalse(File.Exists(BackupFilePath), "Backup should be consumed after recovery");
 
-            McpEditorSettingsData restored = JsonUtility.FromJson<McpEditorSettingsData>(
+            UnityCliLoopEditorSettingsData restored = JsonUtility.FromJson<UnityCliLoopEditorSettingsData>(
                 File.ReadAllText(SettingsFilePath));
             Assert.AreEqual(backupData.showDeveloperTools, restored.showDeveloperTools);
         }
@@ -72,18 +72,18 @@ namespace io.github.hatayama.UnityCliLoop
         [Test]
         public void RecoverSettingsFileIfNeeded_WhenPrimaryMissingAndTempExists_ShouldPromoteTemp()
         {
-            McpEditorSettingsData oldData = new() { showDeveloperTools = false };
-            McpEditorSettingsData newData = new() { showDeveloperTools = true };
+            UnityCliLoopEditorSettingsData oldData = new() { showDeveloperTools = false };
+            UnityCliLoopEditorSettingsData newData = new() { showDeveloperTools = true };
             File.WriteAllText(BackupFilePath, JsonUtility.ToJson(oldData, true));
             File.WriteAllText(TempFilePath, JsonUtility.ToJson(newData, true));
 
-            McpEditorSettings.RecoverSettingsFileIfNeeded();
+            UnityCliLoopEditorSettings.RecoverSettingsFileIfNeeded();
 
             Assert.IsTrue(File.Exists(SettingsFilePath), "Primary settings file should be restored from temp");
             Assert.IsFalse(File.Exists(BackupFilePath), "Backup should be removed after temp recovery");
             Assert.IsFalse(File.Exists(TempFilePath), "Temp file should be consumed after recovery");
 
-            McpEditorSettingsData restored = JsonUtility.FromJson<McpEditorSettingsData>(
+            UnityCliLoopEditorSettingsData restored = JsonUtility.FromJson<UnityCliLoopEditorSettingsData>(
                 File.ReadAllText(SettingsFilePath));
             Assert.AreEqual(newData.showDeveloperTools, restored.showDeveloperTools);
         }
@@ -91,17 +91,17 @@ namespace io.github.hatayama.UnityCliLoop
         [Test]
         public void RecoverSettingsFileIfNeeded_WhenPrimaryExists_ShouldCleanStaleSidecars()
         {
-            McpEditorSettingsData primaryData = new() { showDeveloperTools = true };
+            UnityCliLoopEditorSettingsData primaryData = new() { showDeveloperTools = true };
             File.WriteAllText(SettingsFilePath, JsonUtility.ToJson(primaryData, true));
-            File.WriteAllText(BackupFilePath, JsonUtility.ToJson(new McpEditorSettingsData { showDeveloperTools = false }, true));
-            File.WriteAllText(TempFilePath, JsonUtility.ToJson(new McpEditorSettingsData { showDeveloperTools = false }, true));
+            File.WriteAllText(BackupFilePath, JsonUtility.ToJson(new UnityCliLoopEditorSettingsData { showDeveloperTools = false }, true));
+            File.WriteAllText(TempFilePath, JsonUtility.ToJson(new UnityCliLoopEditorSettingsData { showDeveloperTools = false }, true));
 
-            McpEditorSettings.RecoverSettingsFileIfNeeded();
+            UnityCliLoopEditorSettings.RecoverSettingsFileIfNeeded();
 
             Assert.IsFalse(File.Exists(BackupFilePath), "Backup should not linger once primary exists");
             Assert.IsFalse(File.Exists(TempFilePath), "Temp should not linger once primary exists");
 
-            McpEditorSettingsData restored = JsonUtility.FromJson<McpEditorSettingsData>(
+            UnityCliLoopEditorSettingsData restored = JsonUtility.FromJson<UnityCliLoopEditorSettingsData>(
                 File.ReadAllText(SettingsFilePath));
             Assert.AreEqual(primaryData.showDeveloperTools, restored.showDeveloperTools);
         }
@@ -110,9 +110,9 @@ namespace io.github.hatayama.UnityCliLoop
         public void GetInstallSkillsFlat_WhenMissingFromSettings_DefaultsToTrue()
         {
             File.WriteAllText(SettingsFilePath, "{\"showDeveloperTools\":true}");
-            McpEditorSettings.InvalidateCache();
+            UnityCliLoopEditorSettings.InvalidateCache();
 
-            bool installSkillsFlat = McpEditorSettings.GetInstallSkillsFlat();
+            bool installSkillsFlat = UnityCliLoopEditorSettings.GetInstallSkillsFlat();
 
             Assert.IsTrue(installSkillsFlat);
         }
@@ -131,7 +131,7 @@ namespace io.github.hatayama.UnityCliLoop
                 "\"connectedLLMTools\":[{\"Name\":\"codex\",\"Endpoint\":\"/tmp/uloop/test.sock#1\",\"Port\":18449}]" +
                 "}");
 
-            McpEditorSettings.RecoverSettingsFileIfNeeded();
+            UnityCliLoopEditorSettings.RecoverSettingsFileIfNeeded();
 
             string recoveredJson = File.ReadAllText(SettingsFilePath);
             StringAssert.DoesNotContain("customPort", recoveredJson);
@@ -148,16 +148,16 @@ namespace io.github.hatayama.UnityCliLoop
         {
             File.WriteAllText(SettingsFilePath, new string(' ', McpConstants.MAX_SETTINGS_SIZE_BYTES + 1));
 
-            Assert.Throws<SecurityException>(() => McpEditorSettings.RecoverSettingsFileIfNeeded());
+            Assert.Throws<SecurityException>(() => UnityCliLoopEditorSettings.RecoverSettingsFileIfNeeded());
         }
 
         [Test]
         public void SetInstallSkillsFlat_PersistsValue()
         {
-            McpEditorSettings.SetInstallSkillsFlat(true);
-            McpEditorSettings.InvalidateCache();
+            UnityCliLoopEditorSettings.SetInstallSkillsFlat(true);
+            UnityCliLoopEditorSettings.InvalidateCache();
 
-            bool installSkillsFlat = McpEditorSettings.GetInstallSkillsFlat();
+            bool installSkillsFlat = UnityCliLoopEditorSettings.GetInstallSkillsFlat();
 
             Assert.IsTrue(installSkillsFlat);
         }
@@ -170,7 +170,7 @@ namespace io.github.hatayama.UnityCliLoop
             ServiceResult<bool> result = service.UpdateSessionState(true);
 
             Assert.IsTrue(result.Success, "Session update should succeed");
-            Assert.IsTrue(McpEditorSettings.GetIsServerRunning(), "Server running state should be persisted");
+            Assert.IsTrue(UnityCliLoopEditorSettings.GetIsServerRunning(), "Server running state should be persisted");
             string savedJson = File.ReadAllText(SettingsFilePath);
             StringAssert.DoesNotContain("projectRootPath", savedJson);
             StringAssert.DoesNotContain("serverSessionId", savedJson);

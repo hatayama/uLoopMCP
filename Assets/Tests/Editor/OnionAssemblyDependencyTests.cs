@@ -203,6 +203,19 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
+        public void ProductionSources_WhenLoaded_DoNotUseLegacyMcpEditorSettingsName()
+        {
+            // Tests that editor settings use UnityCLILoop naming outside protocol-specific code.
+            string legacyEditorSettingsName = "Mcp" + "EditorSettings";
+            string[] offendingReferences = ReadProductionSourcePaths()
+                .SelectMany(path => FindForbiddenReferences(path, new[] { legacyEditorSettingsName }))
+                .OrderBy(reference => reference)
+                .ToArray();
+
+            Assert.That(offendingReferences, Is.Empty);
+        }
+
+        [Test]
         public void EditorUiFiles_WhenLoaded_DoNotUseLegacyMcpSettingsWindowNames()
         {
             // Tests that settings-window UI code uses UnityCLILoop naming instead of legacy MCP naming.

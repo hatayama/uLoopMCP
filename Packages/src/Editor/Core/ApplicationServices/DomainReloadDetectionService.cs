@@ -69,9 +69,9 @@ namespace io.github.hatayama.UnityCliLoop
             // Save session state if server is running
             if (serverIsRunning)
             {
-                McpEditorSettings.UpdateSettings(s =>
+                UnityCliLoopEditorSettings.UpdateSettings(s =>
                 {
-                    McpEditorSettingsData updatedSettings = s with
+                    UnityCliLoopEditorSettingsData updatedSettings = s with
                     {
                         isDomainReloadInProgress = true,
                         isServerRunning = true,
@@ -86,7 +86,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
             else
             {
-                McpEditorSettings.SetIsDomainReloadInProgress(true);
+                UnityCliLoopEditorSettings.SetIsDomainReloadInProgress(true);
             }
 
             McpEditorDomainReloadStateProvider.SetDomainReloadInProgressFromMainThread(true);
@@ -119,7 +119,7 @@ namespace io.github.hatayama.UnityCliLoop
             // to avoid a gap between domain reload completion and server ready
 
             // Clear Domain Reload completion flag
-            McpEditorSettings.ClearDomainReloadFlag();
+            UnityCliLoopEditorSettings.ClearDomainReloadFlag();
             McpEditorDomainReloadStateProvider.SetDomainReloadInProgressFromMainThread(false);
 
             // Log recording
@@ -139,7 +139,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return;
             }
 
-            McpEditorSettings.UpdateSettings(s => s with
+            UnityCliLoopEditorSettings.UpdateSettings(s => s with
             {
                 isDomainReloadInProgress = false,
                 isAfterCompile = false,
@@ -163,7 +163,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <returns>True if Domain Reload is in progress</returns>
         public static bool IsDomainReloadInProgress()
         {
-            return McpEditorSettings.GetIsDomainReloadInProgress();
+            return UnityCliLoopEditorSettings.GetIsDomainReloadInProgress();
         }
 
         /// <summary>
@@ -172,7 +172,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <returns>True if reconnection UI display is required</returns>
         public static bool ShouldShowReconnectingUI()
         {
-            return McpEditorSettings.GetShowReconnectingUI();
+            return UnityCliLoopEditorSettings.GetShowReconnectingUI();
         }
 
         /// <summary>
@@ -181,7 +181,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <returns>True if after compile</returns>
         public static bool IsAfterCompile()
         {
-            return McpEditorSettings.GetIsAfterCompile();
+            return UnityCliLoopEditorSettings.GetIsAfterCompile();
         }
 
         private static void CreateLockFile()

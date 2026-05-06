@@ -23,7 +23,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// Unity CLI Loop Editor settings data.
     /// </summary>
     [Serializable]
-    public record McpEditorSettingsData
+    public record UnityCliLoopEditorSettingsData
     {
         public bool showDeveloperTools = false;
         public string lastSeenSetupWizardVersion = "";
@@ -53,7 +53,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// Management class for Unity CLI Loop Editor settings.
     /// Saves as a JSON file in the UserSettings folder.
     /// </summary>
-    public static class McpEditorSettings
+    public static class UnityCliLoopEditorSettings
     {
         private static string SettingsFilePath => Path.Combine(McpConstants.USER_SETTINGS_FOLDER, McpConstants.SETTINGS_FILE_NAME);
         private static readonly string[] LegacyTransientSettingKeys =
@@ -68,7 +68,7 @@ namespace io.github.hatayama.UnityCliLoop
             "connectedLLMTools"
         };
 
-        private static McpEditorSettingsData _cachedSettings;
+        private static UnityCliLoopEditorSettingsData _cachedSettings;
 
         internal static void InvalidateCache()
         {
@@ -100,7 +100,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Gets the settings data.
         /// </summary>
-        public static McpEditorSettingsData GetSettings()
+        public static UnityCliLoopEditorSettingsData GetSettings()
         {
             if (_cachedSettings == null)
             {
@@ -113,7 +113,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Saves the settings data.
         /// </summary>
-        public static void SaveSettings(McpEditorSettingsData settings)
+        public static void SaveSettings(UnityCliLoopEditorSettingsData settings)
         {
             // Security: Validate settings file path
             if (!IsValidSettingsPath(SettingsFilePath))
@@ -147,12 +147,12 @@ namespace io.github.hatayama.UnityCliLoop
         /// Applies a transformation to the current settings and saves once.
         /// Use when multiple fields need to be updated together to avoid redundant writes.
         /// </summary>
-        public static void UpdateSettings(Func<McpEditorSettingsData, McpEditorSettingsData> transform)
+        public static void UpdateSettings(Func<UnityCliLoopEditorSettingsData, UnityCliLoopEditorSettingsData> transform)
         {
             Debug.Assert(transform != null, "transform must not be null");
 
-            McpEditorSettingsData current = GetSettings();
-            McpEditorSettingsData updated = transform(current);
+            UnityCliLoopEditorSettingsData current = GetSettings();
+            UnityCliLoopEditorSettingsData updated = transform(current);
             SaveSettings(updated);
         }
 
@@ -169,8 +169,8 @@ namespace io.github.hatayama.UnityCliLoop
         /// </summary>
         public static void SetShowDeveloperTools(bool show)
         {
-            McpEditorSettingsData settings = GetSettings();
-            McpEditorSettingsData updatedSettings = settings with { showDeveloperTools = show };
+            UnityCliLoopEditorSettingsData settings = GetSettings();
+            UnityCliLoopEditorSettingsData updatedSettings = settings with { showDeveloperTools = show };
             SaveSettings(updatedSettings);
         }
 
@@ -182,8 +182,8 @@ namespace io.github.hatayama.UnityCliLoop
         public static void SetLastSeenSetupWizardVersion(string version)
         {
             string normalizedVersion = version ?? string.Empty;
-            McpEditorSettingsData settings = GetSettings();
-            McpEditorSettingsData updatedSettings = settings with { lastSeenSetupWizardVersion = normalizedVersion };
+            UnityCliLoopEditorSettingsData settings = GetSettings();
+            UnityCliLoopEditorSettingsData updatedSettings = settings with { lastSeenSetupWizardVersion = normalizedVersion };
             SaveSettings(updatedSettings);
         }
 
@@ -194,8 +194,8 @@ namespace io.github.hatayama.UnityCliLoop
 
         public static void SetSuppressSetupWizardAutoShow(bool suppressAutoShow)
         {
-            McpEditorSettingsData settings = GetSettings();
-            McpEditorSettingsData updatedSettings = settings with { suppressSetupWizardAutoShow = suppressAutoShow };
+            UnityCliLoopEditorSettingsData settings = GetSettings();
+            UnityCliLoopEditorSettingsData updatedSettings = settings with { suppressSetupWizardAutoShow = suppressAutoShow };
             SaveSettings(updatedSettings);
         }
 
@@ -212,8 +212,8 @@ namespace io.github.hatayama.UnityCliLoop
         /// </summary>
         public static void SetShowUnityCliLoopSecuritySetting(bool showUnityCliLoopSecuritySetting)
         {
-            McpEditorSettingsData settings = GetSettings();
-            McpEditorSettingsData newSettings = settings with { showUnityCliLoopSecuritySetting = showUnityCliLoopSecuritySetting };
+            UnityCliLoopEditorSettingsData settings = GetSettings();
+            UnityCliLoopEditorSettingsData newSettings = settings with { showUnityCliLoopSecuritySetting = showUnityCliLoopSecuritySetting };
             SaveSettings(newSettings);
         }
 
@@ -224,8 +224,8 @@ namespace io.github.hatayama.UnityCliLoop
 
         public static void SetShowToolSettings(bool showToolSettings)
         {
-            McpEditorSettingsData settings = GetSettings();
-            McpEditorSettingsData newSettings = settings with { showToolSettings = showToolSettings };
+            UnityCliLoopEditorSettingsData settings = GetSettings();
+            UnityCliLoopEditorSettingsData newSettings = settings with { showToolSettings = showToolSettings };
             SaveSettings(newSettings);
         }
 
@@ -236,8 +236,8 @@ namespace io.github.hatayama.UnityCliLoop
 
         public static void SetInstallSkillsFlat(bool installSkillsFlat)
         {
-            McpEditorSettingsData settings = GetSettings();
-            McpEditorSettingsData newSettings = settings with { installSkillsFlat = installSkillsFlat };
+            UnityCliLoopEditorSettingsData settings = GetSettings();
+            UnityCliLoopEditorSettingsData newSettings = settings with { installSkillsFlat = installSkillsFlat };
             SaveSettings(newSettings);
         }
 
@@ -256,8 +256,8 @@ namespace io.github.hatayama.UnityCliLoop
         /// </summary>
         public static void SetIsServerRunning(bool isServerRunning)
         {
-            McpEditorSettingsData settings = GetSettings();
-            McpEditorSettingsData newSettings = settings with { isServerRunning = isServerRunning };
+            UnityCliLoopEditorSettingsData settings = GetSettings();
+            UnityCliLoopEditorSettingsData newSettings = settings with { isServerRunning = isServerRunning };
             SaveSettings(newSettings);
         }
 
@@ -274,8 +274,8 @@ namespace io.github.hatayama.UnityCliLoop
         /// </summary>
         public static void SetIsAfterCompile(bool isAfterCompile)
         {
-            McpEditorSettingsData settings = GetSettings();
-            McpEditorSettingsData newSettings = settings with { isAfterCompile = isAfterCompile };
+            UnityCliLoopEditorSettingsData settings = GetSettings();
+            UnityCliLoopEditorSettingsData newSettings = settings with { isAfterCompile = isAfterCompile };
             SaveSettings(newSettings);
         }
 
@@ -292,8 +292,8 @@ namespace io.github.hatayama.UnityCliLoop
         /// </summary>
         public static void SetIsDomainReloadInProgress(bool isDomainReloadInProgress)
         {
-            McpEditorSettingsData settings = GetSettings();
-            McpEditorSettingsData newSettings = settings with { isDomainReloadInProgress = isDomainReloadInProgress };
+            UnityCliLoopEditorSettingsData settings = GetSettings();
+            UnityCliLoopEditorSettingsData newSettings = settings with { isDomainReloadInProgress = isDomainReloadInProgress };
             SaveSettings(newSettings);
         }
 
@@ -310,8 +310,8 @@ namespace io.github.hatayama.UnityCliLoop
         /// </summary>
         public static void SetIsReconnecting(bool isReconnecting)
         {
-            McpEditorSettingsData settings = GetSettings();
-            McpEditorSettingsData newSettings = settings with { isReconnecting = isReconnecting };
+            UnityCliLoopEditorSettingsData settings = GetSettings();
+            UnityCliLoopEditorSettingsData newSettings = settings with { isReconnecting = isReconnecting };
             SaveSettings(newSettings);
         }
 
@@ -328,8 +328,8 @@ namespace io.github.hatayama.UnityCliLoop
         /// </summary>
         public static void SetShowReconnectingUI(bool showReconnectingUI)
         {
-            McpEditorSettingsData settings = GetSettings();
-            McpEditorSettingsData newSettings = settings with { showReconnectingUI = showReconnectingUI };
+            UnityCliLoopEditorSettingsData settings = GetSettings();
+            UnityCliLoopEditorSettingsData newSettings = settings with { showReconnectingUI = showReconnectingUI };
             SaveSettings(newSettings);
         }
 
@@ -346,8 +346,8 @@ namespace io.github.hatayama.UnityCliLoop
         /// </summary>
         public static void SetShowPostCompileReconnectingUI(bool showPostCompileReconnectingUI)
         {
-            McpEditorSettingsData settings = GetSettings();
-            McpEditorSettingsData newSettings = settings with { showPostCompileReconnectingUI = showPostCompileReconnectingUI };
+            UnityCliLoopEditorSettingsData settings = GetSettings();
+            UnityCliLoopEditorSettingsData newSettings = settings with { showPostCompileReconnectingUI = showPostCompileReconnectingUI };
             SaveSettings(newSettings);
         }
 
@@ -364,8 +364,8 @@ namespace io.github.hatayama.UnityCliLoop
         /// </summary>
         public static void SetCompileWindowHasData(bool compileWindowHasData)
         {
-            McpEditorSettingsData settings = GetSettings();
-            McpEditorSettingsData newSettings = settings with { compileWindowHasData = compileWindowHasData };
+            UnityCliLoopEditorSettingsData settings = GetSettings();
+            UnityCliLoopEditorSettingsData newSettings = settings with { compileWindowHasData = compileWindowHasData };
             SaveSettings(newSettings);
         }
 
@@ -441,8 +441,8 @@ namespace io.github.hatayama.UnityCliLoop
         /// </summary>
         public static void SetPendingCompileRequestIds(string[] pendingCompileRequestIds)
         {
-            McpEditorSettingsData settings = GetSettings();
-            McpEditorSettingsData newSettings = settings with { pendingCompileRequestIds = pendingCompileRequestIds };
+            UnityCliLoopEditorSettingsData settings = GetSettings();
+            UnityCliLoopEditorSettingsData newSettings = settings with { pendingCompileRequestIds = pendingCompileRequestIds };
             SaveSettings(newSettings);
         }
 
@@ -459,8 +459,8 @@ namespace io.github.hatayama.UnityCliLoop
         /// </summary>
         public static void SetCompileRequests(CompileRequestData[] compileRequests)
         {
-            McpEditorSettingsData settings = GetSettings();
-            McpEditorSettingsData newSettings = settings with { compileRequests = compileRequests };
+            UnityCliLoopEditorSettingsData settings = GetSettings();
+            UnityCliLoopEditorSettingsData newSettings = settings with { compileRequests = compileRequests };
             SaveSettings(newSettings);
         }
 
@@ -569,16 +569,16 @@ namespace io.github.hatayama.UnityCliLoop
                         throw new InvalidDataException("Settings file contains invalid JSON content");
                     }
 
-                    _cachedSettings = JsonUtility.FromJson<McpEditorSettingsData>(json);
+                    _cachedSettings = JsonUtility.FromJson<UnityCliLoopEditorSettingsData>(json);
 
                     // Migrate security fields before any potential SaveSettings call from this class.
                     // If SaveSettings runs first, legacy security fields are stripped from JSON
-                    // because McpEditorSettingsData no longer defines them.
+                    // because UnityCliLoopEditorSettingsData no longer defines them.
                     ULoopSettings.GetSettings();
                 }
                 else
                 {
-                    _cachedSettings = new McpEditorSettingsData();
+                    _cachedSettings = new UnityCliLoopEditorSettingsData();
                 }
             }
             catch (Exception ex)

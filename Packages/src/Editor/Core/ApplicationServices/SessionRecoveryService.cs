@@ -20,8 +20,8 @@ namespace io.github.hatayama.UnityCliLoop
         /// <returns>Recovery process result</returns>
         public static ValidationResult RestoreServerStateIfNeeded()
         {
-            bool wasRunning = McpEditorSettings.GetIsServerRunning();
-            bool isAfterCompile = McpEditorSettings.GetIsAfterCompile();
+            bool wasRunning = UnityCliLoopEditorSettings.GetIsServerRunning();
+            bool isAfterCompile = UnityCliLoopEditorSettings.GetIsAfterCompile();
 
             // If server is already running
             McpBridgeServer currentServer = McpServerController.CurrentServer;
@@ -37,7 +37,7 @@ namespace io.github.hatayama.UnityCliLoop
 
                 if (isAfterCompile)
                 {
-                    McpEditorSettings.ClearAfterCompileFlag();
+                    UnityCliLoopEditorSettings.ClearAfterCompileFlag();
                 }
                 return ValidationResult.Success();
             }
@@ -45,7 +45,7 @@ namespace io.github.hatayama.UnityCliLoop
             // Clear after-compile flag
             if (isAfterCompile)
             {
-                McpEditorSettings.ClearAfterCompileFlag();
+                UnityCliLoopEditorSettings.ClearAfterCompileFlag();
             }
 
             // If server was running and is currently stopped, delegate to centralized controller logic
@@ -85,7 +85,7 @@ namespace io.github.hatayama.UnityCliLoop
                 McpServerController.RegisterRecoveredServer(newServer);
 
                 // Update session state
-                McpEditorSettings.UpdateSettings(s => s with
+                UnityCliLoopEditorSettings.UpdateSettings(s => s with
                 {
                     isReconnecting = false
                 });
@@ -110,7 +110,7 @@ namespace io.github.hatayama.UnityCliLoop
                 else
                 {
                     // Clear session when maximum retry count is reached
-                    McpEditorSettings.ClearServerSession();
+                    UnityCliLoopEditorSettings.ClearServerSession();
                     return ValidationResult.Failure($"Failed to restore server after {MAX_RETRIES} retries: {ex.Message}");
                 }
             }
@@ -142,10 +142,10 @@ namespace io.github.hatayama.UnityCliLoop
             int timeoutFrames = McpConstants.RECONNECTION_TIMEOUT_SECONDS * 60;
             await EditorDelay.DelayFrame(timeoutFrames);
 
-            bool isStillShowingUI = McpEditorSettings.GetShowReconnectingUI();
+            bool isStillShowingUI = UnityCliLoopEditorSettings.GetShowReconnectingUI();
             if (isStillShowingUI)
             {
-                McpEditorSettings.ClearReconnectingFlags();
+                UnityCliLoopEditorSettings.ClearReconnectingFlags();
             }
         }
     }

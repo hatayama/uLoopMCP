@@ -287,7 +287,7 @@ namespace io.github.hatayama.UnityCliLoop
                     catch (ThreadAbortException ex)
                     {
                         // Log and re-throw ThreadAbortException
-                        if (!McpEditorSettings.GetIsDomainReloadInProgress())
+                        if (!UnityCliLoopEditorSettings.GetIsDomainReloadInProgress())
                         {
                             OnError?.Invoke($"Unexpected thread abort: {ex.Message}");
                         }
@@ -331,7 +331,7 @@ namespace io.github.hatayama.UnityCliLoop
             catch (ThreadAbortException ex)
             {
                 // Log and re-throw ThreadAbortException
-                if (!McpEditorSettings.GetIsDomainReloadInProgress())
+                if (!UnityCliLoopEditorSettings.GetIsDomainReloadInProgress())
                 {
                     OnError?.Invoke($"Unexpected thread abort: {ex.Message}");
                 }

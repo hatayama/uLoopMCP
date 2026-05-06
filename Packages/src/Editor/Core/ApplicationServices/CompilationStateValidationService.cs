@@ -23,7 +23,7 @@ namespace io.github.hatayama.UnityCliLoop
                 );
             }
             
-            if (McpEditorSettings.GetIsDomainReloadInProgress())
+            if (UnityCliLoopEditorSettings.GetIsDomainReloadInProgress())
             {
                 return ValidationResult.Failure(
                     "Cannot compile while domain reload is in progress. Please wait for the domain reload to complete."
