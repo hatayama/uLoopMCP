@@ -42,6 +42,7 @@
 - Moved `execute-dynamic-code` into `UnityCLILoop.FirstPartyTools.Editor` as a bundled tool plugin that receives dynamic-code execution access through a `ToolContracts` host-service contract.
 - Moved `execute-dynamic-code` schema and response DTOs into `UnityCLILoop.ToolContracts` because both the bundled tool and the application-side execution pipeline shape those values.
 - Moved concrete tool host-service wiring into `UnityCLILoop.CompositionRoot.Editor`; `UnityCliLoopToolRegistry` now asks an application-side provider for registered host services instead of constructing them directly.
+- Moved concrete dynamic-code compilation service factory into `UnityCLILoop.Infrastructure`; `UnityCLILoop.CompositionRoot.Editor` still owns registration, while Infrastructure owns the factory that creates the compiler service.
 - Added registry tests proving:
   - bundled tools are discovered through the attribute path.
   - `get-logs` is registered from `UnityCLILoop.FirstPartyTools.Editor`.
@@ -61,6 +62,7 @@
   - `execute-dynamic-code` skill discovery still works after moving under `UnityCLILoop.FirstPartyTools.Editor`.
   - concrete tool host services compile under `UnityCLILoop.CompositionRoot.Editor`.
   - `UnityCliLoopToolRegistry` does not directly construct concrete host services.
+  - concrete dynamic-code compiler factory compiles under `UnityCLILoop.Infrastructure`.
   - the sample extension asmdef references only `UnityCLILoop.ToolContracts`.
   - the sample `hello-world` extension executes through the same typed contract path as bundled tools.
   - `UnityCLILoop.FirstPartyTools.Editor` references only `UnityCLILoop.ToolContracts`.

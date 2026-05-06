@@ -87,6 +87,7 @@ namespace io.github.hatayama.UnityCliLoop
             {
                 ApplicationAssemblyName,
                 DomainAssemblyName,
+                SharedAssemblyName,
                 ToolContractsAssemblyName
             }));
         }
@@ -125,6 +126,15 @@ namespace io.github.hatayama.UnityCliLoop
             string registrationAssemblyName = typeof(DynamicCodeCompilationServiceRegistration).Assembly.GetName().Name;
 
             Assert.That(registrationAssemblyName, Is.EqualTo(CompositionRootAssemblyName));
+        }
+
+        [Test]
+        public void DynamicCodeCompilationServiceFactory_WhenLoaded_CompilesUnderInfrastructureAssembly()
+        {
+            // Tests that concrete dynamic-code compiler construction is owned by infrastructure.
+            string factoryAssemblyName = typeof(DynamicCodeCompilationServiceFactory).Assembly.GetName().Name;
+
+            Assert.That(factoryAssemblyName, Is.EqualTo(InfrastructureAssemblyName));
         }
 
         [Test]
