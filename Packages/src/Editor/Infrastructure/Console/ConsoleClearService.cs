@@ -3,7 +3,7 @@ using UnityEngine;
 namespace io.github.hatayama.UnityCliLoop
 {
     /// <summary>
-    /// Application-owned bridge from the public host-service contract to Unity Console mutation.
+    /// Infrastructure bridge from the public host-service contract to Unity Console mutation.
     /// </summary>
     public sealed class ConsoleClearService : IUnityCliLoopConsoleClearService
     {

@@ -156,6 +156,15 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
+        public void ConsoleClearService_WhenLoaded_CompilesUnderInfrastructureAssembly()
+        {
+            // Tests that Unity Console mutation is owned by infrastructure.
+            string serviceAssemblyName = typeof(ConsoleClearService).Assembly.GetName().Name;
+
+            Assert.That(serviceAssemblyName, Is.EqualTo(InfrastructureAssemblyName));
+        }
+
+        [Test]
         public void ToolHostServices_WhenLoaded_CompileUnderCompositionRootAssembly()
         {
             // Tests that concrete tool host wiring is owned by the composition root.

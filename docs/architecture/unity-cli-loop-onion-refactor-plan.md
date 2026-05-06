@@ -44,6 +44,7 @@
 - Moved `execute-dynamic-code` schema and response DTOs into `UnityCLILoop.ToolContracts` because both the bundled tool and the application-side execution pipeline shape those values.
 - Moved concrete tool host-service wiring into `UnityCLILoop.CompositionRoot.Editor`; `UnityCliLoopToolRegistry` now asks an application-side provider for registered host services instead of constructing them directly.
 - Moved concrete dynamic-code compilation service factory into `UnityCLILoop.Infrastructure`; `UnityCLILoop.CompositionRoot.Editor` still owns registration, while Infrastructure owns the factory that creates the compiler service.
+- Moved Unity Console clear host-service implementation into `UnityCLILoop.Infrastructure`; `clear-console` receives the capability through `ToolContracts` and the composition root wires the concrete adapter.
 - Moved project-root identity matching into `UnityCLILoop.Domain` as a platform safety rule; JSON-RPC request validation now delegates to the domain rule and only converts failures into tool parameter errors.
 - Moved CLI version ordering into `UnityCLILoop.Domain` because dispatcher compatibility checks are pure platform rules with no Unity Editor, file-system, or protocol dependency.
 - Added registry tests proving:
@@ -67,6 +68,7 @@
   - concrete tool host services compile under `UnityCLILoop.CompositionRoot.Editor`.
   - `UnityCliLoopToolRegistry` does not directly construct concrete host services.
   - concrete dynamic-code compiler factory compiles under `UnityCLILoop.Infrastructure`.
+  - Unity Console clear host service compiles under `UnityCLILoop.Infrastructure`.
   - project-root identity safety policy compiles under `UnityCLILoop.Domain`.
   - CLI version ordering compiles under `UnityCLILoop.Domain`.
   - the sample extension asmdef references only `UnityCLILoop.ToolContracts`.
