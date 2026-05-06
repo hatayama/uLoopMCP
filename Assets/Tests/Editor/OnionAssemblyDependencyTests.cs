@@ -18,6 +18,7 @@ namespace io.github.hatayama.UnityCliLoop
         private const string MetadataValidationAssemblyName = "uLoopMCP.Editor.MetadataValidation";
         private const string PresentationAssemblyName = "UnityCLILoop.Presentation";
         private const string ToolContractsAssemblyName = "UnityCLILoop.ToolContracts";
+        private const string RemovedSharedAssemblyGuidReference = "GUID:290394860909340b7835eb7cc215ee75";
 
         [Test]
         public void DomainAsmdef_WhenLoaded_HasNoProjectAssemblyReferences()
@@ -316,6 +317,19 @@ namespace io.github.hatayama.UnityCliLoop
                 .ToArray();
 
             Assert.That(offendingAssemblyNames, Is.Empty);
+        }
+
+        [Test]
+        public void ProjectAsmdefs_WhenLoaded_DoNotReferenceRemovedSharedAssemblyGuid()
+        {
+            // Tests that removed module asmdefs do not leave stale GUID references in dependent asmdefs.
+            string[] offendingReferences = ReadProjectAsmdefPaths()
+                .Where(path => ReadRawReferences(path).Contains(RemovedSharedAssemblyGuidReference))
+                .Select(path => $"{ReadAsmdefName(path)} references removed shared assembly")
+                .OrderBy(reference => reference)
+                .ToArray();
+
+            Assert.That(offendingReferences, Is.Empty);
         }
 
         [Test]

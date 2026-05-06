@@ -57,6 +57,7 @@
 - Removed now-unused `uLoopMCP.Editor.Shared` references from `UnityCLILoop.Infrastructure` and `UnityCLILoop.CompositionRoot.Editor`.
 - Moved preload metadata validation contracts and registry into `uLoopMCP.Editor.MetadataValidation` so the metadata validation module exposes its own facade instead of depending on `uLoopMCP.Editor.Shared`.
 - Removed `uLoopMCP.Editor.Shared` as a production assembly after moving its remaining constants, logging, and domain-reload registry types into `UnityCLILoop.Application`.
+- Removed stale references to the deleted shared assembly GUID from dev and editor test asmdefs.
 - Added registry tests proving:
   - bundled tools are discovered through the attribute path.
   - `get-logs` is registered from `UnityCLILoop.FirstPartyTools.Editor`.
@@ -94,6 +95,7 @@
   - `uLoopMCP.Editor.MetadataValidation` no longer references `uLoopMCP.Editor.Shared`.
   - support constants, structured logging, and domain-reload registry types compile under `UnityCLILoop.Application`.
   - production asmdefs no longer reference `uLoopMCP.Editor.Shared`.
+  - project asmdefs no longer reference the deleted shared assembly GUID.
   - the sample extension asmdef references only `UnityCLILoop.ToolContracts`.
   - the sample `hello-world` extension executes through the same typed contract path as bundled tools.
   - `UnityCLILoop.FirstPartyTools.Editor` references only `UnityCLILoop.ToolContracts`.
