@@ -1122,7 +1122,11 @@ namespace io.github.hatayama.UnityCliLoop
         {
             private MouseUiSimulationCommand(UnityCliLoopMouseUiSimulationRequest request)
             {
-                Debug.Assert(request != null, "request must not be null");
+                if (request == null)
+                {
+                    throw new ArgumentNullException(nameof(request));
+                }
+
                 Action = ToRuntimeMouseAction(request.Action);
                 X = request.X;
                 Y = request.Y;

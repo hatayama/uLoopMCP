@@ -8,13 +8,7 @@ using UnityEngine;
 namespace io.github.hatayama.UnityCliLoop
 {
     /// <summary>
-    /// Event handler for UnityCliLoopSettingsWindow - Manages Unity and server events
-    /// Helper class for Presenter layer in MVP architecture
-    /// Related classes:
-    /// - UnityCliLoopSettingsWindow: Main presenter that owns this handler
-    /// - UnityCliLoopSettingsModel: Model layer for state management
-    /// - UnityCliLoopBridgeServer: Server that provides events
-    /// - UnityCliLoopServerController: Server lifecycle management
+    /// Keeps editor and server event subscriptions out of the settings window presenter.
     /// </summary>
     internal class UnityCliLoopSettingsWindowEventHandler
     {
@@ -70,15 +64,13 @@ namespace io.github.hatayama.UnityCliLoop
         {
             UnsubscribeFromServerEvents();
 
-            UnityCliLoopBridgeServer.OnServerStarted += OnServerStateChanged;
-            UnityCliLoopBridgeServer.OnServerStopping += OnServerStateChanged;
+            UnityCliLoopServerApplicationFacade.ServerStateChanged += OnServerStateChanged;
             ToolSettingsApplicationFacade.OnToolsChanged += OnToolsChanged;
         }
 
         private void UnsubscribeFromServerEvents()
         {
-            UnityCliLoopBridgeServer.OnServerStarted -= OnServerStateChanged;
-            UnityCliLoopBridgeServer.OnServerStopping -= OnServerStateChanged;
+            UnityCliLoopServerApplicationFacade.ServerStateChanged -= OnServerStateChanged;
             ToolSettingsApplicationFacade.OnToolsChanged -= OnToolsChanged;
         }
 

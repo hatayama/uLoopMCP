@@ -701,4 +701,39 @@ namespace io.github.hatayama.UnityCliLoop
             return null;
         }
     }
+
+    /// <summary>
+    /// Presentation boundary for server lifecycle state.
+    /// UI code depends on this facade so transport and controller internals can move behind the application boundary.
+    /// </summary>
+    public static class UnityCliLoopServerApplicationFacade
+    {
+        public static event Action ServerStateChanged
+        {
+            add
+            {
+                UnityCliLoopBridgeServer.OnServerStarted += value;
+                UnityCliLoopBridgeServer.OnServerStopping += value;
+            }
+            remove
+            {
+                UnityCliLoopBridgeServer.OnServerStarted -= value;
+                UnityCliLoopBridgeServer.OnServerStopping -= value;
+            }
+        }
+
+        public static bool IsServerRunning => UnityCliLoopServerController.IsServerRunning;
+
+        public static Task RecoveryTask => UnityCliLoopServerController.RecoveryTask;
+
+        public static void StartServer()
+        {
+            UnityCliLoopServerController.StartServer();
+        }
+
+        public static void StopServer()
+        {
+            UnityCliLoopServerController.StopServer();
+        }
+    }
 }

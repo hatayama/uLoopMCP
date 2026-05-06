@@ -125,7 +125,7 @@ namespace io.github.hatayama.UnityCliLoop
             _model.EnablePostCompileMode();
             UnityCliLoopEditorSettings.SetShowReconnectingUI(false);
 
-            Task recoveryTask = UnityCliLoopServerController.RecoveryTask;
+            Task recoveryTask = UnityCliLoopServerApplicationFacade.RecoveryTask;
             if (recoveryTask != null && !recoveryTask.IsCompleted)
             {
                 await recoveryTask;
@@ -139,7 +139,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return;
             }
 
-            // UnityCliLoopServerController.[InitializeOnLoad] handles automatic server recovery via RestoreServerStateIfNeeded()
+            // The server lifecycle owns automatic recovery after domain reload.
         }
 
         private void OnDisable()

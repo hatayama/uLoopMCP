@@ -459,6 +459,34 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
+        public void ServerApplicationFacade_WhenLoaded_CompilesUnderApplicationAssembly()
+        {
+            // Tests that Presentation sees server lifecycle through an application boundary.
+            string facadeAssemblyName = typeof(UnityCliLoopServerApplicationFacade).Assembly.GetName().Name;
+
+            Assert.That(facadeAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+        }
+
+        [Test]
+        public void PresentationSources_WhenLoaded_DoNotReferenceServerInternals()
+        {
+            // Tests that Presentation does not depend directly on server transport/controller internals.
+            string[] sourcePaths = Directory.GetFiles("Packages/src/Editor/Presentation", "*.cs", SearchOption.AllDirectories);
+            string[] offendingFiles = sourcePaths
+                .Where(path =>
+                {
+                    string source = File.ReadAllText(path);
+                    return source.Contains("UnityCliLoopBridgeServer")
+                        || source.Contains("UnityCliLoopServerController");
+                })
+                .Select(path => Path.GetRelativePath(UnityCliLoopPathResolver.GetProjectRoot(), path))
+                .OrderBy(path => path)
+                .ToArray();
+
+            Assert.That(offendingFiles, Is.Empty);
+        }
+
+        [Test]
         public void ConsoleClearService_WhenLoaded_CompilesUnderInfrastructureAssembly()
         {
             // Tests that Unity Console mutation is owned by infrastructure.

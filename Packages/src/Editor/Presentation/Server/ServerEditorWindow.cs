@@ -27,15 +27,13 @@ namespace io.github.hatayama.UnityCliLoop
         private void OnEnable()
         {
             EditorApplication.update += OnEditorUpdate;
-            UnityCliLoopBridgeServer.OnServerStarted += OnServerStateChanged;
-            UnityCliLoopBridgeServer.OnServerStopping += OnServerStateChanged;
+            UnityCliLoopServerApplicationFacade.ServerStateChanged += OnServerStateChanged;
         }
 
         private void OnDisable()
         {
             EditorApplication.update -= OnEditorUpdate;
-            UnityCliLoopBridgeServer.OnServerStarted -= OnServerStateChanged;
-            UnityCliLoopBridgeServer.OnServerStopping -= OnServerStateChanged;
+            UnityCliLoopServerApplicationFacade.ServerStateChanged -= OnServerStateChanged;
         }
 
         private void CreateGUI()
@@ -87,7 +85,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private ServerStatusData CreateServerStatusData()
         {
-            bool isRunning = UnityCliLoopServerController.IsServerRunning;
+            bool isRunning = UnityCliLoopServerApplicationFacade.IsServerRunning;
             string status = isRunning ? "Running" : "Stopped";
             Color statusColor = isRunning ? Color.green : Color.red;
 
@@ -96,15 +94,15 @@ namespace io.github.hatayama.UnityCliLoop
 
         private ServerControlsData CreateServerControlsData()
         {
-            bool isRunning = UnityCliLoopServerController.IsServerRunning;
+            bool isRunning = UnityCliLoopServerApplicationFacade.IsServerRunning;
             return new ServerControlsData(isRunning);
         }
 
         private void ToggleServer()
         {
-            if (UnityCliLoopServerController.IsServerRunning)
+            if (UnityCliLoopServerApplicationFacade.IsServerRunning)
             {
-                UnityCliLoopServerController.StopServer();
+                UnityCliLoopServerApplicationFacade.StopServer();
             }
             else
             {
@@ -116,7 +114,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private void StartServer()
         {
-            UnityCliLoopServerController.StartServer();
+            UnityCliLoopServerApplicationFacade.StartServer();
         }
 
         private void OnServerStateChanged()
