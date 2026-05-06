@@ -157,7 +157,7 @@ namespace io.github.hatayama.UnityCliLoop
             // Wait for the server task to complete.
             try
             {
-                _serverTask?.Wait(TimeSpan.FromSeconds(McpServerConfig.SHUTDOWN_TIMEOUT_SECONDS));
+                _serverTask?.Wait(TimeSpan.FromSeconds(UnityCliLoopServerConfig.SHUTDOWN_TIMEOUT_SECONDS));
             }
             finally
             {

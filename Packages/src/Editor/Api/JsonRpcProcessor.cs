@@ -250,13 +250,13 @@ namespace io.github.hatayama.UnityCliLoop
             JsonSerializerSettings settings = new JsonSerializerSettings
             {
                 ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
-                MaxDepth = McpServerConfig.DEFAULT_JSON_MAX_DEPTH
+                MaxDepth = UnityCliLoopServerConfig.DEFAULT_JSON_MAX_DEPTH
             };
             
             try
             {
                 JsonRpcSuccessResponse response = new JsonRpcSuccessResponse(
-                    McpServerConfig.JSONRPC_VERSION,
+                    UnityCliLoopServerConfig.JSONRPC_VERSION,
                     id,
                     result
                 );
@@ -272,7 +272,7 @@ namespace io.github.hatayama.UnityCliLoop
                 };
                 
                 JsonRpcSuccessResponse fallbackResponse = new JsonRpcSuccessResponse(
-                    McpServerConfig.JSONRPC_VERSION,
+                    UnityCliLoopServerConfig.JSONRPC_VERSION,
                     id,
                     fallbackResult
                 );
@@ -305,15 +305,15 @@ namespace io.github.hatayama.UnityCliLoop
             }
 
             JsonRpcErrorResponse errorResponse = new JsonRpcErrorResponse(
-                McpServerConfig.JSONRPC_VERSION,
+                UnityCliLoopServerConfig.JSONRPC_VERSION,
                 id,
-                new JsonRpcError(McpServerConfig.INTERNAL_ERROR_CODE, errorMessage, errorData)
+                new JsonRpcError(UnityCliLoopServerConfig.INTERNAL_ERROR_CODE, errorMessage, errorData)
             );
             
             JsonSerializerSettings settings = new JsonSerializerSettings
             {
                 ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
-                MaxDepth = McpServerConfig.DEFAULT_JSON_MAX_DEPTH
+                MaxDepth = UnityCliLoopServerConfig.DEFAULT_JSON_MAX_DEPTH
             };
             
             return JsonConvert.SerializeObject(errorResponse, Formatting.None, settings);

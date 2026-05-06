@@ -49,7 +49,7 @@ namespace io.github.hatayama.UnityCliLoop
             JsonSerializerSettings settings = new JsonSerializerSettings
             {
                 ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
-                MaxDepth = McpServerConfig.DEFAULT_JSON_MAX_DEPTH,
+                MaxDepth = UnityCliLoopServerConfig.DEFAULT_JSON_MAX_DEPTH,
                 Formatting = Formatting.Indented,
                 NullValueHandling = NullValueHandling.Ignore
             };

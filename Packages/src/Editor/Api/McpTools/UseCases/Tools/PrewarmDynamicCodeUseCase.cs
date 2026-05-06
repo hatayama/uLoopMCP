@@ -495,7 +495,7 @@ namespace io.github.hatayama.UnityCliLoop
                 });
             JObject request = new JObject
             {
-                ["jsonrpc"] = McpServerConfig.JSONRPC_VERSION,
+                ["jsonrpc"] = UnityCliLoopServerConfig.JSONRPC_VERSION,
                 ["id"] = AutoPrewarmRequestId,
                 ["method"] = UnityCliLoopConstants.TOOL_NAME_EXECUTE_DYNAMIC_CODE,
                 ["params"] = JObject.FromObject(parameters, serializer),
