@@ -1,5 +1,8 @@
 namespace io.github.hatayama.UnityCliLoop
 {
+    /// <summary>
+    /// Version payload returned by the internal CLI readiness bridge command.
+    /// </summary>
     public class GetVersionResponse : UnityCliLoopToolResponse
     {
         public string UnityVersion { get; set; } = string.Empty;

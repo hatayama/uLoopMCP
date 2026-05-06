@@ -1,0 +1,28 @@
+using System;
+using UnityEngine;
+
+namespace io.github.hatayama.UnityCliLoop
+{
+    /// <summary>
+    /// Routes CLI-only bridge commands that must not appear in the extension-facing tool registry.
+    /// </summary>
+    internal static class InternalBridgeCommandRouter
+    {
+        public static bool IsInternalCommand(string commandName)
+        {
+            return commandName == McpConstants.COMMAND_NAME_GET_VERSION;
+        }
+
+        public static UnityCliLoopToolResponse Execute(string commandName)
+        {
+            Debug.Assert(IsInternalCommand(commandName), $"Unknown internal bridge command: {commandName}");
+
+            if (commandName == McpConstants.COMMAND_NAME_GET_VERSION)
+            {
+                return GetVersionBridgeCommand.Execute();
+            }
+
+            throw new ArgumentException($"Unknown internal bridge command: {commandName}", nameof(commandName));
+        }
+    }
+}

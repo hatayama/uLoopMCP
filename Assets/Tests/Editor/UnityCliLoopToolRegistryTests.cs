@@ -1,5 +1,6 @@
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
@@ -35,7 +36,6 @@ namespace io.github.hatayama.UnityCliLoop
             UnityCliLoopToolRegistry registry = new UnityCliLoopToolRegistry();
             string[] toolNames = new[]
             {
-                "get-version",
                 "focus-window"
             };
 
@@ -44,6 +44,29 @@ namespace io.github.hatayama.UnityCliLoop
                 Assert.That(registry.IsToolRegistered(toolName), Is.True);
                 Assert.That(registry.IsThirdPartyTool(toolName), Is.False);
             }
+        }
+
+        [Test]
+        public void Constructor_WhenGetVersionIsInternalBridgeCommand_DoesNotRegisterItAsTool()
+        {
+            // Tests that get-version is kept out of the extension-facing runtime registry.
+            UnityCliLoopToolRegistry registry = new UnityCliLoopToolRegistry();
+
+            Assert.That(registry.IsToolRegistered(McpConstants.COMMAND_NAME_GET_VERSION), Is.False);
+        }
+
+        [Test]
+        public async Task ExecuteCommandAsync_WhenCommandIsGetVersion_ReturnsBridgeVersionPayload()
+        {
+            // Tests that get-version still works as a CLI-only bridge command after leaving the tool registry.
+            UnityCliLoopToolResponse response = await UnityApiHandler.ExecuteCommandAsync(
+                McpConstants.COMMAND_NAME_GET_VERSION,
+                new JObject());
+
+            GetVersionResponse getVersionResponse = response as GetVersionResponse;
+            Assert.That(getVersionResponse, Is.Not.Null);
+            Assert.That(getVersionResponse.UnityVersion, Is.Not.Empty);
+            Assert.That(getVersionResponse.IsEditor, Is.True);
         }
 
         [Test]

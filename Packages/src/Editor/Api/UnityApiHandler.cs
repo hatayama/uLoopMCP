@@ -43,6 +43,11 @@ namespace io.github.hatayama.UnityCliLoop
         /// <returns>Execution result</returns>
         public static async Task<UnityCliLoopToolResponse> ExecuteCommandAsync(string commandName, JToken paramsToken)
         {
+            if (InternalBridgeCommandRouter.IsInternalCommand(commandName))
+            {
+                return InternalBridgeCommandRouter.Execute(commandName);
+            }
+
             Stopwatch registryAcquireStopwatch = Stopwatch.StartNew();
             UnityCliLoopToolRegistry registry = UnityCliLoopToolRegistrar.GetRegistry();
             registryAcquireStopwatch.Stop();

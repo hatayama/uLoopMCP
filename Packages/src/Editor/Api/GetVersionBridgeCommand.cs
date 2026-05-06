@@ -1,16 +1,13 @@
-using System.Threading;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    [UnityCliLoopTool(DisplayDevelopmentOnly = true)]
-    public class GetVersionTool : UnityCliLoopTool<GetVersionSchema, GetVersionResponse>
+    /// <summary>
+    /// Provides the CLI readiness version payload without registering an extension-facing tool.
+    /// </summary>
+    internal static class GetVersionBridgeCommand
     {
-        public override string ToolName => "get-version";
-
-        protected override Task<GetVersionResponse> ExecuteAsync(
-            GetVersionSchema parameters, CancellationToken ct)
+        public static GetVersionResponse Execute()
         {
             GetVersionResponse response = new GetVersionResponse
             {
@@ -24,7 +21,8 @@ namespace io.github.hatayama.UnityCliLoop
                 CompanyName = Application.companyName
             };
 
-            return Task.FromResult(response);
+            Debug.Assert(!string.IsNullOrWhiteSpace(response.UnityVersion), "Unity version must be available.");
+            return response;
         }
     }
 }
