@@ -15,11 +15,20 @@ namespace io.github.hatayama.UnityCliLoop
     }
 
     /// <summary>
+    /// Host capability used by tools that need to clear Unity Console entries.
+    /// </summary>
+    public interface IUnityCliLoopConsoleClearService
+    {
+        UnityCliLoopConsoleClearResult Clear(bool addConfirmationMessage);
+    }
+
+    /// <summary>
     /// Tool host services that are injected into tools which need platform-provided capabilities.
     /// </summary>
     public interface IUnityCliLoopToolHostServices
     {
         IUnityCliLoopConsoleLogService ConsoleLogs { get; }
+        IUnityCliLoopConsoleClearService ConsoleClear { get; }
         IUnityCliLoopCompilationService Compilation { get; }
         IUnityCliLoopDynamicCodeExecutionService DynamicCodeExecution { get; }
     }
@@ -72,6 +81,46 @@ namespace io.github.hatayama.UnityCliLoop
         {
             LogEntries = logEntries ?? new UnityCliLoopConsoleLogEntry[0];
             TotalCount = totalCount;
+        }
+    }
+
+    /// <summary>
+    /// Immutable Unity Console clear-count snapshot shared across tool boundaries.
+    /// </summary>
+    public sealed class UnityCliLoopConsoleClearCounts
+    {
+        public readonly int ErrorCount;
+        public readonly int WarningCount;
+        public readonly int LogCount;
+
+        public UnityCliLoopConsoleClearCounts(int errorCount, int warningCount, int logCount)
+        {
+            ErrorCount = errorCount;
+            WarningCount = warningCount;
+            LogCount = logCount;
+        }
+    }
+
+    /// <summary>
+    /// Immutable Unity Console clear result shared across tool boundaries.
+    /// </summary>
+    public sealed class UnityCliLoopConsoleClearResult
+    {
+        public readonly bool Success;
+        public readonly int ClearedLogCount;
+        public readonly UnityCliLoopConsoleClearCounts ClearedCounts;
+        public readonly string Message;
+
+        public UnityCliLoopConsoleClearResult(
+            bool success,
+            int clearedLogCount,
+            UnityCliLoopConsoleClearCounts clearedCounts,
+            string message)
+        {
+            Success = success;
+            ClearedLogCount = clearedLogCount;
+            ClearedCounts = clearedCounts ?? new UnityCliLoopConsoleClearCounts(0, 0, 0);
+            Message = message ?? string.Empty;
         }
     }
 }

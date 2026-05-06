@@ -1,5 +1,6 @@
 ---
 name: uloop-clear-console
+toolName: clear-console
 description: "Clear all Unity Console log entries. Use when you need to: (1) Clear console before running tests or compilation, (2) Start a fresh debugging session, (3) Remove noisy logs to isolate specific output."
 ---
 
@@ -44,5 +45,5 @@ Returns JSON with:
   - `ErrorCount` (number): Errors cleared
   - `WarningCount` (number): Warnings cleared
   - `LogCount` (number): Info logs cleared
-- `Message` (string): Description of the result; carries the failure summary when the operation fails (e.g. `"Failed to clear console: ..."`)
-- `ErrorMessage` (string): Currently always empty for this tool — read `Message` for failure details
+- `Message` (string): Description of the result
+- `ErrorMessage` (string): Empty for successful responses; unexpected failures are reported as CLI errors

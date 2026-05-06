@@ -1066,6 +1066,12 @@ namespace io.github.hatayama.UnityCliLoop
 
             Assert.That(executeDynamicCodeSkill.ToolName, Is.EqualTo("execute-dynamic-code"));
             Assert.That(executeDynamicCodeSkill.SkillFiles.Keys, Does.Contain(SkillInstallLayout.SkillFileName));
+
+            SkillInstallLayout.SkillSourceInfo clearConsoleSkill = skillSources
+                .Single(skill => skill.Name == "uloop-clear-console");
+
+            Assert.That(clearConsoleSkill.ToolName, Is.EqualTo("clear-console"));
+            Assert.That(clearConsoleSkill.SkillFiles.Keys, Does.Contain(SkillInstallLayout.SkillFileName));
         }
 
         // Tests that internal skill metadata maps back to the hidden tool name only.

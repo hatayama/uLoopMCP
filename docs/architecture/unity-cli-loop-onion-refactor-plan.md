@@ -38,6 +38,7 @@
   - `debug-sleep`
 - Moved `control-play-mode` into `UnityCLILoop.FirstPartyTools.Editor` as the first bundled tool plugin that references only `UnityCLILoop.ToolContracts`.
 - Moved `get-logs` into `UnityCLILoop.FirstPartyTools.Editor` as a bundled tool plugin that receives Unity Console access through a `ToolContracts` host-service contract.
+- Moved `clear-console` into `UnityCLILoop.FirstPartyTools.Editor` as a bundled tool plugin that receives Unity Console mutation access through a `ToolContracts` host-service contract.
 - Moved `compile` into `UnityCLILoop.FirstPartyTools.Editor` as a bundled tool plugin that receives Unity compilation access through a `ToolContracts` host-service contract.
 - Moved `execute-dynamic-code` into `UnityCLILoop.FirstPartyTools.Editor` as a bundled tool plugin that receives dynamic-code execution access through a `ToolContracts` host-service contract.
 - Moved `execute-dynamic-code` schema and response DTOs into `UnityCLILoop.ToolContracts` because both the bundled tool and the application-side execution pipeline shape those values.
@@ -60,6 +61,7 @@
   - `control-play-mode` is registered from `UnityCLILoop.FirstPartyTools.Editor`.
   - `control-play-mode` skill discovery still works after moving under `UnityCLILoop.FirstPartyTools.Editor`.
   - `get-logs` skill discovery still works after moving under `UnityCLILoop.FirstPartyTools.Editor`.
+  - `clear-console` skill discovery still works after moving under `UnityCLILoop.FirstPartyTools.Editor`.
   - `compile` skill discovery still works after moving under `UnityCLILoop.FirstPartyTools.Editor`.
   - `execute-dynamic-code` skill discovery still works after moving under `UnityCLILoop.FirstPartyTools.Editor`.
   - concrete tool host services compile under `UnityCLILoop.CompositionRoot.Editor`.
