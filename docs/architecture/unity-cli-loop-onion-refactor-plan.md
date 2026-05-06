@@ -51,6 +51,7 @@
 - Moved dynamic-code default namespace and class-name constants into `UnityCLILoop.Domain` because they are platform defaults shared by compilation and execution policies.
 - Moved script-changes-while-playing policy values into `UnityCLILoop.Domain` because they are compile safety policy values interpreted by Application services.
 - Moved dynamic-code security result values and the dangerous API catalog into `UnityCLILoop.Domain` because they are platform safety policy values shared by compilation and metadata validation.
+- Moved source-level dynamic-code security scanning into `UnityCLILoop.Domain` because it is a pure platform safety policy over source text.
 - Added registry tests proving:
   - bundled tools are discovered through the attribute path.
   - `get-logs` is registered from `UnityCLILoop.FirstPartyTools.Editor`.
@@ -80,6 +81,7 @@
   - script-changes-while-playing policy values compile under `UnityCLILoop.Domain`.
   - dynamic-code security result values compile under `UnityCLILoop.Domain`.
   - dynamic-code dangerous API policy compiles under `UnityCLILoop.Domain`.
+  - source-level dynamic-code security scanning compiles under `UnityCLILoop.Domain`.
   - the sample extension asmdef references only `UnityCLILoop.ToolContracts`.
   - the sample `hello-world` extension executes through the same typed contract path as bundled tools.
   - `UnityCLILoop.FirstPartyTools.Editor` references only `UnityCLILoop.ToolContracts`.

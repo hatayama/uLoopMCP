@@ -8,7 +8,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// Blocks dangerous API patterns before code reaches the compiler,
     /// preventing actually harmful code from executing (e.g. Process.Kill crashing Unity).
     /// </summary>
-    internal static class SourceSecurityScanner
+    public static class SourceSecurityScanner
     {
         private static readonly Regex StripCommentsAndStringsRegex = new Regex(
             @"

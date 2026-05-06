@@ -105,6 +105,15 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
+        public void SourceSecurityScanner_WhenLoaded_CompilesUnderDomainAssembly()
+        {
+            // Tests that source-level dynamic-code security scanning lives in the domain layer.
+            string scannerAssemblyName = typeof(SourceSecurityScanner).Assembly.GetName().Name;
+
+            Assert.That(scannerAssemblyName, Is.EqualTo(DomainAssemblyName));
+        }
+
+        [Test]
         public void ToolContractsAsmdef_WhenLoaded_HasNoProjectAssemblyReferences()
         {
             // Tests that the public tool contract assembly stays independent from implementation assemblies.
