@@ -67,6 +67,15 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
+        public void DynamicCodeConstants_WhenLoaded_CompileUnderDomainAssembly()
+        {
+            // Tests that dynamic-code platform defaults live in the domain layer.
+            string constantsAssemblyName = typeof(DynamicCodeConstants).Assembly.GetName().Name;
+
+            Assert.That(constantsAssemblyName, Is.EqualTo(DomainAssemblyName));
+        }
+
+        [Test]
         public void ToolContractsAsmdef_WhenLoaded_HasNoProjectAssemblyReferences()
         {
             // Tests that the public tool contract assembly stays independent from implementation assemblies.
