@@ -118,9 +118,9 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
-        public void EditorUiFiles_WhenLoaded_DoNotReferenceCliSetupInternalsDirectly()
+        public void EditorUiFiles_WhenLoaded_DoNotReferenceFacadeInternalsDirectly()
         {
-            // Tests that presentation-facing UI code uses the Application facade for CLI setup workflows.
+            // Tests that presentation-facing UI code uses Application facades for setup and tool settings workflows.
             string[] forbiddenReferences =
             {
                 "CliInstallationDetector",
@@ -128,7 +128,12 @@ namespace io.github.hatayama.UnityCliLoop
                 "ProjectLocalCliInstaller",
                 "NativeCliInstaller",
                 "CliVersionComparer",
-                "ToolSkillSynchronizer"
+                "ToolSkillSynchronizer",
+                "ULoopSettings.",
+                "ToolSettings.",
+                "UnityCliLoopToolRegistrar",
+                "UnityCliLoopToolRegistry",
+                "ToolSettingsCatalogItem"
             };
             string[] offendingReferences = ReadEditorUiSourcePaths()
                 .SelectMany(path => FindForbiddenReferences(path, forbiddenReferences))

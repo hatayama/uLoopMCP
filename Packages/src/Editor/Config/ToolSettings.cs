@@ -122,4 +122,82 @@ namespace io.github.hatayama.UnityCliLoop
             _cachedSettings = new ToolSettingsData();
         }
     }
+
+    /// <summary>
+    /// Application facade for tool catalog and security settings workflows.
+    /// Presentation code uses this facade instead of depending on registry and settings internals directly.
+    /// </summary>
+    public static class ToolSettingsApplicationFacade
+    {
+        public readonly struct ToolCatalogItem
+        {
+            public readonly string Name;
+            public readonly bool DisplayDevelopmentOnly;
+            public readonly bool IsThirdParty;
+
+            public ToolCatalogItem(
+                string name,
+                bool displayDevelopmentOnly,
+                bool isThirdParty)
+            {
+                Name = name;
+                DisplayDevelopmentOnly = displayDevelopmentOnly;
+                IsThirdParty = isThirdParty;
+            }
+        }
+
+        public static event Action OnToolsChanged
+        {
+            add => UnityCliLoopToolRegistrar.OnToolsChanged += value;
+            remove => UnityCliLoopToolRegistrar.OnToolsChanged -= value;
+        }
+
+        public static DynamicCodeSecurityLevel GetDynamicCodeSecurityLevel()
+        {
+            return ULoopSettings.GetDynamicCodeSecurityLevel();
+        }
+
+        public static void SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel level)
+        {
+            ULoopSettings.SetDynamicCodeSecurityLevel(level);
+        }
+
+        public static bool IsToolEnabled(string toolName)
+        {
+            return ToolSettings.IsToolEnabled(toolName);
+        }
+
+        public static void SetToolEnabled(string toolName, bool enabled)
+        {
+            ToolSettings.SetToolEnabled(toolName, enabled);
+        }
+
+        public static void WarmupRegistry()
+        {
+            UnityCliLoopToolRegistrar.WarmupRegistry();
+        }
+
+        public static bool TryGetToolCatalog(out ToolCatalogItem[] catalog)
+        {
+            UnityCliLoopToolRegistry registry = UnityCliLoopToolRegistrar.TryGetRegistry();
+            if (registry == null)
+            {
+                catalog = Array.Empty<ToolCatalogItem>();
+                return false;
+            }
+
+            catalog = registry.GetToolSettingsCatalog()
+                .Select(ToFacadeItem)
+                .ToArray();
+            return true;
+        }
+
+        private static ToolCatalogItem ToFacadeItem(ToolSettingsCatalogItem item)
+        {
+            return new ToolCatalogItem(
+                item.Name,
+                item.DisplayDevelopmentOnly,
+                item.IsThirdParty);
+        }
+    }
 }

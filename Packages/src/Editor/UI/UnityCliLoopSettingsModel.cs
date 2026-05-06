@@ -165,7 +165,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         public void UpdateToolEnabled(string toolName, bool enabled)
         {
-            ToolSettings.SetToolEnabled(toolName, enabled);
+            ToolSettingsApplicationFacade.SetToolEnabled(toolName, enabled);
         }
 
         public void UpdateShowConfiguration(bool show)

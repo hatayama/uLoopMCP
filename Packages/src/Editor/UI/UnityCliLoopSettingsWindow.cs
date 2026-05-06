@@ -342,7 +342,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             return new ToolSettingsSectionData(
                 _model.UI.ShowToolSettings,
-                ULoopSettings.GetDynamicCodeSecurityLevel(),
+                ToolSettingsApplicationFacade.GetDynamicCodeSecurityLevel(),
                 System.Array.Empty<ToolToggleItem>(),
                 System.Array.Empty<ToolToggleItem>(),
                 true,
@@ -351,31 +351,31 @@ namespace io.github.hatayama.UnityCliLoop
 
         private ToolSettingsSectionData CreateToolSettingsData()
         {
-            UnityCliLoopToolRegistry registry = UnityCliLoopToolRegistrar.TryGetRegistry();
-            if (registry == null)
+            bool isRegistryAvailable =
+                ToolSettingsApplicationFacade.TryGetToolCatalog(
+                    out ToolSettingsApplicationFacade.ToolCatalogItem[] allTools);
+            if (!isRegistryAvailable)
             {
                 return new ToolSettingsSectionData(
                     _model.UI.ShowToolSettings,
-                    ULoopSettings.GetDynamicCodeSecurityLevel(),
+                    ToolSettingsApplicationFacade.GetDynamicCodeSecurityLevel(),
                     System.Array.Empty<ToolToggleItem>(),
                     System.Array.Empty<ToolToggleItem>(),
                     false,
                     true);
             }
 
-            ToolSettingsCatalogItem[] allTools = registry.GetToolSettingsCatalog();
-
             List<ToolToggleItem> builtIn = new();
             List<ToolToggleItem> thirdParty = new();
 
-            foreach (ToolSettingsCatalogItem tool in allTools)
+            foreach (ToolSettingsApplicationFacade.ToolCatalogItem tool in allTools)
             {
                 if (tool.DisplayDevelopmentOnly)
                 {
                     continue;
                 }
 
-                bool isEnabled = ToolSettings.IsToolEnabled(tool.Name);
+                bool isEnabled = ToolSettingsApplicationFacade.IsToolEnabled(tool.Name);
                 bool isThirdPartyTool = tool.IsThirdParty;
 
                 ToolToggleItem item = new ToolToggleItem(tool.Name, isEnabled, isThirdPartyTool);
@@ -395,7 +395,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             return new ToolSettingsSectionData(
                 _model.UI.ShowToolSettings,
-                ULoopSettings.GetDynamicCodeSecurityLevel(),
+                ToolSettingsApplicationFacade.GetDynamicCodeSecurityLevel(),
                 builtIn.ToArray(),
                 thirdParty.ToArray(),
                 true,
@@ -455,7 +455,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return;
             }
 
-            UnityCliLoopToolRegistrar.WarmupRegistry();
+            ToolSettingsApplicationFacade.WarmupRegistry();
             InvalidateToolSettingsCatalog();
             RefreshToolSettingsCatalogIfNeeded();
         }
@@ -516,7 +516,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private void UpdateDynamicCodeSecurityLevel(DynamicCodeSecurityLevel level)
         {
-            ULoopSettings.SetDynamicCodeSecurityLevel(level);
+            ToolSettingsApplicationFacade.SetDynamicCodeSecurityLevel(level);
         }
 
         private void RefreshCliSetupSection(bool includeSkillDirectoryChecks = true)
