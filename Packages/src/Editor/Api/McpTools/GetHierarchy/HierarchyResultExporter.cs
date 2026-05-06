@@ -15,7 +15,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// </summary>
     public static class HierarchyResultExporter
     {
-        private static readonly string EXPORT_DIR = Path.Combine(McpConstants.OUTPUT_ROOT_DIR, McpConstants.HIERARCHY_RESULTS_DIR);
+        private static readonly string EXPORT_DIR = Path.Combine(UnityCliLoopConstants.OUTPUT_ROOT_DIR, UnityCliLoopConstants.HIERARCHY_RESULTS_DIR);
         private const string FILE_PREFIX = "hierarchy";
         
         /// <summary>

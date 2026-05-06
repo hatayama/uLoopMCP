@@ -181,7 +181,7 @@ namespace io.github.hatayama.UnityCliLoop
         private static string CreateRequestId()
         {
             long unixTimeMilliseconds = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-            string correlationId = McpConstants.GenerateCorrelationId();
+            string correlationId = UnityCliLoopConstants.GenerateCorrelationId();
             return $"compile_{unixTimeMilliseconds}_{correlationId}";
         }
     }

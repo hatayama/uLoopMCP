@@ -13,7 +13,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// </summary>
     public static class FindGameObjectsResultExporter
     {
-        private static readonly string EXPORT_DIR = Path.Combine(McpConstants.OUTPUT_ROOT_DIR, McpConstants.FIND_GAMEOBJECTS_RESULTS_DIR);
+        private static readonly string EXPORT_DIR = Path.Combine(UnityCliLoopConstants.OUTPUT_ROOT_DIR, UnityCliLoopConstants.FIND_GAMEOBJECTS_RESULTS_DIR);
         private const string FILE_PREFIX = "find-game-objects";
 
         /// <summary>

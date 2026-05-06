@@ -21,7 +21,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             ct.ThrowIfCancellationRequested();
 
-            string correlationId = McpConstants.GenerateCorrelationId();
+            string correlationId = UnityCliLoopConstants.GenerateCorrelationId();
 
             VibeLogger.LogInfo(
                 "screenshot_start",
@@ -67,7 +67,7 @@ namespace io.github.hatayama.UnityCliLoop
             {
                 UIElementAnnotator.ConvertToSimCoordinates(annotatedElements, (int)Handles.GetMainGameViewSize().y);
                 ScreenshotInfo elementsOnlyInfo = new ScreenshotInfo();
-                elementsOnlyInfo.CoordinateSystem = McpConstants.COORDINATE_SYSTEM_GAME_VIEW;
+                elementsOnlyInfo.CoordinateSystem = UnityCliLoopConstants.COORDINATE_SYSTEM_GAME_VIEW;
                 elementsOnlyInfo.AnnotatedElements = annotatedElements;
                 return new ScreenshotResponse(new List<ScreenshotInfo> { elementsOnlyInfo });
             }
@@ -122,7 +122,7 @@ namespace io.github.hatayama.UnityCliLoop
                 FileInfo savedFileInfo = new FileInfo(savedPath);
                 ScreenshotInfo info = new ScreenshotInfo(
                     savedPath, savedFileInfo.Length, width, height,
-                    McpConstants.COORDINATE_SYSTEM_GAME_VIEW, parameters.ResolutionScale, yOffset);
+                    UnityCliLoopConstants.COORDINATE_SYSTEM_GAME_VIEW, parameters.ResolutionScale, yOffset);
                 info.AnnotatedElements = annotatedElements;
                 screenshots.Add(info);
             }
@@ -267,7 +267,7 @@ namespace io.github.hatayama.UnityCliLoop
             if (string.IsNullOrEmpty(outputDirectory))
             {
                 string projectRoot = UnityCliLoopPathResolver.GetProjectRoot();
-                resolvedDirectory = Path.Combine(projectRoot, McpConstants.OUTPUT_ROOT_DIR, McpConstants.SCREENSHOTS_DIR);
+                resolvedDirectory = Path.Combine(projectRoot, UnityCliLoopConstants.OUTPUT_ROOT_DIR, UnityCliLoopConstants.SCREENSHOTS_DIR);
             }
             else
             {

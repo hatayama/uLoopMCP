@@ -11,7 +11,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
     public class SetupWizardWindowTests
     {
         private static readonly string SettingsFilePath =
-            Path.Combine(McpConstants.USER_SETTINGS_FOLDER, McpConstants.SETTINGS_FILE_NAME);
+            Path.Combine(UnityCliLoopConstants.USER_SETTINGS_FOLDER, UnityCliLoopConstants.SETTINGS_FILE_NAME);
 
         private bool _settingsFileExisted;
         private string _settingsFileContent;
@@ -22,9 +22,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             _settingsFileExisted = File.Exists(SettingsFilePath);
             _settingsFileContent = _settingsFileExisted ? File.ReadAllText(SettingsFilePath) : null;
 
-            if (!Directory.Exists(McpConstants.USER_SETTINGS_FOLDER))
+            if (!Directory.Exists(UnityCliLoopConstants.USER_SETTINGS_FOLDER))
             {
-                Directory.CreateDirectory(McpConstants.USER_SETTINGS_FOLDER);
+                Directory.CreateDirectory(UnityCliLoopConstants.USER_SETTINGS_FOLDER);
             }
 
             DeleteIfExists(SettingsFilePath);

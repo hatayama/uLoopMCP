@@ -42,7 +42,7 @@ namespace io.github.hatayama.UnityCliLoop
             CancellationToken cancellationToken = default,
             bool compileOnly = false)
         {
-            string correlationId = McpConstants.GenerateCorrelationId();
+            string correlationId = UnityCliLoopConstants.GenerateCorrelationId();
             Stopwatch totalStopwatch = Stopwatch.StartNew();
             Stopwatch sourcePreparationStopwatch = Stopwatch.StartNew();
 
@@ -223,7 +223,7 @@ namespace io.github.hatayama.UnityCliLoop
             return new ExecutionResult
             {
                 Success = false,
-                ErrorMessage = McpConstants.ERROR_MESSAGE_EXECUTION_CANCELLED,
+                ErrorMessage = UnityCliLoopConstants.ERROR_MESSAGE_EXECUTION_CANCELLED,
                 Logs = new List<string> { "Execution cancelled" },
                 ExecutionTime = executionTime,
                 Timings = new List<string>()

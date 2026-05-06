@@ -36,7 +36,7 @@ namespace io.github.hatayama.UnityCliLoop
                 Action = parameters.Action.ToString()
             };
 #else
-            string correlationId = McpConstants.GenerateCorrelationId();
+            string correlationId = UnityCliLoopConstants.GenerateCorrelationId();
 
             if (!EditorApplication.isPlaying)
             {

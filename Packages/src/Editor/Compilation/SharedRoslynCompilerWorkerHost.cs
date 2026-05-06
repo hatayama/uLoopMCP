@@ -870,7 +870,7 @@ namespace io.github.hatayama.UnityCliLoop
                 },
                 humanNote: "Shared Roslyn worker cleanup could not remove its temporary directory during shutdown.",
                 aiTodo: "Investigate file locks or permission issues if temporary worker directories continue to accumulate.");
-            Debug.LogWarning($"[{McpConstants.PROJECT_NAME}] Failed to delete shared Roslyn worker directory '{workerDirectoryPath}': {ex.Message}");
+            Debug.LogWarning($"[{UnityCliLoopConstants.PROJECT_NAME}] Failed to delete shared Roslyn worker directory '{workerDirectoryPath}': {ex.Message}");
         }
 
         private static WorkerAttemptResult CreateRetryableWorkerCommunicationFailure(
@@ -970,7 +970,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static string GetWorkerProgramTemplatePath()
         {
-            return Path.Combine(McpConstants.PackageResolvedPath, RoslynWorkerProgramTemplateRelativePath);
+            return Path.Combine(UnityCliLoopConstants.PackageResolvedPath, RoslynWorkerProgramTemplateRelativePath);
         }
     }
 }

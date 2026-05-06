@@ -534,7 +534,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             string cliVersion = CliSetupApplicationFacade.GetCachedCliVersion();
             string cliExecutablePath = CliSetupApplicationFacade.GetCachedCliExecutablePath();
-            string packageVersion = McpConstants.PackageInfo.version;
+            string packageVersion = UnityCliLoopConstants.PackageInfo.version;
             string requiredDispatcherVersion = GetRequiredDispatcherVersion();
             string projectRoot = UnityCliLoopPathResolver.GetProjectRoot();
             CliInstallResult projectLocalResult = CliSetupApplicationFacade.EnsureProjectLocalCliCurrent(
@@ -543,7 +543,7 @@ namespace io.github.hatayama.UnityCliLoop
             if (!projectLocalResult.Success)
             {
                 Debug.LogWarning(
-                    $"[{McpConstants.PROJECT_NAME}] Failed to update project-local uLoop CLI: {projectLocalResult.ErrorOutput}");
+                    $"[{UnityCliLoopConstants.PROJECT_NAME}] Failed to update project-local uLoop CLI: {projectLocalResult.ErrorOutput}");
             }
 
             bool isCliInstalled = cliVersion != null;
@@ -583,9 +583,9 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static string GetRequiredDispatcherVersion()
         {
-            string requiredDispatcherVersion = CliSetupApplicationFacade.GetRequiredDispatcherVersion(McpConstants.PackageInfo.version);
+            string requiredDispatcherVersion = CliSetupApplicationFacade.GetRequiredDispatcherVersion(UnityCliLoopConstants.PackageInfo.version);
             return string.IsNullOrEmpty(requiredDispatcherVersion)
-                ? McpConstants.PackageInfo.version
+                ? UnityCliLoopConstants.PackageInfo.version
                 : requiredDispatcherVersion;
         }
 
@@ -681,14 +681,14 @@ namespace io.github.hatayama.UnityCliLoop
             {
                 CliInstallResult result = await CliSetupApplicationFacade.InstallGlobalCliAsync(
                     Application.platform,
-                    McpConstants.PackageInfo.version,
+                    UnityCliLoopConstants.PackageInfo.version,
                     CancellationToken.None);
 
                 if (!result.Success)
                 {
                     NativeCliInstallCommand command = CliSetupApplicationFacade.GetGlobalCliInstallCommand(
                         Application.platform,
-                        McpConstants.PackageInfo.version,
+                        UnityCliLoopConstants.PackageInfo.version,
                         true);
                     EditorUtility.DisplayDialog(
                         "Installation Failed",

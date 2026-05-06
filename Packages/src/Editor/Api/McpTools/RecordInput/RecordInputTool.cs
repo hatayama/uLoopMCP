@@ -40,7 +40,7 @@ namespace io.github.hatayama.UnityCliLoop
                 Action = parameters.Action.ToString()
             };
 #else
-            string correlationId = McpConstants.GenerateCorrelationId();
+            string correlationId = UnityCliLoopConstants.GenerateCorrelationId();
 
             VibeLogger.LogInfo(
                 "record_input_start",

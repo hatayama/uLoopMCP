@@ -28,7 +28,7 @@ namespace io.github.hatayama.UnityCliLoop
             ExecuteDynamicCodeSchema parameters,
             CancellationToken cancellationToken)
         {
-            string correlationId = McpConstants.GenerateCorrelationId();
+            string correlationId = UnityCliLoopConstants.GenerateCorrelationId();
             DynamicCodeSecurityLevel editorLevel = DynamicCodeSecurityLevel.Restricted;
 
             try
@@ -245,7 +245,7 @@ namespace io.github.hatayama.UnityCliLoop
             return new ExecutionResult
             {
                 Success = false,
-                ErrorMessage = McpConstants.ERROR_MESSAGE_EXECUTION_IN_PROGRESS
+                ErrorMessage = UnityCliLoopConstants.ERROR_MESSAGE_EXECUTION_IN_PROGRESS
             };
         }
 
@@ -310,7 +310,7 @@ namespace io.github.hatayama.UnityCliLoop
                 && !executionResult.Success
                 && string.Equals(
                     executionResult.ErrorMessage,
-                    McpConstants.ERROR_MESSAGE_EXECUTION_CANCELLED,
+                    UnityCliLoopConstants.ERROR_MESSAGE_EXECUTION_CANCELLED,
                     StringComparison.Ordinal);
         }
 
@@ -358,7 +358,7 @@ namespace io.github.hatayama.UnityCliLoop
                 Result = string.Empty,
                 Logs = new List<string> { "Execution cancelled" },
                 CompilationErrors = new List<CompilationErrorDto>(),
-                ErrorMessage = McpConstants.ERROR_MESSAGE_EXECUTION_CANCELLED,
+                ErrorMessage = UnityCliLoopConstants.ERROR_MESSAGE_EXECUTION_CANCELLED,
                 SecurityLevel = securityLevel.ToString()
             };
         }

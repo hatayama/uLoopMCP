@@ -56,8 +56,8 @@ namespace io.github.hatayama.UnityCliLoop
 
         private void LoadLayout()
         {
-            string uxmlPath = $"{McpConstants.PackageAssetPath}/{UXML_RELATIVE_PATH}";
-            string ussPath = $"{McpConstants.PackageAssetPath}/{USS_RELATIVE_PATH}";
+            string uxmlPath = $"{UnityCliLoopConstants.PackageAssetPath}/{UXML_RELATIVE_PATH}";
+            string ussPath = $"{UnityCliLoopConstants.PackageAssetPath}/{USS_RELATIVE_PATH}";
 
             VisualTreeAsset visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(uxmlPath);
             if (visualTree == null)
@@ -122,7 +122,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private void InitializeGitHubIcon()
         {
-            string iconPath = $"{McpConstants.PackageAssetPath}/{GITHUB_ICON_RELATIVE_PATH}";
+            string iconPath = $"{UnityCliLoopConstants.PackageAssetPath}/{GITHUB_ICON_RELATIVE_PATH}";
             Texture2D iconTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(iconPath);
             Debug.Assert(iconTexture != null, $"GitHub icon not found at {iconPath}");
             _githubLinkIcon.image = iconTexture;

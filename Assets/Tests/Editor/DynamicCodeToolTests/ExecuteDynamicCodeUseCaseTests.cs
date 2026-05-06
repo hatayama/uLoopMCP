@@ -241,7 +241,7 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
                 new ExecutionResult
                 {
                     Success = false,
-                    ErrorMessage = McpConstants.ERROR_MESSAGE_EXECUTION_IN_PROGRESS
+                    ErrorMessage = UnityCliLoopConstants.ERROR_MESSAGE_EXECUTION_IN_PROGRESS
                 },
                 new ExecutionResult
                 {
@@ -460,7 +460,7 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
                     cancellationTokenSource.Token);
 
                 Assert.That(response.Success, Is.False);
-                Assert.That(response.ErrorMessage, Is.EqualTo(McpConstants.ERROR_MESSAGE_EXECUTION_CANCELLED));
+                Assert.That(response.ErrorMessage, Is.EqualTo(UnityCliLoopConstants.ERROR_MESSAGE_EXECUTION_CANCELLED));
                 Assert.That(response.Logs, Contains.Item("Execution cancelled"));
             }
             finally
@@ -477,7 +477,7 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
                 new ExecutionResult
                 {
                     Success = false,
-                    ErrorMessage = McpConstants.ERROR_MESSAGE_EXECUTION_CANCELLED,
+                    ErrorMessage = UnityCliLoopConstants.ERROR_MESSAGE_EXECUTION_CANCELLED,
                     Logs = new List<string> { "Execution cancelled" },
                     Timings = new List<string> { "compile_ms=1" }
                 });
@@ -496,7 +496,7 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
                     CancellationToken.None);
 
                 Assert.That(response.Success, Is.False);
-                Assert.That(response.ErrorMessage, Is.EqualTo(McpConstants.ERROR_MESSAGE_EXECUTION_CANCELLED));
+                Assert.That(response.ErrorMessage, Is.EqualTo(UnityCliLoopConstants.ERROR_MESSAGE_EXECUTION_CANCELLED));
                 Assert.That(response.Logs, Contains.Item("Execution cancelled"));
                 Assert.That(response.Timings, Contains.Item("compile_ms=1"));
             }

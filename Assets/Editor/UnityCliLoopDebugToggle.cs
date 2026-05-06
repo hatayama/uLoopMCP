@@ -28,7 +28,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             BuildTargetGroup targetGroup = EditorUserBuildSettings.selectedBuildTargetGroup;
             string defines = PlayerSettings.GetScriptingDefineSymbolsForGroup(targetGroup);
-            return defines.Split(';').Contains(McpConstants.SCRIPTING_DEFINE_ULOOP_DEBUG);
+            return defines.Split(';').Contains(UnityCliLoopConstants.SCRIPTING_DEFINE_ULOOP_DEBUG);
         }
 
         /// <summary>
@@ -48,11 +48,11 @@ namespace io.github.hatayama.UnityCliLoop
             
             if (string.IsNullOrEmpty(defines))
             {
-                defines = McpConstants.SCRIPTING_DEFINE_ULOOP_DEBUG;
+                defines = UnityCliLoopConstants.SCRIPTING_DEFINE_ULOOP_DEBUG;
             }
             else
             {
-                defines += ";" + McpConstants.SCRIPTING_DEFINE_ULOOP_DEBUG;
+                defines += ";" + UnityCliLoopConstants.SCRIPTING_DEFINE_ULOOP_DEBUG;
             }
             
             PlayerSettings.SetScriptingDefineSymbolsForGroup(targetGroup, defines);
@@ -75,7 +75,7 @@ namespace io.github.hatayama.UnityCliLoop
             string defines = PlayerSettings.GetScriptingDefineSymbolsForGroup(targetGroup);
             
             string[] defineArray = defines.Split(';');
-            defineArray = defineArray.Where(d => d != McpConstants.SCRIPTING_DEFINE_ULOOP_DEBUG).ToArray();
+            defineArray = defineArray.Where(d => d != UnityCliLoopConstants.SCRIPTING_DEFINE_ULOOP_DEBUG).ToArray();
             defines = string.Join(";", defineArray);
             
             PlayerSettings.SetScriptingDefineSymbolsForGroup(targetGroup, defines);

@@ -11,12 +11,12 @@ namespace io.github.hatayama.UnityCliLoop
     {
         public static string GetBundledRequiredDispatcherVersionFlag()
         {
-            return GetRequiredDispatcherVersionFlag(McpConstants.PackageResolvedPath);
+            return GetRequiredDispatcherVersionFlag(UnityCliLoopConstants.PackageResolvedPath);
         }
 
         public static string GetBundledMinimumRequiredDispatcherVersion()
         {
-            return GetMinimumRequiredDispatcherVersion(McpConstants.PackageResolvedPath);
+            return GetMinimumRequiredDispatcherVersion(UnityCliLoopConstants.PackageResolvedPath);
         }
 
         internal static string GetMinimumRequiredDispatcherVersion(string packageResolvedPath)

@@ -463,7 +463,7 @@ namespace io.github.hatayama.UnityCliLoop
         private static async Task StartReconnectionUITimeoutAsync()
         {
             // Wait for the timeout period (convert seconds to frames at ~60fps)
-            int timeoutFrames = McpConstants.RECONNECTION_TIMEOUT_SECONDS * 60;
+            int timeoutFrames = UnityCliLoopConstants.RECONNECTION_TIMEOUT_SECONDS * 60;
             await EditorDelay.DelayFrame(timeoutFrames);
 
             // Check if UI flag is still set after timeout
@@ -578,7 +578,7 @@ namespace io.github.hatayama.UnityCliLoop
                     // Ensure session reflects stopped state on failure
                     UnityCliLoopEditorSettings.ClearServerSession();
                     UnityCliLoopEditorSettings.ClearReconnectingFlags();
-                    Debug.LogError($"[{McpConstants.PROJECT_NAME}] Recovery failed: no project IPC endpoint to bind.");
+                    Debug.LogError($"[{UnityCliLoopConstants.PROJECT_NAME}] Recovery failed: no project IPC endpoint to bind.");
                     throw new InvalidOperationException("Failed to bind recovery endpoint.");
                 }
 

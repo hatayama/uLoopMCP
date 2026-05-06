@@ -89,7 +89,7 @@ namespace io.github.hatayama.UnityCliLoop
             return new ExecutionResult
             {
                 Success = false,
-                ErrorMessage = McpConstants.ERROR_MESSAGE_EXECUTION_IN_PROGRESS
+                ErrorMessage = UnityCliLoopConstants.ERROR_MESSAGE_EXECUTION_IN_PROGRESS
             };
         }
 

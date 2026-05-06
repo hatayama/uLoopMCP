@@ -19,10 +19,10 @@ namespace io.github.hatayama.UnityCliLoop
         private const string LEGACY_ALLOW_THIRD_PARTY_TOOLS_FIELD = "allowThirdPartyTools";
 
         private static string SettingsFilePath =>
-            Path.Combine(McpConstants.ULOOP_DIR, McpConstants.ULOOP_SETTINGS_FILE_NAME);
+            Path.Combine(UnityCliLoopConstants.ULOOP_DIR, UnityCliLoopConstants.ULOOP_SETTINGS_FILE_NAME);
 
         private static string LegacySettingsFilePath =>
-            Path.Combine(McpConstants.USER_SETTINGS_FOLDER, McpConstants.SETTINGS_FILE_NAME);
+            Path.Combine(UnityCliLoopConstants.USER_SETTINGS_FOLDER, UnityCliLoopConstants.SETTINGS_FILE_NAME);
 
         private static ULoopSettingsData _cachedSettings;
 
@@ -47,7 +47,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             string json = JsonUtility.ToJson(settings, true);
 
-            Debug.Assert(json.Length <= McpConstants.MAX_SETTINGS_SIZE_BYTES,
+            Debug.Assert(json.Length <= UnityCliLoopConstants.MAX_SETTINGS_SIZE_BYTES,
                 "Settings JSON content exceeds size limit");
 
             AtomicFileWriter.Write(SettingsFilePath, json);
@@ -91,7 +91,7 @@ namespace io.github.hatayama.UnityCliLoop
                 "editor_settings_security_level_changed",
                 $"Security level changed to: {level}",
                 new { level = level.ToString() },
-                correlationId: McpConstants.GenerateCorrelationId(),
+                correlationId: UnityCliLoopConstants.GenerateCorrelationId(),
                 humanNote: "Security level updated in editor settings",
                 aiTodo: "Monitor security level changes"
             );
@@ -101,7 +101,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static void LoadSettings()
         {
-            string oldSettingsPath = Path.Combine(McpConstants.ULOOP_DIR, "settings.security.json");
+            string oldSettingsPath = Path.Combine(UnityCliLoopConstants.ULOOP_DIR, "settings.security.json");
             string oldBackupPath = oldSettingsPath + ".bak";
 
             AtomicFileWriter.RecoverSidecarFiles(SettingsFilePath);
@@ -135,7 +135,7 @@ namespace io.github.hatayama.UnityCliLoop
             if (File.Exists(SettingsFilePath))
             {
                 FileInfo fileInfo = new FileInfo(SettingsFilePath);
-                Debug.Assert(fileInfo.Length <= McpConstants.MAX_SETTINGS_SIZE_BYTES,
+                Debug.Assert(fileInfo.Length <= UnityCliLoopConstants.MAX_SETTINGS_SIZE_BYTES,
                     $"Settings file exceeds size limit: {fileInfo.Length} bytes");
 
                 string json = File.ReadAllText(SettingsFilePath);
@@ -241,7 +241,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return false;
             }
 
-            ToolSettings.SetToolEnabled(McpConstants.TOOL_NAME_EXECUTE_DYNAMIC_CODE, false);
+            ToolSettings.SetToolEnabled(UnityCliLoopConstants.TOOL_NAME_EXECUTE_DYNAMIC_CODE, false);
             _cachedSettings = _cachedSettings with
             {
                 dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.Restricted
@@ -262,7 +262,7 @@ namespace io.github.hatayama.UnityCliLoop
             if (json.Contains($"\"{nameof(LegacyUnityCliLoopSecuritySettingProbe.enableTestsExecution)}\"")
                 && !probe.enableTestsExecution)
             {
-                ToolSettings.SetToolEnabled(McpConstants.TOOL_NAME_RUN_TESTS, false);
+                ToolSettings.SetToolEnabled(UnityCliLoopConstants.TOOL_NAME_RUN_TESTS, false);
                 migrated = true;
             }
 

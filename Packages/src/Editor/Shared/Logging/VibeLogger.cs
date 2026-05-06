@@ -25,7 +25,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// </summary>
     public static class VibeLogger
     {
-        private static readonly string LOG_DIRECTORY = Path.Combine(Application.dataPath, "..", McpConstants.OUTPUT_ROOT_DIR, McpConstants.VIBE_LOGS_DIR);
+        private static readonly string LOG_DIRECTORY = Path.Combine(Application.dataPath, "..", UnityCliLoopConstants.OUTPUT_ROOT_DIR, UnityCliLoopConstants.VIBE_LOGS_DIR);
         private static readonly string LOG_FILE_PREFIX = "unity_vibe";
         private static readonly int MAX_FILE_SIZE_MB = 10;
         private static readonly int MAX_MEMORY_LOGS = 1000;
@@ -61,7 +61,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// Log an info level message with structured context
         /// Only logs when ULOOP_DEBUG symbol is defined
         /// </summary>
-        [Conditional(McpConstants.ENV_KEY_ULOOP_DEBUG)]
+        [Conditional(UnityCliLoopConstants.ENV_KEY_ULOOP_DEBUG)]
         public static void LogInfo(string operation, string message, object context = null, 
                                   string correlationId = null, string humanNote = null, string aiTodo = null, bool includeStackTrace = false)
         {
@@ -72,7 +72,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// Log a warning level message with structured context
         /// Only logs when ULOOP_DEBUG symbol is defined
         /// </summary>
-        [Conditional(McpConstants.ENV_KEY_ULOOP_DEBUG)]
+        [Conditional(UnityCliLoopConstants.ENV_KEY_ULOOP_DEBUG)]
         public static void LogWarning(string operation, string message, object context = null, 
                                      string correlationId = null, string humanNote = null, string aiTodo = null, bool includeStackTrace = true)
         {
@@ -83,7 +83,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// Log an error level message with structured context
         /// Only logs when ULOOP_DEBUG symbol is defined
         /// </summary>
-        [Conditional(McpConstants.ENV_KEY_ULOOP_DEBUG)]
+        [Conditional(UnityCliLoopConstants.ENV_KEY_ULOOP_DEBUG)]
         public static void LogError(string operation, string message, object context = null, 
                                    string correlationId = null, string humanNote = null, string aiTodo = null, bool includeStackTrace = true)
         {
@@ -94,7 +94,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// Log a debug level message with structured context
         /// Only logs when ULOOP_DEBUG symbol is defined
         /// </summary>
-        [Conditional(McpConstants.ENV_KEY_ULOOP_DEBUG)]
+        [Conditional(UnityCliLoopConstants.ENV_KEY_ULOOP_DEBUG)]
         public static void LogDebug(string operation, string message, object context = null, 
                                    string correlationId = null, string humanNote = null, string aiTodo = null, bool includeStackTrace = false)
         {
@@ -105,7 +105,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// Log an exception with structured context
         /// Only logs when ULOOP_DEBUG symbol is defined
         /// </summary>
-        [Conditional(McpConstants.ENV_KEY_ULOOP_DEBUG)]
+        [Conditional(UnityCliLoopConstants.ENV_KEY_ULOOP_DEBUG)]
         public static void LogException(string operation, Exception exception, object context = null, 
                                        string correlationId = null, string humanNote = null, string aiTodo = null, bool includeStackTrace = true)
         {

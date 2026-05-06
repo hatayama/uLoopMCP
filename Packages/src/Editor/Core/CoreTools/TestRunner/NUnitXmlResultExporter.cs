@@ -37,7 +37,7 @@ namespace io.github.hatayama.UnityCliLoop
                 throw new System.InvalidOperationException("Unable to determine project root directory");
             }
             string projectRoot = parentDir.FullName;
-            string testResultsDir = Path.Combine(projectRoot, McpConstants.OUTPUT_ROOT_DIR, McpConstants.TEST_RESULTS_DIR);
+            string testResultsDir = Path.Combine(projectRoot, UnityCliLoopConstants.OUTPUT_ROOT_DIR, UnityCliLoopConstants.TEST_RESULTS_DIR);
 
             // Create directory if it doesn't exist
             if (!Directory.Exists(testResultsDir))

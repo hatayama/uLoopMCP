@@ -66,7 +66,7 @@ namespace io.github.hatayama.UnityCliLoop
             {
                 if (!IsValidToolType(type))
                 {
-                    UnityEngine.Debug.LogWarning($"{McpConstants.SECURITY_LOG_PREFIX} Skipping invalid tool type: {type.FullName}");
+                    UnityEngine.Debug.LogWarning($"{UnityCliLoopConstants.SECURITY_LOG_PREFIX} Skipping invalid tool type: {type.FullName}");
                     continue;
                 }
 

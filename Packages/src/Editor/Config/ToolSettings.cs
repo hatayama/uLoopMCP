@@ -13,7 +13,7 @@ namespace io.github.hatayama.UnityCliLoop
     public static class ToolSettings
     {
         private static string SettingsFilePath =>
-            Path.Combine(McpConstants.ULOOP_DIR, McpConstants.ULOOP_TOOL_SETTINGS_FILE_NAME);
+            Path.Combine(UnityCliLoopConstants.ULOOP_DIR, UnityCliLoopConstants.ULOOP_TOOL_SETTINGS_FILE_NAME);
 
         private static ToolSettingsData _cachedSettings;
 
@@ -38,7 +38,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             string json = JsonUtility.ToJson(settings, true);
 
-            Debug.Assert(json.Length <= McpConstants.MAX_SETTINGS_SIZE_BYTES,
+            Debug.Assert(json.Length <= UnityCliLoopConstants.MAX_SETTINGS_SIZE_BYTES,
                 "Settings JSON content exceeds size limit");
 
             AtomicFileWriter.Write(SettingsFilePath, json);
@@ -97,7 +97,7 @@ namespace io.github.hatayama.UnityCliLoop
             if (File.Exists(SettingsFilePath))
             {
                 FileInfo fileInfo = new FileInfo(SettingsFilePath);
-                Debug.Assert(fileInfo.Length <= McpConstants.MAX_SETTINGS_SIZE_BYTES,
+                Debug.Assert(fileInfo.Length <= UnityCliLoopConstants.MAX_SETTINGS_SIZE_BYTES,
                     $"Settings file exceeds size limit: {fileInfo.Length} bytes");
 
                 string json = File.ReadAllText(SettingsFilePath);

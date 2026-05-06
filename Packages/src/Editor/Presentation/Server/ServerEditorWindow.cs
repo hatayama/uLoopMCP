@@ -52,12 +52,12 @@ namespace io.github.hatayama.UnityCliLoop
 
         private void LoadLayout()
         {
-            string uxmlPath = $"{McpConstants.PackageAssetPath}/{UXML_RELATIVE_PATH}";
+            string uxmlPath = $"{UnityCliLoopConstants.PackageAssetPath}/{UXML_RELATIVE_PATH}";
             VisualTreeAsset visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(uxmlPath);
             Debug.Assert(visualTree != null, $"UXML not found at {uxmlPath}");
             visualTree.CloneTree(rootVisualElement);
 
-            string ussPath = $"{McpConstants.PackageAssetPath}/{USS_RELATIVE_PATH}";
+            string ussPath = $"{UnityCliLoopConstants.PackageAssetPath}/{USS_RELATIVE_PATH}";
             StyleSheet styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(ussPath);
             Debug.Assert(styleSheet != null, $"USS not found at {ussPath}");
             rootVisualElement.styleSheets.Add(styleSheet);

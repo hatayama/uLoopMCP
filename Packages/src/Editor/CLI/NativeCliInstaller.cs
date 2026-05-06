@@ -80,7 +80,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
 
             string sourceBinaryPath = GetGlobalCliBundlePath(
-                McpConstants.PackageResolvedPath,
+                UnityCliLoopConstants.PackageResolvedPath,
                 platform,
                 RuntimeInformation.ProcessArchitecture);
 

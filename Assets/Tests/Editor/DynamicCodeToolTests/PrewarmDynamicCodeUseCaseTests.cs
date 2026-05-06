@@ -81,11 +81,11 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
         [Test]
         public async Task RequestAsync_WhenExecuteDynamicCodeIsDisabled_ShouldSkipExecution()
         {
-            string settingsPath = Path.Combine(McpConstants.ULOOP_DIR, McpConstants.ULOOP_TOOL_SETTINGS_FILE_NAME);
+            string settingsPath = Path.Combine(UnityCliLoopConstants.ULOOP_DIR, UnityCliLoopConstants.ULOOP_TOOL_SETTINGS_FILE_NAME);
             bool hadSettingsFile = File.Exists(settingsPath);
             string originalSettingsJson = hadSettingsFile ? File.ReadAllText(settingsPath) : null;
             ToolSettings.InvalidateCache();
-            ToolSettings.SetToolEnabled(McpConstants.TOOL_NAME_EXECUTE_DYNAMIC_CODE, false);
+            ToolSettings.SetToolEnabled(UnityCliLoopConstants.TOOL_NAME_EXECUTE_DYNAMIC_CODE, false);
 
             FakePrewarmRuntime runtime = new FakePrewarmRuntime(true);
             FakeDynamicCodeAutoPrewarmExecutor executor = new FakeDynamicCodeAutoPrewarmExecutor();
@@ -157,7 +157,7 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
                 new DynamicCodeAutoPrewarmResult
                 {
                     Success = false,
-                    ErrorMessage = McpConstants.ERROR_MESSAGE_EXECUTION_IN_PROGRESS
+                    ErrorMessage = UnityCliLoopConstants.ERROR_MESSAGE_EXECUTION_IN_PROGRESS
                 });
             PrewarmDynamicCodeUseCase useCase = new PrewarmDynamicCodeUseCase(runtime, default, executor);
 
@@ -223,17 +223,17 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
                 new DynamicCodeAutoPrewarmResult
                 {
                     Success = false,
-                    ErrorMessage = McpConstants.ERROR_MESSAGE_EXECUTION_IN_PROGRESS
+                    ErrorMessage = UnityCliLoopConstants.ERROR_MESSAGE_EXECUTION_IN_PROGRESS
                 },
                 new DynamicCodeAutoPrewarmResult
                 {
                     Success = false,
-                    ErrorMessage = McpConstants.ERROR_MESSAGE_EXECUTION_IN_PROGRESS
+                    ErrorMessage = UnityCliLoopConstants.ERROR_MESSAGE_EXECUTION_IN_PROGRESS
                 },
                 new DynamicCodeAutoPrewarmResult
                 {
                     Success = false,
-                    ErrorMessage = McpConstants.ERROR_MESSAGE_EXECUTION_IN_PROGRESS
+                    ErrorMessage = UnityCliLoopConstants.ERROR_MESSAGE_EXECUTION_IN_PROGRESS
                 },
                 new DynamicCodeAutoPrewarmResult { Success = true },
                 new DynamicCodeAutoPrewarmResult { Success = true },

@@ -131,10 +131,10 @@ namespace io.github.hatayama.UnityCliLoop
 
             if (context == null)
             {
-                return $"[{McpConstants.PROJECT_NAME}] {message}\noperation: {operation}{diagnosticSourceLine}";
+                return $"[{UnityCliLoopConstants.PROJECT_NAME}] {message}\noperation: {operation}{diagnosticSourceLine}";
             }
 
-            return $"[{McpConstants.PROJECT_NAME}] {message}\noperation: {operation}{diagnosticSourceLine}\ncontext: {context}";
+            return $"[{UnityCliLoopConstants.PROJECT_NAME}] {message}\noperation: {operation}{diagnosticSourceLine}\ncontext: {context}";
         }
 
         private sealed class ConsoleDiagnosticSourceScope : System.IDisposable

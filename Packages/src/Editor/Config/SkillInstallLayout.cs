@@ -662,7 +662,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
 
             return Path.Combine(
-                McpConstants.PackageResolvedPath,
+                UnityCliLoopConstants.PackageResolvedPath,
                 CliPackageDirName,
                 CliCoreDirName,
                 CliInternalDirName,

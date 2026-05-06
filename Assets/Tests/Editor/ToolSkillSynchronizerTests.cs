@@ -12,7 +12,7 @@ namespace io.github.hatayama.UnityCliLoop
     public class ToolSkillSynchronizerTests
     {
         private static readonly string ToolSettingsFilePath =
-            Path.Combine(McpConstants.ULOOP_DIR, McpConstants.ULOOP_TOOL_SETTINGS_FILE_NAME);
+            Path.Combine(UnityCliLoopConstants.ULOOP_DIR, UnityCliLoopConstants.ULOOP_TOOL_SETTINGS_FILE_NAME);
 
         private string _projectRoot;
         private string[] _nonExistentDirsBefore;

@@ -119,7 +119,7 @@ namespace io.github.hatayama.UnityCliLoop
                     return;
                 }
 
-                if (!ToolSettings.IsToolEnabled(McpConstants.TOOL_NAME_EXECUTE_DYNAMIC_CODE))
+                if (!ToolSettings.IsToolEnabled(UnityCliLoopConstants.TOOL_NAME_EXECUTE_DYNAMIC_CODE))
                 {
                     DynamicCodeStartupTelemetry.MarkPrewarmSkipped("tool_disabled");
                     VibeLogger.LogInfo(
@@ -332,7 +332,7 @@ namespace io.github.hatayama.UnityCliLoop
             return !result.Success
                 && string.Equals(
                     result.ErrorMessage,
-                    McpConstants.ERROR_MESSAGE_EXECUTION_CANCELLED,
+                    UnityCliLoopConstants.ERROR_MESSAGE_EXECUTION_CANCELLED,
                     StringComparison.Ordinal);
         }
 
@@ -346,7 +346,7 @@ namespace io.github.hatayama.UnityCliLoop
             return !result.Success
                 && string.Equals(
                     result.ErrorMessage,
-                    McpConstants.ERROR_MESSAGE_EXECUTION_IN_PROGRESS,
+                    UnityCliLoopConstants.ERROR_MESSAGE_EXECUTION_IN_PROGRESS,
                     StringComparison.Ordinal);
         }
 
@@ -497,7 +497,7 @@ namespace io.github.hatayama.UnityCliLoop
             {
                 ["jsonrpc"] = McpServerConfig.JSONRPC_VERSION,
                 ["id"] = AutoPrewarmRequestId,
-                ["method"] = McpConstants.TOOL_NAME_EXECUTE_DYNAMIC_CODE,
+                ["method"] = UnityCliLoopConstants.TOOL_NAME_EXECUTE_DYNAMIC_CODE,
                 ["params"] = JObject.FromObject(parameters, serializer),
                 ["x-uloop"] = new JObject
                 {

@@ -90,7 +90,7 @@ namespace io.github.hatayama.UnityCliLoop
             );
 
             string message =
-                $"{McpConstants.ERROR_MESSAGE_DUPLICATE_ASMDEF}\n" +
+                $"{UnityCliLoopConstants.ERROR_MESSAGE_DUPLICATE_ASMDEF}\n" +
                 "Detected from Console errors:\n" +
                 $"{details}\n" +
                 "Fix: ensure each .asmdef has a unique \"name\".";
@@ -144,7 +144,7 @@ namespace io.github.hatayama.UnityCliLoop
             );
 
             string message =
-                $"{McpConstants.ERROR_MESSAGE_DUPLICATE_ASMDEF}\n" +
+                $"{UnityCliLoopConstants.ERROR_MESSAGE_DUPLICATE_ASMDEF}\n" +
                 "Duplicates (first 5 groups):\n" +
                 $"{details}\n" +
                 "Fix: ensure each .asmdef has a unique \"name\".";

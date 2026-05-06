@@ -139,7 +139,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <returns>Task for timeout processing</returns>
         public static async Task StartReconnectionUITimeoutAsync()
         {
-            int timeoutFrames = McpConstants.RECONNECTION_TIMEOUT_SECONDS * 60;
+            int timeoutFrames = UnityCliLoopConstants.RECONNECTION_TIMEOUT_SECONDS * 60;
             await EditorDelay.DelayFrame(timeoutFrames);
 
             bool isStillShowingUI = UnityCliLoopEditorSettings.GetShowReconnectingUI();

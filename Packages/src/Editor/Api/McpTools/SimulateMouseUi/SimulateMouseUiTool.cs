@@ -25,7 +25,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             ct.ThrowIfCancellationRequested();
 
-            string correlationId = McpConstants.GenerateCorrelationId();
+            string correlationId = UnityCliLoopConstants.GenerateCorrelationId();
 
             if (!EditorApplication.isPlaying)
             {

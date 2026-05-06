@@ -19,9 +19,9 @@ namespace io.github.hatayama.UnityCliLoop
         private static string ProjectRootPath => Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
         private static string CompileResultDirectoryPath => Path.Combine(
             ProjectRootPath,
-            McpConstants.TEMP_DIR,
-            McpConstants.UNITYCLILOOP_DIR,
-            McpConstants.COMPILE_RESULTS_DIR
+            UnityCliLoopConstants.TEMP_DIR,
+            UnityCliLoopConstants.UNITYCLILOOP_DIR,
+            UnityCliLoopConstants.COMPILE_RESULTS_DIR
         );
 
         public static void ClearStaleResults()
@@ -31,7 +31,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return;
             }
 
-            string searchPattern = $"*{McpConstants.JSON_FILE_EXTENSION}";
+            string searchPattern = $"*{UnityCliLoopConstants.JSON_FILE_EXTENSION}";
             string[] resultFiles = Directory.GetFiles(CompileResultDirectoryPath, searchPattern);
             DateTime staleThreshold = DateTime.UtcNow - StaleResultThreshold;
 
@@ -60,7 +60,7 @@ namespace io.github.hatayama.UnityCliLoop
                 $"requestId must not contain path separators: '{requestId}'");
 
             string resultJson = JsonConvert.SerializeObject(response, Formatting.None);
-            string fileName = $"{sanitizedFileName}{McpConstants.JSON_FILE_EXTENSION}";
+            string fileName = $"{sanitizedFileName}{UnityCliLoopConstants.JSON_FILE_EXTENSION}";
             string filePath = Path.Combine(CompileResultDirectoryPath, fileName);
             File.WriteAllText(filePath, resultJson, Encoding.UTF8);
         }

@@ -53,10 +53,10 @@ namespace io.github.hatayama.UnityCliLoop
 
         public ExecutionResult Execute(ExecutionContext context)
         {
-            string correlationId = McpConstants.GenerateCorrelationId();
+            string correlationId = UnityCliLoopConstants.GenerateCorrelationId();
             if (!TryBeginExecution(out int undoGroup))
             {
-                return CreateErrorResult(McpConstants.ERROR_MESSAGE_EXECUTION_IN_PROGRESS);
+                return CreateErrorResult(UnityCliLoopConstants.ERROR_MESSAGE_EXECUTION_IN_PROGRESS);
             }
 
             try
@@ -89,10 +89,10 @@ namespace io.github.hatayama.UnityCliLoop
 
         public async Task<ExecutionResult> ExecuteAsync(ExecutionContext context)
         {
-            string correlationId = McpConstants.GenerateCorrelationId();
+            string correlationId = UnityCliLoopConstants.GenerateCorrelationId();
             if (!TryBeginExecution(out int undoGroup))
             {
-                return CreateErrorResult(McpConstants.ERROR_MESSAGE_EXECUTION_IN_PROGRESS);
+                return CreateErrorResult(UnityCliLoopConstants.ERROR_MESSAGE_EXECUTION_IN_PROGRESS);
             }
 
             try
@@ -155,7 +155,7 @@ namespace io.github.hatayama.UnityCliLoop
         private static ExecutionResult CreateCancelledResult()
         {
             return CreateErrorResult(
-                McpConstants.ERROR_MESSAGE_EXECUTION_CANCELLED,
+                UnityCliLoopConstants.ERROR_MESSAGE_EXECUTION_CANCELLED,
                 new List<string> { "Execution cancelled" });
         }
 
@@ -189,7 +189,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             if (context.CompiledAssembly == null)
             {
-                return CreateErrorResult(McpConstants.ERROR_MESSAGE_NO_COMPILED_ASSEMBLY);
+                return CreateErrorResult(UnityCliLoopConstants.ERROR_MESSAGE_NO_COMPILED_ASSEMBLY);
             }
 
             try
@@ -201,7 +201,7 @@ namespace io.github.hatayama.UnityCliLoop
                 if (targetType == null || executeMethod == null)
                 {
                     return CreateErrorResult(
-                        McpConstants.ERROR_MESSAGE_NO_EXECUTE_METHOD,
+                        UnityCliLoopConstants.ERROR_MESSAGE_NO_EXECUTE_METHOD,
                         new List<string> { "Assembly types checked but no Execute method found" });
                 }
 
@@ -209,7 +209,7 @@ namespace io.github.hatayama.UnityCliLoop
                 object instance = CreateInstance(targetType);
                 if (instance == null)
                 {
-                    return CreateErrorResult(McpConstants.ERROR_MESSAGE_FAILED_TO_CREATE_INSTANCE);
+                    return CreateErrorResult(UnityCliLoopConstants.ERROR_MESSAGE_FAILED_TO_CREATE_INSTANCE);
                 }
 
                 // Check cancellation
@@ -232,7 +232,7 @@ namespace io.github.hatayama.UnityCliLoop
                 catch (NotSupportedException ex)
                 {
                     return CreateErrorResult(
-                        McpConstants.ERROR_MESSAGE_UNSUPPORTED_SIGNATURE,
+                        UnityCliLoopConstants.ERROR_MESSAGE_UNSUPPORTED_SIGNATURE,
                         new List<string> { ex.Message });
                 }
             }
@@ -273,7 +273,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             if (context.CompiledAssembly == null)
             {
-                return CreateErrorResult(McpConstants.ERROR_MESSAGE_NO_COMPILED_ASSEMBLY);
+                return CreateErrorResult(UnityCliLoopConstants.ERROR_MESSAGE_NO_COMPILED_ASSEMBLY);
             }
 
             try
@@ -286,7 +286,7 @@ namespace io.github.hatayama.UnityCliLoop
                     object instance = CreateInstance(asyncType);
                     if (instance == null)
                     {
-                        return CreateErrorResult(McpConstants.ERROR_MESSAGE_FAILED_TO_CREATE_INSTANCE);
+                        return CreateErrorResult(UnityCliLoopConstants.ERROR_MESSAGE_FAILED_TO_CREATE_INSTANCE);
                     }
 
                     cancellationToken.ThrowIfCancellationRequested();

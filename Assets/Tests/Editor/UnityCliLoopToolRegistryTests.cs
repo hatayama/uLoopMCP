@@ -57,7 +57,7 @@ namespace io.github.hatayama.UnityCliLoop
             // Tests that get-version is kept out of the extension-facing runtime registry.
             UnityCliLoopToolRegistry registry = new UnityCliLoopToolRegistry();
 
-            Assert.That(registry.IsToolRegistered(McpConstants.COMMAND_NAME_GET_VERSION), Is.False);
+            Assert.That(registry.IsToolRegistered(UnityCliLoopConstants.COMMAND_NAME_GET_VERSION), Is.False);
         }
 
         [Test]
@@ -66,7 +66,7 @@ namespace io.github.hatayama.UnityCliLoop
             // Tests that get-tool-details is kept out of the extension-facing runtime registry.
             UnityCliLoopToolRegistry registry = new UnityCliLoopToolRegistry();
 
-            Assert.That(registry.IsToolRegistered(McpConstants.COMMAND_NAME_GET_TOOL_DETAILS), Is.False);
+            Assert.That(registry.IsToolRegistered(UnityCliLoopConstants.COMMAND_NAME_GET_TOOL_DETAILS), Is.False);
         }
 
         [Test]
@@ -74,7 +74,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             // Tests that get-version still works as a CLI-only bridge command after leaving the tool registry.
             UnityCliLoopToolResponse response = await UnityApiHandler.ExecuteCommandAsync(
-                McpConstants.COMMAND_NAME_GET_VERSION,
+                UnityCliLoopConstants.COMMAND_NAME_GET_VERSION,
                 new JObject());
 
             GetVersionResponse getVersionResponse = response as GetVersionResponse;
@@ -88,7 +88,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             // Tests that CLI catalog access still works without registering the catalog command as a tool.
             UnityCliLoopToolResponse response = await UnityApiHandler.ExecuteCommandAsync(
-                McpConstants.COMMAND_NAME_GET_TOOL_DETAILS,
+                UnityCliLoopConstants.COMMAND_NAME_GET_TOOL_DETAILS,
                 new JObject());
 
             GetToolDetailsResponse getToolDetailsResponse = response as GetToolDetailsResponse;
@@ -99,8 +99,8 @@ namespace io.github.hatayama.UnityCliLoop
                 .ToArray();
 
             Assert.That(toolNames, Does.Contain("get-logs"));
-            Assert.That(toolNames, Does.Not.Contain(McpConstants.COMMAND_NAME_GET_TOOL_DETAILS));
-            Assert.That(toolNames, Does.Not.Contain(McpConstants.COMMAND_NAME_GET_VERSION));
+            Assert.That(toolNames, Does.Not.Contain(UnityCliLoopConstants.COMMAND_NAME_GET_TOOL_DETAILS));
+            Assert.That(toolNames, Does.Not.Contain(UnityCliLoopConstants.COMMAND_NAME_GET_VERSION));
             Assert.That(toolNames, Does.Not.Contain("focus-window"));
             Assert.That(toolNames, Does.Not.Contain("ping"));
             Assert.That(toolNames, Does.Not.Contain("debug-sleep"));

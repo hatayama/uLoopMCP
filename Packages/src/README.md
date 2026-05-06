@@ -633,7 +633,7 @@ scripts/build-go-cli.sh
 
 ### Unity CLI Loop Files
 
-`UserSettings/UnityMcpSettings.json` stores per-user editor session state and should always remain local-only. The file name is a historical compatibility name.
+`UserSettings/UnityCliLoopSettings.json` stores per-user editor session state and should always remain local-only.
 
 The `.uloop/` directory at the project root stores CLI cache, tool registry, and runtime outputs. Most of its contents are local-only, but some files can optionally be git-tracked for team sharing.
 

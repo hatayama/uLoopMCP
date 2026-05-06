@@ -42,7 +42,7 @@ namespace io.github.hatayama.UnityCliLoop
                         "assembly_policy_unknown_level",
                         $"Unknown security level: {level}",
                         new { level = level.ToString() },
-                        correlationId: McpConstants.GenerateCorrelationId(),
+                        correlationId: UnityCliLoopConstants.GenerateCorrelationId(),
                         humanNote: "Unknown security level encountered",
                         aiTodo: "Review security level enum changes"
                     );
@@ -71,7 +71,7 @@ namespace io.github.hatayama.UnityCliLoop
                 "assembly_policy_all_assemblies",
                 "Generated all available assemblies list",
                 new { count = assemblies.Count },
-                correlationId: McpConstants.GenerateCorrelationId(),
+                correlationId: UnityCliLoopConstants.GenerateCorrelationId(),
                 humanNote: "All assemblies made available for compilation",
                 aiTodo: "Monitor assembly usage in dynamic code execution"
             );

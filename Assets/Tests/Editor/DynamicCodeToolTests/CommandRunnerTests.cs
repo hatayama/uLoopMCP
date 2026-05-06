@@ -25,7 +25,7 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
             ExecutionResult result = await runner.ExecuteAsync(context);
 
             Assert.That(result.Success, Is.False);
-            Assert.That(result.ErrorMessage, Is.EqualTo(McpConstants.ERROR_MESSAGE_EXECUTION_CANCELLED));
+            Assert.That(result.ErrorMessage, Is.EqualTo(UnityCliLoopConstants.ERROR_MESSAGE_EXECUTION_CANCELLED));
             Assert.That(result.Logs, Contains.Item("Execution cancelled"));
             Assert.That(result.Logs, Has.No.Member("Execution cancelled due to timeout"));
         }

@@ -7,7 +7,7 @@ namespace io.github.hatayama.UnityCliLoop
     public class ToolSettingsTests
     {
         private static readonly string SettingsFilePath =
-            Path.Combine(McpConstants.ULOOP_DIR, McpConstants.ULOOP_TOOL_SETTINGS_FILE_NAME);
+            Path.Combine(UnityCliLoopConstants.ULOOP_DIR, UnityCliLoopConstants.ULOOP_TOOL_SETTINGS_FILE_NAME);
         private static readonly string SettingsBackupPath = SettingsFilePath + ".bak";
 
         private bool _settingsFileExisted;

@@ -116,7 +116,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             int waitedMs = 0;
 
-            while (waitedMs < McpConstants.COMPILE_START_TIMEOUT_MS)
+            while (waitedMs < UnityCliLoopConstants.COMPILE_START_TIMEOUT_MS)
             {
                 if (ct.IsCancellationRequested)
                 {
@@ -136,8 +136,8 @@ namespace io.github.hatayama.UnityCliLoop
 
                 // Do not pass CancellationToken here: this method is fire-and-forget and must not throw.
                 // Cancellation is handled by explicit checks above to avoid leaving _currentCompileTask pending.
-                await TimerDelay.Wait(McpConstants.COMPILE_START_POLL_INTERVAL_MS);
-                waitedMs += McpConstants.COMPILE_START_POLL_INTERVAL_MS;
+                await TimerDelay.Wait(UnityCliLoopConstants.COMPILE_START_POLL_INTERVAL_MS);
+                waitedMs += UnityCliLoopConstants.COMPILE_START_POLL_INTERVAL_MS;
             }
 
             AssemblyDefinitionDuplicationValidationService asmdefValidationService = new();

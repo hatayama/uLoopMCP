@@ -54,14 +54,14 @@ namespace io.github.hatayama.UnityCliLoop
         private static void EnsureProjectLocalCliForCurrentProject()
         {
             string projectRoot = UnityCliLoopPathResolver.GetProjectRoot();
-            CliInstallResult result = EnsureProjectLocalCliCurrent(projectRoot, McpConstants.PackageInfo.version);
+            CliInstallResult result = EnsureProjectLocalCliCurrent(projectRoot, UnityCliLoopConstants.PackageInfo.version);
             if (result.Success)
             {
                 return;
             }
 
             Debug.LogWarning(
-                $"[{McpConstants.PROJECT_NAME}] Failed to update project-local uLoop CLI: {result.ErrorOutput}");
+                $"[{UnityCliLoopConstants.PROJECT_NAME}] Failed to update project-local uLoop CLI: {result.ErrorOutput}");
         }
     }
 }

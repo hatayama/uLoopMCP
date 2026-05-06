@@ -42,7 +42,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             string detectedVersion = DetectCliOutput(
                 sourceBinaryPath,
-                McpConstants.PackageResolvedPath,
+                UnityCliLoopConstants.PackageResolvedPath,
                 requiredDispatcherVersionFlag);
             if (!string.IsNullOrEmpty(detectedVersion))
             {
@@ -106,7 +106,7 @@ namespace io.github.hatayama.UnityCliLoop
         internal static string GetProjectCliBundlePath()
         {
             return Path.Combine(
-                McpConstants.PackageResolvedPath,
+                UnityCliLoopConstants.PackageResolvedPath,
                 CliConstants.CLI_PACKAGE_DIR_NAME,
                 CliConstants.GO_CLI_CORE_DIR_NAME,
                 CliConstants.DIST_DIR_NAME,
@@ -204,7 +204,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             return Path.Combine(
                 projectRoot,
-                McpConstants.ULOOP_DIR,
+                UnityCliLoopConstants.ULOOP_DIR,
                 CliConstants.PROJECT_LOCAL_BIN_DIR_NAME);
         }
 

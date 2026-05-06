@@ -64,7 +64,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static void TryShowOnVersionChange()
         {
-            string currentVersion = McpConstants.PackageInfo.version;
+            string currentVersion = UnityCliLoopConstants.PackageInfo.version;
             bool suppressAutoShow = UnityCliLoopEditorSettings.GetSuppressSetupWizardAutoShow();
             MaybeRecordSuppressedVersion(suppressAutoShow, currentVersion);
             string lastSeenVersion = UnityCliLoopEditorSettings.GetLastSeenSetupWizardVersion();
@@ -80,7 +80,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static void ShowWindowInternal(bool shouldRecordVersion)
         {
-            string currentVersion = McpConstants.PackageInfo.version;
+            string currentVersion = UnityCliLoopConstants.PackageInfo.version;
             if (TryReuseOpenWindow(
                 HasOpenInstances<SetupWizardWindow>(),
                 shouldRecordVersion,
@@ -224,12 +224,12 @@ namespace io.github.hatayama.UnityCliLoop
 
         private void LoadLayout()
         {
-            string uxmlPath = $"{McpConstants.PackageAssetPath}/{UXML_RELATIVE_PATH}";
+            string uxmlPath = $"{UnityCliLoopConstants.PackageAssetPath}/{UXML_RELATIVE_PATH}";
             VisualTreeAsset visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(uxmlPath);
             Debug.Assert(visualTree != null, $"UXML not found at {uxmlPath}");
             visualTree.CloneTree(rootVisualElement);
 
-            string ussPath = $"{McpConstants.PackageAssetPath}/{USS_RELATIVE_PATH}";
+            string ussPath = $"{UnityCliLoopConstants.PackageAssetPath}/{USS_RELATIVE_PATH}";
             StyleSheet styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(ussPath);
             Debug.Assert(styleSheet != null, $"USS not found at {ussPath}");
             rootVisualElement.styleSheets.Add(styleSheet);
@@ -290,7 +290,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private void InitializeGitHubIcon()
         {
-            string iconPath = $"{McpConstants.PackageAssetPath}/{GITHUB_ICON_RELATIVE_PATH}";
+            string iconPath = $"{UnityCliLoopConstants.PackageAssetPath}/{GITHUB_ICON_RELATIVE_PATH}";
             Texture2D iconTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(iconPath);
             Debug.Assert(iconTexture != null, $"GitHub icon not found at {iconPath}");
             _githubLinkIcon.image = iconTexture;
@@ -650,9 +650,9 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static string GetRequiredDispatcherVersion()
         {
-            string requiredDispatcherVersion = CliSetupApplicationFacade.GetRequiredDispatcherVersion(McpConstants.PackageInfo.version);
+            string requiredDispatcherVersion = CliSetupApplicationFacade.GetRequiredDispatcherVersion(UnityCliLoopConstants.PackageInfo.version);
             return string.IsNullOrEmpty(requiredDispatcherVersion)
-                ? McpConstants.PackageInfo.version
+                ? UnityCliLoopConstants.PackageInfo.version
                 : requiredDispatcherVersion;
         }
 
@@ -665,14 +665,14 @@ namespace io.github.hatayama.UnityCliLoop
         {
             CliInstallResult result = CliSetupApplicationFacade.EnsureProjectLocalCliCurrent(
                 projectRoot,
-                McpConstants.PackageInfo.version);
+                UnityCliLoopConstants.PackageInfo.version);
             if (result.Success)
             {
                 return;
             }
 
             Debug.LogWarning(
-                $"[{McpConstants.PROJECT_NAME}] Failed to update project-local uLoop CLI: {result.ErrorOutput}");
+                $"[{UnityCliLoopConstants.PROJECT_NAME}] Failed to update project-local uLoop CLI: {result.ErrorOutput}");
         }
 
         private void UpdateSkillsStep(
@@ -875,14 +875,14 @@ namespace io.github.hatayama.UnityCliLoop
             {
                 CliInstallResult result = await CliSetupApplicationFacade.InstallGlobalCliAsync(
                     Application.platform,
-                    McpConstants.PackageInfo.version,
+                    UnityCliLoopConstants.PackageInfo.version,
                     CancellationToken.None);
 
                 if (!result.Success)
                 {
                     NativeCliInstallCommand command = CliSetupApplicationFacade.GetGlobalCliInstallCommand(
                         Application.platform,
-                        McpConstants.PackageInfo.version,
+                        UnityCliLoopConstants.PackageInfo.version,
                         true);
                     EditorUtility.DisplayDialog(
                         "Installation Failed",
@@ -936,7 +936,7 @@ namespace io.github.hatayama.UnityCliLoop
         private void HandleSuppressAutoShowChanged(bool suppressAutoShow)
         {
             UnityCliLoopEditorSettings.SetSuppressSetupWizardAutoShow(suppressAutoShow);
-            MaybeRecordSuppressedVersion(suppressAutoShow, McpConstants.PackageInfo.version);
+            MaybeRecordSuppressedVersion(suppressAutoShow, UnityCliLoopConstants.PackageInfo.version);
             ScheduleResizeToContent();
         }
 

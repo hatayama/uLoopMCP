@@ -15,7 +15,7 @@ namespace io.github.hatayama.UnityCliLoop
         //   sim_x = image_x / ResolutionScale
         //   sim_y = image_y / ResolutionScale + YOffset
         // "window": EditorWindow capture including toolbar
-        public string CoordinateSystem { get; set; } = McpConstants.COORDINATE_SYSTEM_WINDOW;
+        public string CoordinateSystem { get; set; } = UnityCliLoopConstants.COORDINATE_SYSTEM_WINDOW;
 
         public float ResolutionScale { get; set; } = 1.0f;
 
@@ -26,7 +26,7 @@ namespace io.github.hatayama.UnityCliLoop
         public List<UIElementInfo> AnnotatedElements { get; set; } = new();
 
         public ScreenshotInfo(string imagePath, long fileSizeBytes, int width, int height,
-            string coordinateSystem = McpConstants.COORDINATE_SYSTEM_WINDOW,
+            string coordinateSystem = UnityCliLoopConstants.COORDINATE_SYSTEM_WINDOW,
             float resolutionScale = 1.0f, int yOffset = 0)
         {
             ImagePath = imagePath;

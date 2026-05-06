@@ -15,7 +15,7 @@ namespace io.github.hatayama.UnityCliLoop.Factory
 
         public IDynamicCodeExecutor Create(DynamicCodeSecurityLevel securityLevel)
         {
-            string correlationId = McpConstants.GenerateCorrelationId();
+            string correlationId = UnityCliLoopConstants.GenerateCorrelationId();
             IDynamicCompilationService compiler;
             if (!DynamicCompilationServiceRegistry.TryCreate(securityLevel, out compiler))
             {

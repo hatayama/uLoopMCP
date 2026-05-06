@@ -55,7 +55,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// </summary>
     public static class UnityCliLoopEditorSettings
     {
-        private static string SettingsFilePath => Path.Combine(McpConstants.USER_SETTINGS_FOLDER, McpConstants.SETTINGS_FILE_NAME);
+        private static string SettingsFilePath => Path.Combine(UnityCliLoopConstants.USER_SETTINGS_FOLDER, UnityCliLoopConstants.SETTINGS_FILE_NAME);
         private static readonly string[] LegacyTransientSettingKeys =
         {
             "customPort",
@@ -131,7 +131,7 @@ namespace io.github.hatayama.UnityCliLoop
             string json = JsonUtility.ToJson(settings, true);
             
             // Security: Validate JSON content size
-            if (json.Length > McpConstants.MAX_SETTINGS_SIZE_BYTES)
+            if (json.Length > UnityCliLoopConstants.MAX_SETTINGS_SIZE_BYTES)
             {
                 throw new SecurityException("Settings JSON content exceeds size limit");
             }
@@ -556,7 +556,7 @@ namespace io.github.hatayama.UnityCliLoop
                 {
                     // Security: Check file size before reading
                     FileInfo fileInfo = new FileInfo(SettingsFilePath);
-                    if (fileInfo.Length > McpConstants.MAX_SETTINGS_SIZE_BYTES)
+                    if (fileInfo.Length > UnityCliLoopConstants.MAX_SETTINGS_SIZE_BYTES)
                     {
                         throw new SecurityException("Settings file exceeds size limit");
                     }
@@ -597,7 +597,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
 
             FileInfo fileInfo = new FileInfo(settingsPath);
-            if (fileInfo.Length > McpConstants.MAX_SETTINGS_SIZE_BYTES)
+            if (fileInfo.Length > UnityCliLoopConstants.MAX_SETTINGS_SIZE_BYTES)
             {
                 throw new SecurityException("Settings file exceeds size limit");
             }
@@ -659,15 +659,15 @@ namespace io.github.hatayama.UnityCliLoop
                 string normalizedPath = Path.GetFullPath(path);
                 
                 // Must be under UserSettings directory
-                string expectedUserSettingsPath = Path.GetFullPath(McpConstants.USER_SETTINGS_FOLDER);
+                string expectedUserSettingsPath = Path.GetFullPath(UnityCliLoopConstants.USER_SETTINGS_FOLDER);
                 
                 // Check if path is within the expected directory
                 return normalizedPath.StartsWith(expectedUserSettingsPath, StringComparison.OrdinalIgnoreCase) &&
-                       normalizedPath.EndsWith(McpConstants.SETTINGS_FILE_NAME, StringComparison.OrdinalIgnoreCase);
+                       normalizedPath.EndsWith(UnityCliLoopConstants.SETTINGS_FILE_NAME, StringComparison.OrdinalIgnoreCase);
             }
             catch (Exception ex)
             {
-                UnityEngine.Debug.LogError($"{McpConstants.SECURITY_LOG_PREFIX} Error validating settings path {path}: {ex.Message}");
+                UnityEngine.Debug.LogError($"{UnityCliLoopConstants.SECURITY_LOG_PREFIX} Error validating settings path {path}: {ex.Message}");
                 return false;
             }
         }

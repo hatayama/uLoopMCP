@@ -209,7 +209,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
         {
             // Verifies that editor path constants stay aligned with the CLI layout manifest.
             string path = Path.Combine(
-                McpConstants.PackageResolvedPath,
+                UnityCliLoopConstants.PackageResolvedPath,
                 CliConstants.CLI_PACKAGE_DIR_NAME,
                 CliConstants.CLI_LAYOUT_CONTRACT_FILE_NAME);
 

@@ -10,7 +10,7 @@ namespace io.github.hatayama.UnityCliLoop
     public class UnityCliLoopEditorSettingsRecoveryTests
     {
         private static readonly string SettingsFilePath =
-            Path.Combine(McpConstants.USER_SETTINGS_FOLDER, McpConstants.SETTINGS_FILE_NAME);
+            Path.Combine(UnityCliLoopConstants.USER_SETTINGS_FOLDER, UnityCliLoopConstants.SETTINGS_FILE_NAME);
         private static readonly string BackupFilePath = SettingsFilePath + ".bak";
         private static readonly string TempFilePath = SettingsFilePath + ".tmp";
 
@@ -33,9 +33,9 @@ namespace io.github.hatayama.UnityCliLoop
             _tempFileExisted = File.Exists(TempFilePath);
             _tempFileContent = _tempFileExisted ? File.ReadAllText(TempFilePath) : null;
 
-            if (!Directory.Exists(McpConstants.USER_SETTINGS_FOLDER))
+            if (!Directory.Exists(UnityCliLoopConstants.USER_SETTINGS_FOLDER))
             {
-                Directory.CreateDirectory(McpConstants.USER_SETTINGS_FOLDER);
+                Directory.CreateDirectory(UnityCliLoopConstants.USER_SETTINGS_FOLDER);
             }
 
             DeleteIfExists(SettingsFilePath);
@@ -146,7 +146,7 @@ namespace io.github.hatayama.UnityCliLoop
         [Test]
         public void RecoverSettingsFileIfNeeded_WhenSettingsFileExceedsSizeLimit_ShouldThrowSecurityException()
         {
-            File.WriteAllText(SettingsFilePath, new string(' ', McpConstants.MAX_SETTINGS_SIZE_BYTES + 1));
+            File.WriteAllText(SettingsFilePath, new string(' ', UnityCliLoopConstants.MAX_SETTINGS_SIZE_BYTES + 1));
 
             Assert.Throws<SecurityException>(() => UnityCliLoopEditorSettings.RecoverSettingsFileIfNeeded());
         }

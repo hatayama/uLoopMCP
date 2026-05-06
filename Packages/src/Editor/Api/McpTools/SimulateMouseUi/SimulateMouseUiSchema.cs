@@ -20,7 +20,7 @@ namespace io.github.hatayama.UnityCliLoop
         public float FromY { get; set; } = 0f;
 
         [Description("Drag speed in pixels per second (0 for instant). Applies to Drag, DragMove, and DragEnd actions.")]
-        public float DragSpeed { get; set; } = McpConstants.SIMULATE_MOUSE_UI_DEFAULT_DRAG_SPEED;
+        public float DragSpeed { get; set; } = UnityCliLoopConstants.SIMULATE_MOUSE_UI_DEFAULT_DRAG_SPEED;
 
         [Description("Hold duration in seconds for LongPress action (default: 0.5).")]
         public float Duration { get; set; } = 0.5f;
