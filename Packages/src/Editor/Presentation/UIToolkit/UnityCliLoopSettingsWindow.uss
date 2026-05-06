@@ -4,38 +4,38 @@
    =========================================== */
 
 :root {
-    --mcp-color-success: #4caf50;
-    --mcp-color-danger: #ef5350;
-    --mcp-color-warning: #ffd200;
+    --unity-cli-loop-color-success: #4caf50;
+    --unity-cli-loop-color-danger: #ef5350;
+    --unity-cli-loop-color-warning: #ffd200;
 }
 
 /* Main Container */
-.mcp-window-root {
+.unity-cli-loop-window-root {
     flex-direction: column;
     flex-grow: 1;
     flex-shrink: 1;
     min-height: 0;
 }
 
-.mcp-main-container {
+.unity-cli-loop-main-container {
     flex-grow: 1;
     flex-shrink: 1;
     min-height: 0;
     padding: 4px;
 }
 
-.mcp-main-container--debug {
+.unity-cli-loop-main-container--debug {
     background-color: rgba(128, 0, 128, 0.15);
 }
 
 /* ===========================================
    Block: Section
    =========================================== */
-.mcp-section {
+.unity-cli-loop-section {
     margin-bottom: 8px;
 }
 
-.mcp-section--box {
+.unity-cli-loop-section--box {
     background-color: var(--unity-colors-helpbox-background);
     border-color: var(--unity-colors-helpbox-border);
     border-width: 1px;
@@ -47,14 +47,14 @@
 /* ===========================================
    Block: Server Status (prominent status row)
    =========================================== */
-.mcp-server-status {
+.unity-cli-loop-server-status {
     flex-direction: row;
     align-items: center;
     margin-bottom: 8px;
     margin-left: 7px;
 }
 
-.mcp-server-status__indicator {
+.unity-cli-loop-server-status__indicator {
     width: 8px;
     height: 8px;
     border-radius: 4px;
@@ -62,63 +62,63 @@
     flex-shrink: 0;
 }
 
-.mcp-server-status__indicator--running {
-    background-color: var(--mcp-color-success);
+.unity-cli-loop-server-status__indicator--running {
+    background-color: var(--unity-cli-loop-color-success);
 }
 
-.mcp-server-status__indicator--stopped {
-    background-color: var(--mcp-color-danger);
+.unity-cli-loop-server-status__indicator--stopped {
+    background-color: var(--unity-cli-loop-color-danger);
 }
 
-.mcp-server-status__text {
+.unity-cli-loop-server-status__text {
     -unity-font-style: bold;
 }
 
-.mcp-server-status__text--running {
-    color: var(--mcp-color-success);
-    border-color: var(--mcp-color-success);
+.unity-cli-loop-server-status__text--running {
+    color: var(--unity-cli-loop-color-success);
+    border-color: var(--unity-cli-loop-color-success);
     border-width: 1px;
     border-radius: 3px;
     padding: 2px 6px;
 }
 
-.mcp-server-status__text--stopped {
-    color: var(--mcp-color-danger);
-    border-color: var(--mcp-color-danger);
+.unity-cli-loop-server-status__text--stopped {
+    color: var(--unity-cli-loop-color-danger);
+    border-color: var(--unity-cli-loop-color-danger);
     border-width: 1px;
     border-radius: 3px;
     padding: 2px 6px;
 }
 
-.mcp-server-status__spacer {
+.unity-cli-loop-server-status__spacer {
     flex-grow: 1;
 }
 
 /* ===========================================
    Block: Server Controls (compact row)
    =========================================== */
-.mcp-server-controls {
+.unity-cli-loop-server-controls {
     margin-top: 4px;
     padding-left: 8px;
 }
 
-.mcp-server-controls .mcp-button {
+.unity-cli-loop-server-controls .unity-cli-loop-button {
     flex-grow: 1;
 }
 
 /* ===========================================
    Block: Warning Container
    =========================================== */
-.mcp-warning-container {
+.unity-cli-loop-warning-container {
     display: none;
     margin-bottom: 8px;
 }
 
-.mcp-warning-container--visible {
+.unity-cli-loop-warning-container--visible {
     display: flex;
 }
 
-.mcp-warning-label {
+.unity-cli-loop-warning-label {
     background-color: #5c4a00;
     border-color: #7a6400;
     color: #ffcc00;
@@ -131,12 +131,12 @@
 /* ===========================================
    Block: Button
    =========================================== */
-.mcp-button {
+.unity-cli-loop-button {
     margin-top: 4px;
     margin-bottom: 4px;
 }
 
-.mcp-button--compact {
+.unity-cli-loop-button--compact {
     height: 22px;
     padding-left: 12px;
     padding-right: 12px;
@@ -146,36 +146,36 @@
     margin-left: 0;
 }
 
-.mcp-button--start {
+.unity-cli-loop-button--start {
     background-color: #2e7d32;
-    border-color: var(--mcp-color-success);
+    border-color: var(--unity-cli-loop-color-success);
     color: #ffffff;
 }
 
-.mcp-button--start:hover {
+.unity-cli-loop-button--start:hover {
     background-color: #388e3c;
 }
 
-.mcp-button--stop {
+.unity-cli-loop-button--stop {
     background-color: #4a4a4a;
     border-color: #666666;
     color: #ff6b6b;
 }
 
-.mcp-button--stop:hover {
+.unity-cli-loop-button--stop:hover {
     background-color: #555555;
 }
 
-.mcp-button--warning {
+.unity-cli-loop-button--warning {
     background-color: #665522;
     border-color: #aa9944;
 }
 
-.mcp-button--warning:hover {
+.unity-cli-loop-button--warning:hover {
     background-color: #887744;
 }
 
-.mcp-button--configure {
+.unity-cli-loop-button--configure {
     margin-top: 8px;
 }
 
@@ -183,16 +183,16 @@
     margin-top: 2px;
 }
 
-.mcp-button--delete {
+.unity-cli-loop-button--delete {
     margin-top: 12px;
     color: #ff6b6b;
 }
 
-.mcp-button--delete:hover {
+.unity-cli-loop-button--delete:hover {
     color: #ff8a8a;
 }
 
-.mcp-button--disabled {
+.unity-cli-loop-button--disabled {
     background-color: #4a4a4a;
     border-width: 1px;
     border-color: rgba(128, 128, 128, 0.5);
@@ -203,41 +203,41 @@
 /* ===========================================
    Block: Toggle Row
    =========================================== */
-.mcp-toggle-row {
+.unity-cli-loop-toggle-row {
     flex-direction: row;
     align-items: center;
     margin-top: 4px;
     margin-bottom: 4px;
 }
 
-.mcp-toggle-row__toggle {
+.unity-cli-loop-toggle-row__toggle {
     width: 20px;
     margin-right: 4px;
 }
 
-.mcp-toggle-row__label {
+.unity-cli-loop-toggle-row__label {
     flex-grow: 1;
 }
 
-.mcp-toggle-row__label--danger {
-    color: var(--mcp-color-warning);
+.unity-cli-loop-toggle-row__label--danger {
+    color: var(--unity-cli-loop-color-warning);
 }
 
 /* ===========================================
    Block: Target Row (Editor Selection)
    =========================================== */
-.mcp-target-row {
+.unity-cli-loop-target-row {
     flex-direction: row;
     align-items: center;
     overflow: hidden;
 }
 
-.mcp-target-row__label {
+.unity-cli-loop-target-row__label {
     width: 50px;
     flex-shrink: 0;
 }
 
-.mcp-target-row__field {
+.unity-cli-loop-target-row__field {
     flex-grow: 1;
     flex-shrink: 1;
     min-width: 0;
@@ -247,7 +247,7 @@
 /* ===========================================
    Block: Foldout
    =========================================== */
-.mcp-foldout {
+.unity-cli-loop-foldout {
     margin-left: -8px;
 }
 
@@ -259,7 +259,7 @@
 /* ===========================================
    Block: Messages
    =========================================== */
-.mcp-info-message {
+.unity-cli-loop-info-message {
     display: none;
     background-color: var(--unity-colors-helpbox-background);
     border-color: var(--unity-colors-helpbox-border);
@@ -270,11 +270,11 @@
     white-space: normal;
 }
 
-.mcp-info-message--visible {
+.unity-cli-loop-info-message--visible {
     display: flex;
 }
 
-.mcp-warning-message {
+.unity-cli-loop-warning-message {
     display: none;
     background-color: #5c4a00;
     border-color: #7a6400;
@@ -286,11 +286,11 @@
     white-space: normal;
 }
 
-.mcp-warning-message--visible {
+.unity-cli-loop-warning-message--visible {
     display: flex;
 }
 
-.mcp-error-message {
+.unity-cli-loop-error-message {
     display: none;
     background-color: var(--unity-colors-error-background, #440000);
     border-color: var(--unity-colors-error-border, #aa0000);
@@ -303,27 +303,27 @@
     color: var(--unity-colors-error-text, #ff4444);
 }
 
-.mcp-error-message--visible {
+.unity-cli-loop-error-message--visible {
     display: flex;
 }
 
 /* ===========================================
    Block: Tool Settings
    =========================================== */
-.mcp-tool-settings-info {
+.unity-cli-loop-tool-settings-info {
     white-space: normal;
     margin-top: 14px;
     margin-bottom: 4px;
 }
 
-.mcp-tool-settings-note {
+.unity-cli-loop-tool-settings-note {
     font-size: 10px;
     color: #888888;
     white-space: normal;
     margin-bottom: 8px;
 }
 
-.mcp-tool-settings-link {
+.unity-cli-loop-tool-settings-link {
     font-size: 10px;
     color: #4C7EF3;
     white-space: normal;
@@ -332,11 +332,11 @@
     -unity-font-style: italic;
 }
 
-.mcp-tool-settings-link:hover {
+.unity-cli-loop-tool-settings-link:hover {
     color: #6B9AFF;
 }
 
-.mcp-tool-settings-content {
+.unity-cli-loop-tool-settings-content {
     margin-top: 0;
     padding-top: 0;
 }
@@ -345,7 +345,7 @@
     padding-left: 14px;
 }
 
-.mcp-tool-settings-card {
+.unity-cli-loop-tool-settings-card {
     border-width: 1px;
     border-color: rgba(255, 255, 255, 0.22);
     border-radius: 4px;
@@ -354,66 +354,66 @@
     margin-bottom: 12px;
 }
 
-.mcp-tool-settings-card__header {
+.unity-cli-loop-tool-settings-card__header {
     margin-top: 0;
     padding-top: 0;
     margin-bottom: 2px;
 }
 
-.mcp-tool-group-header {
+.unity-cli-loop-tool-group-header {
     -unity-font-style: bold;
     margin-top: 6px;
     margin-bottom: 4px;
 }
 
-.mcp-tool-group--disabled {
+.unity-cli-loop-tool-group--disabled {
     opacity: 0.45;
 }
 
-.mcp-permission-item {
+.unity-cli-loop-permission-item {
     margin-top: 8px;
     padding: 8px 0 0 14px;
     border-top-width: 1px;
     border-top-color: rgba(255, 255, 255, 0.08);
 }
 
-.mcp-permission-item--first {
+.unity-cli-loop-permission-item--first {
     margin-top: 0;
     padding-top: 4px;
     border-top-width: 0;
 }
 
-.mcp-permission-item__title {
+.unity-cli-loop-permission-item__title {
     margin-top: 0;
     margin-bottom: 6px;
-    color: var(--mcp-color-warning);
+    color: var(--unity-cli-loop-color-warning);
 }
 
-.mcp-permission-item__title--dynamic-code {
+.unity-cli-loop-permission-item__title--dynamic-code {
     font-size: 13px;
 }
 
-.mcp-permission-item__control-row {
+.unity-cli-loop-permission-item__control-row {
     flex-direction: row;
     align-items: center;
 }
 
-.mcp-permission-item__control-label {
+.unity-cli-loop-permission-item__control-label {
     min-width: 0;
     margin-right: 0;
     color: rgba(255, 255, 255, 0.75);
 }
 
-.mcp-permission-item__toggle-row {
+.unity-cli-loop-permission-item__toggle-row {
     margin-top: 0;
     margin-bottom: 0;
 }
 
-.mcp-permission-item__assistive-label {
+.unity-cli-loop-permission-item__assistive-label {
     display: none;
 }
 
-.mcp-segmented-control {
+.unity-cli-loop-segmented-control {
     flex-direction: row;
     margin-top: 4px;
     margin-bottom: 4px;
@@ -423,7 +423,7 @@
     border-color: rgba(128, 128, 128, 0.2);
 }
 
-.mcp-segmented-control__button {
+.unity-cli-loop-segmented-control__button {
     flex-grow: 1;
     height: 20px;
     margin: 0;
@@ -436,7 +436,7 @@
     font-size: 11px;
 }
 
-.mcp-segmented-control__button:hover {
+.unity-cli-loop-segmented-control__button:hover {
     background-color: rgba(46, 90, 136, 0.3);
     color: rgba(255, 255, 255, 0.7);
     border-width: 1px;
@@ -450,21 +450,21 @@
     border-color: rgba(178, 76, 76, 0.55);
 }
 
-.mcp-segmented-control__button--active {
+.unity-cli-loop-segmented-control__button--active {
     background-color: rgba(46, 90, 136, 0.8);
     color: #ffffff;
     border-width: 1px;
     border-color: rgba(70, 130, 200, 0.4);
 }
 
-.mcp-segmented-control__button--warning-active {
+.unity-cli-loop-segmented-control__button--warning-active {
     background-color: rgba(122, 39, 39, 0.85);
     color: #ffd7d7;
     border-width: 1px;
     border-color: rgba(178, 76, 76, 0.7);
 }
 
-.mcp-tool-toggle-row {
+.unity-cli-loop-tool-toggle-row {
     flex-direction: row;
     align-items: center;
     padding: 2px 4px 2px 14px;
@@ -472,19 +472,19 @@
     margin-bottom: 1px;
 }
 
-.mcp-tool-toggle-row__toggle {
+.unity-cli-loop-tool-toggle-row__toggle {
     margin-right: 4px;
 }
 
-.mcp-tool-toggle-row__label {
+.unity-cli-loop-tool-toggle-row__label {
     flex-grow: 1;
 }
 
-.mcp-tool-list-container {
+.unity-cli-loop-tool-list-container {
     padding-left: 0;
 }
 
-.mcp-tool-list-view {
+.unity-cli-loop-tool-list-view {
     margin-top: 4px;
     margin-left: 0;
     margin-right: 0;
@@ -492,16 +492,16 @@
     background-color: transparent;
 }
 
-.mcp-tool-list-row {
+.unity-cli-loop-tool-list-row {
     min-height: 24px;
 }
 
-.mcp-tool-list-row--header {
+.unity-cli-loop-tool-list-row--header {
     padding-top: 0;
     padding-bottom: 0;
 }
 
-.mcp-tool-registry-unavailable {
+.unity-cli-loop-tool-registry-unavailable {
     color: #888888;
     -unity-font-style: italic;
     margin-top: 4px;
@@ -510,7 +510,7 @@
 /* ===========================================
    Block: Security
    =========================================== */
-.mcp-security-warning {
+.unity-cli-loop-security-warning {
     background-color: #5c4a00;
     border-color: #7a6400;
     border-width: 1px;
@@ -521,22 +521,22 @@
     color: #ffcc00;
 }
 
-.mcp-section-header {
+.unity-cli-loop-section-header {
     -unity-font-style: bold;
     margin-top: 10px;
     margin-bottom: 4px;
 }
 
-.mcp-section-header--danger {
-    color: var(--mcp-color-warning);
+.unity-cli-loop-section-header--danger {
+    color: var(--unity-cli-loop-color-warning);
 }
 
-.mcp-security-level-field {
+.unity-cli-loop-security-level-field {
     margin-top: 4px;
     margin-bottom: 4px;
 }
 
-.mcp-security-level-description {
+.unity-cli-loop-security-level-description {
     background-color: var(--unity-colors-helpbox-background);
     border-color: var(--unity-colors-helpbox-border);
     border-width: 1px;
@@ -546,7 +546,7 @@
     white-space: normal;
 }
 
-.mcp-security-level-description--warning {
+.unity-cli-loop-security-level-description--warning {
     background-color: #5c4a00;
     border-color: #7a6400;
     color: #ffcc00;
@@ -555,20 +555,20 @@
 /* ===========================================
    Block: CLI Setup
    =========================================== */
-.mcp-cli-subsection-header {
+.unity-cli-loop-cli-subsection-header {
     -unity-font-style: bold;
     margin-top: 6px;
     margin-bottom: 4px;
 }
 
-.mcp-cli-separator {
+.unity-cli-loop-cli-separator {
     height: 1px;
     margin-top: 10px;
     margin-bottom: 6px;
     background-color: rgba(255, 255, 255, 0.12);
 }
 
-.mcp-cli-status-row {
+.unity-cli-loop-cli-status-row {
     flex-direction: row;
     align-items: center;
     margin-top: 4px;
@@ -579,22 +579,22 @@
     flex-grow: 1;
 }
 
-.mcp-cli-status-icon {
+.unity-cli-loop-cli-status-icon {
     width: 8px;
     height: 8px;
     border-radius: 4px;
     margin-right: 6px;
 }
 
-.mcp-cli-status-icon--installed {
-    background-color: var(--mcp-color-success);
+.unity-cli-loop-cli-status-icon--installed {
+    background-color: var(--unity-cli-loop-color-success);
 }
 
-.mcp-cli-status-icon--not-installed {
+.unity-cli-loop-cli-status-icon--not-installed {
     background-color: rgba(128, 128, 128, 0.5);
 }
 
-.mcp-button--refresh {
+.unity-cli-loop-button--refresh {
     width: 20px;
     height: 20px;
     min-width: 20px;
@@ -608,7 +608,7 @@
 /* ===========================================
    Block: GitHub Link
    =========================================== */
-.mcp-github-link {
+.unity-cli-loop-github-link {
     flex-direction: row;
     justify-content: flex-end;
     align-items: center;
@@ -623,34 +623,34 @@
     opacity: 0.78;
 }
 
-.mcp-github-link__label {
+.unity-cli-loop-github-link__label {
     font-size: 11px;
     color: #c3cad3;
     margin-right: 5px;
 }
 
-.mcp-github-link__icon {
+.unity-cli-loop-github-link__icon {
     width: 16px;
     height: 16px;
     opacity: 0.78;
     -unity-background-scale-mode: scale-to-fit;
 }
 
-.mcp-github-link--hover {
+.unity-cli-loop-github-link--hover {
     opacity: 1;
 }
 
-.mcp-github-link__label--hover {
+.unity-cli-loop-github-link__label--hover {
     color: #ffffff;
 }
 
-.mcp-github-link__icon--hover {
+.unity-cli-loop-github-link__icon--hover {
     opacity: 1;
 }
 
 /* ===========================================
    Utility: Hidden
    =========================================== */
-.mcp-hidden {
+.unity-cli-loop-hidden {
     display: none;
 }

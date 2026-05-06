@@ -134,8 +134,8 @@ namespace io.github.hatayama.UnityCliLoop
             Button restrictedButton = root.Q<Button>("security-level-restricted-button");
             Button fullAccessButton = root.Q<Button>("security-level-full-access-button");
 
-            Assert.IsTrue(restrictedButton.ClassListContains("mcp-segmented-control__button--active"));
-            Assert.IsFalse(fullAccessButton.ClassListContains("mcp-segmented-control__button--active"));
+            Assert.IsTrue(restrictedButton.ClassListContains("unity-cli-loop-segmented-control__button--active"));
+            Assert.IsFalse(fullAccessButton.ClassListContains("unity-cli-loop-segmented-control__button--active"));
         }
 
         [Test]
@@ -154,10 +154,10 @@ namespace io.github.hatayama.UnityCliLoop
             Button fullAccessButton = root.Q<Button>("security-level-full-access-button");
             Label description = root.Q<Label>("security-level-description");
 
-            Assert.IsFalse(restrictedButton.ClassListContains("mcp-segmented-control__button--active"));
-            Assert.IsTrue(fullAccessButton.ClassListContains("mcp-segmented-control__button--active"));
-            Assert.IsTrue(fullAccessButton.ClassListContains("mcp-segmented-control__button--warning-active"));
-            Assert.IsTrue(description.ClassListContains("mcp-security-level-description--warning"));
+            Assert.IsFalse(restrictedButton.ClassListContains("unity-cli-loop-segmented-control__button--active"));
+            Assert.IsTrue(fullAccessButton.ClassListContains("unity-cli-loop-segmented-control__button--active"));
+            Assert.IsTrue(fullAccessButton.ClassListContains("unity-cli-loop-segmented-control__button--warning-active"));
+            Assert.IsTrue(description.ClassListContains("unity-cli-loop-security-level-description--warning"));
         }
 
         private static VisualElement CreateRootElement()

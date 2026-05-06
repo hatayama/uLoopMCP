@@ -29,20 +29,20 @@ namespace io.github.hatayama.UnityCliLoop
 
             _statusValueLabel.text = data.Status;
 
-            _statusValueLabel.RemoveFromClassList("mcp-server-status__text--running");
-            _statusValueLabel.RemoveFromClassList("mcp-server-status__text--stopped");
-            _statusIndicator.RemoveFromClassList("mcp-server-status__indicator--running");
-            _statusIndicator.RemoveFromClassList("mcp-server-status__indicator--stopped");
+            _statusValueLabel.RemoveFromClassList("unity-cli-loop-server-status__text--running");
+            _statusValueLabel.RemoveFromClassList("unity-cli-loop-server-status__text--stopped");
+            _statusIndicator.RemoveFromClassList("unity-cli-loop-server-status__indicator--running");
+            _statusIndicator.RemoveFromClassList("unity-cli-loop-server-status__indicator--stopped");
 
             if (data.IsRunning)
             {
-                _statusValueLabel.AddToClassList("mcp-server-status__text--running");
-                _statusIndicator.AddToClassList("mcp-server-status__indicator--running");
+                _statusValueLabel.AddToClassList("unity-cli-loop-server-status__text--running");
+                _statusIndicator.AddToClassList("unity-cli-loop-server-status__indicator--running");
             }
             else
             {
-                _statusValueLabel.AddToClassList("mcp-server-status__text--stopped");
-                _statusIndicator.AddToClassList("mcp-server-status__indicator--stopped");
+                _statusValueLabel.AddToClassList("unity-cli-loop-server-status__text--stopped");
+                _statusIndicator.AddToClassList("unity-cli-loop-server-status__indicator--stopped");
             }
         }
     }

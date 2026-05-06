@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -365,6 +366,19 @@ namespace io.github.hatayama.UnityCliLoop
             Assert.That(offendingReferences, Is.Empty);
         }
 
+        [Test]
+        public void PresentationAssets_WhenLoaded_DoNotUseLegacyMcpStylePrefix()
+        {
+            // Tests that presentation USS, UXML, and C# class names do not keep the legacy MCP style prefix.
+            string legacyStylePrefix = "mcp" + "-";
+            string[] offendingReferences = ReadPresentationAssetPaths()
+                .SelectMany(path => FindForbiddenReferences(path, new[] { legacyStylePrefix }))
+                .OrderBy(reference => reference)
+                .ToArray();
+
+            Assert.That(offendingReferences, Is.Empty);
+        }
+
         private static string[] ReadResolvedReferences(string relativeAsmdefPath)
         {
             string asmdefPath = Path.Combine(UnityCliLoopPathResolver.GetProjectRoot(), relativeAsmdefPath);
@@ -403,6 +417,16 @@ namespace io.github.hatayama.UnityCliLoop
         {
             string presentationRoot = Path.Combine(UnityCliLoopPathResolver.GetProjectRoot(), "Packages", "src", "Editor", "Presentation");
             return Directory.GetFiles(presentationRoot, "*.cs", SearchOption.AllDirectories);
+        }
+
+        private static string[] ReadPresentationAssetPaths()
+        {
+            string presentationRoot = Path.Combine(UnityCliLoopPathResolver.GetProjectRoot(), "Packages", "src", "Editor", "Presentation");
+            return Directory.GetFiles(presentationRoot, "*", SearchOption.AllDirectories)
+                .Where(path => path.EndsWith(".cs", StringComparison.Ordinal)
+                    || path.EndsWith(".uxml", StringComparison.Ordinal)
+                    || path.EndsWith(".uss", StringComparison.Ordinal))
+                .ToArray();
         }
 
         private static string[] ReadProductionSourcePaths()

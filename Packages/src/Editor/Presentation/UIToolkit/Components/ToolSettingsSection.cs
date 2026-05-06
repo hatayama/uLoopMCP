@@ -228,11 +228,11 @@ namespace io.github.hatayama.UnityCliLoop
             };
 
             _securityLevelDescription.text = description;
-            _securityLevelDescription.RemoveFromClassList("mcp-security-level-description--warning");
+            _securityLevelDescription.RemoveFromClassList("unity-cli-loop-security-level-description--warning");
 
             if (currentLevel == DynamicCodeSecurityLevel.FullAccess)
             {
-                _securityLevelDescription.AddToClassList("mcp-security-level-description--warning");
+                _securityLevelDescription.AddToClassList("unity-cli-loop-security-level-description--warning");
             }
         }
 
@@ -248,10 +248,10 @@ namespace io.github.hatayama.UnityCliLoop
             bool isRestricted = currentLevel == DynamicCodeSecurityLevel.Restricted;
             bool isFullAccess = currentLevel == DynamicCodeSecurityLevel.FullAccess;
 
-            ViewDataBinder.ToggleClass(_securityLevelRestrictedButton, "mcp-segmented-control__button--active", isRestricted);
-            ViewDataBinder.ToggleClass(_securityLevelRestrictedButton, "mcp-segmented-control__button--warning-active", false);
-            ViewDataBinder.ToggleClass(_securityLevelFullAccessButton, "mcp-segmented-control__button--active", isFullAccess);
-            ViewDataBinder.ToggleClass(_securityLevelFullAccessButton, "mcp-segmented-control__button--warning-active", isFullAccess);
+            ViewDataBinder.ToggleClass(_securityLevelRestrictedButton, "unity-cli-loop-segmented-control__button--active", isRestricted);
+            ViewDataBinder.ToggleClass(_securityLevelRestrictedButton, "unity-cli-loop-segmented-control__button--warning-active", false);
+            ViewDataBinder.ToggleClass(_securityLevelFullAccessButton, "unity-cli-loop-segmented-control__button--active", isFullAccess);
+            ViewDataBinder.ToggleClass(_securityLevelFullAccessButton, "unity-cli-loop-segmented-control__button--warning-active", isFullAccess);
         }
 
         private void Rebuild(ToolSettingsSectionData data)
@@ -335,7 +335,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             Label label = new Label();
             label.name = "tool-list-status-label";
-            label.AddToClassList("mcp-tool-registry-unavailable");
+            label.AddToClassList("unity-cli-loop-tool-registry-unavailable");
             return label;
         }
 
@@ -343,7 +343,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             ListView listView = new ListView();
             listView.name = "tool-list-view";
-            listView.AddToClassList("mcp-tool-list-view");
+            listView.AddToClassList("unity-cli-loop-tool-list-view");
             listView.fixedItemHeight = ToolListRowHeight;
             listView.virtualizationMethod = CollectionVirtualizationMethod.FixedHeight;
             listView.selectionType = SelectionType.None;
@@ -357,12 +357,12 @@ namespace io.github.hatayama.UnityCliLoop
         private static VisualElement CreateToolListRowElement()
         {
             VisualElement row = new VisualElement();
-            row.AddToClassList("mcp-tool-toggle-row");
-            row.AddToClassList("mcp-tool-list-row");
+            row.AddToClassList("unity-cli-loop-tool-toggle-row");
+            row.AddToClassList("unity-cli-loop-tool-list-row");
 
             Toggle toggle = new Toggle();
             toggle.name = "tool-list-row-toggle";
-            toggle.AddToClassList("mcp-tool-toggle-row__toggle");
+            toggle.AddToClassList("unity-cli-loop-tool-toggle-row__toggle");
             toggle.RegisterValueChangedCallback(evt =>
             {
                 evt.StopPropagation();
@@ -377,7 +377,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             Label label = new Label();
             label.name = "tool-list-row-label";
-            label.AddToClassList("mcp-tool-toggle-row__label");
+            label.AddToClassList("unity-cli-loop-tool-toggle-row__label");
             label.RegisterCallback<ClickEvent>(evt =>
             {
                 evt.StopPropagation();
@@ -428,8 +428,8 @@ namespace io.github.hatayama.UnityCliLoop
             label.text = item.Label;
             label.tooltip = string.Empty;
             row.SetEnabled(true);
-            row.AddToClassList("mcp-tool-list-row--header");
-            label.AddToClassList("mcp-tool-group-header");
+            row.AddToClassList("unity-cli-loop-tool-list-row--header");
+            label.AddToClassList("unity-cli-loop-tool-group-header");
         }
 
         private void BindToolRow(VisualElement row, Toggle toggle, Label label, ToolListRowData item)
@@ -445,8 +445,8 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static void ResetRowClasses(VisualElement row, Label label)
         {
-            row.RemoveFromClassList("mcp-tool-list-row--header");
-            label.RemoveFromClassList("mcp-tool-group-header");
+            row.RemoveFromClassList("unity-cli-loop-tool-list-row--header");
+            label.RemoveFromClassList("unity-cli-loop-tool-group-header");
         }
 
         private void UnbindToolListRowElement(VisualElement row, int index)

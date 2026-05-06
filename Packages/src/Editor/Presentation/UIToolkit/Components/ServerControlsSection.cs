@@ -44,14 +44,14 @@ namespace io.github.hatayama.UnityCliLoop
             if (data.IsServerRunning)
             {
                 _toggleServerButton.text = "Stop Server";
-                _toggleServerButton.RemoveFromClassList("mcp-button--start");
-                _toggleServerButton.AddToClassList("mcp-button--stop");
+                _toggleServerButton.RemoveFromClassList("unity-cli-loop-button--start");
+                _toggleServerButton.AddToClassList("unity-cli-loop-button--stop");
             }
             else
             {
                 _toggleServerButton.text = "Start Server";
-                _toggleServerButton.RemoveFromClassList("mcp-button--stop");
-                _toggleServerButton.AddToClassList("mcp-button--start");
+                _toggleServerButton.RemoveFromClassList("unity-cli-loop-button--stop");
+                _toggleServerButton.AddToClassList("unity-cli-loop-button--start");
             }
         }
     }

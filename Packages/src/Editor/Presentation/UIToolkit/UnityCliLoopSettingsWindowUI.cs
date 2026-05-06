@@ -50,7 +50,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
 #if ULOOP_DEBUG
             VisualElement mainContainer = _root.Q<VisualElement>("main-scroll-view");
-            mainContainer?.AddToClassList("mcp-main-container--debug");
+            mainContainer?.AddToClassList("unity-cli-loop-main-container--debug");
 #endif
         }
 
@@ -135,9 +135,9 @@ namespace io.github.hatayama.UnityCliLoop
 
         private void HandleGitHubHoverChanged(bool isHovered)
         {
-            ViewDataBinder.ToggleClass(_githubLinkRow, "mcp-github-link--hover", isHovered);
-            ViewDataBinder.ToggleClass(_githubLinkLabel, "mcp-github-link__label--hover", isHovered);
-            ViewDataBinder.ToggleClass(_githubLinkIcon, "mcp-github-link__icon--hover", isHovered);
+            ViewDataBinder.ToggleClass(_githubLinkRow, "unity-cli-loop-github-link--hover", isHovered);
+            ViewDataBinder.ToggleClass(_githubLinkLabel, "unity-cli-loop-github-link__label--hover", isHovered);
+            ViewDataBinder.ToggleClass(_githubLinkIcon, "unity-cli-loop-github-link__icon--hover", isHovered);
         }
 
         public void UpdateToolSettings(ToolSettingsSectionData data)

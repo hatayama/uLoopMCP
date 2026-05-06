@@ -80,14 +80,14 @@ namespace io.github.hatayama.UnityCliLoop
         {
             if (data.IsChecking)
             {
-                ViewDataBinder.ToggleClass(_cliStatusIcon, "mcp-cli-status-icon--installed", false);
-                ViewDataBinder.ToggleClass(_cliStatusIcon, "mcp-cli-status-icon--not-installed", false);
+                ViewDataBinder.ToggleClass(_cliStatusIcon, "unity-cli-loop-cli-status-icon--installed", false);
+                ViewDataBinder.ToggleClass(_cliStatusIcon, "unity-cli-loop-cli-status-icon--not-installed", false);
                 _cliStatusLabel.text = "CLI: Checking...";
                 return;
             }
 
-            ViewDataBinder.ToggleClass(_cliStatusIcon, "mcp-cli-status-icon--installed", data.IsCliInstalled);
-            ViewDataBinder.ToggleClass(_cliStatusIcon, "mcp-cli-status-icon--not-installed", !data.IsCliInstalled);
+            ViewDataBinder.ToggleClass(_cliStatusIcon, "unity-cli-loop-cli-status-icon--installed", data.IsCliInstalled);
+            ViewDataBinder.ToggleClass(_cliStatusIcon, "unity-cli-loop-cli-status-icon--not-installed", !data.IsCliInstalled);
 
             if (data.IsCliInstalled && data.CliVersion != null)
             {
@@ -124,7 +124,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             _installCliButton.text = text;
             _installCliButton.SetEnabled(enabled);
-            ViewDataBinder.ToggleClass(_installCliButton, "mcp-button--disabled", !enabled);
+            ViewDataBinder.ToggleClass(_installCliButton, "unity-cli-loop-button--disabled", !enabled);
         }
 
         private void InitializeTargetFieldIfNeeded(CliSetupData data)
@@ -151,7 +151,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             bool enabled = data.IsCliInstalled && !data.IsChecking && !data.IsInstallingSkills;
             _refreshSkillsStateButton.SetEnabled(enabled);
-            ViewDataBinder.ToggleClass(_refreshSkillsStateButton, "mcp-button--disabled", !enabled);
+            ViewDataBinder.ToggleClass(_refreshSkillsStateButton, "unity-cli-loop-button--disabled", !enabled);
         }
 
         private void UpdateGroupSkillsToggle(CliSetupData data)
@@ -185,7 +185,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             _installSkillsButton.text = text;
             _installSkillsButton.SetEnabled(enabled);
-            ViewDataBinder.ToggleClass(_installSkillsButton, "mcp-button--disabled", !enabled);
+            ViewDataBinder.ToggleClass(_installSkillsButton, "unity-cli-loop-button--disabled", !enabled);
         }
 
         internal static string GetInstallCliButtonText(
