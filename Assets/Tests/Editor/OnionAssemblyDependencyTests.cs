@@ -477,6 +477,17 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
+        public void ServerInstanceFactoryRegistry_WhenLoaded_CompilesUnderApplicationAssembly()
+        {
+            // Tests that application code depends on a replaceable server factory boundary.
+            string registryAssemblyName = typeof(UnityCliLoopServerInstanceFactoryRegistry).Assembly.GetName().Name;
+            string factoryAssemblyName = typeof(IUnityCliLoopServerInstanceFactory).Assembly.GetName().Name;
+
+            Assert.That(registryAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+            Assert.That(factoryAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+        }
+
+        [Test]
         public void PresentationSources_WhenLoaded_DoNotReferenceServerInternals()
         {
             // Tests that Presentation does not depend directly on server transport/controller internals.

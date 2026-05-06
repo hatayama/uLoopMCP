@@ -22,6 +22,43 @@ namespace io.github.hatayama.UnityCliLoop
         void StopServer();
     }
 
+    public interface IUnityCliLoopServerInstanceFactory
+    {
+        IUnityCliLoopServerInstance Create();
+    }
+
+    public static class UnityCliLoopServerInstanceFactoryRegistry
+    {
+        private static readonly object SyncRoot = new object();
+        private static IUnityCliLoopServerInstanceFactory _factory = new UnityCliLoopBridgeServerInstanceFactory();
+
+        public static void RegisterFactory(IUnityCliLoopServerInstanceFactory factory)
+        {
+            System.Diagnostics.Debug.Assert(factory != null, "factory must not be null");
+
+            lock (SyncRoot)
+            {
+                _factory = factory;
+            }
+        }
+
+        public static IUnityCliLoopServerInstance Create()
+        {
+            lock (SyncRoot)
+            {
+                return _factory.Create();
+            }
+        }
+    }
+
+    internal sealed class UnityCliLoopBridgeServerInstanceFactory : IUnityCliLoopServerInstanceFactory
+    {
+        public IUnityCliLoopServerInstance Create()
+        {
+            return new UnityCliLoopBridgeServer();
+        }
+    }
+
     // Related classes:
     // - UnityCliLoopBridgeServer: The bridge server instance that this class manages.
     // - UnityCliLoopSettingsWindow: The UI for starting and stopping the server.
@@ -363,7 +400,7 @@ namespace io.github.hatayama.UnityCliLoop
                     bridgeServer = null;
                 }
 
-                bridgeServer = new UnityCliLoopBridgeServer();
+                bridgeServer = UnityCliLoopServerInstanceFactoryRegistry.Create();
                 bridgeServer.StartServer();
                 SaveRunningServerState();
 
@@ -654,7 +691,7 @@ namespace io.github.hatayama.UnityCliLoop
                         }
                     }
 
-                    server = new UnityCliLoopBridgeServer();
+                    server = UnityCliLoopServerInstanceFactoryRegistry.Create();
                     server.StartServer(clearServerStartingLockWhenReady);
                     bridgeServer = server;
                     VibeLogger.LogInfo("binding_success", $"endpoint={server.Endpoint}");

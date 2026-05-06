@@ -10,7 +10,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             try
             {
-                IUnityCliLoopServerInstance server = new UnityCliLoopBridgeServer();
+                IUnityCliLoopServerInstance server = UnityCliLoopServerInstanceFactoryRegistry.Create();
                 server.StartServer(clearServerStartingLockWhenReady);
                 return ServiceResult<IUnityCliLoopServerInstance>.SuccessResult(server);
             }
