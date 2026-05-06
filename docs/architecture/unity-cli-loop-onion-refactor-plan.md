@@ -30,19 +30,18 @@
 - Removed manual built-in tool registration from `UnityCliLoopToolRegistry`.
 - Registered bundled tools and extension tools through the same `[UnityCliLoopTool]` attribute discovery path.
 - Split `Assets/Editor/CustomCommandSamples` into `UnityCLILoop.CustomCommandSamples.Editor`, which references only `UnityCLILoop.ToolContracts`.
-- Moved low-dependency bundled tools into `UnityCLILoop.FirstPartyTools.Editor`:
-  - `focus-window`
 - Moved `get-version` out of the extension-facing tool registry and kept it as an internal bridge command for CLI readiness and diagnostics.
+- Removed `focus-window` from the Unity-side tool registry because it is implemented as a native Go CLI command.
 - Removed legacy MCP-era development tools from the runtime registry:
   - `ping`
   - `debug-sleep`
-- Kept the moved bundled tools on the same public `UnityCLILoop.ToolContracts` surface as third-party tools.
+- Kept `UnityCLILoop.FirstPartyTools.Editor` as the future first-party plugin boundary, even though no tool currently lives there.
 - Added registry tests proving:
   - bundled tools are discovered through the attribute path.
   - `get-logs` is first-party after the assembly rename.
-  - moved bundled plugin tools are first-party from `UnityCLILoop.FirstPartyTools.Editor`.
   - `get-version` is not registered as an extension-facing tool.
   - `get-version` still executes as an internal bridge command.
+  - `focus-window` is not registered as a Unity-side tool.
   - legacy MCP-era development tools are not registered.
   - `hello-world` is registered as an extension tool.
   - the sample extension asmdef references only `UnityCLILoop.ToolContracts`.

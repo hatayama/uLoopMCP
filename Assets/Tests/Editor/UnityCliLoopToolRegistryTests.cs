@@ -30,20 +30,12 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
-        public void IsThirdPartyTool_WhenToolComesFromFirstPartyToolsAssembly_ReturnsFalse()
+        public void Constructor_WhenFocusWindowIsNativeCliCommand_DoesNotRegisterItAsTool()
         {
-            // Tests that bundled plugin tools remain first-party after moving out of the application assembly.
+            // Tests that focus-window stays a native CLI command instead of an extension-facing Unity tool.
             UnityCliLoopToolRegistry registry = new UnityCliLoopToolRegistry();
-            string[] toolNames = new[]
-            {
-                "focus-window"
-            };
 
-            foreach (string toolName in toolNames)
-            {
-                Assert.That(registry.IsToolRegistered(toolName), Is.True);
-                Assert.That(registry.IsThirdPartyTool(toolName), Is.False);
-            }
+            Assert.That(registry.IsToolRegistered("focus-window"), Is.False);
         }
 
         [Test]
