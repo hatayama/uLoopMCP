@@ -1,7 +1,9 @@
 {
     "name": "uLoopMCP.Editor.Shared",
     "rootNamespace": "",
-    "references": [],
+    "references": [
+        "GUID:5c4588558a3624eacbce0f50007cf1eb"
+    ],
     "includePlatforms": [
         "Editor"
     ],
