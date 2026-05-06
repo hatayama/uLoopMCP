@@ -1084,6 +1084,12 @@ namespace io.github.hatayama.UnityCliLoop
 
             Assert.That(runTestsSkill.ToolName, Is.EqualTo("run-tests"));
             Assert.That(runTestsSkill.SkillFiles.Keys, Does.Contain(SkillInstallLayout.SkillFileName));
+
+            SkillInstallLayout.SkillSourceInfo findGameObjectsSkill = skillSources
+                .Single(skill => skill.Name == "uloop-find-game-objects");
+
+            Assert.That(findGameObjectsSkill.ToolName, Is.EqualTo("find-game-objects"));
+            Assert.That(findGameObjectsSkill.SkillFiles.Keys, Does.Contain(SkillInstallLayout.SkillFileName));
         }
 
         // Tests that internal skill metadata maps back to the hidden tool name only.

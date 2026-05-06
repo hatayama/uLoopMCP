@@ -11,6 +11,7 @@ namespace io.github.hatayama.UnityCliLoop
         public IUnityCliLoopDynamicCodeExecutionService DynamicCodeExecution { get; }
         public IUnityCliLoopHierarchyService Hierarchy { get; }
         public IUnityCliLoopTestExecutionService TestExecution { get; }
+        public IUnityCliLoopGameObjectSearchService GameObjectSearch { get; }
 
         public UnityCliLoopToolHostServices()
         {
@@ -20,6 +21,7 @@ namespace io.github.hatayama.UnityCliLoop
             DynamicCodeExecution = new UnityCliLoopDynamicCodeExecutionHostService();
             Hierarchy = new GetHierarchyUseCase(new HierarchyService(), new HierarchySerializer());
             TestExecution = new RunTestsUseCase();
+            GameObjectSearch = new FindGameObjectsUseCase(new GameObjectFinderService(), new ComponentSerializer());
         }
     }
 }

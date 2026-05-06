@@ -212,6 +212,30 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
+        public void GameObjectSearchHostServiceContract_WhenLoaded_CompilesUnderToolContractsAssembly()
+        {
+            // Tests that bundled GameObject search tools consume platform behavior through the public host-service boundary.
+            string serviceAssemblyName = typeof(IUnityCliLoopGameObjectSearchService).Assembly.GetName().Name;
+            string requestAssemblyName = typeof(UnityCliLoopGameObjectSearchRequest).Assembly.GetName().Name;
+            string resultAssemblyName = typeof(UnityCliLoopGameObjectSearchResult).Assembly.GetName().Name;
+            string componentAssemblyName = typeof(ComponentInfo).Assembly.GetName().Name;
+
+            Assert.That(serviceAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
+            Assert.That(requestAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
+            Assert.That(resultAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
+            Assert.That(componentAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
+        }
+
+        [Test]
+        public void FindGameObjectsUseCase_WhenLoaded_CompilesUnderApplicationAssembly()
+        {
+            // Tests that the application layer owns the GameObject search host-service implementation.
+            string useCaseAssemblyName = typeof(FindGameObjectsUseCase).Assembly.GetName().Name;
+
+            Assert.That(useCaseAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+        }
+
+        [Test]
         public void PreloadMetadataValidationPorts_WhenLoaded_CompileUnderMetadataValidationAssembly()
         {
             // Tests that preload metadata validation contracts are owned by the metadata validation module.

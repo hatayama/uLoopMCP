@@ -33,6 +33,7 @@ namespace io.github.hatayama.UnityCliLoop
         IUnityCliLoopDynamicCodeExecutionService DynamicCodeExecution { get; }
         IUnityCliLoopHierarchyService Hierarchy { get; }
         IUnityCliLoopTestExecutionService TestExecution { get; }
+        IUnityCliLoopGameObjectSearchService GameObjectSearch { get; }
     }
 
     /// <summary>

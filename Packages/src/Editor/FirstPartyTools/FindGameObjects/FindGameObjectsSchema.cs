@@ -18,12 +18,4 @@ namespace io.github.hatayama.UnityCliLoop
         public bool IncludeInheritedProperties { get; set; } = false;
     }
     
-    public enum SearchMode
-    {
-        Exact = 0,      // Exact match (default)
-        Path = 1,       // Hierarchy path search (e.g. "Canvas/Button")
-        Regex = 2,      // Regular expression
-        Contains = 3,   // Partial match
-        Selected = 4    // Get currently selected GameObjects in Unity Editor
-    }
 }

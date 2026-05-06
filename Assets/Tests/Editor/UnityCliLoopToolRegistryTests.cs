@@ -21,6 +21,7 @@ namespace io.github.hatayama.UnityCliLoop
             Assert.That(registry.IsToolRegistered("clear-console"), Is.True);
             Assert.That(registry.IsToolRegistered("get-hierarchy"), Is.True);
             Assert.That(registry.IsToolRegistered("run-tests"), Is.True);
+            Assert.That(registry.IsToolRegistered("find-game-objects"), Is.True);
         }
 
         [Test]
@@ -112,6 +113,19 @@ namespace io.github.hatayama.UnityCliLoop
             Assert.That(toolType, Is.Not.Null);
             Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo("UnityCLILoop.FirstPartyTools.Editor"));
             Assert.That(registry.IsThirdPartyTool("run-tests"), Is.False);
+        }
+
+        [Test]
+        public void GetToolType_WhenFindGameObjectsComesFromFirstPartyToolsAssembly_ReturnsBundledPluginType()
+        {
+            // Tests that find-game-objects is a bundled plugin instead of an application-layer tool.
+            UnityCliLoopToolRegistry registry = new UnityCliLoopToolRegistry();
+
+            System.Type toolType = registry.GetToolType("find-game-objects");
+
+            Assert.That(toolType, Is.Not.Null);
+            Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo("UnityCLILoop.FirstPartyTools.Editor"));
+            Assert.That(registry.IsThirdPartyTool("find-game-objects"), Is.False);
         }
 
         [Test]

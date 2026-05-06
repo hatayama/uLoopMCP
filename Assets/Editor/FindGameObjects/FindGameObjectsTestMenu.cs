@@ -10,7 +10,7 @@ namespace io.github.hatayama.UnityCliLoop
         [MenuItem("UnityCliLoop/Debug/FindGameObjects Tests/Test Camera Search")]
         public static async void TestFindGameObjectsCamera()
         {
-            FindGameObjectsTool tool = new FindGameObjectsTool();
+            FindGameObjectsTool tool = CreateTool();
             
             JObject parameters = new JObject
             {
@@ -27,11 +27,11 @@ namespace io.github.hatayama.UnityCliLoop
                 {
                     Debug.Log($"Found {findResponse.totalFound} objects with Camera");
                     
-                    foreach (var result in findResponse.results)
+                    foreach (FindGameObjectResult result in findResponse.results)
                     {
                         Debug.Log($"- {result.name}: {result.components.Length} components");
                         
-                        foreach (var component in result.components)
+                        foreach (ComponentInfo component in result.components)
                         {
                             if (component.type == "Camera")
                             {
@@ -52,7 +52,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             Debug.Log("[FindGameObjectsTestMenu] Starting Main Camera path search test...");
             
-            FindGameObjectsTool tool = new FindGameObjectsTool();
+            FindGameObjectsTool tool = CreateTool();
             
             // Search for Main Camera by path
             JObject parameters = new JObject
@@ -71,12 +71,12 @@ namespace io.github.hatayama.UnityCliLoop
                 {
                     Debug.Log($"[FindGameObjectsTestMenu] Found {findResponse.totalFound} objects");
                     
-                    foreach (var result in findResponse.results)
+                    foreach (FindGameObjectResult result in findResponse.results)
                     {
                         Debug.Log($"[FindGameObjectsTestMenu] - {result.name} at {result.path}");
                         Debug.Log($"[FindGameObjectsTestMenu]   Components: {result.components.Length}");
                         
-                        foreach (var component in result.components)
+                        foreach (ComponentInfo component in result.components)
                         {
                             Debug.Log($"[FindGameObjectsTestMenu]   - {component.type}: {component.properties?.Length ?? 0} properties");
                         }
@@ -94,6 +94,25 @@ namespace io.github.hatayama.UnityCliLoop
             }
             
             Debug.Log("[FindGameObjectsTestMenu] Test completed");
+        }
+
+        private static FindGameObjectsTool CreateTool()
+        {
+            FindGameObjectsTool tool = new FindGameObjectsTool();
+            tool.InitializeHostServices(new FindGameObjectsDebugHostServices());
+            return tool;
+        }
+
+        private sealed class FindGameObjectsDebugHostServices : IUnityCliLoopToolHostServices
+        {
+            public IUnityCliLoopConsoleLogService ConsoleLogs => throw new System.NotSupportedException();
+            public IUnityCliLoopConsoleClearService ConsoleClear => throw new System.NotSupportedException();
+            public IUnityCliLoopCompilationService Compilation => throw new System.NotSupportedException();
+            public IUnityCliLoopDynamicCodeExecutionService DynamicCodeExecution => throw new System.NotSupportedException();
+            public IUnityCliLoopHierarchyService Hierarchy => throw new System.NotSupportedException();
+            public IUnityCliLoopTestExecutionService TestExecution => throw new System.NotSupportedException();
+            public IUnityCliLoopGameObjectSearchService GameObjectSearch { get; } =
+                new FindGameObjectsUseCase(new GameObjectFinderService(), new ComponentSerializer());
         }
     }
 }

@@ -10,7 +10,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// Related classes: FindGameObjectsTool, GameObjectFinderService, ComponentSerializer
     /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - UseCase + Tool Pattern (DDD Integration)
     /// </summary>
-    public class FindGameObjectsUseCase : AbstractUseCase<FindGameObjectsSchema, FindGameObjectsResponse>
+    public class FindGameObjectsUseCase : IUnityCliLoopGameObjectSearchService
     {
         private readonly GameObjectFinderService _finderService;
         private readonly ComponentSerializer _componentSerializer;
@@ -24,14 +24,16 @@ namespace io.github.hatayama.UnityCliLoop
         /// Execute GameObject search processing
         /// </summary>
         /// <param name="parameters">Search parameters</param>
-        /// <param name="cancellationToken">Cancellation control token</param>
+        /// <param name="ct">Cancellation control token</param>
         /// <returns>Search result</returns>
-        public override Task<FindGameObjectsResponse> ExecuteAsync(FindGameObjectsSchema parameters, CancellationToken cancellationToken)
+        public Task<UnityCliLoopGameObjectSearchResult> ExecuteAsync(
+            UnityCliLoopGameObjectSearchRequest parameters,
+            CancellationToken ct)
         {
             // Handle Selected mode separately
             if (parameters.SearchMode == SearchMode.Selected)
             {
-                return Task.FromResult(ExecuteSelectedMode(parameters, cancellationToken));
+                return Task.FromResult(ExecuteSelectedMode(parameters, ct));
             }
 
             // 1. Search criteria validation (skip for Selected mode)
@@ -40,16 +42,16 @@ namespace io.github.hatayama.UnityCliLoop
                 string.IsNullOrEmpty(parameters.Tag) &&
                 !parameters.Layer.HasValue)
             {
-                return Task.FromResult(new FindGameObjectsResponse
+                return Task.FromResult(new UnityCliLoopGameObjectSearchResult
                 {
-                    results = new FindGameObjectResult[0],
-                    totalFound = 0,
-                    errorMessage = "At least one search criterion must be provided"
+                    Results = new UnityCliLoopGameObjectResult[0],
+                    TotalFound = 0,
+                    ErrorMessage = "At least one search criterion must be provided"
                 });
             }
 
             // 2. GameObject search execution
-            cancellationToken.ThrowIfCancellationRequested();
+            ct.ThrowIfCancellationRequested();
             
             try
             {
@@ -67,26 +69,26 @@ namespace io.github.hatayama.UnityCliLoop
                 GameObjectDetails[] foundObjects = _finderService.FindGameObjectsAdvanced(options);
             
                 // 3. Result conversion and formatting
-                cancellationToken.ThrowIfCancellationRequested();
+                ct.ThrowIfCancellationRequested();
                 
-                List<FindGameObjectResult> results = new List<FindGameObjectResult>();
+                List<UnityCliLoopGameObjectResult> results = new List<UnityCliLoopGameObjectResult>();
                 
                 foreach (GameObjectDetails details in foundObjects)
                 {
                     // Check cancellation less frequently for better performance
                     if (results.Count % 100 == 0)
-                        cancellationToken.ThrowIfCancellationRequested();
+                        ct.ThrowIfCancellationRequested();
                     
                     try
                     {
-                        FindGameObjectResult result = new FindGameObjectResult
+                        UnityCliLoopGameObjectResult result = new UnityCliLoopGameObjectResult
                         {
-                            name = details.Name,
-                            path = details.Path,
-                            isActive = details.IsActive,
-                            tag = details.GameObject.tag,
-                            layer = details.GameObject.layer,
-                            components = _componentSerializer.SerializeComponents(details.GameObject)
+                            Name = details.Name,
+                            Path = details.Path,
+                            IsActive = details.IsActive,
+                            Tag = details.GameObject.tag,
+                            Layer = details.GameObject.layer,
+                            Components = _componentSerializer.SerializeComponents(details.GameObject)
                         };
                         
                         results.Add(result);
@@ -104,10 +106,10 @@ namespace io.github.hatayama.UnityCliLoop
                     }
                 }
                 
-                FindGameObjectsResponse response = new FindGameObjectsResponse
+                UnityCliLoopGameObjectSearchResult response = new UnityCliLoopGameObjectSearchResult
                 {
-                    results = results.ToArray(),
-                    totalFound = results.Count
+                    Results = results.ToArray(),
+                    TotalFound = results.Count
                 };
                 
                 // Underlying services are synchronous; wrapping in Task.FromResult for API consistency.
@@ -123,11 +125,11 @@ namespace io.github.hatayama.UnityCliLoop
                     new { searchParameters = parameters, error = ex.Message }
                 );
                 
-                return Task.FromResult(new FindGameObjectsResponse
+                return Task.FromResult(new UnityCliLoopGameObjectSearchResult
                 {
-                    results = new FindGameObjectResult[0],
-                    totalFound = 0,
-                    errorMessage = "Search execution failed. Please check the logs for details."
+                    Results = new UnityCliLoopGameObjectResult[0],
+                    TotalFound = 0,
+                    ErrorMessage = "Search execution failed. Please check the logs for details."
                 });
             }
         }
@@ -136,41 +138,43 @@ namespace io.github.hatayama.UnityCliLoop
         /// Execute Selected mode: get currently selected GameObjects in Unity Editor
         /// Single selection returns JSON directly, multiple selection exports to file
         /// </summary>
-        private FindGameObjectsResponse ExecuteSelectedMode(FindGameObjectsSchema parameters, CancellationToken cancellationToken)
+        private UnityCliLoopGameObjectSearchResult ExecuteSelectedMode(
+            UnityCliLoopGameObjectSearchRequest parameters,
+            CancellationToken ct)
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            ct.ThrowIfCancellationRequested();
 
             GameObjectDetails[] selectedObjects = _finderService.FindSelectedGameObjects(parameters.IncludeInactive);
 
             // No selection
             if (selectedObjects.Length == 0)
             {
-                return new FindGameObjectsResponse
+                return new UnityCliLoopGameObjectSearchResult
                 {
-                    results = new FindGameObjectResult[0],
-                    totalFound = 0,
-                    message = "No GameObjects are currently selected in Unity Editor."
+                    Results = new UnityCliLoopGameObjectResult[0],
+                    TotalFound = 0,
+                    Message = "No GameObjects are currently selected in Unity Editor."
                 };
             }
 
             // Convert to FindGameObjectResult array
-            List<FindGameObjectResult> results = new List<FindGameObjectResult>();
-            List<ProcessingError> errors = new List<ProcessingError>();
+            List<UnityCliLoopGameObjectResult> results = new List<UnityCliLoopGameObjectResult>();
+            List<UnityCliLoopGameObjectProcessingError> errors = new List<UnityCliLoopGameObjectProcessingError>();
 
             foreach (GameObjectDetails details in selectedObjects)
             {
-                cancellationToken.ThrowIfCancellationRequested();
+                ct.ThrowIfCancellationRequested();
 
                 try
                 {
-                    FindGameObjectResult result = new FindGameObjectResult
+                    UnityCliLoopGameObjectResult result = new UnityCliLoopGameObjectResult
                     {
-                        name = details.Name,
-                        path = details.Path,
-                        isActive = details.IsActive,
-                        tag = details.GameObject.tag,
-                        layer = details.GameObject.layer,
-                        components = _componentSerializer.SerializeComponents(details.GameObject)
+                        Name = details.Name,
+                        Path = details.Path,
+                        IsActive = details.IsActive,
+                        Tag = details.GameObject.tag,
+                        Layer = details.GameObject.layer,
+                        Components = _componentSerializer.SerializeComponents(details.GameObject)
                     };
 
                     results.Add(result);
@@ -183,51 +187,58 @@ namespace io.github.hatayama.UnityCliLoop
                         $"Failed to process selected GameObject: {details.Name}",
                         new { gameObjectName = details.Name, gameObjectPath = details.Path, error = ex.Message }
                     );
-                    errors.Add(new ProcessingError
+                    errors.Add(new UnityCliLoopGameObjectProcessingError
                     {
-                        gameObjectName = details.Name,
-                        gameObjectPath = details.Path,
-                        error = ex.Message
+                        GameObjectName = details.Name,
+                        GameObjectPath = details.Path,
+                        Error = ex.Message
                     });
                 }
             }
 
-            FindGameObjectResult[] resultArray = results.ToArray();
-            ProcessingError[] errorArray = errors.Count > 0 ? errors.ToArray() : null;
+            UnityCliLoopGameObjectResult[] resultArray = results.ToArray();
+            UnityCliLoopGameObjectProcessingError[] errorArray = errors.Count > 0 ? errors.ToArray() : null;
 
             // Single selection: return JSON directly
             if (resultArray.Length == 1)
             {
-                return new FindGameObjectsResponse
+                return new UnityCliLoopGameObjectSearchResult
                 {
-                    results = resultArray,
-                    totalFound = 1,
-                    processingErrors = errorArray
+                    Results = resultArray,
+                    TotalFound = 1,
+                    ProcessingErrors = errorArray
                 };
             }
 
             // No successful results
             if (resultArray.Length == 0)
             {
-                return new FindGameObjectsResponse
+                return new UnityCliLoopGameObjectSearchResult
                 {
-                    results = new FindGameObjectResult[0],
-                    totalFound = 0,
-                    processingErrors = errorArray,
-                    message = "All selected GameObjects failed to process."
+                    Results = new UnityCliLoopGameObjectResult[0],
+                    TotalFound = 0,
+                    ProcessingErrors = errorArray,
+                    Message = "All selected GameObjects failed to process."
                 };
             }
 
             // Multiple selection: export to file
             string filePath = FindGameObjectsResultExporter.ExportResults(resultArray);
 
-            return new FindGameObjectsResponse
+            return new UnityCliLoopGameObjectSearchResult
             {
-                resultsFilePath = filePath,
-                totalFound = resultArray.Length,
-                message = $"Multiple objects selected ({resultArray.Length}). Results exported to file.",
-                processingErrors = errorArray
+                ResultsFilePath = filePath,
+                TotalFound = resultArray.Length,
+                Message = $"Multiple objects selected ({resultArray.Length}). Results exported to file.",
+                ProcessingErrors = errorArray
             };
+        }
+
+        public Task<UnityCliLoopGameObjectSearchResult> FindGameObjectsAsync(
+            UnityCliLoopGameObjectSearchRequest request,
+            CancellationToken ct)
+        {
+            return ExecuteAsync(request, ct);
         }
     }
 }
