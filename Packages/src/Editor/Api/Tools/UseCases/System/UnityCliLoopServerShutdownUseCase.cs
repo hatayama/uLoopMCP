@@ -32,7 +32,7 @@ namespace io.github.hatayama.UnityCliLoop
                 cancellationToken.ThrowIfCancellationRequested();
                 
                 // 1. Get current server instance
-                UnityCliLoopBridgeServer currentServer = UnityCliLoopServerController.CurrentServer;
+                IUnityCliLoopServerInstance currentServer = UnityCliLoopServerController.CurrentServer;
                 if (currentServer == null)
                 {
                     response.Success = true;
@@ -43,7 +43,7 @@ namespace io.github.hatayama.UnityCliLoop
                 cancellationToken.ThrowIfCancellationRequested();
                 
                 // 2. Server stop processing - UnityCliLoopServerStartupService
-                var stopResult = _startupService.StopServer(currentServer);
+                ServiceResult<bool> stopResult = _startupService.StopServer(currentServer);
                 if (!stopResult.Success)
                 {
                     response.Success = false;
@@ -54,7 +54,7 @@ namespace io.github.hatayama.UnityCliLoop
                 cancellationToken.ThrowIfCancellationRequested();
                 
                 // 3. Session state clear
-                var sessionUpdateResult = _startupService.UpdateSessionState(false);
+                ServiceResult<bool> sessionUpdateResult = _startupService.UpdateSessionState(false);
                 if (!sessionUpdateResult.Success)
                 {
                     response.Success = false;

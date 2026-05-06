@@ -20,9 +20,6 @@ namespace io.github.hatayama.UnityCliLoop
         /// </summary>
         public string Message { get; set; }
 
-        /// <summary>
-        /// Created server instance
-        /// </summary>
-        public UnityCliLoopBridgeServer ServerInstance { get; set; }
+        public IUnityCliLoopServerInstance ServerInstance { get; set; }
     }
 }

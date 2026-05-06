@@ -48,7 +48,7 @@ namespace io.github.hatayama.UnityCliLoop
                 }
 
                 // 4. Server startup - UnityCliLoopServerStartupService
-                ServiceResult<UnityCliLoopBridgeServer> serverResult = _startupService.StartServer(
+                ServiceResult<IUnityCliLoopServerInstance> serverResult = _startupService.StartServer(
                     !parameters.PreserveStartupLockUntilExplicitRelease);
                 if (!serverResult.Success)
                 {
@@ -56,7 +56,7 @@ namespace io.github.hatayama.UnityCliLoop
                     response.Message = serverResult.ErrorMessage;
                     return Task.FromResult(response);
                 }
-                UnityCliLoopBridgeServer serverInstance = serverResult.Data;
+                IUnityCliLoopServerInstance serverInstance = serverResult.Data;
 
                 // 5. Session state update
                 ServiceResult<bool> sessionUpdateResult =

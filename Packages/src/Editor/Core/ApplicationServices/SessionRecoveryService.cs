@@ -7,7 +7,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// <summary>
     /// Application service responsible for session recovery processing
     /// Single responsibility: Server session recovery and retry control
-    /// Related classes: UnityCliLoopEditorSettings, UnityCliLoopBridgeServer
+    /// Related classes: UnityCliLoopEditorSettings, IUnityCliLoopServerInstance
     /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - Application Service Layer (Single Function Implementation)
     /// </summary>
     public static class SessionRecoveryService
@@ -24,7 +24,7 @@ namespace io.github.hatayama.UnityCliLoop
             bool isAfterCompile = UnityCliLoopEditorSettings.GetIsAfterCompile();
 
             // If server is already running
-            UnityCliLoopBridgeServer currentServer = UnityCliLoopServerController.CurrentServer;
+            IUnityCliLoopServerInstance currentServer = UnityCliLoopServerController.CurrentServer;
             if (currentServer?.IsRunning == true)
             {
                 // Server is running, clean up lock files
@@ -74,13 +74,13 @@ namespace io.github.hatayama.UnityCliLoop
             try
             {
                 // Stop existing server instance
-                UnityCliLoopBridgeServer currentServer = UnityCliLoopServerController.CurrentServer;
+                IUnityCliLoopServerInstance currentServer = UnityCliLoopServerController.CurrentServer;
                 if (currentServer != null)
                 {
                     currentServer.Dispose();
                 }
 
-                UnityCliLoopBridgeServer newServer = new UnityCliLoopBridgeServer();
+                IUnityCliLoopServerInstance newServer = new UnityCliLoopBridgeServer();
                 newServer.StartServer();
                 UnityCliLoopServerController.RegisterRecoveredServer(newServer);
 

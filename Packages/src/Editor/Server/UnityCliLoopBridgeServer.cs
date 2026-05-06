@@ -14,7 +14,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// Unity CLI bridge server.
     /// Accepts project-local CLI connections and handles JSON-RPC 2.0 communication.
     /// </summary>
-    public class UnityCliLoopBridgeServer : IDisposable
+    public class UnityCliLoopBridgeServer : IUnityCliLoopServerInstance
     {
         // Events for server lifecycle notifications
         public static event System.Action OnServerStopping;

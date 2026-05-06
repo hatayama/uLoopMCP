@@ -7,6 +7,21 @@ using UnityEngine;
 
 namespace io.github.hatayama.UnityCliLoop
 {
+    /// <summary>
+    /// Application-owned handle for the running server instance.
+    /// Server internals implement this handle so application use cases do not expose transport classes.
+    /// </summary>
+    public interface IUnityCliLoopServerInstance : IDisposable
+    {
+        bool IsRunning { get; }
+
+        string Endpoint { get; }
+
+        void StartServer(bool clearServerStartingLockWhenReady = true);
+
+        void StopServer();
+    }
+
     // Related classes:
     // - UnityCliLoopBridgeServer: The bridge server instance that this class manages.
     // - UnityCliLoopSettingsWindow: The UI for starting and stopping the server.
@@ -17,7 +32,7 @@ namespace io.github.hatayama.UnityCliLoop
     [InitializeOnLoad]
     public static class UnityCliLoopServerController
     {
-        private static UnityCliLoopBridgeServer bridgeServer;
+        private static IUnityCliLoopServerInstance bridgeServer;
         private static readonly SemaphoreSlim StartupSemaphore = new SemaphoreSlim(1, 1);
         private static long startupProtectionUntilTicks = 0; // UTC ticks
         private static Task _currentRecoveryTask;
@@ -31,14 +46,14 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// The current Unity CLI bridge server instance.
         /// </summary>
-        public static UnityCliLoopBridgeServer CurrentServer => bridgeServer;
+        public static IUnityCliLoopServerInstance CurrentServer => bridgeServer;
 
         /// <summary>
         /// Whether the server is running.
         /// </summary>
         public static bool IsServerRunning => bridgeServer?.IsRunning ?? false;
 
-        internal static void RegisterRecoveredServer(UnityCliLoopBridgeServer server)
+        internal static void RegisterRecoveredServer(IUnityCliLoopServerInstance server)
         {
             System.Diagnostics.Debug.Assert(server != null, "server must not be null");
 
@@ -618,7 +633,7 @@ namespace io.github.hatayama.UnityCliLoop
             while (true)
             {
                 VibeLogger.LogInfo("binding_attempt", "transport=project_ipc");
-                UnityCliLoopBridgeServer server = null;
+                IUnityCliLoopServerInstance server = null;
                 try
                 {
                     // Defensive: dispose any non-running stale instance before creating a new one

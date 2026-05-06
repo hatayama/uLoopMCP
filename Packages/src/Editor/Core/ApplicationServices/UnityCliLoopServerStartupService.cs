@@ -1,41 +1,26 @@
 namespace io.github.hatayama.UnityCliLoop
 {
     /// <summary>
-    /// Application service responsible for Unity CLI bridge startup operations.
-    /// Handles server instance creation, startup, and lifecycle management.
-    /// 
-    /// Related classes:
-    /// - UnityCliLoopBridgeServer: The actual server instance being managed
-    /// - UnityCliLoopEditorSettings: Stores server session state
-    /// - UnityCliLoopServerController: Coordinates overall server management
+    /// Starts and stops server instances behind the application-owned server handle.
     /// </summary>
     public class UnityCliLoopServerStartupService
     {
-        /// <summary>
-        /// Creates and starts a new Unity CLI bridge instance.
-        /// </summary>
-        /// <returns>The created server instance</returns>
-        public ServiceResult<UnityCliLoopBridgeServer> StartServer(
+        public ServiceResult<IUnityCliLoopServerInstance> StartServer(
             bool clearServerStartingLockWhenReady = true)
         {
             try
             {
-                UnityCliLoopBridgeServer server = new();
+                IUnityCliLoopServerInstance server = new UnityCliLoopBridgeServer();
                 server.StartServer(clearServerStartingLockWhenReady);
-                return ServiceResult<UnityCliLoopBridgeServer>.SuccessResult(server);
+                return ServiceResult<IUnityCliLoopServerInstance>.SuccessResult(server);
             }
             catch (System.Exception ex)
             {
-                return ServiceResult<UnityCliLoopBridgeServer>.FailureResult($"Failed to start server: {ex.Message}");
+                return ServiceResult<IUnityCliLoopServerInstance>.FailureResult($"Failed to start server: {ex.Message}");
             }
         }
 
-        /// <summary>
-        /// Stops and disposes of the given server instance.
-        /// </summary>
-        /// <param name="server">Server instance to stop</param>
-        /// <returns>Success indicator</returns>
-        public ServiceResult<bool> StopServer(UnityCliLoopBridgeServer server)
+        public ServiceResult<bool> StopServer(IUnityCliLoopServerInstance server)
         {
             try
             {

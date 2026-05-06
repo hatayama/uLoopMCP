@@ -468,6 +468,15 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
+        public void ServerInstanceHandle_WhenLoaded_CompilesUnderApplicationAssembly()
+        {
+            // Tests that application use cases expose a server handle instead of transport internals.
+            string handleAssemblyName = typeof(IUnityCliLoopServerInstance).Assembly.GetName().Name;
+
+            Assert.That(handleAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+        }
+
+        [Test]
         public void PresentationSources_WhenLoaded_DoNotReferenceServerInternals()
         {
             // Tests that Presentation does not depend directly on server transport/controller internals.
