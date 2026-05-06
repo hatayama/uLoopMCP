@@ -20,7 +20,7 @@ namespace io.github.hatayama.UnityCliLoop
             _originalIsReconnecting = UnityCliLoopEditorSettings.GetIsReconnecting();
             _originalShowReconnectingUI = UnityCliLoopEditorSettings.GetShowReconnectingUI();
             _originalShowPostCompileReconnectingUI = UnityCliLoopEditorSettings.GetShowPostCompileReconnectingUI();
-            McpEditorDomainReloadStateProvider.SetDomainReloadInProgressFromMainThread(false);
+            UnityCliLoopEditorDomainReloadStateProvider.SetDomainReloadInProgressFromMainThread(false);
             DomainReloadDetectionService.DeleteLockFile();
         }
 
@@ -33,7 +33,7 @@ namespace io.github.hatayama.UnityCliLoop
             UnityCliLoopEditorSettings.SetIsReconnecting(_originalIsReconnecting);
             UnityCliLoopEditorSettings.SetShowReconnectingUI(_originalShowReconnectingUI);
             UnityCliLoopEditorSettings.SetShowPostCompileReconnectingUI(_originalShowPostCompileReconnectingUI);
-            McpEditorDomainReloadStateProvider.SetDomainReloadInProgressFromMainThread(false);
+            UnityCliLoopEditorDomainReloadStateProvider.SetDomainReloadInProgressFromMainThread(false);
             DomainReloadDetectionService.DeleteLockFile();
         }
 
@@ -41,7 +41,7 @@ namespace io.github.hatayama.UnityCliLoop
         public void RollbackDomainReloadStart_ClearsTemporaryFlagsProviderStateAndLockFile()
         {
             const string correlationId = "test-correlation";
-            McpEditorDomainReloadStateProvider provider = new McpEditorDomainReloadStateProvider();
+            UnityCliLoopEditorDomainReloadStateProvider provider = new UnityCliLoopEditorDomainReloadStateProvider();
 
             DomainReloadDetectionService.StartDomainReload(correlationId, true);
 

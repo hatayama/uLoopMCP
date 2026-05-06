@@ -2,7 +2,7 @@ using UnityEditor;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    public sealed class McpEditorDomainReloadStateProvider : IDomainReloadStateProvider
+    public sealed class UnityCliLoopEditorDomainReloadStateProvider : IDomainReloadStateProvider
     {
         private static volatile bool _isDomainReloadInProgress;
 
@@ -22,9 +22,9 @@ namespace io.github.hatayama.UnityCliLoop
         [InitializeOnLoadMethod]
         private static void Register()
         {
-            McpEditorDomainReloadStateProvider.SetDomainReloadInProgressFromMainThread(
+            UnityCliLoopEditorDomainReloadStateProvider.SetDomainReloadInProgressFromMainThread(
                 UnityCliLoopEditorSettings.GetIsDomainReloadInProgress());
-            DomainReloadStateRegistry.RegisterProvider(new McpEditorDomainReloadStateProvider());
+            DomainReloadStateRegistry.RegisterProvider(new UnityCliLoopEditorDomainReloadStateProvider());
         }
     }
 }

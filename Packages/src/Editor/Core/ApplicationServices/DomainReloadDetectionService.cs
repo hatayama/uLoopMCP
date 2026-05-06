@@ -89,7 +89,7 @@ namespace io.github.hatayama.UnityCliLoop
                 UnityCliLoopEditorSettings.SetIsDomainReloadInProgress(true);
             }
 
-            McpEditorDomainReloadStateProvider.SetDomainReloadInProgressFromMainThread(true);
+            UnityCliLoopEditorDomainReloadStateProvider.SetDomainReloadInProgressFromMainThread(true);
 
             // Log recording
             VibeLogger.LogInfo(
@@ -120,7 +120,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             // Clear Domain Reload completion flag
             UnityCliLoopEditorSettings.ClearDomainReloadFlag();
-            McpEditorDomainReloadStateProvider.SetDomainReloadInProgressFromMainThread(false);
+            UnityCliLoopEditorDomainReloadStateProvider.SetDomainReloadInProgressFromMainThread(false);
 
             // Log recording
             VibeLogger.LogInfo(
@@ -147,7 +147,7 @@ namespace io.github.hatayama.UnityCliLoop
                 showReconnectingUI = false,
                 showPostCompileReconnectingUI = false
             });
-            McpEditorDomainReloadStateProvider.SetDomainReloadInProgressFromMainThread(false);
+            UnityCliLoopEditorDomainReloadStateProvider.SetDomainReloadInProgressFromMainThread(false);
             DeleteLockFile();
 
             VibeLogger.LogWarning(

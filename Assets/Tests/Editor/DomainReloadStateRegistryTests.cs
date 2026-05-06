@@ -9,14 +9,14 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
         [SetUp]
         public void SetUp()
         {
-            McpEditorDomainReloadStateProvider.SetDomainReloadInProgressFromMainThread(false);
+            UnityCliLoopEditorDomainReloadStateProvider.SetDomainReloadInProgressFromMainThread(false);
             _previousProvider = DomainReloadStateRegistry.SwapProviderForTests(null);
         }
 
         [TearDown]
         public void TearDown()
         {
-            McpEditorDomainReloadStateProvider.SetDomainReloadInProgressFromMainThread(false);
+            UnityCliLoopEditorDomainReloadStateProvider.SetDomainReloadInProgressFromMainThread(false);
             DomainReloadStateRegistry.SwapProviderForTests(_previousProvider);
         }
 
@@ -41,21 +41,21 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
         [Test]
         public void Provider_ReturnsUpdatedInMemoryFlag()
         {
-            McpEditorDomainReloadStateProvider provider = new McpEditorDomainReloadStateProvider();
+            UnityCliLoopEditorDomainReloadStateProvider provider = new UnityCliLoopEditorDomainReloadStateProvider();
 
             try
             {
                 Assert.That(provider.IsDomainReloadInProgress(), Is.False);
 
-                McpEditorDomainReloadStateProvider.SetDomainReloadInProgressFromMainThread(true);
+                UnityCliLoopEditorDomainReloadStateProvider.SetDomainReloadInProgressFromMainThread(true);
                 Assert.That(provider.IsDomainReloadInProgress(), Is.True);
 
-                McpEditorDomainReloadStateProvider.SetDomainReloadInProgressFromMainThread(false);
+                UnityCliLoopEditorDomainReloadStateProvider.SetDomainReloadInProgressFromMainThread(false);
                 Assert.That(provider.IsDomainReloadInProgress(), Is.False);
             }
             finally
             {
-                McpEditorDomainReloadStateProvider.SetDomainReloadInProgressFromMainThread(false);
+                UnityCliLoopEditorDomainReloadStateProvider.SetDomainReloadInProgressFromMainThread(false);
             }
         }
 
