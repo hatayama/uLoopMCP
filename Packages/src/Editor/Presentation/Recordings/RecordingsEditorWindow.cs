@@ -1,8 +1,6 @@
 #if ULOOP_HAS_INPUT_SYSTEM
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -11,8 +9,8 @@ namespace io.github.hatayama.UnityCliLoop
 {
     public class RecordingsEditorWindow : EditorWindow
     {
-        private const string UXML_RELATIVE_PATH = "Editor/UI/Recordings/RecordingsEditorWindow.uxml";
-        private const string USS_RELATIVE_PATH = "Editor/UI/Recordings/RecordingsEditorWindow.uss";
+        private const string UXML_RELATIVE_PATH = "Editor/Presentation/Recordings/RecordingsEditorWindow.uxml";
+        private const string USS_RELATIVE_PATH = "Editor/Presentation/Recordings/RecordingsEditorWindow.uss";
 
         private Button _recordButton;
         private Button _replayButton;
@@ -24,15 +22,14 @@ namespace io.github.hatayama.UnityCliLoop
         private VisualElement _recordStatusIndicator;
         private VisualElement _replayStatusIndicator;
 
-        private List<string> _recordingFiles = new();
+        private string[] _recordingFiles = Array.Empty<string>();
 
         private bool _prevIsRecording;
         private bool _prevIsReplaying;
-        private RecordInputOverlayPhase _prevPhase;
+        private RecordingApplicationPhase _prevPhase;
         private int _prevMinutes = -1;
         private int _prevSecs = -1;
         private int _prevReplayFrame = -1;
-        private int _countdownGeneration;
 
         [MenuItem("Window/Unity CLI Loop/Recordings", priority = 1)]
         public static void ShowWindow()
@@ -63,16 +60,16 @@ namespace io.github.hatayama.UnityCliLoop
         private void OnEnable()
         {
             EditorApplication.update += OnEditorUpdate;
-            InputReplayer.ReplayCompleted += OnReplayCompleted;
-            InputRecorder.RecordingStopped += OnRecordingStopped;
+            RecordingsApplicationFacade.ReplayCompleted += OnReplayCompleted;
+            RecordingsApplicationFacade.RecordingStopped += OnRecordingStopped;
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
         }
 
         private void OnDisable()
         {
             EditorApplication.update -= OnEditorUpdate;
-            InputReplayer.ReplayCompleted -= OnReplayCompleted;
-            InputRecorder.RecordingStopped -= OnRecordingStopped;
+            RecordingsApplicationFacade.ReplayCompleted -= OnReplayCompleted;
+            RecordingsApplicationFacade.RecordingStopped -= OnRecordingStopped;
             EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
             UnbindEvents();
         }
@@ -106,111 +103,21 @@ namespace io.github.hatayama.UnityCliLoop
 
         private void OnRecordButtonClicked()
         {
-            if (!EditorApplication.isPlaying)
-            {
-                EditorUtility.DisplayDialog("Recordings", "PlayMode must be active to record.", "OK");
-                return;
-            }
-
-            if (RecordInputOverlayState.Phase == RecordInputOverlayPhase.Countdown)
-            {
-                _countdownGeneration++;
-                RecordInputOverlayState.Clear();
-                return;
-            }
-
-            if (InputRecorder.IsRecording)
-            {
-                InputRecordingData data = InputRecorder.StopRecording();
-                string outputPath = InputRecordingFileHelper.ResolveOutputPath("");
-                InputRecordingFileHelper.Save(data, outputPath);
-                InputRecorder.NotifyRecordingStopped();
-                return;
-            }
-
-            if (InputReplayer.IsReplaying)
-            {
-                EditorUtility.DisplayDialog("Recordings", "Cannot record while replaying.", "OK");
-                return;
-            }
-
-            int delaySeconds = Mathf.Clamp(_delayField.value, RecordInputConstants.MIN_DELAY_SECONDS, RecordInputConstants.MAX_DELAY_SECONDS);
-
-            OverlayCanvasFactory.EnsureExists();
-            RecordReplayOverlayFactory.EnsureRecordOverlay();
-
-            if (delaySeconds > 0)
-            {
-                int generation = ++_countdownGeneration;
-                RecordInputOverlayState.StartCountdown(delaySeconds);
-                int delayMs = delaySeconds * 1000;
-                TimerDelay.WaitThenExecuteOnMainThread(delayMs, () =>
-                {
-                    if (!EditorApplication.isPlaying
-                        || generation != _countdownGeneration
-                        || RecordInputOverlayState.Phase != RecordInputOverlayPhase.Countdown)
-                    {
-                        RecordInputOverlayState.Clear();
-                        return;
-                    }
-                    RecordInputOverlayState.StartRecording();
-                    InputRecorder.StartRecording(null);
-                });
-            }
-            else
-            {
-                RecordInputOverlayState.StartRecording();
-                InputRecorder.StartRecording(null);
-            }
+            RecordingApplicationResult result = RecordingsApplicationFacade.ToggleRecording(_delayField.value);
+            ShowDialogWhenNeeded(result);
         }
 
         private void OnReplayButtonClicked()
         {
-            if (!EditorApplication.isPlaying)
-            {
-                EditorUtility.DisplayDialog("Recordings", "PlayMode must be active to replay.", "OK");
-                return;
-            }
-
-            if (InputReplayer.IsReplaying)
-            {
-                InputReplayer.StopReplay();
-                return;
-            }
-
-            if (InputRecorder.IsRecording)
-            {
-                EditorUtility.DisplayDialog("Recordings", "Cannot replay while recording.", "OK");
-                return;
-            }
-
             string selectedFile = GetSelectedFilePath();
-            if (string.IsNullOrEmpty(selectedFile))
-            {
-                EditorUtility.DisplayDialog("Recordings", "No recording file selected.", "OK");
-                return;
-            }
-
-            InputRecordingData data = InputRecordingFileHelper.Load(selectedFile);
-            if (data == null)
-            {
-                EditorUtility.DisplayDialog("Recordings", "Failed to load recording file.", "OK");
-                return;
-            }
-
-            OverlayCanvasFactory.EnsureExists();
-            RecordReplayOverlayFactory.EnsureReplayOverlay();
-            InputReplayer.StartReplay(data, false, true);
+            RecordingApplicationResult result = RecordingsApplicationFacade.ToggleReplay(selectedFile);
+            ShowDialogWhenNeeded(result);
         }
 
         private void OnOpenFolderClicked()
         {
-            string dir = RecordInputConstants.DEFAULT_OUTPUT_DIR;
-            if (!Directory.Exists(dir))
-            {
-                Directory.CreateDirectory(dir);
-            }
-            EditorUtility.RevealInFinder(dir);
+            string outputDirectory = RecordingsApplicationFacade.EnsureRecordingFolderExists();
+            EditorUtility.RevealInFinder(outputDirectory);
         }
 
         private void OnRecordingStopped()
@@ -233,43 +140,46 @@ namespace io.github.hatayama.UnityCliLoop
 
         private void OnEditorUpdate()
         {
-            bool isRecording = InputRecorder.IsRecording;
-            bool isReplaying = InputReplayer.IsReplaying;
-            RecordInputOverlayPhase phase = RecordInputOverlayState.Phase;
+            RecordingApplicationState state = RecordingsApplicationFacade.GetCurrentState();
 
-            bool stateChanged = isRecording != _prevIsRecording
-                || isReplaying != _prevIsReplaying
-                || phase != _prevPhase;
+            bool stateChanged = state.IsRecording != _prevIsRecording
+                || state.IsReplaying != _prevIsReplaying
+                || state.Phase != _prevPhase;
 
-            if (!isRecording && !isReplaying && phase == RecordInputOverlayPhase.None && !stateChanged)
+            if (!state.IsRecording
+                && !state.IsReplaying
+                && state.Phase == RecordingApplicationPhase.None
+                && !stateChanged)
             {
                 return;
             }
 
-            _prevIsRecording = isRecording;
-            _prevIsReplaying = isReplaying;
-            _prevPhase = phase;
+            _prevIsRecording = state.IsRecording;
+            _prevIsReplaying = state.IsReplaying;
+            _prevPhase = state.Phase;
 
-            UpdateRecordUI();
-            UpdateReplayUI();
+            UpdateRecordUI(state);
+            UpdateReplayUI(state);
         }
 
         private void UpdateRecordUI()
+        {
+            UpdateRecordUI(RecordingsApplicationFacade.GetCurrentState());
+        }
+
+        private void UpdateRecordUI(RecordingApplicationState state)
         {
             if (_recordButton == null)
             {
                 return;
             }
 
-            bool isRecording = InputRecorder.IsRecording;
-            RecordInputOverlayPhase phase = RecordInputOverlayState.Phase;
-
-            if (isRecording)
+            if (state.IsRecording)
             {
                 _recordButton.text = "Stop Recording";
                 _recordButton.RemoveFromClassList("rec-button--record");
                 _recordButton.AddToClassList("rec-button--recording");
-                float elapsed = RecordInputOverlayState.ElapsedSeconds;
+                float elapsed = state.RecordingElapsedSeconds;
                 int minutes = (int)(elapsed / 60f);
                 int secs = (int)(elapsed % 60f);
                 if (minutes != _prevMinutes || secs != _prevSecs)
@@ -280,12 +190,12 @@ namespace io.github.hatayama.UnityCliLoop
                 }
                 SetIndicatorClass(_recordStatusIndicator, "rec-status-indicator--recording");
             }
-            else if (phase == RecordInputOverlayPhase.Countdown)
+            else if (state.Phase == RecordingApplicationPhase.Countdown)
             {
                 _recordButton.text = "Cancel";
                 _recordButton.RemoveFromClassList("rec-button--recording");
                 _recordButton.AddToClassList("rec-button--record");
-                int remaining = Mathf.CeilToInt(RecordInputOverlayState.RemainingSeconds);
+                int remaining = Mathf.CeilToInt(state.CountdownRemainingSeconds);
                 _recordStatusLabel.text = $"Starting in {remaining}...";
                 SetIndicatorClass(_recordStatusIndicator, "rec-status-indicator--countdown");
             }
@@ -301,20 +211,23 @@ namespace io.github.hatayama.UnityCliLoop
 
         private void UpdateReplayUI()
         {
+            UpdateReplayUI(RecordingsApplicationFacade.GetCurrentState());
+        }
+
+        private void UpdateReplayUI(RecordingApplicationState state)
+        {
             if (_replayButton == null)
             {
                 return;
             }
 
-            bool isReplaying = InputReplayer.IsReplaying;
-
-            if (isReplaying)
+            if (state.IsReplaying)
             {
                 _replayButton.text = "Stop Replay";
                 _replayButton.RemoveFromClassList("rec-button--replay");
                 _replayButton.AddToClassList("rec-button--replaying");
-                int current = InputReplayer.CurrentFrame;
-                int total = InputReplayer.TotalFrames;
+                int current = state.ReplayCurrentFrame;
+                int total = state.ReplayTotalFrames;
                 if (current != _prevReplayFrame)
                 {
                     _prevReplayFrame = current;
@@ -334,23 +247,13 @@ namespace io.github.hatayama.UnityCliLoop
 
         private void RefreshFileList()
         {
-            _recordingFiles.Clear();
-
-            string dir = RecordInputConstants.DEFAULT_OUTPUT_DIR;
-            if (Directory.Exists(dir))
-            {
-                string[] files = Directory.GetFiles(dir, "*.json");
-                Array.Sort(files);
-                Array.Reverse(files);
-                _recordingFiles.AddRange(files);
-            }
-
-            List<string> displayNames = _recordingFiles.Select(Path.GetFileName).ToList();
+            RecordingFileList fileList = RecordingsApplicationFacade.GetRecordingFiles();
+            _recordingFiles = fileList.FilePaths;
 
             if (_fileDropdown != null)
             {
-                _fileDropdown.choices = displayNames;
-                if (displayNames.Count > 0)
+                _fileDropdown.choices = new List<string>(fileList.DisplayNames);
+                if (fileList.DisplayNames.Length > 0)
                 {
                     _fileDropdown.index = 0;
                 }
@@ -359,11 +262,21 @@ namespace io.github.hatayama.UnityCliLoop
 
         private string GetSelectedFilePath()
         {
-            if (_fileDropdown == null || _fileDropdown.index < 0 || _fileDropdown.index >= _recordingFiles.Count)
+            if (_fileDropdown == null || _fileDropdown.index < 0 || _fileDropdown.index >= _recordingFiles.Length)
             {
                 return "";
             }
             return _recordingFiles[_fileDropdown.index];
+        }
+
+        private static void ShowDialogWhenNeeded(RecordingApplicationResult result)
+        {
+            if (!result.ShouldShowDialog)
+            {
+                return;
+            }
+
+            EditorUtility.DisplayDialog("Recordings", result.DialogMessage, "OK");
         }
 
         private static void SetIndicatorClass(VisualElement indicator, string activeClass)

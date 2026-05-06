@@ -135,11 +135,38 @@ namespace io.github.hatayama.UnityCliLoop
                 "ToolSettings.",
                 "UnityCliLoopToolRegistrar",
                 "UnityCliLoopToolRegistry",
-                "ToolSettingsCatalogItem"
+                "ToolSettingsCatalogItem",
+                "InputRecorder",
+                "InputReplayer",
+                "InputRecordingFileHelper",
+                "InputRecordingData",
+                "RecordInputConstants",
+                "RecordInputOverlayState",
+                "OverlayCanvasFactory",
+                "RecordReplayOverlayFactory"
             };
             string[] offendingReferences = ReadPresentationSourcePaths()
                 .SelectMany(path => FindForbiddenReferences(path, forbiddenReferences))
                 .OrderBy(reference => reference)
+                .ToArray();
+
+            Assert.That(offendingReferences, Is.Empty);
+        }
+
+        [Test]
+        public void EditorUiFiles_WhenLoaded_ContainNoEditorWindowImplementations()
+        {
+            // Tests that EditorWindow implementations compile under the presentation assembly.
+            string uiRoot = Path.Combine(UnityMcpPathResolver.GetProjectRoot(), "Packages", "src", "Editor", "UI");
+            if (!Directory.Exists(uiRoot))
+            {
+                Assert.Pass();
+            }
+
+            string[] offendingReferences = Directory.GetFiles(uiRoot, "*.cs", SearchOption.AllDirectories)
+                .Where(path => File.ReadAllText(path).Contains("EditorWindow"))
+                .Select(path => Path.GetRelativePath(UnityMcpPathResolver.GetProjectRoot(), path))
+                .OrderBy(path => path)
                 .ToArray();
 
             Assert.That(offendingReferences, Is.Empty);

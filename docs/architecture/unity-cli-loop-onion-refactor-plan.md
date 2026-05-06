@@ -57,6 +57,7 @@
   - settings-window UI code no longer reaches tool settings, registry, or security settings internals directly and goes through `ToolSettingsApplicationFacade`.
   - settings-window UI source uses `UnityCliLoopSettingsWindow` naming instead of the legacy MCP settings-window name.
   - settings, setup, and server editor UI files now compile under `UnityCLILoop.Presentation`.
+  - recordings editor UI now compiles under `UnityCLILoop.Presentation` and reaches record/replay services through `RecordingsApplicationFacade`.
   - pure platform values `DynamicCodeSecurityLevel` and `ToolDisabledException` now compile under `UnityCLILoop.Domain`.
 - Added asmdef dependency tests proving:
   - `Domain` and `ToolContracts` have no project assembly references.
@@ -85,7 +86,7 @@
 
 - Continue moving cohesive platform rules into `UnityCLILoop.Domain` when they have no Unity or file-system dependency.
 - Move hosting/catalog/execution policies into `UnityCLILoop.Application`.
-- Move remaining editor UI that still depends on feature internals, such as recordings, after adding the necessary Application facades.
+- Move remaining editor UI into `UnityCLILoop.Presentation` after adding the necessary Application facades.
 - Move Unity Editor, IPC, file system, dynamic compilation, and protocol adapters into `UnityCLILoop.Infrastructure`.
 - Continue moving bundled tool implementations into `UnityCLILoop.FirstPartyTools.Editor` once their dependencies are either internal to that plugin or exposed through stable contracts.
 - Continue splitting internal bridge commands from public tool registration when more CLI-only commands are identified.
