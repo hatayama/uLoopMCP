@@ -45,7 +45,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             if (InternalBridgeCommandRouter.IsInternalCommand(commandName))
             {
-                return InternalBridgeCommandRouter.Execute(commandName);
+                return InternalBridgeCommandRouter.Execute(commandName, paramsToken);
             }
 
             Stopwatch registryAcquireStopwatch = Stopwatch.StartNew();

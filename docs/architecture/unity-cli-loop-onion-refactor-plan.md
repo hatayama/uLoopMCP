@@ -31,6 +31,7 @@
 - Registered bundled tools and extension tools through the same `[UnityCliLoopTool]` attribute discovery path.
 - Split `Assets/Editor/CustomCommandSamples` into `UnityCLILoop.CustomCommandSamples.Editor`, which references only `UnityCLILoop.ToolContracts`.
 - Moved `get-version` out of the extension-facing tool registry and kept it as an internal bridge command for CLI readiness and diagnostics.
+- Moved `get-tool-details` out of the extension-facing tool registry and kept it as an internal bridge command for CLI list/sync catalog access.
 - Removed `focus-window` from the Unity-side tool registry because it is implemented as a native Go CLI command.
 - Removed legacy MCP-era development tools from the runtime registry:
   - `ping`
@@ -41,6 +42,8 @@
   - `get-logs` is first-party after the assembly rename.
   - `get-version` is not registered as an extension-facing tool.
   - `get-version` still executes as an internal bridge command.
+  - `get-tool-details` is not registered as an extension-facing tool.
+  - `get-tool-details` still returns the CLI catalog through the internal bridge path.
   - `focus-window` is not registered as a Unity-side tool.
   - legacy MCP-era development tools are not registered.
   - `hello-world` is registered as an extension tool.

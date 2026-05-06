@@ -48,6 +48,15 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
+        public void Constructor_WhenGetToolDetailsIsInternalBridgeCommand_DoesNotRegisterItAsTool()
+        {
+            // Tests that get-tool-details is kept out of the extension-facing runtime registry.
+            UnityCliLoopToolRegistry registry = new UnityCliLoopToolRegistry();
+
+            Assert.That(registry.IsToolRegistered(McpConstants.COMMAND_NAME_GET_TOOL_DETAILS), Is.False);
+        }
+
+        [Test]
         public async Task ExecuteCommandAsync_WhenCommandIsGetVersion_ReturnsBridgeVersionPayload()
         {
             // Tests that get-version still works as a CLI-only bridge command after leaving the tool registry.
@@ -59,6 +68,29 @@ namespace io.github.hatayama.UnityCliLoop
             Assert.That(getVersionResponse, Is.Not.Null);
             Assert.That(getVersionResponse.UnityVersion, Is.Not.Empty);
             Assert.That(getVersionResponse.IsEditor, Is.True);
+        }
+
+        [Test]
+        public async Task ExecuteCommandAsync_WhenCommandIsGetToolDetails_ReturnsCatalogWithoutInternalCommands()
+        {
+            // Tests that CLI catalog access still works without registering the catalog command as a tool.
+            UnityCliLoopToolResponse response = await UnityApiHandler.ExecuteCommandAsync(
+                McpConstants.COMMAND_NAME_GET_TOOL_DETAILS,
+                new JObject());
+
+            GetToolDetailsResponse getToolDetailsResponse = response as GetToolDetailsResponse;
+            Assert.That(getToolDetailsResponse, Is.Not.Null);
+
+            string[] toolNames = getToolDetailsResponse.Tools
+                .Select(tool => tool.Name)
+                .ToArray();
+
+            Assert.That(toolNames, Does.Contain("get-logs"));
+            Assert.That(toolNames, Does.Not.Contain(McpConstants.COMMAND_NAME_GET_TOOL_DETAILS));
+            Assert.That(toolNames, Does.Not.Contain(McpConstants.COMMAND_NAME_GET_VERSION));
+            Assert.That(toolNames, Does.Not.Contain("focus-window"));
+            Assert.That(toolNames, Does.Not.Contain("ping"));
+            Assert.That(toolNames, Does.Not.Contain("debug-sleep"));
         }
 
         [Test]
