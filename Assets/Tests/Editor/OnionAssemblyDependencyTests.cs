@@ -17,7 +17,6 @@ namespace io.github.hatayama.UnityCliLoop
         private const string InfrastructureAssemblyName = "UnityCLILoop.Infrastructure";
         private const string MetadataValidationAssemblyName = "uLoopMCP.Editor.MetadataValidation";
         private const string PresentationAssemblyName = "UnityCLILoop.Presentation";
-        private const string SharedAssemblyName = "uLoopMCP.Editor.Shared";
         private const string ToolContractsAssemblyName = "UnityCLILoop.ToolContracts";
 
         [Test]
@@ -190,6 +189,21 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
+        public void SharedSupportTypes_WhenLoaded_CompileUnderApplicationAssembly()
+        {
+            // Tests that support constants and logging are owned by the application layer instead of a shared bucket.
+            string constantsAssemblyName = typeof(UnityCliLoopConstants).Assembly.GetName().Name;
+            string loggerAssemblyName = typeof(VibeLogger).Assembly.GetName().Name;
+            string registryAssemblyName = typeof(DomainReloadStateRegistry).Assembly.GetName().Name;
+            string providerAssemblyName = typeof(IDomainReloadStateProvider).Assembly.GetName().Name;
+
+            Assert.That(constantsAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+            Assert.That(loggerAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+            Assert.That(registryAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+            Assert.That(providerAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+        }
+
+        [Test]
         public void PresentationAsmdef_WhenLoaded_DependsOnApplicationAndDoesNotReferenceInfrastructure()
         {
             // Tests that presentation and infrastructure remain sibling outer layers.
@@ -199,7 +213,6 @@ namespace io.github.hatayama.UnityCliLoop
             {
                 ApplicationAssemblyName,
                 DomainAssemblyName,
-                SharedAssemblyName,
                 ToolContractsAssemblyName
             }));
         }

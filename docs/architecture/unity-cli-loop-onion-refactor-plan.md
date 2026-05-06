@@ -56,6 +56,7 @@
 - Moved dynamic-code compilation DTOs and compilation cache management into `UnityCLILoop.Application` because they belong to the application execution flow rather than a shared cross-layer bucket.
 - Removed now-unused `uLoopMCP.Editor.Shared` references from `UnityCLILoop.Infrastructure` and `UnityCLILoop.CompositionRoot.Editor`.
 - Moved preload metadata validation contracts and registry into `uLoopMCP.Editor.MetadataValidation` so the metadata validation module exposes its own facade instead of depending on `uLoopMCP.Editor.Shared`.
+- Removed `uLoopMCP.Editor.Shared` as a production assembly after moving its remaining constants, logging, and domain-reload registry types into `UnityCLILoop.Application`.
 - Added registry tests proving:
   - bundled tools are discovered through the attribute path.
   - `get-logs` is registered from `UnityCLILoop.FirstPartyTools.Editor`.
@@ -91,6 +92,8 @@
   - `UnityCLILoop.Infrastructure` and `UnityCLILoop.CompositionRoot.Editor` no longer reference `uLoopMCP.Editor.Shared`.
   - preload metadata validation contracts and registry compile under `uLoopMCP.Editor.MetadataValidation`.
   - `uLoopMCP.Editor.MetadataValidation` no longer references `uLoopMCP.Editor.Shared`.
+  - support constants, structured logging, and domain-reload registry types compile under `UnityCLILoop.Application`.
+  - production asmdefs no longer reference `uLoopMCP.Editor.Shared`.
   - the sample extension asmdef references only `UnityCLILoop.ToolContracts`.
   - the sample `hello-world` extension executes through the same typed contract path as bundled tools.
   - `UnityCLILoop.FirstPartyTools.Editor` references only `UnityCLILoop.ToolContracts`.
