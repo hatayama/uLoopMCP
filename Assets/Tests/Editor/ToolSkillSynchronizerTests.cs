@@ -1054,6 +1054,12 @@ namespace io.github.hatayama.UnityCliLoop
 
             Assert.That(getLogsSkill.ToolName, Is.EqualTo("get-logs"));
             Assert.That(getLogsSkill.SkillFiles.Keys, Does.Contain(SkillInstallLayout.SkillFileName));
+
+            SkillInstallLayout.SkillSourceInfo compileSkill = skillSources
+                .Single(skill => skill.Name == "uloop-compile");
+
+            Assert.That(compileSkill.ToolName, Is.EqualTo("compile"));
+            Assert.That(compileSkill.SkillFiles.Keys, Does.Contain(SkillInstallLayout.SkillFileName));
         }
 
         // Tests that internal skill metadata maps back to the hidden tool name only.

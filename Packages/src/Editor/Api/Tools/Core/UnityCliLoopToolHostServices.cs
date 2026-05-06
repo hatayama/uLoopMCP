@@ -6,10 +6,12 @@ namespace io.github.hatayama.UnityCliLoop
     internal sealed class UnityCliLoopToolHostServices : IUnityCliLoopToolHostServices
     {
         public IUnityCliLoopConsoleLogService ConsoleLogs { get; }
+        public IUnityCliLoopCompilationService Compilation { get; }
 
         public UnityCliLoopToolHostServices()
         {
             ConsoleLogs = new LogRetrievalService();
+            Compilation = new CompileUseCase();
         }
     }
 }

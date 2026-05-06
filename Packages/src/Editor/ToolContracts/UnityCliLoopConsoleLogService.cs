@@ -20,6 +20,7 @@ namespace io.github.hatayama.UnityCliLoop
     public interface IUnityCliLoopToolHostServices
     {
         IUnityCliLoopConsoleLogService ConsoleLogs { get; }
+        IUnityCliLoopCompilationService Compilation { get; }
     }
 
     /// <summary>

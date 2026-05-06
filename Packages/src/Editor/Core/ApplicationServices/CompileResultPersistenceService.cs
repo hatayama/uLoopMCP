@@ -45,7 +45,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        public static void SaveResult(string requestId, CompileResponse response)
+        public static void SaveResult(string requestId, UnityCliLoopCompileResult response)
         {
             Debug.Assert(!string.IsNullOrWhiteSpace(requestId), "requestId must not be null or empty");
             Debug.Assert(response != null, "response must not be null");

@@ -1,0 +1,91 @@
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace io.github.hatayama.UnityCliLoop
+{
+    /// <summary>
+    /// Compile tool handler - Type-safe implementation using Schema and Response
+    /// Handles Unity project compilation with optional force recompile
+    /// Related classes: CompileUseCase, CompilationStateValidationService, CompilationExecutionService
+    /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - UseCase + Tool Pattern (DDD Integration)
+    /// </summary>
+    [UnityCliLoopTool]
+    public class CompileTool : UnityCliLoopTool<CompileSchema, CompileResponse>, IUnityCliLoopToolHostServicesReceiver
+    {
+        private IUnityCliLoopCompilationService _compilation;
+
+        public override string ToolName => "compile";
+
+        public void InitializeHostServices(IUnityCliLoopToolHostServices services)
+        {
+            if (services == null)
+            {
+                throw new System.ArgumentNullException(nameof(services));
+            }
+
+            _compilation = services.Compilation ?? throw new System.ArgumentNullException(nameof(services.Compilation));
+        }
+
+        protected override async Task<CompileResponse> ExecuteAsync(CompileSchema parameters, CancellationToken ct)
+        {
+            if (_compilation == null)
+            {
+                throw new System.InvalidOperationException("Host services were not initialized.");
+            }
+
+            UnityCliLoopCompileResult result = await _compilation.CompileAsync(ToRequest(parameters), ct);
+            return ToResponse(result);
+        }
+
+        private static UnityCliLoopCompileRequest ToRequest(CompileSchema parameters)
+        {
+            if (parameters == null)
+            {
+                throw new System.ArgumentNullException(nameof(parameters));
+            }
+
+            return new UnityCliLoopCompileRequest
+            {
+                ForceRecompile = parameters.ForceRecompile,
+                WaitForDomainReload = parameters.WaitForDomainReload,
+                RequestId = parameters.RequestId,
+            };
+        }
+
+        private static CompileResponse ToResponse(UnityCliLoopCompileResult result)
+        {
+            if (result == null)
+            {
+                throw new System.ArgumentNullException(nameof(result));
+            }
+
+            CompileResponse response = new CompileResponse(
+                success: result.Success,
+                errorCount: result.ErrorCount,
+                warningCount: result.WarningCount,
+                errors: ToCompileIssues(result.Errors),
+                warnings: ToCompileIssues(result.Warnings),
+                message: result.Message);
+
+            response.ProjectRoot = result.ProjectRoot;
+            return response;
+        }
+
+        private static CompileIssue[] ToCompileIssues(UnityCliLoopCompileIssue[] issues)
+        {
+            if (issues == null)
+            {
+                return null;
+            }
+
+            CompileIssue[] mappedIssues = new CompileIssue[issues.Length];
+            for (int i = 0; i < issues.Length; i++)
+            {
+                UnityCliLoopCompileIssue issue = issues[i];
+                mappedIssues[i] = new CompileIssue(issue.Message, issue.File, issue.Line);
+            }
+
+            return mappedIssues;
+        }
+    }
+}

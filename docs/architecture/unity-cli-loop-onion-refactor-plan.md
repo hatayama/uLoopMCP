@@ -38,9 +38,11 @@
   - `debug-sleep`
 - Moved `control-play-mode` into `UnityCLILoop.FirstPartyTools.Editor` as the first bundled tool plugin that references only `UnityCLILoop.ToolContracts`.
 - Moved `get-logs` into `UnityCLILoop.FirstPartyTools.Editor` as a bundled tool plugin that receives Unity Console access through a `ToolContracts` host-service contract.
+- Moved `compile` into `UnityCLILoop.FirstPartyTools.Editor` as a bundled tool plugin that receives Unity compilation access through a `ToolContracts` host-service contract.
 - Added registry tests proving:
   - bundled tools are discovered through the attribute path.
   - `get-logs` is registered from `UnityCLILoop.FirstPartyTools.Editor`.
+  - `compile` is registered from `UnityCLILoop.FirstPartyTools.Editor`.
   - `get-version` is not registered as an extension-facing tool.
   - `get-version` still executes as an internal bridge command.
   - `get-tool-details` is not registered as an extension-facing tool.
@@ -51,6 +53,7 @@
   - `control-play-mode` is registered from `UnityCLILoop.FirstPartyTools.Editor`.
   - `control-play-mode` skill discovery still works after moving under `UnityCLILoop.FirstPartyTools.Editor`.
   - `get-logs` skill discovery still works after moving under `UnityCLILoop.FirstPartyTools.Editor`.
+  - `compile` skill discovery still works after moving under `UnityCLILoop.FirstPartyTools.Editor`.
   - the sample extension asmdef references only `UnityCLILoop.ToolContracts`.
   - the sample `hello-world` extension executes through the same typed contract path as bundled tools.
   - `UnityCLILoop.FirstPartyTools.Editor` references only `UnityCLILoop.ToolContracts`.

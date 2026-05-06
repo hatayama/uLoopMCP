@@ -14,7 +14,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// Related classes: CompileTool, PlayModeCompilationPreparationService, CompilationStateValidationService, CompilationExecutionService
     /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - UseCase + Tool Pattern (DDD Integration)
     /// </summary>
-    public class CompileUseCase : AbstractUseCase<CompileSchema, CompileResponse>
+    public class CompileUseCase : IUnityCliLoopCompilationService
     {
         private const int MAX_WAIT_MS = 5000;
         private const int POLL_INTERVAL_MS = 50;
@@ -25,9 +25,14 @@ namespace io.github.hatayama.UnityCliLoop
         /// <param name="parameters">Compilation parameters</param>
         /// <param name="ct">Cancellation control token</param>
         /// <returns>Compilation result</returns>
-        public override async Task<CompileResponse> ExecuteAsync(CompileSchema parameters, CancellationToken ct)
+        public async Task<UnityCliLoopCompileResult> CompileAsync(UnityCliLoopCompileRequest request, CancellationToken ct)
         {
-            PrepareResultStorage(parameters);
+            if (request == null)
+            {
+                throw new ArgumentNullException(nameof(request));
+            }
+
+            PrepareResultStorage(request);
 
             // 1. Play Mode preparation check
             PlayModeCompilationPreparationService preparationService = new();
@@ -35,14 +40,14 @@ namespace io.github.hatayama.UnityCliLoop
 
             if (!preparation.CanProceed)
             {
-                CompileResponse response = new CompileResponse(
-                    success: false,
-                    errorCount: 1,
-                    warningCount: 0,
-                    errors: new[] { new CompileIssue(preparation.ErrorMessage, "", 0) },
-                    warnings: Array.Empty<CompileIssue>()
-                );
-                return PersistResponseIfNeeded(parameters, response);
+                UnityCliLoopCompileResult response = CreateCompileResult(
+                    false,
+                    1,
+                    0,
+                    new[] { CreateIssue(preparation.ErrorMessage, "", 0) },
+                    Array.Empty<UnityCliLoopCompileIssue>(),
+                    null);
+                return PersistResponseIfNeeded(request, response);
             }
 
             if (preparation.NeedsPlayModeStop)
@@ -51,14 +56,14 @@ namespace io.github.hatayama.UnityCliLoop
                 bool exited = await WaitForPlayModeExitAsync(ct);
                 if (!exited)
                 {
-                    CompileResponse response = new CompileResponse(
-                        success: false,
-                        errorCount: 1,
-                        warningCount: 0,
-                        errors: new[] { new CompileIssue("Play Mode did not exit within 5 seconds; compilation aborted.", "", 0) },
-                        warnings: Array.Empty<CompileIssue>()
-                    );
-                    return PersistResponseIfNeeded(parameters, response);
+                    UnityCliLoopCompileResult response = CreateCompileResult(
+                        false,
+                        1,
+                        0,
+                        new[] { CreateIssue("Play Mode did not exit within 5 seconds; compilation aborted.", "", 0) },
+                        Array.Empty<UnityCliLoopCompileIssue>(),
+                        null);
+                    return PersistResponseIfNeeded(request, response);
                 }
             }
 
@@ -68,46 +73,74 @@ namespace io.github.hatayama.UnityCliLoop
             
             if (!validation.IsValid)
             {
-                CompileResponse response = new CompileResponse(
-                    success: false,
-                    errorCount: 1,
-                    warningCount: 0,
-                    errors: new[] { new CompileIssue(validation.ErrorMessage, "", 0) },
-                    warnings: Array.Empty<CompileIssue>()
-                );
-                return PersistResponseIfNeeded(parameters, response);
+                UnityCliLoopCompileResult response = CreateCompileResult(
+                    false,
+                    1,
+                    0,
+                    new[] { CreateIssue(validation.ErrorMessage, "", 0) },
+                    Array.Empty<UnityCliLoopCompileIssue>(),
+                    null);
+                return PersistResponseIfNeeded(request, response);
             }
 
             // 3. Compilation execution
             ct.ThrowIfCancellationRequested();
             CompilationExecutionService executionService = new();
-            CompileResult result = await executionService.ExecuteCompilationAsync(parameters.ForceRecompile, ct);
+            CompileResult result = await executionService.ExecuteCompilationAsync(request.ForceRecompile, ct);
             
             // 4. Result formatting
             if (result.IsIndeterminate)
             {
-                CompileResponse response = new CompileResponse(
-                    success: result.Success,
-                    errorCount: result.ErrorCount,
-                    warningCount: result.WarningCount,
-                    errors: null,
-                    warnings: null,
-                    message: result.Message ?? "Compilation status is indeterminate. Use get-logs tool to check results."
-                );
-                return PersistResponseIfNeeded(parameters, response);
+                UnityCliLoopCompileResult response = CreateCompileResult(
+                    result.Success,
+                    result.ErrorCount,
+                    result.WarningCount,
+                    null,
+                    null,
+                    result.Message ?? "Compilation status is indeterminate. Use get-logs tool to check results.");
+                return PersistResponseIfNeeded(request, response);
             }
-            
-            CompileIssue[] errors = result.error?.Select(e => new CompileIssue(e.message, e.file, e.line)).ToArray();
-            CompileIssue[] warnings = result.warning?.Select(w => new CompileIssue(w.message, w.file, w.line)).ToArray();
-            
-            CompileResponse successResponse = new CompileResponse(
-                success: result.Success,
-                errorCount: result.error?.Length ?? 0,
-                warningCount: result.warning?.Length ?? 0,
-                errors: errors,
-                warnings: warnings
-            );
-            return PersistResponseIfNeeded(parameters, successResponse);
+
+            UnityCliLoopCompileIssue[] errors = result.error?.Select(e => CreateIssue(e.message, e.file, e.line)).ToArray();
+            UnityCliLoopCompileIssue[] warnings = result.warning?.Select(w => CreateIssue(w.message, w.file, w.line)).ToArray();
+
+            UnityCliLoopCompileResult successResponse = CreateCompileResult(
+                result.Success,
+                result.error?.Length ?? 0,
+                result.warning?.Length ?? 0,
+                errors,
+                warnings,
+                null);
+            return PersistResponseIfNeeded(request, successResponse);
+        }
+
+        private static UnityCliLoopCompileResult CreateCompileResult(
+            bool? success,
+            int? errorCount,
+            int? warningCount,
+            UnityCliLoopCompileIssue[] errors,
+            UnityCliLoopCompileIssue[] warnings,
+            string message)
+        {
+            return new UnityCliLoopCompileResult
+            {
+                Success = success,
+                ErrorCount = errorCount,
+                WarningCount = warningCount,
+                Errors = errors,
+                Warnings = warnings,
+                Message = message,
+            };
+        }
+
+        private static UnityCliLoopCompileIssue CreateIssue(string message, string file, int line)
+        {
+            return new UnityCliLoopCompileIssue
+            {
+                Message = message,
+                File = file,
+                Line = line,
+            };
         }
 
         private async Task<bool> WaitForPlayModeExitAsync(CancellationToken ct)
@@ -124,23 +157,23 @@ namespace io.github.hatayama.UnityCliLoop
             return !EditorApplication.isPlaying;
         }
 
-        private static void PrepareResultStorage(CompileSchema parameters)
+        private static void PrepareResultStorage(UnityCliLoopCompileRequest request)
         {
-            Debug.Assert(parameters != null, "parameters must not be null");
+            Debug.Assert(request != null, "request must not be null");
 
             CompileResultPersistenceService.ClearStaleResults();
 
-            if (!parameters.WaitForDomainReload)
+            if (!request.WaitForDomainReload)
             {
                 return;
             }
 
-            if (!string.IsNullOrWhiteSpace(parameters.RequestId) && IsRequestIdSafe(parameters.RequestId))
+            if (!string.IsNullOrWhiteSpace(request.RequestId) && IsRequestIdSafe(request.RequestId))
             {
                 return;
             }
 
-            parameters.RequestId = CreateRequestId();
+            request.RequestId = CreateRequestId();
         }
 
         private static bool IsRequestIdSafe(string requestId)
@@ -157,24 +190,24 @@ namespace io.github.hatayama.UnityCliLoop
             return true;
         }
 
-        private static CompileResponse PersistResponseIfNeeded(CompileSchema parameters, CompileResponse response)
+        private static UnityCliLoopCompileResult PersistResponseIfNeeded(UnityCliLoopCompileRequest request, UnityCliLoopCompileResult response)
         {
-            Debug.Assert(parameters != null, "parameters must not be null");
+            Debug.Assert(request != null, "request must not be null");
             Debug.Assert(response != null, "response must not be null");
 
-            if (!parameters.WaitForDomainReload)
+            if (!request.WaitForDomainReload)
             {
                 return response;
             }
 
             response.ProjectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
 
-            if (string.IsNullOrWhiteSpace(parameters.RequestId))
+            if (string.IsNullOrWhiteSpace(request.RequestId))
             {
                 return response;
             }
 
-            CompileResultPersistenceService.SaveResult(parameters.RequestId, response);
+            CompileResultPersistenceService.SaveResult(request.RequestId, response);
             return response;
         }
 

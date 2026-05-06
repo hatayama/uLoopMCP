@@ -34,6 +34,19 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
+        public void GetToolType_WhenCompileComesFromFirstPartyToolsAssembly_ReturnsBundledPluginType()
+        {
+            // Tests that compile is a bundled plugin instead of an application-layer tool.
+            UnityCliLoopToolRegistry registry = new UnityCliLoopToolRegistry();
+
+            System.Type toolType = registry.GetToolType("compile");
+
+            Assert.That(toolType, Is.Not.Null);
+            Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo("UnityCLILoop.FirstPartyTools.Editor"));
+            Assert.That(registry.IsThirdPartyTool("compile"), Is.False);
+        }
+
+        [Test]
         public void GetToolType_WhenToolComesFromFirstPartyToolsAssembly_ReturnsBundledPluginType()
         {
             // Tests that a bundled tool can live in the first-party plugin assembly and still register normally.
