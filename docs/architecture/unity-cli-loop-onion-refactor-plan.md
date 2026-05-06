@@ -58,6 +58,7 @@
   - settings-window UI source uses `UnityCliLoopSettingsWindow` naming instead of the legacy MCP settings-window name.
   - settings, setup, and server editor UI files now compile under `UnityCLILoop.Presentation`.
   - recordings editor UI now compiles under `UnityCLILoop.Presentation` and reaches record/replay services through `RecordingsApplicationFacade`.
+  - unused legacy MCP communication-log code and its transient settings have been removed.
   - pure platform values `DynamicCodeSecurityLevel` and `ToolDisabledException` now compile under `UnityCLILoop.Domain`.
 - Added asmdef dependency tests proving:
   - `Domain` and `ToolContracts` have no project assembly references.

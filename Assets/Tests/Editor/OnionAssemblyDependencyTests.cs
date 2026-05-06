@@ -173,6 +173,23 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
+        public void ProductionSources_WhenLoaded_DoNotUseLegacyMcpCommunicationLogTypes()
+        {
+            // Tests that the removed MCP communication log utility does not return under a legacy public name.
+            string[] legacyNames =
+            {
+                "Mcp" + "CommunicationLog",
+                "Mcp" + "CommunicationLogger"
+            };
+            string[] offendingReferences = ReadProductionSourcePaths()
+                .SelectMany(path => FindForbiddenReferences(path, legacyNames))
+                .OrderBy(reference => reference)
+                .ToArray();
+
+            Assert.That(offendingReferences, Is.Empty);
+        }
+
+        [Test]
         public void EditorUiFiles_WhenLoaded_DoNotUseLegacyMcpSettingsWindowNames()
         {
             // Tests that settings-window UI code uses UnityCLILoop naming instead of legacy MCP naming.
@@ -223,6 +240,12 @@ namespace io.github.hatayama.UnityCliLoop
         {
             string presentationRoot = Path.Combine(UnityMcpPathResolver.GetProjectRoot(), "Packages", "src", "Editor", "Presentation");
             return Directory.GetFiles(presentationRoot, "*.cs", SearchOption.AllDirectories);
+        }
+
+        private static string[] ReadProductionSourcePaths()
+        {
+            string editorRoot = Path.Combine(UnityMcpPathResolver.GetProjectRoot(), "Packages", "src", "Editor");
+            return Directory.GetFiles(editorRoot, "*.cs", SearchOption.AllDirectories);
         }
 
         private static string[] FindForbiddenReferences(string path, string[] forbiddenReferences)

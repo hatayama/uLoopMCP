@@ -26,7 +26,6 @@ namespace io.github.hatayama.UnityCliLoop
     public record McpEditorSettingsData
     {
         public bool showDeveloperTools = false;
-        public bool enableCommunicationLogs = false;
         public string lastSeenSetupWizardVersion = "";
         public bool suppressSetupWizardAutoShow = false;
 
@@ -45,9 +44,6 @@ namespace io.github.hatayama.UnityCliLoop
         public bool isReconnecting = false;
         public bool showReconnectingUI = false;
         public bool showPostCompileReconnectingUI = false;
-        public float communicationLogHeight = McpUIConstants.DEFAULT_COMMUNICATION_LOG_HEIGHT;
-        public string communicationLogsJson = "[]";
-        public string pendingRequestsJson = "{}";
         public bool compileWindowHasData = false;
         public string[] pendingCompileRequestIds = new string[0];
         public CompileRequestData[] compileRequests = new CompileRequestData[0];
@@ -178,14 +174,6 @@ namespace io.github.hatayama.UnityCliLoop
             SaveSettings(updatedSettings);
         }
 
-        /// <summary>
-        /// Gets the communication logs enabled flag.
-        /// </summary>
-        public static bool GetEnableCommunicationLogs()
-        {
-            return GetSettings().enableCommunicationLogs;
-        }
-
         public static string GetLastSeenSetupWizardVersion()
         {
             return GetSettings().lastSeenSetupWizardVersion ?? string.Empty;
@@ -209,16 +197,6 @@ namespace io.github.hatayama.UnityCliLoop
             McpEditorSettingsData settings = GetSettings();
             McpEditorSettingsData updatedSettings = settings with { suppressSetupWizardAutoShow = suppressAutoShow };
             SaveSettings(updatedSettings);
-        }
-
-        /// <summary>
-        /// Sets the communication logs enabled flag.
-        /// </summary>
-        public static void SetEnableCommunicationLogs(bool enableCommunicationLogs)
-        {
-            McpEditorSettingsData settings = GetSettings();
-            McpEditorSettingsData newSettings = settings with { enableCommunicationLogs = enableCommunicationLogs };
-            SaveSettings(newSettings);
         }
 
         /// <summary>
@@ -374,61 +352,6 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         /// <summary>
-        /// Gets the communication log height.
-        /// </summary>
-        public static float GetCommunicationLogHeight()
-        {
-            return GetSettings().communicationLogHeight;
-        }
-
-        /// <summary>
-        /// Sets the communication log height.
-        /// </summary>
-        public static void SetCommunicationLogHeight(float communicationLogHeight)
-        {
-            McpEditorSettingsData settings = GetSettings();
-            McpEditorSettingsData newSettings = settings with { communicationLogHeight = communicationLogHeight };
-            SaveSettings(newSettings);
-        }
-
-        /// <summary>
-        /// Gets the communication logs JSON.
-        /// </summary>
-        public static string GetCommunicationLogsJson()
-        {
-            return GetSettings().communicationLogsJson;
-        }
-
-        /// <summary>
-        /// Sets the communication logs JSON.
-        /// </summary>
-        public static void SetCommunicationLogsJson(string communicationLogsJson)
-        {
-            McpEditorSettingsData settings = GetSettings();
-            McpEditorSettingsData newSettings = settings with { communicationLogsJson = communicationLogsJson };
-            SaveSettings(newSettings);
-        }
-
-        /// <summary>
-        /// Gets the pending requests JSON.
-        /// </summary>
-        public static string GetPendingRequestsJson()
-        {
-            return GetSettings().pendingRequestsJson;
-        }
-
-        /// <summary>
-        /// Sets the pending requests JSON.
-        /// </summary>
-        public static void SetPendingRequestsJson(string pendingRequestsJson)
-        {
-            McpEditorSettingsData settings = GetSettings();
-            McpEditorSettingsData newSettings = settings with { pendingRequestsJson = pendingRequestsJson };
-            SaveSettings(newSettings);
-        }
-
-
-        /// <summary>
         /// Gets the compile window has data flag.
         /// </summary>
         public static bool GetCompileWindowHasData()
@@ -493,18 +416,6 @@ namespace io.github.hatayama.UnityCliLoop
         public static void ClearDomainReloadFlag()
         {
             SetIsDomainReloadInProgress(false);
-        }
-
-        /// <summary>
-        /// Clear communication logs.
-        /// </summary>
-        public static void ClearCommunicationLogs()
-        {
-            UpdateSettings(s => s with
-            {
-                communicationLogsJson = "[]",
-                pendingRequestsJson = "{}"
-            });
         }
 
         /// <summary>
