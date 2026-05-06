@@ -85,6 +85,26 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
+        public void DynamicCodeSecurityValues_WhenLoaded_CompileUnderDomainAssembly()
+        {
+            // Tests that dynamic-code security result values live in the domain layer.
+            string resultAssemblyName = typeof(SecurityValidationResult).Assembly.GetName().Name;
+            string violationAssemblyName = typeof(SecurityViolation).Assembly.GetName().Name;
+
+            Assert.That(resultAssemblyName, Is.EqualTo(DomainAssemblyName));
+            Assert.That(violationAssemblyName, Is.EqualTo(DomainAssemblyName));
+        }
+
+        [Test]
+        public void DangerousApiCatalog_WhenLoaded_CompilesUnderDomainAssembly()
+        {
+            // Tests that dynamic-code dangerous API policy lives in the domain layer.
+            string catalogAssemblyName = typeof(DangerousApiCatalog).Assembly.GetName().Name;
+
+            Assert.That(catalogAssemblyName, Is.EqualTo(DomainAssemblyName));
+        }
+
+        [Test]
         public void ToolContractsAsmdef_WhenLoaded_HasNoProjectAssemblyReferences()
         {
             // Tests that the public tool contract assembly stays independent from implementation assemblies.
