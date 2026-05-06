@@ -15,7 +15,7 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
         public void ExecuteAsync_WithStringParameters_ShouldThrowUnityCliLoopToolParameterValidationException()
         {
             // Arrange
-            ExecuteDynamicCodeTool tool = new ExecuteDynamicCodeTool();
+            UnityCliLoopToolRegistry registry = new UnityCliLoopToolRegistry();
             JObject paramsToken = new JObject
             {
                 ["Code"] = "return \"ok\";",
@@ -24,9 +24,10 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
             };
 
             // Act & Assert
-            var ex = Assert.ThrowsAsync<UnityCliLoopToolParameterValidationException>(async () =>
+            UnityCliLoopToolParameterValidationException ex =
+                Assert.ThrowsAsync<UnityCliLoopToolParameterValidationException>(async () =>
             {
-                await tool.ExecuteAsync(paramsToken);
+                await registry.ExecuteToolAsync("execute-dynamic-code", paramsToken);
             });
 
             Assert.IsNotNull(ex);
@@ -40,7 +41,7 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
             // Arrange
             DynamicCodeSecurityLevel prev = ULoopSettings.GetDynamicCodeSecurityLevel();
             ULoopSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
-            ExecuteDynamicCodeTool tool = new ExecuteDynamicCodeTool();
+            UnityCliLoopToolRegistry registry = new UnityCliLoopToolRegistry();
             JObject paramsToken = new JObject
             {
                 ["Code"] = "return \"ok\";",
@@ -52,7 +53,7 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
             UnityCliLoopToolResponse baseResponse = null;
             try
             {
-                baseResponse = await tool.ExecuteAsync(paramsToken);
+                baseResponse = await registry.ExecuteToolAsync("execute-dynamic-code", paramsToken);
             }
             finally
             {
@@ -72,7 +73,7 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
             // Arrange
             DynamicCodeSecurityLevel prev = ULoopSettings.GetDynamicCodeSecurityLevel();
             ULoopSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
-            ExecuteDynamicCodeTool tool = new ExecuteDynamicCodeTool();
+            UnityCliLoopToolRegistry registry = new UnityCliLoopToolRegistry();
             JObject paramsToken = new JObject
             {
                 ["Code"] = "int x = 1; // no explicit return",
@@ -83,7 +84,7 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
             UnityCliLoopToolResponse baseResponse = null;
             try
             {
-                baseResponse = await tool.ExecuteAsync(paramsToken);
+                baseResponse = await registry.ExecuteToolAsync("execute-dynamic-code", paramsToken);
             }
             finally
             {
@@ -99,5 +100,4 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
     }
 }
 #endif
-
 

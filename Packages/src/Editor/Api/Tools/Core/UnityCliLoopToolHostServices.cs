@@ -7,11 +7,13 @@ namespace io.github.hatayama.UnityCliLoop
     {
         public IUnityCliLoopConsoleLogService ConsoleLogs { get; }
         public IUnityCliLoopCompilationService Compilation { get; }
+        public IUnityCliLoopDynamicCodeExecutionService DynamicCodeExecution { get; }
 
         public UnityCliLoopToolHostServices()
         {
             ConsoleLogs = new LogRetrievalService();
             Compilation = new CompileUseCase();
+            DynamicCodeExecution = new UnityCliLoopDynamicCodeExecutionHostService();
         }
     }
 }

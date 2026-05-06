@@ -21,6 +21,7 @@ namespace io.github.hatayama.UnityCliLoop
     {
         IUnityCliLoopConsoleLogService ConsoleLogs { get; }
         IUnityCliLoopCompilationService Compilation { get; }
+        IUnityCliLoopDynamicCodeExecutionService DynamicCodeExecution { get; }
     }
 
     /// <summary>

@@ -1,5 +1,6 @@
 ---
 name: uloop-execute-dynamic-code
+toolName: execute-dynamic-code
 description: "Execute C# code dynamically in Unity Editor. Use find-game-objects first for basic selected GameObject discovery or property inspection. Use when you need to: (1) Wire prefab/material references and AddComponent operations, (2) Edit SerializedObject properties and reference wiring, (3) Perform scene/hierarchy edits and batch operations, (4) Execute Unity Editor menu commands through EditorApplication.ExecuteMenuItem, (5) PlayMode automation (click buttons, invoke methods, tweak runtime state), (6) PlayMode UI controls (InputField, Slider, Toggle, Dropdown), (7) PlayMode inspection that requires custom Unity API code beyond existing tools. NOT for file I/O or script authoring."
 context: fork
 ---

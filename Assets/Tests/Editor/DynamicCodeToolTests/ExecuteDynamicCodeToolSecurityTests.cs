@@ -11,7 +11,7 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
         public async Task ExecuteAsync_Restricted_FileExists_ShouldUseCompilerSecurityRulesInsteadOfToolLocalBlock()
         {
             DynamicCodeSecurityLevel previous = ULoopSettings.GetDynamicCodeSecurityLevel();
-            ExecuteDynamicCodeTool tool = new ExecuteDynamicCodeTool();
+            UnityCliLoopToolRegistry registry = new UnityCliLoopToolRegistry();
 
             try
             {
@@ -22,7 +22,7 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
                 };
 
                 ULoopSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
-                UnityCliLoopToolResponse response = await tool.ExecuteAsync(paramsToken);
+                UnityCliLoopToolResponse response = await registry.ExecuteToolAsync("execute-dynamic-code", paramsToken);
                 ExecuteDynamicCodeResponse typedResponse = response as ExecuteDynamicCodeResponse;
 
                 Assert.IsNotNull(typedResponse, "Response should be ExecuteDynamicCodeResponse");
