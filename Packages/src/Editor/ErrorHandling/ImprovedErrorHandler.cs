@@ -86,11 +86,11 @@ namespace io.github.hatayama.UnityCliLoop
             {
                 return new TranslationOutput
                 {
-                    FriendlyMessage = $"Tool '{disabledException.ToolName}' is disabled. To enable it, go to {McpUIConstants.TOOL_SETTINGS_MENU_PATH}",
+                    FriendlyMessage = $"Tool '{disabledException.ToolName}' is disabled. To enable it, go to {UnityCliLoopUIConstants.TOOL_SETTINGS_MENU_PATH}",
                     Explanation = "This tool has been disabled in project settings.",
                     Solutions = new List<string>
                     {
-                        $"Enable '{disabledException.ToolName}' in {McpUIConstants.TOOL_SETTINGS_MENU_PATH}"
+                        $"Enable '{disabledException.ToolName}' in {UnityCliLoopUIConstants.TOOL_SETTINGS_MENU_PATH}"
                     }
                 };
             }

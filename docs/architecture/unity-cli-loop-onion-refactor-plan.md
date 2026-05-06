@@ -59,6 +59,7 @@
   - settings, setup, and server editor UI files now compile under `UnityCLILoop.Presentation`.
   - recordings editor UI now compiles under `UnityCLILoop.Presentation` and reaches record/replay services through `RecordingsApplicationFacade`.
   - unused legacy MCP communication-log code and its transient settings have been removed.
+  - shared editor UI constants now use `UnityCliLoopUIConstants` naming instead of the legacy MCP name.
   - pure platform values `DynamicCodeSecurityLevel` and `ToolDisabledException` now compile under `UnityCLILoop.Domain`.
 - Added asmdef dependency tests proving:
   - `Domain` and `ToolContracts` have no project assembly references.

@@ -53,7 +53,7 @@ namespace io.github.hatayama.UnityCliLoop
             Label cliReferenceLink = root.Q<Label>("cli-reference-link");
             if (cliReferenceLink != null)
             {
-                cliReferenceLink.RegisterCallback<ClickEvent>(_ => Application.OpenURL(McpUIConstants.CLI_COMMAND_REFERENCE_URL));
+                cliReferenceLink.RegisterCallback<ClickEvent>(_ => Application.OpenURL(UnityCliLoopUIConstants.CLI_COMMAND_REFERENCE_URL));
             }
 
             SetupBindings();

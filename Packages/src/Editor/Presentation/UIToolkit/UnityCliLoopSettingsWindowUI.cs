@@ -130,7 +130,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static void HandleOpenGitHub()
         {
-            Application.OpenURL(McpUIConstants.PROJECT_REPOSITORY_URL);
+            Application.OpenURL(UnityCliLoopUIConstants.PROJECT_REPOSITORY_URL);
         }
 
         private void HandleGitHubHoverChanged(bool isHovered)

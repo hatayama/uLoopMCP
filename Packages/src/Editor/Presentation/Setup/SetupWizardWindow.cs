@@ -116,7 +116,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         internal static string GetGitHubRepositoryUrl()
         {
-            return McpUIConstants.PROJECT_REPOSITORY_URL;
+            return UnityCliLoopUIConstants.PROJECT_REPOSITORY_URL;
         }
 
         internal static bool TryReuseOpenWindow(

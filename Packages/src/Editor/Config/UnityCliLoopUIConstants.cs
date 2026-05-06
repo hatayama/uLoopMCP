@@ -6,7 +6,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// Unity CLI Loop Editor UI constants
     /// Centralized management of UI-related constants
     /// </summary>
-    public static class McpUIConstants
+    public static class UnityCliLoopUIConstants
     {
         // UI spacing and dimensions
         public const float BUTTON_HEIGHT_LARGE = 30f;

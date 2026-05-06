@@ -35,7 +35,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             TranslationOutput result = _translator.TranslateFromException(exception);
 
-            StringAssert.Contains(McpUIConstants.TOOL_SETTINGS_MENU_PATH, result.FriendlyMessage);
+            StringAssert.Contains(UnityCliLoopUIConstants.TOOL_SETTINGS_MENU_PATH, result.FriendlyMessage);
         }
 
         [Test]
