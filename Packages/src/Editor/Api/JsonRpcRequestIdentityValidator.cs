@@ -1,5 +1,3 @@
-using System;
-
 namespace io.github.hatayama.UnityCliLoop
 {
     internal static class JsonRpcRequestIdentityValidator
@@ -13,19 +11,12 @@ namespace io.github.hatayama.UnityCliLoop
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(metadata.ExpectedProjectRoot))
+            ValidationResult validation = ProjectRootIdentityValidator.Validate(
+                metadata.ExpectedProjectRoot,
+                actualProjectRoot);
+            if (!validation.IsValid)
             {
-                throw new UnityCliLoopToolParameterValidationException("Invalid x-uloop metadata: expectedProjectRoot is required.");
-            }
-
-            if (string.IsNullOrWhiteSpace(actualProjectRoot))
-            {
-                throw new UnityCliLoopToolParameterValidationException("Fast project validation is unavailable. Restart Unity CLI Loop and retry.");
-            }
-
-            if (!string.Equals(metadata.ExpectedProjectRoot, actualProjectRoot, StringComparison.Ordinal))
-            {
-                throw new UnityCliLoopToolParameterValidationException("Connected Unity instance belongs to a different project.");
+                throw new UnityCliLoopToolParameterValidationException(validation.ErrorMessage);
             }
         }
     }

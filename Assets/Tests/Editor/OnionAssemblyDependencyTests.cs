@@ -40,6 +40,15 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
+        public void ProjectRootIdentityValidator_WhenLoaded_CompilesUnderDomainAssembly()
+        {
+            // Tests that project identity safety policy lives in the domain layer.
+            string validatorAssemblyName = typeof(ProjectRootIdentityValidator).Assembly.GetName().Name;
+
+            Assert.That(validatorAssemblyName, Is.EqualTo(DomainAssemblyName));
+        }
+
+        [Test]
         public void ToolContractsAsmdef_WhenLoaded_HasNoProjectAssemblyReferences()
         {
             // Tests that the public tool contract assembly stays independent from implementation assemblies.
