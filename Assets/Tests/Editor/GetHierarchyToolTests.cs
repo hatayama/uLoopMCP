@@ -1,100 +1,80 @@
+using System;
+using System.Threading;
 using System.Threading.Tasks;
-using NUnit.Framework;
-using UnityEngine;
 using Newtonsoft.Json.Linq;
+using NUnit.Framework;
 
 namespace io.github.hatayama.UnityCliLoop
 {
     public class GetHierarchyToolTests
     {
-        private GetHierarchyTool tool;
-        private GameObject testRoot;
+        private GetHierarchyTool _tool;
+        private FakeHierarchyService _hierarchyService;
         
         [SetUp]
         public void SetUp()
         {
-            tool = new GetHierarchyTool();
-            testRoot = new GameObject("TestRoot");
-        }
-        
-        [TearDown]
-        public void TearDown()
-        {
-            if (testRoot != null)
-                Object.DestroyImmediate(testRoot);
+            _hierarchyService = new FakeHierarchyService();
+            _tool = new GetHierarchyTool();
+            _tool.InitializeHostServices(new FakeToolHostServices(_hierarchyService));
         }
         
         [Test]
         public void ToolName_ReturnsCorrectName()
         {
-            Assert.That(tool.ToolName, Is.EqualTo("get-hierarchy"));
+            // Tests that the bundled hierarchy tool keeps the CLI command name stable.
+            Assert.That(_tool.ToolName, Is.EqualTo("get-hierarchy"));
         }
         
         [Test]
-        public async Task ExecuteAsync_WithDefaultParameters_ReturnsValidResponse()
+        public async Task ExecuteAsync_WithDefaultParameters_ReturnsHostServiceResponse()
         {
-            // Arrange
-            JObject paramsJson = new JObject();
+            // Tests that the tool delegates execution to the injected hierarchy host service.
+            JObject parameters = new JObject();
             
-            // Act
-            UnityCliLoopToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
+            UnityCliLoopToolResponse baseResponse = await _tool.ExecuteAsync(parameters);
             GetHierarchyResponse response = baseResponse as GetHierarchyResponse;
             
-            // Assert
             Assert.That(response, Is.Not.Null);
-            Assert.That(response.hierarchyFilePath, Is.Not.Null);
+            Assert.That(response.hierarchyFilePath, Is.EqualTo("HierarchyResults/fake.json"));
+            Assert.That(response.message, Is.EqualTo("fake hierarchy message"));
+            Assert.That(_hierarchyService.LastRequest, Is.Not.Null);
         }
         
         [Test]
-        public async Task ExecuteAsync_WithMaxDepthParameter_LimitsDepth()
+        public async Task ExecuteAsync_WithMaxDepthParameter_MapsRequest()
         {
-            // Arrange
-            GameObject child = new GameObject("Child");
-            GameObject grandChild = new GameObject("GrandChild");
-            child.transform.SetParent(testRoot.transform);
-            grandChild.transform.SetParent(child.transform);
-            
-            JObject paramsJson = new JObject
+            // Tests that MaxDepth crosses the first-party tool boundary through the host request DTO.
+            JObject parameters = new JObject
             {
                 ["MaxDepth"] = 1
             };
             
-            // Act
-            UnityCliLoopToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
-            GetHierarchyResponse response = baseResponse as GetHierarchyResponse;
+            await _tool.ExecuteAsync(parameters);
             
-            // Assert
-            Assert.That(response, Is.Not.Null);
-            Assert.That(response.hierarchyFilePath, Is.Not.Null);
+            Assert.That(_hierarchyService.LastRequest.MaxDepth, Is.EqualTo(1));
         }
         
         [Test]
-        public async Task ExecuteAsync_WithIncludeComponentsFalse_ExcludesComponents()
+        public async Task ExecuteAsync_WithIncludeComponentsFalse_MapsRequest()
         {
-            // Arrange
-            testRoot.AddComponent<BoxCollider>();
-            
-            JObject paramsJson = new JObject
+            // Tests that component inclusion crosses the first-party tool boundary through the host request DTO.
+            JObject parameters = new JObject
             {
                 ["IncludeComponents"] = false
             };
             
-            // Act
-            UnityCliLoopToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
-            GetHierarchyResponse response = baseResponse as GetHierarchyResponse;
+            await _tool.ExecuteAsync(parameters);
             
-            // Assert
-            Assert.That(response, Is.Not.Null);
-            Assert.That(response.hierarchyFilePath, Is.Not.Null);
+            Assert.That(_hierarchyService.LastRequest.IncludeComponents, Is.False);
         }
         
         [Test]
         public void ParameterSchema_HasCorrectProperties()
         {
-            // Act
-            ToolParameterSchema schema = tool.ParameterSchema;
+            // Tests that moving the tool assembly does not change the public parameter schema.
+            ToolParameterSchema schema = _tool.ParameterSchema;
             
-            // Assert
             Assert.That(schema, Is.Not.Null);
             Assert.That(schema.Properties, Is.Not.Null);
             Assert.That(schema.Properties.ContainsKey("IncludeInactive"), Is.True);
@@ -103,6 +83,34 @@ namespace io.github.hatayama.UnityCliLoop
             Assert.That(schema.Properties.ContainsKey("IncludeComponents"), Is.True);
             Assert.That(schema.Properties.ContainsKey("IncludePaths"), Is.True);
             Assert.That(schema.Properties.ContainsKey("UseComponentsLut"), Is.True);
+        }
+
+        private sealed class FakeHierarchyService : IUnityCliLoopHierarchyService
+        {
+            public UnityCliLoopHierarchyRequest LastRequest { get; private set; }
+
+            public Task<UnityCliLoopHierarchyResult> GetHierarchyAsync(UnityCliLoopHierarchyRequest request, CancellationToken ct)
+            {
+                LastRequest = request;
+                UnityCliLoopHierarchyResult result = new UnityCliLoopHierarchyResult(
+                    "HierarchyResults/fake.json",
+                    "fake hierarchy message");
+                return Task.FromResult(result);
+            }
+        }
+
+        private sealed class FakeToolHostServices : IUnityCliLoopToolHostServices
+        {
+            public IUnityCliLoopConsoleLogService ConsoleLogs => throw new NotSupportedException();
+            public IUnityCliLoopConsoleClearService ConsoleClear => throw new NotSupportedException();
+            public IUnityCliLoopCompilationService Compilation => throw new NotSupportedException();
+            public IUnityCliLoopDynamicCodeExecutionService DynamicCodeExecution => throw new NotSupportedException();
+            public IUnityCliLoopHierarchyService Hierarchy { get; }
+
+            public FakeToolHostServices(IUnityCliLoopHierarchyService hierarchy)
+            {
+                Hierarchy = hierarchy ?? throw new ArgumentNullException(nameof(hierarchy));
+            }
         }
     }
 }

@@ -168,6 +168,28 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
+        public void HierarchyHostServiceContract_WhenLoaded_CompilesUnderToolContractsAssembly()
+        {
+            // Tests that bundled hierarchy tools consume platform behavior through the public host-service boundary.
+            string serviceAssemblyName = typeof(IUnityCliLoopHierarchyService).Assembly.GetName().Name;
+            string requestAssemblyName = typeof(UnityCliLoopHierarchyRequest).Assembly.GetName().Name;
+            string resultAssemblyName = typeof(UnityCliLoopHierarchyResult).Assembly.GetName().Name;
+
+            Assert.That(serviceAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
+            Assert.That(requestAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
+            Assert.That(resultAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
+        }
+
+        [Test]
+        public void GetHierarchyUseCase_WhenLoaded_CompilesUnderApplicationAssembly()
+        {
+            // Tests that the application layer owns the hierarchy host-service implementation.
+            string useCaseAssemblyName = typeof(GetHierarchyUseCase).Assembly.GetName().Name;
+
+            Assert.That(useCaseAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+        }
+
+        [Test]
         public void PreloadMetadataValidationPorts_WhenLoaded_CompileUnderMetadataValidationAssembly()
         {
             // Tests that preload metadata validation contracts are owned by the metadata validation module.

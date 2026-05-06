@@ -9,6 +9,7 @@ namespace io.github.hatayama.UnityCliLoop
         public IUnityCliLoopConsoleClearService ConsoleClear { get; }
         public IUnityCliLoopCompilationService Compilation { get; }
         public IUnityCliLoopDynamicCodeExecutionService DynamicCodeExecution { get; }
+        public IUnityCliLoopHierarchyService Hierarchy { get; }
 
         public UnityCliLoopToolHostServices()
         {
@@ -16,6 +17,7 @@ namespace io.github.hatayama.UnityCliLoop
             ConsoleClear = new ConsoleClearService();
             Compilation = new CompileUseCase();
             DynamicCodeExecution = new UnityCliLoopDynamicCodeExecutionHostService();
+            Hierarchy = new GetHierarchyUseCase(new HierarchyService(), new HierarchySerializer());
         }
     }
 }

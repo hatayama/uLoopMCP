@@ -19,6 +19,7 @@ namespace io.github.hatayama.UnityCliLoop
             Assert.That(registry.IsToolRegistered("get-logs"), Is.True);
             Assert.That(registry.IsToolRegistered("execute-dynamic-code"), Is.True);
             Assert.That(registry.IsToolRegistered("clear-console"), Is.True);
+            Assert.That(registry.IsToolRegistered("get-hierarchy"), Is.True);
         }
 
         [Test]
@@ -84,6 +85,19 @@ namespace io.github.hatayama.UnityCliLoop
             Assert.That(toolType, Is.Not.Null);
             Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo("UnityCLILoop.FirstPartyTools.Editor"));
             Assert.That(registry.IsThirdPartyTool("clear-console"), Is.False);
+        }
+
+        [Test]
+        public void GetToolType_WhenGetHierarchyComesFromFirstPartyToolsAssembly_ReturnsBundledPluginType()
+        {
+            // Tests that get-hierarchy is a bundled plugin instead of an application-layer tool.
+            UnityCliLoopToolRegistry registry = new UnityCliLoopToolRegistry();
+
+            System.Type toolType = registry.GetToolType("get-hierarchy");
+
+            Assert.That(toolType, Is.Not.Null);
+            Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo("UnityCLILoop.FirstPartyTools.Editor"));
+            Assert.That(registry.IsThirdPartyTool("get-hierarchy"), Is.False);
         }
 
         [Test]

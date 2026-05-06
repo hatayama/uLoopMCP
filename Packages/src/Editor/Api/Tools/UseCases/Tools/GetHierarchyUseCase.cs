@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Threading;
 
@@ -9,7 +10,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// Related classes: GetHierarchyTool, HierarchyService, HierarchySerializer, HierarchyResultExporter
     /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - UseCase + Tool Pattern (DDD Integration)
     /// </summary>
-    public class GetHierarchyUseCase : AbstractUseCase<GetHierarchySchema, GetHierarchyResponse>
+    public class GetHierarchyUseCase : IUnityCliLoopHierarchyService
     {
         private readonly HierarchyService _hierarchyService;
         private readonly HierarchySerializer _hierarchySerializer;
@@ -23,9 +24,9 @@ namespace io.github.hatayama.UnityCliLoop
         /// Execute Unity Hierarchy retrieval processing
         /// </summary>
         /// <param name="parameters">Hierarchy retrieval parameters</param>
-        /// <param name="cancellationToken">Cancellation control token</param>
+        /// <param name="ct">Cancellation control token</param>
         /// <returns>Hierarchy retrieval result</returns>
-        public override Task<GetHierarchyResponse> ExecuteAsync(GetHierarchySchema parameters, CancellationToken cancellationToken)
+        public Task<UnityCliLoopHierarchyResult> ExecuteAsync(UnityCliLoopHierarchyRequest parameters, CancellationToken ct)
         {
             if (parameters == null)
             {
@@ -44,13 +45,13 @@ namespace io.github.hatayama.UnityCliLoop
                     UseSelection = parameters.UseSelection
                 };
                 
-                cancellationToken.ThrowIfCancellationRequested();
+                ct.ThrowIfCancellationRequested();
                 
-                var nodes = _hierarchyService.GetHierarchyNodes(options);
+                List<HierarchyNode> nodes = _hierarchyService.GetHierarchyNodes(options);
                 HierarchyContext context = _hierarchyService.GetCurrentContext() ?? new HierarchyContext("editor", string.Empty, 0, 0);
 
                 // 2. Data conversion to scene-grouped structure
-                cancellationToken.ThrowIfCancellationRequested();
+                ct.ThrowIfCancellationRequested();
                 HierarchySerializationOptions serOptions = new HierarchySerializationOptions
                 {
                     IncludePaths = parameters.IncludePaths,
@@ -59,10 +60,10 @@ namespace io.github.hatayama.UnityCliLoop
                 HierarchySerializationResult result = _hierarchySerializer.BuildGroups(nodes, context, serOptions);
 
                 // 3. Always export to JSON
-                cancellationToken.ThrowIfCancellationRequested();
+                ct.ThrowIfCancellationRequested();
                 string filePath = HierarchyResultExporter.ExportHierarchyResults(result.Groups, result.Context);
                 string message = "Hierarchy data saved below. Open the JSON to read 'Context' and 'Hierarchy'.";
-                return Task.FromResult(new GetHierarchyResponse(filePath, message));
+                return Task.FromResult(new UnityCliLoopHierarchyResult(filePath, message));
             }
             catch (System.OperationCanceledException)
             {
@@ -74,6 +75,11 @@ namespace io.github.hatayama.UnityCliLoop
                 VibeLogger.LogError("get_hierarchy_failed", $"Failed to get hierarchy: {ex.Message}", ex);
                 throw new System.InvalidOperationException($"Failed to retrieve hierarchy: {ex.Message}", ex);
             }
+        }
+
+        public Task<UnityCliLoopHierarchyResult> GetHierarchyAsync(UnityCliLoopHierarchyRequest request, CancellationToken ct)
+        {
+            return ExecuteAsync(request, ct);
         }
     }
 }

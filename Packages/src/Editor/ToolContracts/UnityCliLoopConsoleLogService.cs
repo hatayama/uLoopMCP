@@ -31,6 +31,7 @@ namespace io.github.hatayama.UnityCliLoop
         IUnityCliLoopConsoleClearService ConsoleClear { get; }
         IUnityCliLoopCompilationService Compilation { get; }
         IUnityCliLoopDynamicCodeExecutionService DynamicCodeExecution { get; }
+        IUnityCliLoopHierarchyService Hierarchy { get; }
     }
 
     /// <summary>
