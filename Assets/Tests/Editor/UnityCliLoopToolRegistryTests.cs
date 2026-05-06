@@ -30,6 +30,19 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
+        public void GetToolType_WhenToolComesFromFirstPartyToolsAssembly_ReturnsBundledPluginType()
+        {
+            // Tests that a bundled tool can live in the first-party plugin assembly and still register normally.
+            UnityCliLoopToolRegistry registry = new UnityCliLoopToolRegistry();
+
+            System.Type toolType = registry.GetToolType("control-play-mode");
+
+            Assert.That(toolType, Is.Not.Null);
+            Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo("UnityCLILoop.FirstPartyTools.Editor"));
+            Assert.That(registry.IsThirdPartyTool("control-play-mode"), Is.False);
+        }
+
+        [Test]
         public void Constructor_WhenFocusWindowIsNativeCliCommand_DoesNotRegisterItAsTool()
         {
             // Tests that focus-window stays a native CLI command instead of an extension-facing Unity tool.

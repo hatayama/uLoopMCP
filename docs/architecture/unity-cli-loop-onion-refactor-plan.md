@@ -36,7 +36,7 @@
 - Removed legacy MCP-era development tools from the runtime registry:
   - `ping`
   - `debug-sleep`
-- Kept `UnityCLILoop.FirstPartyTools.Editor` as the future first-party plugin boundary, even though no tool currently lives there.
+- Moved `control-play-mode` into `UnityCLILoop.FirstPartyTools.Editor` as the first bundled tool plugin that references only `UnityCLILoop.ToolContracts`.
 - Added registry tests proving:
   - bundled tools are discovered through the attribute path.
   - `get-logs` is first-party after the assembly rename.
@@ -47,6 +47,7 @@
   - `focus-window` is not registered as a Unity-side tool.
   - legacy MCP-era development tools are not registered.
   - `hello-world` is registered as an extension tool.
+  - `control-play-mode` is registered from `UnityCLILoop.FirstPartyTools.Editor`.
   - the sample extension asmdef references only `UnityCLILoop.ToolContracts`.
   - `UnityCLILoop.FirstPartyTools.Editor` references only `UnityCLILoop.ToolContracts`.
 - Added asmdef dependency tests proving:

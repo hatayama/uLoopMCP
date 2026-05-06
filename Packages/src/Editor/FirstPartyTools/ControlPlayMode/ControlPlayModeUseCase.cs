@@ -1,14 +1,17 @@
-using System.Threading.Tasks;
 using System.Threading;
+using System.Threading.Tasks;
 using UnityEditor;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    public class ControlPlayModeUseCase : AbstractUseCase<ControlPlayModeSchema, ControlPlayModeResponse>
+    /// <summary>
+    /// Executes Unity Editor play mode state changes for the bundled control-play-mode tool.
+    /// </summary>
+    public class ControlPlayModeUseCase
     {
-        public override Task<ControlPlayModeResponse> ExecuteAsync(ControlPlayModeSchema parameters, CancellationToken cancellationToken)
+        public Task<ControlPlayModeResponse> ExecuteAsync(ControlPlayModeSchema parameters, CancellationToken ct)
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            ct.ThrowIfCancellationRequested();
 
             if (parameters == null)
             {
@@ -65,4 +68,3 @@ namespace io.github.hatayama.UnityCliLoop
         }
     }
 }
-
