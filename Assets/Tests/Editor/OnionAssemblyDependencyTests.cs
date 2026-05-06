@@ -29,6 +29,17 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
+        public void PlatformResultTypes_WhenLoaded_CompileUnderDomainAssembly()
+        {
+            // Tests that pure platform result values live in the domain layer.
+            string validationResultAssemblyName = typeof(ValidationResult).Assembly.GetName().Name;
+            string serviceResultAssemblyName = typeof(ServiceResult<int>).Assembly.GetName().Name;
+
+            Assert.That(validationResultAssemblyName, Is.EqualTo(DomainAssemblyName));
+            Assert.That(serviceResultAssemblyName, Is.EqualTo(DomainAssemblyName));
+        }
+
+        [Test]
         public void ToolContractsAsmdef_WhenLoaded_HasNoProjectAssemblyReferences()
         {
             // Tests that the public tool contract assembly stays independent from implementation assemblies.

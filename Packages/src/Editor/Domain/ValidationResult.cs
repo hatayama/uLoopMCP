@@ -1,9 +1,7 @@
 namespace io.github.hatayama.UnityCliLoop
 {
     /// <summary>
-    /// Data model representing validation result
-    /// Used in Application Service Layer
-    /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - Application Service Layer (Single Function Implementation)
+    /// Domain value for platform rule validation.
     /// </summary>
     public class ValidationResult
     {

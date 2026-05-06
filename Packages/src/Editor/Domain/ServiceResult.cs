@@ -1,9 +1,7 @@
 namespace io.github.hatayama.UnityCliLoop
 {
     /// <summary>
-    /// Generic data model representing service execution result
-    /// Used in Application Service Layer
-    /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - Application Service Layer (Single Function Implementation)
+    /// Domain value for platform operation results.
     /// </summary>
     /// <typeparam name="T">Type of result data</typeparam>
     public class ServiceResult<T>

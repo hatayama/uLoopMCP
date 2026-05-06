@@ -66,7 +66,7 @@
   - package version, tool security, console log filter, shared constants, and server config now use `UnityCliLoop*` naming instead of legacy MCP names.
   - project IPC server lifecycle types now use `UnityCliLoop*` naming instead of legacy MCP names.
   - presentation USS, UXML, and C# style class names now use `unity-cli-loop-*` prefixes instead of the legacy `mcp-*` prefix.
-  - pure platform values `DynamicCodeSecurityLevel` and `ToolDisabledException` now compile under `UnityCLILoop.Domain`.
+  - pure platform values `DynamicCodeSecurityLevel`, `ToolDisabledException`, `ValidationResult`, and `ServiceResult<T>` now compile under `UnityCLILoop.Domain`.
 - Added asmdef dependency tests proving:
   - `Domain` and `ToolContracts` have no project assembly references.
   - `Application` references the inward contracts and does not reference outer onion layers.
