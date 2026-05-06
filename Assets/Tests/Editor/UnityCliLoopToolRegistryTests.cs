@@ -21,11 +21,15 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
-        public void IsThirdPartyTool_WhenToolComesFromApplicationAssembly_ReturnsFalse()
+        public void GetToolType_WhenGetLogsComesFromFirstPartyToolsAssembly_ReturnsBundledPluginType()
         {
-            // Tests that the renamed application assembly is still classified as first-party.
+            // Tests that get-logs is a bundled plugin instead of an application-layer tool.
             UnityCliLoopToolRegistry registry = new UnityCliLoopToolRegistry();
 
+            System.Type toolType = registry.GetToolType("get-logs");
+
+            Assert.That(toolType, Is.Not.Null);
+            Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo("UnityCLILoop.FirstPartyTools.Editor"));
             Assert.That(registry.IsThirdPartyTool("get-logs"), Is.False);
         }
 

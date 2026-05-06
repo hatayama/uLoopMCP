@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 
 namespace io.github.hatayama.UnityCliLoop
@@ -10,26 +11,26 @@ namespace io.github.hatayama.UnityCliLoop
     /// </summary>
     public class LogFilteringService
     {
-        /// <summary>
-        /// Filter log entries and apply limits
-        /// </summary>
-        /// <param name="entries">Log entry array</param>
-        /// <param name="maxCount">Maximum retrieval count</param>
-        /// <param name="includeStackTrace">Whether to include stack trace</param>
-        /// <returns>Filtered log entry array</returns>
-        public LogEntry[] FilterAndLimitLogs(LogEntryDto[] entries, int maxCount, bool includeStackTrace)
+        public LogEntry[] FilterAndLimitLogs(UnityCliLoopConsoleLogEntry[] entries, int maxCount, bool includeStackTrace)
         {
-            // Get the most recent logs, limited by maxCount
-            LogEntryDto[] limitedEntries = entries.Length > maxCount
+            if (entries == null)
+            {
+                throw new ArgumentNullException(nameof(entries));
+            }
+
+            if (maxCount < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(maxCount), "maxCount must be zero or greater.");
+            }
+
+            UnityCliLoopConsoleLogEntry[] limitedEntries = entries.Length > maxCount
                 ? entries.Skip(entries.Length - maxCount).ToArray()
                 : entries;
-            
-            // Reverse to show newest first
+
             limitedEntries = limitedEntries.Reverse().ToArray();
 
-            // Convert from LogEntryDto to LogEntry
             return limitedEntries.Select(entry => new LogEntry(
-                type: entry.LogType,
+                type: entry.Type,
                 message: entry.Message,
                 stackTrace: includeStackTrace ? entry.StackTrace : null
             )).ToArray();

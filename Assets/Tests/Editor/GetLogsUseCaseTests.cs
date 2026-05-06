@@ -535,10 +535,10 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         /// <summary>
-        /// Verifies behavior with negative MaxCount (error handling check)
+        /// Verifies fail-fast behavior with negative MaxCount
         /// </summary>
         [Test]
-        public async Task ExecuteAsync_WithNegativeMaxCount_HandlesGracefully()
+        public void ExecuteAsync_WithNegativeMaxCount_ThrowsArgumentOutOfRangeException()
         {
             // Arrange
             GetLogsSchema schema = new()
@@ -547,14 +547,11 @@ namespace io.github.hatayama.UnityCliLoop
                 MaxCount = -1,
             };
 
-            // Act
-            GetLogsResponse result = await _useCase.ExecuteAsync(schema, _cancellationTokenSource.Token);
-
-            // Assert
-            Assert.IsNotNull(result);
-            Assert.IsNotNull(result.Logs);
-            // Negative MaxCount should be handled gracefully (likely treated as 0 or ignored)
-            Assert.GreaterOrEqual(result.DisplayedCount, 0, "DisplayedCount should be non-negative");
+            // Act & Assert
+            Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () =>
+            {
+                await _useCase.ExecuteAsync(schema, _cancellationTokenSource.Token);
+            });
         }
 
         #endregion
@@ -568,9 +565,7 @@ namespace io.github.hatayama.UnityCliLoop
         public void ExecuteAsync_WithNullParameters_ThrowsException()
         {
             // Act & Assert
-            // Currently throws InvalidOperationException wrapping NullReferenceException
-            // This is acceptable behavior as it indicates the parameter was null
-            Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            Assert.ThrowsAsync<ArgumentNullException>(async () =>
             {
 #pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type
                 await _useCase.ExecuteAsync(null, _cancellationTokenSource.Token);
@@ -629,7 +624,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// Verifies behavior with invalid regex pattern
         /// </summary>
         [Test]
-        public async Task ExecuteAsync_WithInvalidRegexPattern_HandlesGracefully()
+        public void ExecuteAsync_WithInvalidRegexPattern_ThrowsArgumentException()
         {
             // Arrange
             Debug.Log("Test Log");
@@ -642,35 +637,11 @@ namespace io.github.hatayama.UnityCliLoop
                 MaxCount = 10,
             };
 
-            // Act
-            // Should handle invalid regex gracefully
-            Exception thrownException = null;
-            GetLogsResponse result = null;
-            
-            try
+            // Act & Assert
+            Assert.ThrowsAsync<ArgumentException>(async () =>
             {
-                result = await _useCase.ExecuteAsync(schema, _cancellationTokenSource.Token);
-            }
-            catch (Exception ex)
-            {
-                thrownException = ex;
-            }
-
-            // Assert
-            // Either returns empty result or throws a meaningful exception
-            if (thrownException != null)
-            {
-                Assert.IsTrue(
-                    thrownException is InvalidOperationException || 
-                    thrownException.InnerException is RegexMatchTimeoutException ||
-                    thrownException.InnerException is ArgumentException,
-                    "Should throw appropriate exception for invalid regex");
-            }
-            else
-            {
-                Assert.IsNotNull(result, "Should return a result even with invalid regex");
-                Assert.IsNotNull(result.Logs, "Logs array should not be null");
-            }
+                await _useCase.ExecuteAsync(schema, _cancellationTokenSource.Token);
+            });
         }
 
         #endregion

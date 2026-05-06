@@ -1048,6 +1048,12 @@ namespace io.github.hatayama.UnityCliLoop
 
             Assert.That(controlPlayModeSkill.ToolName, Is.EqualTo("control-play-mode"));
             Assert.That(controlPlayModeSkill.SkillFiles.Keys, Does.Contain(SkillInstallLayout.SkillFileName));
+
+            SkillInstallLayout.SkillSourceInfo getLogsSkill = skillSources
+                .Single(skill => skill.Name == "uloop-get-logs");
+
+            Assert.That(getLogsSkill.ToolName, Is.EqualTo("get-logs"));
+            Assert.That(getLogsSkill.SkillFiles.Keys, Does.Contain(SkillInstallLayout.SkillFileName));
         }
 
         // Tests that internal skill metadata maps back to the hidden tool name only.

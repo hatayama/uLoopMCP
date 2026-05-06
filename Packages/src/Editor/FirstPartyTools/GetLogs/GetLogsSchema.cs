@@ -3,17 +3,6 @@ using System.ComponentModel;
 namespace io.github.hatayama.UnityCliLoop
 {
     /// <summary>
-    /// Supported log types for filtering: Log, Warning, Error, All
-    /// </summary>
-    public static class UnityCliLoopLogType
-    {
-        public const string Log = "Log";
-        public const string Warning = "Warning";
-        public const string Error = "Error";
-        public const string All = "All";
-    }
-
-    /// <summary>
     /// Schema for GetLogs command parameters
     /// Provides type-safe parameter access with default values
     /// </summary>
@@ -55,4 +44,4 @@ namespace io.github.hatayama.UnityCliLoop
         [Description("Whether to display stack trace")]
         public bool IncludeStackTrace { get; set; } = false;
     }
-} 
+}

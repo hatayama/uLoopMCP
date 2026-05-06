@@ -23,6 +23,7 @@ namespace io.github.hatayama.UnityCliLoop
         private const string ApplicationAssemblyName = "UnityCLILoop.Application";
         private const string FirstPartyToolsAssemblyName = "UnityCLILoop.FirstPartyTools.Editor";
 
+        private readonly IUnityCliLoopToolHostServices _hostServices;
         private readonly Dictionary<string, IUnityCliLoopTool> _tools = new();
 
         /// <summary>
@@ -35,7 +36,13 @@ namespace io.github.hatayama.UnityCliLoop
         /// Auto-registers standard _tools
         /// </summary>
         public UnityCliLoopToolRegistry()
+            : this(new UnityCliLoopToolHostServices())
         {
+        }
+
+        internal UnityCliLoopToolRegistry(IUnityCliLoopToolHostServices hostServices)
+        {
+            _hostServices = hostServices ?? throw new ArgumentNullException(nameof(hostServices));
             UnityCliLoopToolContractVersion.SetCurrent(UnityCliLoopVersion.VERSION);
             Instance = this;
             RegisterDefaultTools();
@@ -70,9 +77,20 @@ namespace io.github.hatayama.UnityCliLoop
                     continue;
                 }
 
-                IUnityCliLoopTool tool = (IUnityCliLoopTool)Activator.CreateInstance(type);
+                IUnityCliLoopTool tool = CreateTool(type);
                 RegisterTool(tool);
             }
+        }
+
+        private IUnityCliLoopTool CreateTool(Type type)
+        {
+            IUnityCliLoopTool tool = (IUnityCliLoopTool)Activator.CreateInstance(type);
+            if (tool is IUnityCliLoopToolHostServicesReceiver receiver)
+            {
+                receiver.InitializeHostServices(_hostServices);
+            }
+
+            return tool;
         }
 
         private bool IsValidToolType(Type type)
