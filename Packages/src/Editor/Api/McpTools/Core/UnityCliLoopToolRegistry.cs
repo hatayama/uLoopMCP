@@ -204,20 +204,8 @@ namespace io.github.hatayama.UnityCliLoop
                 {
                     displayDevelopmentOnly = attribute.DisplayDevelopmentOnly;
                 }
-                
-                // Check security settings
-                bool isAllowed = McpSecurityChecker.IsToolAllowed(tool.ToolName);
-                
-                // Get description from attribute
-                string description = attribute?.Description ?? "";
-                
-                // Modify description for blocked _tools
-                if (!isAllowed)
-                {
-                    description = $"[BLOCKED] {description} - Blocked by security settings";
-                }
-                
-                return new ToolInfo(tool.ToolName, description, tool.ParameterSchema, displayDevelopmentOnly);
+
+                return new ToolInfo(tool.ToolName, tool.ParameterSchema, displayDevelopmentOnly);
             }).ToArray();
         }
 
@@ -237,9 +225,8 @@ namespace io.github.hatayama.UnityCliLoop
                 .Select(tool =>
             {
                 UnityCliLoopToolAttribute attribute = tool.GetType().GetCustomAttribute<UnityCliLoopToolAttribute>();
-                string description = attribute?.Description ?? "";
                 bool displayDevelopmentOnly = attribute?.DisplayDevelopmentOnly ?? false;
-                return new ToolInfo(tool.ToolName, description, tool.ParameterSchema, displayDevelopmentOnly);
+                return new ToolInfo(tool.ToolName, tool.ParameterSchema, displayDevelopmentOnly);
             }).ToArray();
         }
 
@@ -257,13 +244,11 @@ namespace io.github.hatayama.UnityCliLoop
             {
                 Type toolType = tool.GetType();
                 UnityCliLoopToolAttribute attribute = toolType.GetCustomAttribute<UnityCliLoopToolAttribute>();
-                string description = attribute?.Description ?? "";
                 bool displayDevelopmentOnly = attribute?.DisplayDevelopmentOnly ?? false;
                 bool isThirdParty = IsThirdPartyAssembly(toolType.Assembly.GetName().Name);
 
                 return new ToolSettingsCatalogItem(
                     tool.ToolName,
-                    description,
                     displayDevelopmentOnly,
                     isThirdParty);
             }).ToArray();
@@ -321,16 +306,13 @@ namespace io.github.hatayama.UnityCliLoop
     {
         [JsonProperty("name")] public string Name { get; }
 
-        [JsonProperty("description")] public string Description { get; }
-
         [JsonProperty("parameterSchema")] public ToolParameterSchema ParameterSchema { get; }
 
         [JsonProperty("displayDevelopmentOnly")] public bool DisplayDevelopmentOnly { get; }
 
-        public ToolInfo(string name, string description, ToolParameterSchema parameterSchema, bool displayDevelopmentOnly = false)
+        public ToolInfo(string name, ToolParameterSchema parameterSchema, bool displayDevelopmentOnly = false)
         {
             Name = name;
-            Description = description;
             ParameterSchema = parameterSchema;
             DisplayDevelopmentOnly = displayDevelopmentOnly;
         }
@@ -342,18 +324,15 @@ namespace io.github.hatayama.UnityCliLoop
     public class ToolSettingsCatalogItem
     {
         public readonly string Name;
-        public readonly string Description;
         public readonly bool DisplayDevelopmentOnly;
         public readonly bool IsThirdParty;
 
         public ToolSettingsCatalogItem(
             string name,
-            string description,
             bool displayDevelopmentOnly,
             bool isThirdParty)
         {
             Name = name;
-            Description = description;
             DisplayDevelopmentOnly = displayDevelopmentOnly;
             IsThirdParty = isThirdParty;
         }

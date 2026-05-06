@@ -20,11 +20,6 @@ namespace io.github.hatayama.UnityCliLoop
         public UnityCliLoopSecuritySetting RequiredSecuritySetting { get; set; } = UnityCliLoopSecuritySetting.None;
 
         /// <summary>
-        /// Gets or sets the description of this tool
-        /// </summary>
-        public string Description { get; set; } = string.Empty;
-
-        /// <summary>
         /// Public parameterless constructor required for attribute usage.
         /// </summary>
         public UnityCliLoopToolAttribute()

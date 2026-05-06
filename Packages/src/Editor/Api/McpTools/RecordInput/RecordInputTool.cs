@@ -14,7 +14,7 @@ using Newtonsoft.Json.Serialization;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    [UnityCliLoopTool(Description = "Record keyboard and mouse input during PlayMode. Captures key presses, mouse movement, clicks, and scroll events frame-by-frame into a JSON file for later replay.")]
+    [UnityCliLoopTool]
     public class RecordInputTool : UnityCliLoopTool<RecordInputSchema, RecordInputResponse>
     {
         public override string ToolName => "record-input";

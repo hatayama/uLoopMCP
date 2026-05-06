@@ -9,7 +9,7 @@ namespace Samples
     /// Hello World custom tool - Type-safe implementation using Schema and Response
     /// Basic implementation example of a custom tool with strongly typed parameters and response
     /// </summary>
-    [UnityCliLoopTool(Description = "Personalized hello world tool with name parameter")]
+    [UnityCliLoopTool]
     public class HelloWorldTool : UnityCliLoopTool<HelloWorldSchema, HelloWorldResponse>
     {
         public override string ToolName => "hello-world";

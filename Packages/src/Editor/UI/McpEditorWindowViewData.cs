@@ -34,14 +34,12 @@ namespace io.github.hatayama.UnityCliLoop
     public record ToolToggleItem
     {
         public readonly string ToolName;
-        public readonly string Description;
         public readonly bool IsEnabled;
         public readonly bool IsThirdParty;
 
-        public ToolToggleItem(string toolName, string description, bool isEnabled, bool isThirdParty)
+        public ToolToggleItem(string toolName, bool isEnabled, bool isThirdParty)
         {
             ToolName = toolName;
-            Description = description;
             IsEnabled = isEnabled;
             IsThirdParty = isThirdParty;
         }

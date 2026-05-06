@@ -53,5 +53,29 @@ namespace io.github.hatayama.UnityCliLoop
 
             Assert.That(references, Is.EqualTo(new[] { "UnityCLILoop.ToolContracts" }));
         }
+
+        [Test]
+        public void GetRegisteredTools_WhenSerialized_DoesNotExposeDescription()
+        {
+            // Tests that get-tool-details no longer exposes display descriptions from runtime attributes.
+            UnityCliLoopToolRegistry registry = new UnityCliLoopToolRegistry();
+            ToolInfo tool = registry.GetRegisteredTools()
+                .First(item => item.Name == "get-logs");
+            JObject serializedTool = JObject.FromObject(tool);
+
+            Assert.That(serializedTool.ContainsKey("description"), Is.False);
+        }
+
+        [Test]
+        public void GetToolSettingsCatalog_WhenSerialized_DoesNotExposeDescription()
+        {
+            // Tests that Settings metadata no longer carries tooltip descriptions.
+            UnityCliLoopToolRegistry registry = new UnityCliLoopToolRegistry();
+            ToolSettingsCatalogItem tool = registry.GetToolSettingsCatalog()
+                .First(item => item.Name == "get-logs");
+            JObject serializedTool = JObject.FromObject(tool);
+
+            Assert.That(serializedTool.ContainsKey("Description"), Is.False);
+        }
     }
 }

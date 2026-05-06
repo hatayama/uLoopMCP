@@ -9,7 +9,7 @@ namespace Samples
     /// Project information retrieval custom tool
     /// Example of retrieving detailed Unity project information
     /// </summary>
-    [UnityCliLoopTool(Description = "Get detailed Unity project information")]
+    [UnityCliLoopTool]
     public class GetProjectInfoTool : UnityCliLoopTool<GetProjectInfoSchema, GetProjectInfoResponse>
     {
         public override string ToolName => "get-project-info";

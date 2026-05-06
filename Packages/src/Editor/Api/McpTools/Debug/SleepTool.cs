@@ -10,10 +10,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// - SleepResponse: Output containing results and timing information
     /// - UnityCliLoopTool: Base class providing timeout infrastructure
     /// </summary>
-    [UnityCliLoopTool(
-        DisplayDevelopmentOnly = true,
-        Description = "Debug tool that sleeps for specified duration to test timeout functionality"
-    )]
+    [UnityCliLoopTool(DisplayDevelopmentOnly = true)]
     public class SleepTool : UnityCliLoopTool<SleepSchema, SleepResponse>
     {
         public override string ToolName => "debug-sleep";

@@ -10,7 +10,7 @@ using UnityEngine.UI;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    [UnityCliLoopTool(Description = "Simulate mouse click, long-press, and drag on PlayMode UI elements via EventSystem screen coordinates")]
+    [UnityCliLoopTool]
     public class SimulateMouseUiTool : UnityCliLoopTool<SimulateMouseUiSchema, SimulateMouseUiResponse>
     {
         public override string ToolName => "simulate-mouse-ui";

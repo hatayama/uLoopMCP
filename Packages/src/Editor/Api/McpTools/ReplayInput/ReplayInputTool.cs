@@ -14,7 +14,7 @@ using Newtonsoft.Json.Serialization;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    [UnityCliLoopTool(Description = "Replay recorded input during PlayMode. Loads a JSON recording and injects keyboard/mouse input frame-by-frame with zero CLI overhead.")]
+    [UnityCliLoopTool]
     public class ReplayInputTool : UnityCliLoopTool<ReplayInputSchema, ReplayInputResponse>
     {
         public override string ToolName => "replay-input";

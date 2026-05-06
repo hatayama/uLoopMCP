@@ -12,10 +12,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// - ToolInfo: Data structure for tool details
     /// - GetToolDetailsResponse: Type-safe response structure
     /// </summary>
-    [UnityCliLoopTool(
-        Description = "Retrieve detailed information about all registered Unity CLI tools",
-        DisplayDevelopmentOnly = true
-    )]
+    [UnityCliLoopTool(DisplayDevelopmentOnly = true)]
     public class GetToolDetailsTool : UnityCliLoopTool<GetToolDetailsSchema, GetToolDetailsResponse>
     {
         public override string ToolName => "get-tool-details";

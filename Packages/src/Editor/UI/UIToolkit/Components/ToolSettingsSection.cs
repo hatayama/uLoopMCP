@@ -437,7 +437,7 @@ namespace io.github.hatayama.UnityCliLoop
             ViewDataBinder.SetVisible(toggle, true);
             toggle.SetValueWithoutNotify(item.IsEnabled);
             label.text = item.ToolName;
-            label.tooltip = item.Description;
+            label.tooltip = string.Empty;
 
             row.SetEnabled(true);
             _togglesByToolName[item.ToolName] = toggle;
@@ -481,7 +481,6 @@ namespace io.github.hatayama.UnityCliLoop
             public readonly bool IsHeader;
             public readonly string ToolName;
             public readonly string Label;
-            public readonly string Description;
             public bool IsEnabled;
             public ToolSettingsSection Owner;
 
@@ -489,13 +488,11 @@ namespace io.github.hatayama.UnityCliLoop
                 bool isHeader,
                 string toolName,
                 string label,
-                string description,
                 bool isEnabled)
             {
                 IsHeader = isHeader;
                 ToolName = toolName;
                 Label = label;
-                Description = description;
                 IsEnabled = isEnabled;
             }
 
@@ -505,7 +502,6 @@ namespace io.github.hatayama.UnityCliLoop
                     true,
                     string.Empty,
                     label,
-                    string.Empty,
                     true);
             }
 
@@ -515,7 +511,6 @@ namespace io.github.hatayama.UnityCliLoop
                     false,
                     item.ToolName,
                     item.ToolName,
-                    item.Description,
                     item.IsEnabled);
             }
         }

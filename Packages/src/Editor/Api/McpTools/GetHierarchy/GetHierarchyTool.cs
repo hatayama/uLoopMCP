@@ -21,7 +21,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// - GetHierarchySchema: Type-safe parameter schema
     /// - GetHierarchyResponse: Type-safe response structure
     /// </summary>
-    [UnityCliLoopTool(Description = "Get Unity Hierarchy structure for the whole scene, a root path, or selected GameObject descendants using UseSelection. Use this when the child tree, parent-child structure, or descendants under the selection are needed. Use find-game-objects for selected object details and component properties.")]
+    [UnityCliLoopTool]
     public class GetHierarchyTool : UnityCliLoopTool<GetHierarchySchema, GetHierarchyResponse>
     {
         public override string ToolName => "get-hierarchy";

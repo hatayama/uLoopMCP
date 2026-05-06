@@ -4,10 +4,7 @@ using UnityEngine;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    [UnityCliLoopTool(
-        DisplayDevelopmentOnly = true,
-        Description = "Get Unity version and project information"
-    )]
+    [UnityCliLoopTool(DisplayDevelopmentOnly = true)]
     public class GetVersionTool : UnityCliLoopTool<GetVersionSchema, GetVersionResponse>
     {
         public override string ToolName => "get-version";

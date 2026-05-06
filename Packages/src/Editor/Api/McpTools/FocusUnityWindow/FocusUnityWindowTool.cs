@@ -28,7 +28,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// <summary>
     /// Stub for tool list registration. Actual focus is handled by the CLI.
     /// </summary>
-    [UnityCliLoopTool(Description = "Bring Unity Editor window to front using OS-level commands. Works even when Unity is busy (compiling, domain reload).")]
+    [UnityCliLoopTool]
     public class FocusUnityWindowTool : UnityCliLoopTool<FocusUnityWindowSchema, FocusUnityWindowResponse>
     {
         /// <inheritdoc />

@@ -9,7 +9,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// Related classes: CompileUseCase, CompilationStateValidationService, CompilationExecutionService
     /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - UseCase + Tool Pattern (DDD Integration)
     /// </summary>
-    [UnityCliLoopTool(Description = "Execute Unity project compilation")]
+    [UnityCliLoopTool]
     public class CompileTool : UnityCliLoopTool<CompileSchema, CompileResponse>
     {
         public override string ToolName => "compile";

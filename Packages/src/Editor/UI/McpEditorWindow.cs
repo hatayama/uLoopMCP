@@ -378,7 +378,7 @@ namespace io.github.hatayama.UnityCliLoop
                 bool isEnabled = ToolSettings.IsToolEnabled(tool.Name);
                 bool isThirdPartyTool = tool.IsThirdParty;
 
-                ToolToggleItem item = new ToolToggleItem(tool.Name, tool.Description, isEnabled, isThirdPartyTool);
+                ToolToggleItem item = new ToolToggleItem(tool.Name, isEnabled, isThirdPartyTool);
                 if (isThirdPartyTool)
                 {
                     thirdParty.Add(item);

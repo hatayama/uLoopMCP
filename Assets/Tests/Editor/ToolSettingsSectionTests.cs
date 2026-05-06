@@ -213,7 +213,6 @@ namespace io.github.hatayama.UnityCliLoop
         {
             ToolToggleItem compile = new ToolToggleItem(
                 toolName: "compile",
-                description: "Compile project",
                 isEnabled: compileEnabled,
                 isThirdParty: false);
             ToolToggleItem[] thirdPartyTools = includeThirdPartyTool
@@ -221,7 +220,6 @@ namespace io.github.hatayama.UnityCliLoop
                 {
                     new ToolToggleItem(
                         toolName: "sample-third-party",
-                        description: "Third-party sample",
                         isEnabled: true,
                         isThirdParty: true)
                 }
@@ -232,7 +230,6 @@ namespace io.github.hatayama.UnityCliLoop
             {
                 ToolToggleItem getLogs = new ToolToggleItem(
                     toolName: "get-logs",
-                    description: "Read Unity logs",
                     isEnabled: true,
                     isThirdParty: false);
                 builtInTools = new[] { compile, getLogs };

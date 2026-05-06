@@ -8,7 +8,7 @@ using UnityEditor;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    [UnityCliLoopTool(Description = "Take a screenshot of Unity EditorWindow and save as PNG")]
+    [UnityCliLoopTool]
     public class ScreenshotTool : UnityCliLoopTool<ScreenshotSchema, ScreenshotResponse>
     {
         private const int ANNOTATION_OVERLAY_RENDER_WAIT_FRAMES = 2;

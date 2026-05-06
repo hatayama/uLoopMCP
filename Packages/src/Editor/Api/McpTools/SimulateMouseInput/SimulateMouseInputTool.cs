@@ -10,7 +10,7 @@ using UnityEngine.InputSystem;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    [UnityCliLoopTool(Description = "Simulate mouse input in PlayMode via Input System. Injects button clicks, mouse delta, and scroll wheel directly into Mouse.current for game logic that reads Input System (e.g. WasPressedThisFrame). Requires the Input System package.")]
+    [UnityCliLoopTool]
     public class SimulateMouseInputTool : UnityCliLoopTool<SimulateMouseInputSchema, SimulateMouseInputResponse>
     {
         public override string ToolName => "simulate-mouse-input";
