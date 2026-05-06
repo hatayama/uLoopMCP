@@ -106,6 +106,7 @@ namespace io.github.hatayama.UnityCliLoop
             public IUnityCliLoopCompilationService Compilation => throw new NotSupportedException();
             public IUnityCliLoopDynamicCodeExecutionService DynamicCodeExecution => throw new NotSupportedException();
             public IUnityCliLoopHierarchyService Hierarchy { get; }
+            public IUnityCliLoopTestExecutionService TestExecution => throw new NotSupportedException();
 
             public FakeToolHostServices(IUnityCliLoopHierarchyService hierarchy)
             {

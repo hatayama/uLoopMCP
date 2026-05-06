@@ -18,13 +18,13 @@ namespace io.github.hatayama.UnityCliLoop
                 executionService,
                 validationService
             );
-            RunTestsSchema parameters = new()
+            UnityCliLoopTestExecutionRequest parameters = new()
             {
-                TestMode = TestMode.EditMode,
+                TestMode = UnityCliLoopTestMode.EditMode,
                 SaveBeforeRun = true
             };
 
-            RunTestsResponse response = await useCase.ExecuteAsync(parameters, CancellationToken.None);
+            UnityCliLoopTestExecutionResult response = await useCase.ExecuteAsync(parameters, CancellationToken.None);
 
             Assert.That(response.Success, Is.False);
             Assert.That(response.Message, Is.EqualTo("EditMode tests cannot run during play mode"));

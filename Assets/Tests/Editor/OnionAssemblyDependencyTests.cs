@@ -190,6 +190,28 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
+        public void TestExecutionHostServiceContract_WhenLoaded_CompilesUnderToolContractsAssembly()
+        {
+            // Tests that bundled test-runner tools consume platform behavior through the public host-service boundary.
+            string serviceAssemblyName = typeof(IUnityCliLoopTestExecutionService).Assembly.GetName().Name;
+            string requestAssemblyName = typeof(UnityCliLoopTestExecutionRequest).Assembly.GetName().Name;
+            string resultAssemblyName = typeof(UnityCliLoopTestExecutionResult).Assembly.GetName().Name;
+
+            Assert.That(serviceAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
+            Assert.That(requestAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
+            Assert.That(resultAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
+        }
+
+        [Test]
+        public void RunTestsUseCase_WhenLoaded_CompilesUnderApplicationAssembly()
+        {
+            // Tests that the application layer owns the test execution host-service implementation.
+            string useCaseAssemblyName = typeof(RunTestsUseCase).Assembly.GetName().Name;
+
+            Assert.That(useCaseAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+        }
+
+        [Test]
         public void PreloadMetadataValidationPorts_WhenLoaded_CompileUnderMetadataValidationAssembly()
         {
             // Tests that preload metadata validation contracts are owned by the metadata validation module.

@@ -1078,6 +1078,12 @@ namespace io.github.hatayama.UnityCliLoop
 
             Assert.That(getHierarchySkill.ToolName, Is.EqualTo("get-hierarchy"));
             Assert.That(getHierarchySkill.SkillFiles.Keys, Does.Contain(SkillInstallLayout.SkillFileName));
+
+            SkillInstallLayout.SkillSourceInfo runTestsSkill = skillSources
+                .Single(skill => skill.Name == "uloop-run-tests");
+
+            Assert.That(runTestsSkill.ToolName, Is.EqualTo("run-tests"));
+            Assert.That(runTestsSkill.SkillFiles.Keys, Does.Contain(SkillInstallLayout.SkillFileName));
         }
 
         // Tests that internal skill metadata maps back to the hidden tool name only.

@@ -20,6 +20,7 @@ namespace io.github.hatayama.UnityCliLoop
             Assert.That(registry.IsToolRegistered("execute-dynamic-code"), Is.True);
             Assert.That(registry.IsToolRegistered("clear-console"), Is.True);
             Assert.That(registry.IsToolRegistered("get-hierarchy"), Is.True);
+            Assert.That(registry.IsToolRegistered("run-tests"), Is.True);
         }
 
         [Test]
@@ -98,6 +99,19 @@ namespace io.github.hatayama.UnityCliLoop
             Assert.That(toolType, Is.Not.Null);
             Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo("UnityCLILoop.FirstPartyTools.Editor"));
             Assert.That(registry.IsThirdPartyTool("get-hierarchy"), Is.False);
+        }
+
+        [Test]
+        public void GetToolType_WhenRunTestsComesFromFirstPartyToolsAssembly_ReturnsBundledPluginType()
+        {
+            // Tests that run-tests is a bundled plugin instead of an application-layer tool.
+            UnityCliLoopToolRegistry registry = new UnityCliLoopToolRegistry();
+
+            System.Type toolType = registry.GetToolType("run-tests");
+
+            Assert.That(toolType, Is.Not.Null);
+            Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo("UnityCLILoop.FirstPartyTools.Editor"));
+            Assert.That(registry.IsThirdPartyTool("run-tests"), Is.False);
         }
 
         [Test]

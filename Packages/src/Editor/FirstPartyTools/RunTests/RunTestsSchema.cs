@@ -4,17 +4,6 @@ using UnityEditor.TestTools.TestRunner.Api;
 namespace io.github.hatayama.UnityCliLoop
 {
     /// <summary>
-    /// Supported test filter types
-    /// </summary>
-    public enum TestFilterType
-    {
-        all = 0,
-        exact = 1,
-        regex = 2,
-        assembly = 3
-    }
-
-    /// <summary>
     /// Schema for RunTests command parameters
     /// Provides type-safe parameter access with default values
     /// </summary>

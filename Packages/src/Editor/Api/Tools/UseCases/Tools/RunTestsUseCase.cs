@@ -12,7 +12,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// Related classes: RunTestsTool, TestFilterCreationService, TestExecutionService
     /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - UseCase + Tool Pattern (DDD Integration)
     /// </summary>
-    public class RunTestsUseCase : AbstractUseCase<RunTestsSchema, RunTestsResponse>
+    public class RunTestsUseCase : IUnityCliLoopTestExecutionService
     {
         private readonly TestFilterCreationService _filterService;
         private readonly TestExecutionService _executionService;
@@ -43,11 +43,12 @@ namespace io.github.hatayama.UnityCliLoop
         /// Executes test execution processing
         /// </summary>
         /// <param name="parameters">Test execution parameters</param>
-        /// <param name="cancellationToken">Cancellation control token</param>
+        /// <param name="ct">Cancellation control token</param>
         /// <returns>Test execution result</returns>
-        public override async Task<RunTestsResponse> ExecuteAsync(RunTestsSchema parameters, CancellationToken cancellationToken)
+        public async Task<UnityCliLoopTestExecutionResult> ExecuteAsync(UnityCliLoopTestExecutionRequest parameters, CancellationToken ct)
         {
-            ValidationResult validation = _validationService.Validate(parameters.TestMode, parameters.SaveBeforeRun);
+            TestMode testMode = ToUnityTestMode(parameters.TestMode);
+            ValidationResult validation = _validationService.Validate(testMode, parameters.SaveBeforeRun);
             if (!validation.IsValid)
             {
                 return CreateFailureResponse(validation.ErrorMessage);
@@ -61,12 +62,12 @@ namespace io.github.hatayama.UnityCliLoop
             }
             
             // 2. Test execution
-            cancellationToken.ThrowIfCancellationRequested();
+            ct.ThrowIfCancellationRequested();
             SerializableTestResult result;
             
             try
             {
-                if (parameters.TestMode == TestMode.PlayMode)
+                if (testMode == TestMode.PlayMode)
                 {
                     // TODO: Add cancellationToken parameter when TestExecutionService supports it
                     result = await _executionService.ExecutePlayModeTestAsync(filter);
@@ -89,7 +90,7 @@ namespace io.github.hatayama.UnityCliLoop
                 VibeLogger.LogError(
                     "test_execution_failed", 
                     "Test execution encountered an error", 
-                    new { testMode = parameters.TestMode, filterType = parameters.FilterType, filterValue = parameters.FilterValue, error = ex.Message }
+                    new { testMode, filterType = parameters.FilterType, filterValue = parameters.FilterValue, error = ex.Message }
                 );
                 
                 // Create a minimal error result
@@ -97,30 +98,47 @@ namespace io.github.hatayama.UnityCliLoop
             }
             
             // 3. Response creation
-            return new RunTestsResponse(
-                success: result.success,
-                message: result.message,
-                completedAt: result.completedAt,
-                testCount: result.testCount,
-                passedCount: result.passedCount,
-                failedCount: result.failedCount,
-                skippedCount: result.skippedCount,
-                xmlPath: result.xmlPath
-            );
+            return new UnityCliLoopTestExecutionResult
+            {
+                Success = result.success,
+                Message = result.message,
+                CompletedAt = result.completedAt,
+                TestCount = result.testCount,
+                PassedCount = result.passedCount,
+                FailedCount = result.failedCount,
+                SkippedCount = result.skippedCount,
+                XmlPath = result.xmlPath
+            };
         }
 
-        private static RunTestsResponse CreateFailureResponse(string message)
+        public Task<UnityCliLoopTestExecutionResult> RunTestsAsync(UnityCliLoopTestExecutionRequest request, CancellationToken ct)
         {
-            return new RunTestsResponse(
-                success: false,
-                message: message,
-                completedAt: DateTime.UtcNow.ToString("o"),
-                testCount: 0,
-                passedCount: 0,
-                failedCount: 0,
-                skippedCount: 0,
-                xmlPath: null
-            );
+            return ExecuteAsync(request, ct);
+        }
+
+        private static TestMode ToUnityTestMode(UnityCliLoopTestMode testMode)
+        {
+            if (testMode == UnityCliLoopTestMode.PlayMode)
+            {
+                return TestMode.PlayMode;
+            }
+
+            return TestMode.EditMode;
+        }
+
+        private static UnityCliLoopTestExecutionResult CreateFailureResponse(string message)
+        {
+            return new UnityCliLoopTestExecutionResult
+            {
+                Success = false,
+                Message = message,
+                CompletedAt = DateTime.UtcNow.ToString("o"),
+                TestCount = 0,
+                PassedCount = 0,
+                FailedCount = 0,
+                SkippedCount = 0,
+                XmlPath = null
+            };
         }
     }
 }
