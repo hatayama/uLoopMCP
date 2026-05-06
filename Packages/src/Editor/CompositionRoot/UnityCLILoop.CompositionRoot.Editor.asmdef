@@ -7,8 +7,7 @@
         "UnityCLILoop.FirstPartyTools.Editor",
         "UnityCLILoop.Infrastructure",
         "UnityCLILoop.Presentation",
-        "UnityCLILoop.ToolContracts",
-        "uLoopMCP.Editor.Shared"
+        "UnityCLILoop.ToolContracts"
     ],
     "includePlatforms": [
         "Editor"

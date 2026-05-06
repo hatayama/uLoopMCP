@@ -191,7 +191,6 @@ namespace io.github.hatayama.UnityCliLoop
             {
                 ApplicationAssemblyName,
                 DomainAssemblyName,
-                SharedAssemblyName,
                 ToolContractsAssemblyName
             }));
         }
@@ -218,8 +217,7 @@ namespace io.github.hatayama.UnityCliLoop
                 FirstPartyToolsAssemblyName,
                 InfrastructureAssemblyName,
                 PresentationAssemblyName,
-                ToolContractsAssemblyName,
-                SharedAssemblyName
+                ToolContractsAssemblyName
             }));
         }
 
