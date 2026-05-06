@@ -1,6 +1,6 @@
 namespace io.github.hatayama.UnityCliLoop
 {
-    internal sealed class DynamicCompilationPlan
+    public sealed class DynamicCompilationPlan
     {
         public CompilationRequest OriginalRequest { get; }
 

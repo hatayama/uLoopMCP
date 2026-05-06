@@ -13,7 +13,7 @@ namespace io.github.hatayama.UnityCliLoop
     {
         private readonly IDynamicCompilationService _compiler;
         private readonly ICompiledCommandInvoker _invoker;
-        private readonly DynamicCodeSourcePreparationService _sourcePreparationService;
+        private readonly IDynamicCodeSourcePreparationService _sourcePreparationService;
         private readonly ExecutionStatistics _statistics;
         private readonly object _statsLock = new();
 
@@ -27,7 +27,7 @@ namespace io.github.hatayama.UnityCliLoop
         internal DynamicCodeExecutor(
             IDynamicCompilationService compiler,
             ICompiledCommandInvoker invoker,
-            DynamicCodeSourcePreparationService sourcePreparationService)
+            IDynamicCodeSourcePreparationService sourcePreparationService)
         {
             _compiler = compiler ?? throw new ArgumentNullException(nameof(compiler));
             _invoker = invoker ?? throw new ArgumentNullException(nameof(invoker));

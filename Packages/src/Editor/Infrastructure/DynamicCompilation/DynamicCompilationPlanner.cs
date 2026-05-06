@@ -5,9 +5,9 @@ namespace io.github.hatayama.UnityCliLoop
 {
     internal sealed class DynamicCompilationPlanner : IDynamicCompilationPlanner
     {
-        private readonly DynamicCodeSourcePreparationService _sourcePreparationService;
+        private readonly IDynamicCodeSourcePreparationService _sourcePreparationService;
 
-        public DynamicCompilationPlanner(DynamicCodeSourcePreparationService sourcePreparationService)
+        public DynamicCompilationPlanner(IDynamicCodeSourcePreparationService sourcePreparationService)
         {
             _sourcePreparationService = sourcePreparationService;
         }

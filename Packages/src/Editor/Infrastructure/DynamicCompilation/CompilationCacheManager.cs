@@ -11,7 +11,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// Manages the caching of compilation results.
     /// Avoids recompiling the same code by hashing requests with SHA256.
     /// </summary>
-    public class CompilationCacheManager
+    internal sealed class CompilationCacheManager
     {
         private const int MaxCacheEntries = 32;
         private readonly Dictionary<string, CachedCompilationResult> _compilationCache = new();

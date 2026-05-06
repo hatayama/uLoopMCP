@@ -2,11 +2,11 @@ namespace io.github.hatayama.UnityCliLoop.Factory
 {
     internal sealed class RegistryDynamicCodeExecutorFactory : IDynamicCodeExecutorProvider
     {
-        private readonly DynamicCodeSourcePreparationService _sourcePreparationService;
+        private readonly IDynamicCodeSourcePreparationService _sourcePreparationService;
         private readonly CompiledCommandEntryPointResolver _entryPointResolver;
 
         public RegistryDynamicCodeExecutorFactory(
-            DynamicCodeSourcePreparationService sourcePreparationService,
+            IDynamicCodeSourcePreparationService sourcePreparationService,
             CompiledCommandEntryPointResolver entryPointResolver)
         {
             _sourcePreparationService = sourcePreparationService;

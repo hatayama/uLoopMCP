@@ -4,7 +4,7 @@ using UnityEditor.Compilation;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    internal sealed class CompilerDiagnostics
+    public sealed class CompilerDiagnostics
     {
         public List<CompilationError> Errors { get; }
 

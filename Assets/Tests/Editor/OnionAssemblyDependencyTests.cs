@@ -153,10 +153,18 @@ namespace io.github.hatayama.UnityCliLoop
             string serviceAssemblyName = typeof(IDynamicCompilationService).Assembly.GetName().Name;
             string factoryAssemblyName = typeof(IDynamicCompilationServiceFactory).Assembly.GetName().Name;
             string registryAssemblyName = typeof(DynamicCompilationServiceRegistry).Assembly.GetName().Name;
+            string runtimeFactoryAssemblyName = typeof(IDynamicCompilationRuntimeServicesFactory).Assembly.GetName().Name;
+            string runtimeRegistryAssemblyName = typeof(DynamicCompilationRuntimeServicesRegistry).Assembly.GetName().Name;
+            string sourcePreparationAssemblyName = typeof(IDynamicCodeSourcePreparationService).Assembly.GetName().Name;
+            string assemblyBuilderAssemblyName = typeof(ICompiledAssemblyBuilder).Assembly.GetName().Name;
 
             Assert.That(serviceAssemblyName, Is.EqualTo(ApplicationAssemblyName));
             Assert.That(factoryAssemblyName, Is.EqualTo(ApplicationAssemblyName));
             Assert.That(registryAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+            Assert.That(runtimeFactoryAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+            Assert.That(runtimeRegistryAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+            Assert.That(sourcePreparationAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+            Assert.That(assemblyBuilderAssemblyName, Is.EqualTo(ApplicationAssemblyName));
         }
 
         [Test]
@@ -167,13 +175,21 @@ namespace io.github.hatayama.UnityCliLoop
             string resultAssemblyName = typeof(CompilationResult).Assembly.GetName().Name;
             string errorAssemblyName = typeof(CompilationError).Assembly.GetName().Name;
             string backendKindAssemblyName = typeof(DynamicCompilationBackendKind).Assembly.GetName().Name;
-            string cacheManagerAssemblyName = typeof(CompilationCacheManager).Assembly.GetName().Name;
+            string buildResultAssemblyName = typeof(CompiledAssemblyBuildResult).Assembly.GetName().Name;
+            string loadResultAssemblyName = typeof(CompiledAssemblyLoadResult).Assembly.GetName().Name;
+            string diagnosticsAssemblyName = typeof(CompilerDiagnostics).Assembly.GetName().Name;
+            string planAssemblyName = typeof(DynamicCompilationPlan).Assembly.GetName().Name;
+            string preparedCodeAssemblyName = typeof(PreparedDynamicCode).Assembly.GetName().Name;
 
             Assert.That(requestAssemblyName, Is.EqualTo(ApplicationAssemblyName));
             Assert.That(resultAssemblyName, Is.EqualTo(ApplicationAssemblyName));
             Assert.That(errorAssemblyName, Is.EqualTo(ApplicationAssemblyName));
             Assert.That(backendKindAssemblyName, Is.EqualTo(ApplicationAssemblyName));
-            Assert.That(cacheManagerAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+            Assert.That(buildResultAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+            Assert.That(loadResultAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+            Assert.That(diagnosticsAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+            Assert.That(planAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+            Assert.That(preparedCodeAssemblyName, Is.EqualTo(ApplicationAssemblyName));
         }
 
         [Test]
@@ -401,6 +417,7 @@ namespace io.github.hatayama.UnityCliLoop
             {
                 ApplicationAssemblyName,
                 DomainAssemblyName,
+                MetadataValidationAssemblyName,
                 ToolContractsAssemblyName
             }));
         }
@@ -484,8 +501,73 @@ namespace io.github.hatayama.UnityCliLoop
         {
             // Tests that concrete dynamic-code compiler construction is owned by infrastructure.
             string factoryAssemblyName = typeof(DynamicCodeCompilationServiceFactory).Assembly.GetName().Name;
+            string runtimeFactoryAssemblyName = typeof(DynamicCompilationRuntimeServicesFactory).Assembly.GetName().Name;
 
             Assert.That(factoryAssemblyName, Is.EqualTo(InfrastructureAssemblyName));
+            Assert.That(runtimeFactoryAssemblyName, Is.EqualTo(InfrastructureAssemblyName));
+        }
+
+        [Test]
+        public void DynamicCodeCompilationImplementation_WhenLoaded_CompilesUnderInfrastructureAssembly()
+        {
+            // Tests that concrete dynamic-code compilation implementation stays in infrastructure.
+            string compilerAssemblyName = typeof(DynamicCodeCompiler).Assembly.GetName().Name;
+            string plannerAssemblyName = typeof(DynamicCompilationPlanner).Assembly.GetName().Name;
+            string sourcePreparationAssemblyName = typeof(DynamicCodeSourcePreparationService).Assembly.GetName().Name;
+            string assemblyBuilderAssemblyName = typeof(CompiledAssemblyBuilder).Assembly.GetName().Name;
+            string assemblyLoadServiceAssemblyName = typeof(CompiledAssemblyLoadService).Assembly.GetName().Name;
+            string cacheManagerAssemblyName = typeof(CompilationCacheManager).Assembly.GetName().Name;
+            string sharedWorkerAssemblyName = typeof(SharedRoslynCompilerWorkerHost).Assembly.GetName().Name;
+
+            Assert.That(compilerAssemblyName, Is.EqualTo(InfrastructureAssemblyName));
+            Assert.That(plannerAssemblyName, Is.EqualTo(InfrastructureAssemblyName));
+            Assert.That(sourcePreparationAssemblyName, Is.EqualTo(InfrastructureAssemblyName));
+            Assert.That(assemblyBuilderAssemblyName, Is.EqualTo(InfrastructureAssemblyName));
+            Assert.That(assemblyLoadServiceAssemblyName, Is.EqualTo(InfrastructureAssemblyName));
+            Assert.That(cacheManagerAssemblyName, Is.EqualTo(InfrastructureAssemblyName));
+            Assert.That(sharedWorkerAssemblyName, Is.EqualTo(InfrastructureAssemblyName));
+        }
+
+        [Test]
+        public void ApplicationSources_WhenLoaded_DoNotReferenceConcreteDynamicCompilationInfrastructure()
+        {
+            // Tests that application code depends on dynamic compilation ports instead of concrete compiler collaborators.
+            string[] forbiddenReferences =
+            {
+                "new DynamicCodeCompiler(",
+                "new DynamicCodeSourcePreparationService(",
+                "new DynamicCompilationPlanner(",
+                "new CompiledAssemblyBuilder(",
+                "new CompiledAssemblyLoadService(",
+                "CompiledAssemblyLoader.",
+                "new DynamicCompilationBackend(",
+                "new DynamicReferenceSetBuilderService(",
+                "new ExternalCompilerPathResolutionService(",
+                "ExternalCompilerPathResolver.",
+                "SharedRoslynCompilerWorkerHost.",
+                "new CompilationCacheManager(",
+                "new AutoUsingResolver(",
+                "PreUsingResolver.",
+                "AssemblyTypeIndex.",
+                "DynamicReferenceSetBuilder.",
+                "ExternalCompilerMessageParser.",
+                "ExternalCompilerPaths ",
+                "new IlSecurityValidator(",
+                "SourceShaper.",
+                "TopLevelReturnDetector.",
+                "WrapperTemplate.",
+                "DynamicCodeLiteralHoister.",
+                "DynamicCodeSourcePreparer.",
+                "DynamicCompilationTimingFormatter.",
+                "AssemblyBuilderFallbackCompilerBackend.",
+                "RoslynCompilerBackend."
+            };
+            string[] offendingReferences = ReadApplicationSourcePaths()
+                .SelectMany(path => FindForbiddenReferences(path, forbiddenReferences))
+                .OrderBy(reference => reference)
+                .ToArray();
+
+            Assert.That(offendingReferences, Is.Empty);
         }
 
         [Test]

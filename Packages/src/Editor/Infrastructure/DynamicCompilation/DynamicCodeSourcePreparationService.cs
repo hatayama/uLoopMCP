@@ -1,6 +1,6 @@
 namespace io.github.hatayama.UnityCliLoop
 {
-    internal sealed class DynamicCodeSourcePreparationService
+    internal sealed class DynamicCodeSourcePreparationService : IDynamicCodeSourcePreparationService
     {
         public PreparedDynamicCode Prepare(
             string source,

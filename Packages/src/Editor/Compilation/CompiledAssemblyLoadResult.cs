@@ -3,7 +3,7 @@ using Assembly = System.Reflection.Assembly;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    internal sealed class CompiledAssemblyLoadResult
+    public sealed class CompiledAssemblyLoadResult
     {
         public bool Success { get; }
 

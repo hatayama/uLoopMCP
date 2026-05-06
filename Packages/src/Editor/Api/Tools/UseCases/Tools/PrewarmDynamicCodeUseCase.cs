@@ -396,7 +396,6 @@ namespace io.github.hatayama.UnityCliLoop
 
             string errorMessage = result.ErrorMessage;
             return errorMessage.IndexOf("Internal error", StringComparison.OrdinalIgnoreCase) >= 0
-                   || errorMessage.IndexOf("PreUsingResolver.Resolve", StringComparison.OrdinalIgnoreCase) >= 0
                    || errorMessage.IndexOf("System.NullReferenceException", StringComparison.OrdinalIgnoreCase) >= 0;
         }
 

@@ -50,7 +50,7 @@
 - Moved `simulate-mouse-ui` into `UnityCLILoop.FirstPartyTools.Editor` as a bundled tool plugin that receives EventSystem mouse simulation access through a `ToolContracts` host-service contract.
 - Moved `execute-dynamic-code` schema and response DTOs into `UnityCLILoop.ToolContracts` because both the bundled tool and the application-side execution pipeline shape those values.
 - Moved concrete tool host-service wiring into `UnityCLILoop.CompositionRoot.Editor`; `UnityCliLoopToolRegistry` now asks an application-side provider for registered host services instead of constructing them directly.
-- Moved concrete dynamic-code compilation service factory into `UnityCLILoop.Infrastructure`; `UnityCLILoop.CompositionRoot.Editor` still owns registration, while Infrastructure owns the factory that creates the compiler service.
+- Moved concrete dynamic-code compilation service factory and runtime-service factory into `UnityCLILoop.Infrastructure`; `UnityCLILoop.CompositionRoot.Editor` still owns registration, while Infrastructure owns the concrete compiler creation.
 - Moved Unity Console clear host-service implementation into `UnityCLILoop.Infrastructure`; `clear-console` receives the capability through `ToolContracts` and the composition root wires the concrete adapter.
 - Moved project-root identity matching into `UnityCLILoop.Domain` as a platform safety rule; JSON-RPC request validation now delegates to the domain rule and only converts failures into tool parameter errors.
 - Moved project-root canonicalization into `UnityCLILoop.Domain` so Application code can validate project identity without depending on project IPC transport types.
@@ -60,8 +60,18 @@
 - Moved script-changes-while-playing policy values into `UnityCLILoop.Domain` because they are compile safety policy values interpreted by Application services.
 - Moved dynamic-code security result values and the dangerous API catalog into `UnityCLILoop.Domain` because they are platform safety policy values shared by compilation and metadata validation.
 - Moved source-level dynamic-code security scanning into `UnityCLILoop.Domain` because it is a pure platform safety policy over source text.
-- Moved dynamic-code compilation service ports and their registry into `UnityCLILoop.Application` because Application owns the dynamic-code execution flow while Infrastructure supplies the concrete compiler factory.
-- Moved dynamic-code compilation DTOs and compilation cache management into `UnityCLILoop.Application` because they belong to the application execution flow rather than a shared cross-layer bucket.
+- Moved dynamic-code compilation service ports, runtime-service ports, and registries into `UnityCLILoop.Application` because Application owns the execution flow while Infrastructure supplies concrete compiler collaborators.
+- Moved dynamic-code compilation DTOs into `UnityCLILoop.Application` because they are the data contract between the application execution flow and the infrastructure compiler implementation.
+- Moved concrete dynamic-code compilation collaborators into `UnityCLILoop.Infrastructure`:
+  - `DynamicCodeCompiler`
+  - `DynamicCodeSourcePreparationService`
+  - `DynamicCompilationPlanner`
+  - `CompiledAssemblyBuilder`
+  - `CompiledAssemblyLoadService`
+  - `CompiledAssemblyLoader`
+  - `CompilationCacheManager`
+  - Roslyn and AssemblyBuilder compiler backends
+  - source shaping, auto-using, pre-using, literal hoisting, and reference-set builders
 - Removed now-unused `uLoopMCP.Editor.Shared` references from `UnityCLILoop.Infrastructure` and `UnityCLILoop.CompositionRoot.Editor`.
 - Moved preload metadata validation contracts and registry into `uLoopMCP.Editor.MetadataValidation` so the metadata validation module exposes its own facade instead of depending on `uLoopMCP.Editor.Shared`.
 - Removed `uLoopMCP.Editor.Shared` as a production assembly after moving its remaining constants, logging, and domain-reload registry types into `UnityCLILoop.Application`.
@@ -132,8 +142,10 @@
   - dynamic-code security result values compile under `UnityCLILoop.Domain`.
   - dynamic-code dangerous API policy compiles under `UnityCLILoop.Domain`.
   - source-level dynamic-code security scanning compiles under `UnityCLILoop.Domain`.
-  - dynamic-code compilation service ports and registry compile under `UnityCLILoop.Application`.
-  - dynamic-code compilation DTOs and cache management compile under `UnityCLILoop.Application`.
+  - dynamic-code compilation service ports, runtime-service ports, and registries compile under `UnityCLILoop.Application`.
+  - dynamic-code compilation DTOs compile under `UnityCLILoop.Application`.
+  - concrete dynamic-code compilation collaborators compile under `UnityCLILoop.Infrastructure`.
+  - Application source files do not reference concrete dynamic-code compilation infrastructure directly.
   - `UnityCLILoop.Infrastructure` and `UnityCLILoop.CompositionRoot.Editor` no longer reference `uLoopMCP.Editor.Shared`.
   - preload metadata validation contracts and registry compile under `uLoopMCP.Editor.MetadataValidation`.
   - `uLoopMCP.Editor.MetadataValidation` no longer references `uLoopMCP.Editor.Shared`.
@@ -186,14 +198,13 @@
 - Keep `CompositionRoot.Editor` as the only assembly that references all layers and first-party tools for DI wiring and registration.
 - Keep `FirstPartyTools.Editor` as an outer plugin assembly that references only `ToolContracts`.
 
-## Remaining Migration Steps
+## Follow-up Opportunities
 
-- Continue moving cohesive platform rules into `UnityCLILoop.Domain` when they have no Unity or file-system dependency.
-- Continue moving concrete dynamic-code compilation collaborators into `UnityCLILoop.Infrastructure`. The factory is already in Infrastructure, but the compiler collaborators still share runtime composition through `DynamicCodeServices`, so this should be split behind stable Application ports before moving files.
-- Continue moving Unity Editor and file-system adapters into `UnityCLILoop.Infrastructure` when Application facades or ports are available.
-- Continue splitting internal bridge commands from public tool registration when more CLI-only commands are identified.
-- Continue moving startup/DI wiring into `UnityCLILoop.CompositionRoot.Editor` as additional concrete service composition points are identified.
-- Extend asmdef dependency tests after each physical move, so the dependency direction is enforced by Unity assemblies instead of documentation alone.
+- Move additional cohesive platform rules into `UnityCLILoop.Domain` when they have no Unity or file-system dependency.
+- Move additional Unity Editor and file-system adapters into `UnityCLILoop.Infrastructure` when Application facades or ports are available.
+- Split additional internal bridge commands from public tool registration when more CLI-only commands are identified.
+- Move additional startup and DI wiring into `UnityCLILoop.CompositionRoot.Editor` as concrete service composition points are identified.
+- Extend asmdef dependency tests after each future physical move, so dependency direction stays enforced by Unity assemblies instead of documentation alone.
 
 ## Public Contracts
 

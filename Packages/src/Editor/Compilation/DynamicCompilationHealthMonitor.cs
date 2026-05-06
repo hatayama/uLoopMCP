@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    internal static class DynamicCompilationHealthMonitor
+    public static class DynamicCompilationHealthMonitor
     {
         private static readonly object ReportedIssueLock = new();
         private static readonly HashSet<string> ReportedIssues = new(System.StringComparer.Ordinal);
@@ -27,7 +27,7 @@ namespace io.github.hatayama.UnityCliLoop
                     missing_components = missingComponents
                 },
                 "Fast dynamic compilation path is unavailable in this Unity installation.",
-                "Check Unity version layout changes and ExternalCompilerPathResolver assumptions.");
+                "Check Unity version layout changes and external compiler path resolution assumptions.");
         }
 
         public static void ReportSharedWorkerFallback(string reason, object context = null)

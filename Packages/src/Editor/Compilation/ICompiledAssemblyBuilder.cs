@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    internal interface ICompiledAssemblyBuilder
+    public interface ICompiledAssemblyBuilder
     {
         bool SupportsAutoPrewarm();
 

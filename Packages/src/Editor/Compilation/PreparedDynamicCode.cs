@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    internal sealed class PreparedDynamicCode
+    public sealed class PreparedDynamicCode
     {
         public string PreparedSource { get; }
         public bool IsScriptMode { get; }

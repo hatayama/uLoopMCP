@@ -16,6 +16,9 @@ namespace io.github.hatayama.UnityCliLoop
         {
             lock (SyncRoot)
             {
+                DynamicCompilationRuntimeServicesRegistry.RegisterFactory(
+                    new DynamicCompilationRuntimeServicesFactory());
+
                 if (DynamicCompilationServiceRegistry.HasRegisteredFactory)
                 {
                     return;

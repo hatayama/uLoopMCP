@@ -1,6 +1,6 @@
 namespace io.github.hatayama.UnityCliLoop
 {
-    internal sealed class HoistedLiteralBinding
+    public sealed class HoistedLiteralBinding
     {
         public string ParameterName { get; }
         public string TypeName { get; }

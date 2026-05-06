@@ -15,37 +15,28 @@ namespace io.github.hatayama.UnityCliLoop
         private static IDynamicCodeExecutionRuntime _runtimeFacade;
         private static IPrewarmDynamicCodeUseCase _prewarmDynamicCodeUseCase;
 
-        public static DynamicCodeSourcePreparationService SourcePreparationService { get; } =
-            new DynamicCodeSourcePreparationService();
+        private static readonly Lazy<IDynamicCodeSourcePreparationService> SourcePreparationServiceValue =
+            new Lazy<IDynamicCodeSourcePreparationService>(
+                DynamicCompilationRuntimeServicesRegistry.CreateSourcePreparationService);
 
-        public static ExternalCompilerPathResolutionService ExternalCompilerPathResolver { get; } =
-            new ExternalCompilerPathResolutionService();
+        private static readonly Lazy<ICompiledAssemblyBuilder> AssemblyBuilderValue =
+            new Lazy<ICompiledAssemblyBuilder>(
+                DynamicCompilationRuntimeServicesRegistry.CreateAssemblyBuilder);
 
-        public static DynamicReferenceSetBuilderService ReferenceSetBuilder { get; } =
-            new DynamicReferenceSetBuilderService();
+        public static IDynamicCodeSourcePreparationService SourcePreparationService => SourcePreparationServiceValue.Value;
 
-        public static IDynamicCompilationPlanner CompilationPlanner { get; } =
-            new DynamicCompilationPlanner(SourcePreparationService);
-
-        public static ICompiledAssemblyLoader AssemblyLoadService { get; } =
-            new CompiledAssemblyLoadService();
-
-        public static DynamicCompilationBackend CompilationBackend { get; } =
-            new DynamicCompilationBackend();
-
-        public static ICompiledAssemblyBuilder AssemblyBuilder { get; } =
-            new CompiledAssemblyBuilder(
-                ExternalCompilerPathResolver,
-                ReferenceSetBuilder,
-                CompilationBackend);
+        public static ICompiledAssemblyBuilder AssemblyBuilder => AssemblyBuilderValue.Value;
 
         public static CompiledCommandEntryPointResolver CommandEntryPointResolver { get; } =
             new CompiledCommandEntryPointResolver();
 
-        public static RegistryDynamicCodeExecutorFactory ExecutorFactory { get; } =
-            new RegistryDynamicCodeExecutorFactory(
-                SourcePreparationService,
-                CommandEntryPointResolver);
+        private static readonly Lazy<RegistryDynamicCodeExecutorFactory> ExecutorFactoryValue =
+            new Lazy<RegistryDynamicCodeExecutorFactory>(
+                () => new RegistryDynamicCodeExecutorFactory(
+                    SourcePreparationService,
+                    CommandEntryPointResolver));
+
+        public static RegistryDynamicCodeExecutorFactory ExecutorFactory => ExecutorFactoryValue.Value;
 
         public static async Task<IExecuteDynamicCodeUseCase> GetExecuteDynamicCodeUseCaseAsync()
         {
@@ -257,7 +248,7 @@ namespace io.github.hatayama.UnityCliLoop
             IDynamicCodeExecutionRuntime runtimeFacade)
         {
             lifetimeCancellationTokenSource?.Cancel();
-            SharedRoslynCompilerWorkerHost.ShutdownForServerReset();
+            DynamicCompilationRuntimeServicesRegistry.ShutdownForServerReset();
 
             if (runtimeFacade is IShutdownAwareDynamicCodeExecutionRuntime shutdownAwareRuntime)
             {

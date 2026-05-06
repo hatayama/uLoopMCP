@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    internal sealed class CompiledAssemblyBuildResult
+    public sealed class CompiledAssemblyBuildResult
     {
         public string UpdatedSource { get; }
 

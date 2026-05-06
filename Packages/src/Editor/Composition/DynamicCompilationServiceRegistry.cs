@@ -2,6 +2,62 @@ using System.Diagnostics;
 
 namespace io.github.hatayama.UnityCliLoop
 {
+    public interface IDynamicCompilationRuntimeServicesFactory
+    {
+        IDynamicCodeSourcePreparationService CreateSourcePreparationService();
+
+        ICompiledAssemblyBuilder CreateAssemblyBuilder();
+
+        void ShutdownForServerReset();
+    }
+
+    public static class DynamicCompilationRuntimeServicesRegistry
+    {
+        private static readonly object SyncRoot = new object();
+        private static IDynamicCompilationRuntimeServicesFactory _factory;
+
+        public static void RegisterFactory(IDynamicCompilationRuntimeServicesFactory factory)
+        {
+            Debug.Assert(factory != null, "factory must not be null");
+
+            lock (SyncRoot)
+            {
+                _factory = factory;
+            }
+        }
+
+        public static IDynamicCodeSourcePreparationService CreateSourcePreparationService()
+        {
+            IDynamicCompilationRuntimeServicesFactory factory = GetFactory();
+            return factory.CreateSourcePreparationService();
+        }
+
+        public static ICompiledAssemblyBuilder CreateAssemblyBuilder()
+        {
+            IDynamicCompilationRuntimeServicesFactory factory = GetFactory();
+            return factory.CreateAssemblyBuilder();
+        }
+
+        public static void ShutdownForServerReset()
+        {
+            IDynamicCompilationRuntimeServicesFactory factory = GetFactory();
+            factory.ShutdownForServerReset();
+        }
+
+        private static IDynamicCompilationRuntimeServicesFactory GetFactory()
+        {
+            lock (SyncRoot)
+            {
+                if (_factory == null)
+                {
+                    throw new System.InvalidOperationException("Dynamic compilation runtime services factory is not registered.");
+                }
+
+                return _factory;
+            }
+        }
+    }
+
     public static class DynamicCompilationServiceRegistry
     {
         private static readonly object SyncRoot = new object();

@@ -11,7 +11,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// Dynamic compilation service for execute-dynamic-code.
     /// Keeps the orchestration flow in one place and delegates low-level compiler concerns to helpers.
     /// </summary>
-    public sealed class DynamicCodeCompiler : IDynamicCompilationService, IDisposable
+    internal sealed class DynamicCodeCompiler : IDynamicCompilationService, IDisposable
     {
         private readonly DynamicCodeSecurityLevel _securityLevel;
         private readonly IDynamicCompilationPlanner _planner;
@@ -25,9 +25,12 @@ namespace io.github.hatayama.UnityCliLoop
         public DynamicCodeCompiler(DynamicCodeSecurityLevel securityLevel)
             : this(
                 securityLevel,
-                DynamicCodeServices.CompilationPlanner,
-                DynamicCodeServices.AssemblyBuilder,
-                DynamicCodeServices.AssemblyLoadService)
+                new DynamicCompilationPlanner(new DynamicCodeSourcePreparationService()),
+                new CompiledAssemblyBuilder(
+                    new ExternalCompilerPathResolutionService(),
+                    new DynamicReferenceSetBuilderService(),
+                    new DynamicCompilationBackend()),
+                new CompiledAssemblyLoadService())
         {
         }
 
