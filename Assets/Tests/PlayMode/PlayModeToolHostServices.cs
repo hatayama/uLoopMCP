@@ -20,5 +20,6 @@ namespace Tests.PlayMode
         public IUnityCliLoopReplayInputService ReplayInput => throw new NotSupportedException();
         public IUnityCliLoopKeyboardSimulationService KeyboardSimulation { get; } = new SimulateKeyboardUseCase();
         public IUnityCliLoopMouseInputSimulationService MouseInputSimulation { get; } = new SimulateMouseInputUseCase();
+        public IUnityCliLoopMouseUiSimulationService MouseUiSimulation { get; } = new SimulateMouseUiUseCase();
     }
 }

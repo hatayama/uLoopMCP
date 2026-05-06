@@ -303,6 +303,9 @@ namespace io.github.hatayama.UnityCliLoop
             string mouseServiceAssemblyName = typeof(IUnityCliLoopMouseInputSimulationService).Assembly.GetName().Name;
             string mouseRequestAssemblyName = typeof(UnityCliLoopMouseInputSimulationRequest).Assembly.GetName().Name;
             string mouseResultAssemblyName = typeof(UnityCliLoopMouseInputSimulationResult).Assembly.GetName().Name;
+            string mouseUiServiceAssemblyName = typeof(IUnityCliLoopMouseUiSimulationService).Assembly.GetName().Name;
+            string mouseUiRequestAssemblyName = typeof(UnityCliLoopMouseUiSimulationRequest).Assembly.GetName().Name;
+            string mouseUiResultAssemblyName = typeof(UnityCliLoopMouseUiSimulationResult).Assembly.GetName().Name;
 
             Assert.That(keyboardServiceAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
             Assert.That(keyboardRequestAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
@@ -310,6 +313,9 @@ namespace io.github.hatayama.UnityCliLoop
             Assert.That(mouseServiceAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
             Assert.That(mouseRequestAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
             Assert.That(mouseResultAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
+            Assert.That(mouseUiServiceAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
+            Assert.That(mouseUiRequestAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
+            Assert.That(mouseUiResultAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
         }
 
         [Test]
@@ -318,9 +324,11 @@ namespace io.github.hatayama.UnityCliLoop
             // Tests that the application layer owns the keyboard and mouse input simulation host-service implementations.
             string keyboardUseCaseAssemblyName = typeof(SimulateKeyboardUseCase).Assembly.GetName().Name;
             string mouseUseCaseAssemblyName = typeof(SimulateMouseInputUseCase).Assembly.GetName().Name;
+            string mouseUiUseCaseAssemblyName = typeof(SimulateMouseUiUseCase).Assembly.GetName().Name;
 
             Assert.That(keyboardUseCaseAssemblyName, Is.EqualTo(ApplicationAssemblyName));
             Assert.That(mouseUseCaseAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+            Assert.That(mouseUiUseCaseAssemblyName, Is.EqualTo(ApplicationAssemblyName));
         }
 
         [Test]

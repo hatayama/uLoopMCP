@@ -17,6 +17,7 @@ namespace io.github.hatayama.UnityCliLoop
         public IUnityCliLoopReplayInputService ReplayInput { get; }
         public IUnityCliLoopKeyboardSimulationService KeyboardSimulation { get; }
         public IUnityCliLoopMouseInputSimulationService MouseInputSimulation { get; }
+        public IUnityCliLoopMouseUiSimulationService MouseUiSimulation { get; }
 
         public UnityCliLoopToolHostServices()
         {
@@ -32,6 +33,7 @@ namespace io.github.hatayama.UnityCliLoop
             ReplayInput = new ReplayInputUseCase();
             KeyboardSimulation = new SimulateKeyboardUseCase();
             MouseInputSimulation = new SimulateMouseInputUseCase();
+            MouseUiSimulation = new SimulateMouseUiUseCase();
         }
     }
 }

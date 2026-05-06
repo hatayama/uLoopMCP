@@ -27,6 +27,7 @@ namespace io.github.hatayama.UnityCliLoop
             Assert.That(registry.IsToolRegistered("replay-input"), Is.True);
             Assert.That(registry.IsToolRegistered("simulate-keyboard"), Is.True);
             Assert.That(registry.IsToolRegistered("simulate-mouse-input"), Is.True);
+            Assert.That(registry.IsToolRegistered("simulate-mouse-ui"), Is.True);
         }
 
         [Test]
@@ -196,6 +197,19 @@ namespace io.github.hatayama.UnityCliLoop
             Assert.That(toolType, Is.Not.Null);
             Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo("UnityCLILoop.FirstPartyTools.Editor"));
             Assert.That(registry.IsThirdPartyTool("simulate-mouse-input"), Is.False);
+        }
+
+        [Test]
+        public void GetToolType_WhenSimulateMouseUiComesFromFirstPartyToolsAssembly_ReturnsBundledPluginType()
+        {
+            // Tests that simulate-mouse-ui is a bundled plugin instead of an application-layer tool.
+            UnityCliLoopToolRegistry registry = new UnityCliLoopToolRegistry();
+
+            System.Type toolType = registry.GetToolType("simulate-mouse-ui");
+
+            Assert.That(toolType, Is.Not.Null);
+            Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo("UnityCLILoop.FirstPartyTools.Editor"));
+            Assert.That(registry.IsThirdPartyTool("simulate-mouse-ui"), Is.False);
         }
 
         [Test]

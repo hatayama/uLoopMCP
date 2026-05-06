@@ -10,26 +10,27 @@ using UnityEngine.UI;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    [UnityCliLoopTool]
-    public class SimulateMouseUiTool : UnityCliLoopTool<SimulateMouseUiSchema, SimulateMouseUiResponse>
+    /// <summary>
+    /// Coordinates EventSystem mouse simulation for the bundled simulate-mouse-ui tool.
+    /// </summary>
+    public class SimulateMouseUiUseCase : IUnityCliLoopMouseUiSimulationService
     {
-        public override string ToolName => "simulate-mouse-ui";
-
         private const float EXPAND_DURATION = SimulateMouseUiAnimationConstants.EXPAND_DURATION;
         private const float EXPAND_START_SCALE = SimulateMouseUiAnimationConstants.EXPAND_START_SCALE;
         private const float DISSIPATE_DURATION = SimulateMouseUiAnimationConstants.DISSIPATE_DURATION;
 
-        protected override async Task<SimulateMouseUiResponse> ExecuteAsync(
-            SimulateMouseUiSchema parameters,
+        public async Task<UnityCliLoopMouseUiSimulationResult> SimulateMouseUiAsync(
+            UnityCliLoopMouseUiSimulationRequest request,
             CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
+            MouseUiSimulationCommand parameters = MouseUiSimulationCommand.FromRequest(request);
 
             string correlationId = UnityCliLoopConstants.GenerateCorrelationId();
 
             if (!EditorApplication.isPlaying)
             {
-                return new SimulateMouseUiResponse
+                return new UnityCliLoopMouseUiSimulationResult
                 {
                     Success = false,
                     Message = "PlayMode is not active. Use control-play-mode tool to start PlayMode first.",
@@ -40,7 +41,7 @@ namespace io.github.hatayama.UnityCliLoop
             EventSystem? eventSystem = EventSystem.current;
             if (eventSystem == null)
             {
-                return new SimulateMouseUiResponse
+                return new UnityCliLoopMouseUiSimulationResult
                 {
                     Success = false,
                     Message = "No EventSystem found in the scene. Ensure an EventSystem GameObject exists.",
@@ -50,7 +51,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             if (parameters.Action != MouseAction.Click && parameters.Action != MouseAction.LongPress && parameters.DragSpeed < 0f)
             {
-                return new SimulateMouseUiResponse
+                return new UnityCliLoopMouseUiSimulationResult
                 {
                     Success = false,
                     Message = $"DragSpeed must be non-negative, got: {parameters.DragSpeed}",
@@ -61,7 +62,7 @@ namespace io.github.hatayama.UnityCliLoop
             // uGUI drag controls (ScrollRect, Slider) only respond to left-button drags
             if (IsDragAction(parameters.Action) && parameters.Button != MouseButton.Left)
             {
-                return new SimulateMouseUiResponse
+                return new UnityCliLoopMouseUiSimulationResult
                 {
                     Success = false,
                     Message = $"Drag actions only support Left button (uGUI ignores non-left drags), got: {parameters.Button}",
@@ -71,7 +72,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             if (parameters.BypassRaycast && !SupportsBypassRaycast(parameters.Action))
             {
-                return new SimulateMouseUiResponse
+                return new UnityCliLoopMouseUiSimulationResult
                 {
                     Success = false,
                     Message = "BypassRaycast is not supported for this action.",
@@ -83,7 +84,7 @@ namespace io.github.hatayama.UnityCliLoop
                 RequiresBypassTargetPath(parameters.Action) &&
                 string.IsNullOrWhiteSpace(parameters.TargetPath))
             {
-                return new SimulateMouseUiResponse
+                return new UnityCliLoopMouseUiSimulationResult
                 {
                     Success = false,
                     Message = "TargetPath is required when BypassRaycast is true for Click, LongPress, Drag, or DragStart.",
@@ -95,7 +96,7 @@ namespace io.github.hatayama.UnityCliLoop
                 parameters.Action != MouseAction.Drag &&
                 parameters.Action != MouseAction.DragEnd)
             {
-                return new SimulateMouseUiResponse
+                return new UnityCliLoopMouseUiSimulationResult
                 {
                     Success = false,
                     Message = "DropTargetPath supports Drag and DragEnd only.",
@@ -124,7 +125,7 @@ namespace io.github.hatayama.UnityCliLoop
             if (MouseDragState.IsDragging &&
                 (parameters.Action == MouseAction.Click || parameters.Action == MouseAction.Drag || parameters.Action == MouseAction.LongPress))
             {
-                return new SimulateMouseUiResponse
+                return new UnityCliLoopMouseUiSimulationResult
                 {
                     Success = false,
                     Message = $"Cannot {parameters.Action.ToString()} while a split drag is active. Call DragEnd first.",
@@ -132,7 +133,7 @@ namespace io.github.hatayama.UnityCliLoop
                 };
             }
 
-            SimulateMouseUiResponse response;
+            UnityCliLoopMouseUiSimulationResult response;
 
             switch (parameters.Action)
             {
@@ -207,8 +208,8 @@ namespace io.github.hatayama.UnityCliLoop
             return new Vector2(screenPos.x, targetHeight - screenPos.y);
         }
 
-        private async Task<SimulateMouseUiResponse> ExecuteClick(
-            SimulateMouseUiSchema parameters, EventSystem eventSystem, CancellationToken ct)
+        private async Task<UnityCliLoopMouseUiSimulationResult> ExecuteClick(
+            MouseUiSimulationCommand parameters, EventSystem eventSystem, CancellationToken ct)
         {
             Vector2 inputPos = new Vector2(parameters.X, parameters.Y);
             Vector2 screenPos = InputToScreen(inputPos);
@@ -235,7 +236,7 @@ namespace io.github.hatayama.UnityCliLoop
                     MouseAction.Click,
                     inputPos,
                     out rawTarget,
-                    out SimulateMouseUiResponse? failureResponse))
+                    out UnityCliLoopMouseUiSimulationResult? failureResponse))
                 {
                     return failureResponse!;
                 }
@@ -274,7 +275,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             if (parameters.BypassRaycast && target == null)
             {
-                return new SimulateMouseUiResponse
+                return new UnityCliLoopMouseUiSimulationResult
                 {
                     Success = false,
                     Message = $"TargetPath '{parameters.TargetPath}' has no pointer click or pointer down handler.",
@@ -308,7 +309,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             await PlayDissipateAnimation(ct);
 
-            return new SimulateMouseUiResponse
+            return new UnityCliLoopMouseUiSimulationResult
             {
                 Success = true,
                 Message = target != null
@@ -323,12 +324,12 @@ namespace io.github.hatayama.UnityCliLoop
             };
         }
 
-        private async Task<SimulateMouseUiResponse> ExecuteLongPress(
-            SimulateMouseUiSchema parameters, EventSystem eventSystem, CancellationToken ct)
+        private async Task<UnityCliLoopMouseUiSimulationResult> ExecuteLongPress(
+            MouseUiSimulationCommand parameters, EventSystem eventSystem, CancellationToken ct)
         {
             if (parameters.Duration <= 0f || float.IsNaN(parameters.Duration) || float.IsInfinity(parameters.Duration))
             {
-                return new SimulateMouseUiResponse
+                return new UnityCliLoopMouseUiSimulationResult
                 {
                     Success = false,
                     Message = $"Duration must be positive, got: {parameters.Duration}",
@@ -359,7 +360,7 @@ namespace io.github.hatayama.UnityCliLoop
                     MouseAction.LongPress,
                     inputPos,
                     out rawTarget,
-                    out SimulateMouseUiResponse? failureResponse))
+                    out UnityCliLoopMouseUiSimulationResult? failureResponse))
                 {
                     return failureResponse!;
                 }
@@ -395,7 +396,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             if (parameters.BypassRaycast && target == null)
             {
-                return new SimulateMouseUiResponse
+                return new UnityCliLoopMouseUiSimulationResult
                 {
                     Success = false,
                     Message = $"TargetPath '{parameters.TargetPath}' has no pointer down or pointer click handler.",
@@ -441,7 +442,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             await PlayDissipateAnimation(ct);
 
-            return new SimulateMouseUiResponse
+            return new UnityCliLoopMouseUiSimulationResult
             {
                 Success = true,
                 Message = target != null
@@ -485,8 +486,8 @@ namespace io.github.hatayama.UnityCliLoop
             return pointerData;
         }
 
-        private async Task<SimulateMouseUiResponse> ExecuteDragOneShot(
-            SimulateMouseUiSchema parameters, EventSystem eventSystem, CancellationToken ct)
+        private async Task<UnityCliLoopMouseUiSimulationResult> ExecuteDragOneShot(
+            MouseUiSimulationCommand parameters, EventSystem eventSystem, CancellationToken ct)
         {
             Vector2 inputStart = new Vector2(parameters.FromX, parameters.FromY);
             Vector2 inputEnd = new Vector2(parameters.X, parameters.Y);
@@ -504,7 +505,7 @@ namespace io.github.hatayama.UnityCliLoop
                     MouseAction.Drag,
                     inputStart,
                     out rawTarget,
-                    out SimulateMouseUiResponse? failureResponse))
+                    out UnityCliLoopMouseUiSimulationResult? failureResponse))
                 {
                     return failureResponse!;
                 }
@@ -523,7 +524,7 @@ namespace io.github.hatayama.UnityCliLoop
                 MouseAction.Drag,
                 inputEnd,
                 out explicitDropTarget,
-                out SimulateMouseUiResponse? dropFailureResponse))
+                out UnityCliLoopMouseUiSimulationResult? dropFailureResponse))
             {
                 return dropFailureResponse!;
             }
@@ -540,7 +541,7 @@ namespace io.github.hatayama.UnityCliLoop
                 await PlayExpandAnimation(ct);
                 await PlayDissipateAnimation(ct);
 
-                return new SimulateMouseUiResponse
+                return new UnityCliLoopMouseUiSimulationResult
                 {
                     Success = false,
                     Message = parameters.BypassRaycast
@@ -578,7 +579,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             await PlayDissipateAnimation(ct);
 
-            return new SimulateMouseUiResponse
+            return new UnityCliLoopMouseUiSimulationResult
             {
                 Success = true,
                 Message = parameters.BypassRaycast
@@ -686,12 +687,12 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        private async Task<SimulateMouseUiResponse> ExecuteDragStart(
-            SimulateMouseUiSchema parameters, EventSystem eventSystem, CancellationToken ct)
+        private async Task<UnityCliLoopMouseUiSimulationResult> ExecuteDragStart(
+            MouseUiSimulationCommand parameters, EventSystem eventSystem, CancellationToken ct)
         {
             if (MouseDragState.IsDragging)
             {
-                return new SimulateMouseUiResponse
+                return new UnityCliLoopMouseUiSimulationResult
                 {
                     Success = false,
                     Message = "A drag is already in progress. Call DragEnd first.",
@@ -715,7 +716,7 @@ namespace io.github.hatayama.UnityCliLoop
                     MouseAction.DragStart,
                     inputPos,
                     out rawTarget,
-                    out SimulateMouseUiResponse? failureResponse))
+                    out UnityCliLoopMouseUiSimulationResult? failureResponse))
                 {
                     return failureResponse!;
                 }
@@ -739,7 +740,7 @@ namespace io.github.hatayama.UnityCliLoop
                 await PlayExpandAnimation(ct);
                 await PlayDissipateAnimation(ct);
 
-                return new SimulateMouseUiResponse
+                return new UnityCliLoopMouseUiSimulationResult
                 {
                     Success = false,
                     Message = parameters.BypassRaycast
@@ -777,7 +778,7 @@ namespace io.github.hatayama.UnityCliLoop
                 }
             }
 
-            return new SimulateMouseUiResponse
+            return new UnityCliLoopMouseUiSimulationResult
             {
                 Success = true,
                 Message = $"Drag started on '{target.name}' at ({inputPos.x:F1}, {inputPos.y:F1})",
@@ -788,12 +789,12 @@ namespace io.github.hatayama.UnityCliLoop
             };
         }
 
-        private async Task<SimulateMouseUiResponse> ExecuteDragMove(
-            SimulateMouseUiSchema parameters, CancellationToken ct)
+        private async Task<UnityCliLoopMouseUiSimulationResult> ExecuteDragMove(
+            MouseUiSimulationCommand parameters, CancellationToken ct)
         {
             if (!MouseDragState.IsDragging)
             {
-                return new SimulateMouseUiResponse
+                return new UnityCliLoopMouseUiSimulationResult
                 {
                     Success = false,
                     Message = "No drag in progress. Call DragStart first.",
@@ -806,7 +807,7 @@ namespace io.github.hatayama.UnityCliLoop
             Debug.Assert(MouseDragState.Target != null, "Target must not be null when IsDragging is true");
             Debug.Assert(MouseDragState.PointerData != null, "PointerData must not be null when IsDragging is true");
 
-            SimulateMouseUiResponse? invalidResponse = ValidateDragStillActive(parameters.Action);
+            UnityCliLoopMouseUiSimulationResult? invalidResponse = ValidateDragStillActive(parameters.Action);
             if (invalidResponse != null)
             {
                 return invalidResponse;
@@ -828,7 +829,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             SimulateMouseUiOverlayState.AddWaypoint(inputEnd);
 
-            return new SimulateMouseUiResponse
+            return new UnityCliLoopMouseUiSimulationResult
             {
                 Success = true,
                 Message = $"Drag moved on '{MouseDragState.Target!.name}' to ({inputEnd.x:F1}, {inputEnd.y:F1}) at {parameters.DragSpeed:F0} px/s",
@@ -839,12 +840,12 @@ namespace io.github.hatayama.UnityCliLoop
             };
         }
 
-        private async Task<SimulateMouseUiResponse> ExecuteDragEnd(
-            SimulateMouseUiSchema parameters, CancellationToken ct)
+        private async Task<UnityCliLoopMouseUiSimulationResult> ExecuteDragEnd(
+            MouseUiSimulationCommand parameters, CancellationToken ct)
         {
             if (!MouseDragState.IsDragging)
             {
-                return new SimulateMouseUiResponse
+                return new UnityCliLoopMouseUiSimulationResult
                 {
                     Success = false,
                     Message = "No drag in progress. Call DragStart first.",
@@ -857,7 +858,7 @@ namespace io.github.hatayama.UnityCliLoop
             Debug.Assert(MouseDragState.Target != null, "Target must not be null when IsDragging is true");
             Debug.Assert(MouseDragState.PointerData != null, "PointerData must not be null when IsDragging is true");
 
-            SimulateMouseUiResponse? invalidResponse = ValidateDragStillActive(parameters.Action);
+            UnityCliLoopMouseUiSimulationResult? invalidResponse = ValidateDragStillActive(parameters.Action);
             if (invalidResponse != null)
             {
                 return invalidResponse;
@@ -873,7 +874,7 @@ namespace io.github.hatayama.UnityCliLoop
                 MouseAction.DragEnd,
                 inputEnd,
                 out explicitDropTarget,
-                out SimulateMouseUiResponse? dropFailureResponse))
+                out UnityCliLoopMouseUiSimulationResult? dropFailureResponse))
             {
                 return dropFailureResponse!;
             }
@@ -902,7 +903,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             await PlayDissipateAnimation(ct);
 
-            return new SimulateMouseUiResponse
+            return new UnityCliLoopMouseUiSimulationResult
             {
                 Success = true,
                 Message = $"Drag ended on '{targetName}' at ({inputEnd.x:F1}, {inputEnd.y:F1}) at {parameters.DragSpeed:F0} px/s",
@@ -915,13 +916,13 @@ namespace io.github.hatayama.UnityCliLoop
 
         // User input during a CLI drag can cause Unity's StandaloneInputModule to
         // release or reassign the drag, leaving MouseDragState stale.
-        private SimulateMouseUiResponse? ValidateDragStillActive(MouseAction action)
+        private UnityCliLoopMouseUiSimulationResult? ValidateDragStillActive(MouseAction action)
         {
             if (!MouseDragState.Target!.activeInHierarchy)
             {
                 MouseDragState.Clear();
                 SimulateMouseUiOverlayState.Clear();
-                return new SimulateMouseUiResponse
+                return new UnityCliLoopMouseUiSimulationResult
                 {
                     Success = false,
                     Message = "Drag target was destroyed or deactivated during drag.",
@@ -934,7 +935,7 @@ namespace io.github.hatayama.UnityCliLoop
             {
                 MouseDragState.Clear();
                 SimulateMouseUiOverlayState.Clear();
-                return new SimulateMouseUiResponse
+                return new UnityCliLoopMouseUiSimulationResult
                 {
                     Success = false,
                     Message = "Drag was interrupted by user input or system event.",
@@ -1009,7 +1010,7 @@ namespace io.github.hatayama.UnityCliLoop
             MouseAction action,
             Vector2 inputPosition,
             out GameObject? target,
-            out SimulateMouseUiResponse? failureResponse)
+            out UnityCliLoopMouseUiSimulationResult? failureResponse)
         {
             TargetPathLookupResult lookupResult = FindActiveGameObjectByPath(targetPath);
             target = lookupResult.Target;
@@ -1023,7 +1024,7 @@ namespace io.github.hatayama.UnityCliLoop
                 ? $"{parameterName} '{targetPath}' was not found."
                 : $"{parameterName} '{targetPath}' matched {lookupResult.MatchCount} active GameObjects. Use a unique hierarchy path.";
 
-            failureResponse = new SimulateMouseUiResponse
+            failureResponse = new UnityCliLoopMouseUiSimulationResult
             {
                 Success = false,
                 Message = message,
@@ -1035,11 +1036,11 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         private static bool TryResolveDropTargetPath(
-            SimulateMouseUiSchema parameters,
+            MouseUiSimulationCommand parameters,
             MouseAction action,
             Vector2 inputPosition,
             out GameObject? dropTarget,
-            out SimulateMouseUiResponse? failureResponse)
+            out UnityCliLoopMouseUiSimulationResult? failureResponse)
         {
             dropTarget = null;
             failureResponse = null;
@@ -1063,7 +1064,7 @@ namespace io.github.hatayama.UnityCliLoop
             GameObject? dropHandler = ExecuteEvents.GetEventHandler<IDropHandler>(rawDropTarget!);
             if (dropHandler == null)
             {
-                failureResponse = new SimulateMouseUiResponse
+                failureResponse = new UnityCliLoopMouseUiSimulationResult
                 {
                     Success = false,
                     Message = $"DropTargetPath '{parameters.DropTargetPath}' has no drop handler.",
@@ -1115,6 +1116,76 @@ namespace io.github.hatayama.UnityCliLoop
             {
                 gameObject = target
             };
+        }
+
+        private sealed class MouseUiSimulationCommand
+        {
+            private MouseUiSimulationCommand(UnityCliLoopMouseUiSimulationRequest request)
+            {
+                Debug.Assert(request != null, "request must not be null");
+                Action = ToRuntimeMouseAction(request.Action);
+                X = request.X;
+                Y = request.Y;
+                FromX = request.FromX;
+                FromY = request.FromY;
+                DragSpeed = request.DragSpeed;
+                Duration = request.Duration;
+                Button = ToRuntimeMouseButton(request.Button);
+                BypassRaycast = request.BypassRaycast;
+                TargetPath = request.TargetPath ?? "";
+                DropTargetPath = request.DropTargetPath ?? "";
+            }
+
+            public MouseAction Action { get; }
+            public float X { get; }
+            public float Y { get; }
+            public float FromX { get; }
+            public float FromY { get; }
+            public float DragSpeed { get; }
+            public float Duration { get; }
+            public MouseButton Button { get; }
+            public bool BypassRaycast { get; }
+            public string TargetPath { get; }
+            public string DropTargetPath { get; }
+
+            public static MouseUiSimulationCommand FromRequest(UnityCliLoopMouseUiSimulationRequest request)
+            {
+                return new MouseUiSimulationCommand(request);
+            }
+
+            private static MouseAction ToRuntimeMouseAction(UnityCliLoopMouseUiAction action)
+            {
+                switch (action)
+                {
+                    case UnityCliLoopMouseUiAction.Click:
+                        return MouseAction.Click;
+                    case UnityCliLoopMouseUiAction.Drag:
+                        return MouseAction.Drag;
+                    case UnityCliLoopMouseUiAction.DragStart:
+                        return MouseAction.DragStart;
+                    case UnityCliLoopMouseUiAction.DragMove:
+                        return MouseAction.DragMove;
+                    case UnityCliLoopMouseUiAction.DragEnd:
+                        return MouseAction.DragEnd;
+                    case UnityCliLoopMouseUiAction.LongPress:
+                        return MouseAction.LongPress;
+                    default:
+                        throw new ArgumentException($"Unknown mouse UI action: {action}");
+                }
+            }
+
+            private static MouseButton ToRuntimeMouseButton(UnityCliLoopMouseButton button)
+            {
+                switch (button)
+                {
+                    case UnityCliLoopMouseButton.Right:
+                        return MouseButton.Right;
+                    case UnityCliLoopMouseButton.Middle:
+                        return MouseButton.Middle;
+                    default:
+                        return MouseButton.Left;
+                }
+            }
         }
 
         private readonly struct TargetPathLookupResult

@@ -118,6 +118,7 @@ namespace io.github.hatayama.UnityCliLoop
             public IUnityCliLoopReplayInputService ReplayInput => throw new System.NotSupportedException();
             public IUnityCliLoopKeyboardSimulationService KeyboardSimulation => throw new System.NotSupportedException();
             public IUnityCliLoopMouseInputSimulationService MouseInputSimulation => throw new System.NotSupportedException();
+            public IUnityCliLoopMouseUiSimulationService MouseUiSimulation => throw new System.NotSupportedException();
         }
     }
 }
