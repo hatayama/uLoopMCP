@@ -10,8 +10,8 @@ using UnityEngine.InputSystem;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    [McpTool(Description = "Simulate keyboard key input in PlayMode via Input System. Supports one-shot press, key-down hold, and key-up release for game controls (WASD, Space, etc.). Requires the Input System package (com.unity.inputsystem).")]
-    public class SimulateKeyboardTool : AbstractUnityTool<SimulateKeyboardSchema, SimulateKeyboardResponse>
+    [UnityCliLoopTool(Description = "Simulate keyboard key input in PlayMode via Input System. Supports one-shot press, key-down hold, and key-up release for game controls (WASD, Space, etc.). Requires the Input System package (com.unity.inputsystem).")]
+    public class SimulateKeyboardTool : UnityCliLoopTool<SimulateKeyboardSchema, SimulateKeyboardResponse>
     {
         public override string ToolName => "simulate-keyboard";
 

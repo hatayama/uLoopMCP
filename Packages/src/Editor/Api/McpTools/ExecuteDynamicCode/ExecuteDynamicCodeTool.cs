@@ -7,7 +7,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// Dynamic C# code execution tool exposed through the CLI.
     /// Delegates workflow orchestration to the dedicated execute-dynamic-code use case.
     /// </summary>
-    [McpTool(Description = @"Execute C# code dynamically in Unity Editor for editor automation.
+    [UnityCliLoopTool(Description = @"Execute C# code dynamically in Unity Editor for editor automation.
 
 Use find-game-objects first for basic selected GameObject discovery or property inspection. Use this after built-in inspection tools are not enough or when you need to modify Unity state.
 
@@ -32,7 +32,7 @@ Don't:
 Need files/dirs? Run terminal commands.
 
 See examples at {project_root}/.claude/skills/unity-cli-loop/uloop-execute-dynamic-code/examples/")]
-    public class ExecuteDynamicCodeTool : AbstractUnityTool<ExecuteDynamicCodeSchema, ExecuteDynamicCodeResponse>
+    public class ExecuteDynamicCodeTool : UnityCliLoopTool<ExecuteDynamicCodeSchema, ExecuteDynamicCodeResponse>
     {
         public override string ToolName => "execute-dynamic-code";
 

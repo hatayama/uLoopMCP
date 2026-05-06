@@ -1,6 +1,6 @@
 namespace io.github.hatayama.UnityCliLoop
 {
-    public class FindGameObjectsResponse : BaseToolResponse
+    public class FindGameObjectsResponse : UnityCliLoopToolResponse
     {
         public FindGameObjectResult[] results { get; set; }
         public int totalFound { get; set; }

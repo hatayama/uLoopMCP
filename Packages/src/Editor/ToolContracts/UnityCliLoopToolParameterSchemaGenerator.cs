@@ -11,7 +11,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// Utility class to generate ToolParameterSchema from DTO classes
     /// Eliminates duplication between DTO default values and schema definitions
     /// </summary>
-    public static class ToolParameterSchemaGenerator
+    public static class UnityCliLoopToolParameterSchemaGenerator
     {
         /// <summary>
         /// Generate ToolParameterSchema from DTO type using reflection

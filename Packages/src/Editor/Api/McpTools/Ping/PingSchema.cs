@@ -6,7 +6,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// Schema for Ping command parameters
     /// Provides type-safe parameter access with default values
     /// </summary>
-    public class PingSchema : BaseToolSchema
+    public class PingSchema : UnityCliLoopToolSchema
     {
         /// <summary>
         /// Message to send to Unity

@@ -4,7 +4,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// Response returned by the Focus Unity Window CLI tool.
     /// Indicates whether the foregrounding request succeeded and includes details for optional UI display.
     /// </summary>
-    public class FocusUnityWindowResponse : BaseToolResponse
+    public class FocusUnityWindowResponse : UnityCliLoopToolResponse
     {
         /// <summary>
         /// Gets whether the Unity Editor window was successfully brought to the foreground.

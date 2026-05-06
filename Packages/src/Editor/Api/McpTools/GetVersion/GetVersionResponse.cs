@@ -1,6 +1,6 @@
 namespace io.github.hatayama.UnityCliLoop
 {
-    public class GetVersionResponse : BaseToolResponse
+    public class GetVersionResponse : UnityCliLoopToolResponse
     {
         public string UnityVersion { get; set; } = string.Empty;
         public string Platform { get; set; } = string.Empty;

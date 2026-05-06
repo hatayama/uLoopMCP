@@ -9,7 +9,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// Always returns the JSON file path of exported hierarchy data.
     /// </summary>
     [Serializable]
-    public class GetHierarchyResponse : BaseToolResponse
+    public class GetHierarchyResponse : UnityCliLoopToolResponse
     {
         /// <summary>
         /// Human-readable guidance for clients to locate and read the JSON file

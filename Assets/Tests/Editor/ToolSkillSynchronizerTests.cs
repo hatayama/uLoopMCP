@@ -1074,7 +1074,7 @@ namespace io.github.hatayama.UnityCliLoop
                 "internal-reference",
                 isInternal: true);
 
-            UnityToolRegistry registry = new();
+            UnityCliLoopToolRegistry registry = new();
             registry.RegisterTool(new FakeUnityTool("internal-tool"));
             registry.RegisterTool(new FakeUnityTool("public-tool"));
 
@@ -1538,7 +1538,7 @@ namespace io.github.hatayama.UnityCliLoop
                 "{\n  \"dependencies\": {\n" + dependenciesContent + "\n  }\n}");
         }
 
-        private sealed class FakeUnityTool : IUnityTool
+        private sealed class FakeUnityTool : IUnityCliLoopTool
         {
             public string ToolName { get; }
 
@@ -1549,13 +1549,13 @@ namespace io.github.hatayama.UnityCliLoop
                 ToolName = toolName;
             }
 
-            public Task<BaseToolResponse> ExecuteAsync(JToken paramsToken)
+            public Task<UnityCliLoopToolResponse> ExecuteAsync(JToken paramsToken)
             {
-                return Task.FromResult<BaseToolResponse>(new FakeToolResponse());
+                return Task.FromResult<UnityCliLoopToolResponse>(new FakeToolResponse());
             }
         }
 
-        private sealed class FakeToolResponse : BaseToolResponse
+        private sealed class FakeToolResponse : UnityCliLoopToolResponse
         {
         }
     }

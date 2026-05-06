@@ -8,15 +8,15 @@ namespace io.github.hatayama.UnityCliLoop
     /// GetToolDetails tool handler - Type-safe implementation using Schema and Response
     /// Retrieves detailed information about all registered Unity CLI tools
     /// Related classes:
-    /// - UnityToolRegistry: Source of tool information
+    /// - UnityCliLoopToolRegistry: Source of tool information
     /// - ToolInfo: Data structure for tool details
     /// - GetToolDetailsResponse: Type-safe response structure
     /// </summary>
-    [McpTool(
+    [UnityCliLoopTool(
         Description = "Retrieve detailed information about all registered Unity CLI tools",
         DisplayDevelopmentOnly = true
     )]
-    public class GetToolDetailsTool : AbstractUnityTool<GetToolDetailsSchema, GetToolDetailsResponse>
+    public class GetToolDetailsTool : UnityCliLoopTool<GetToolDetailsSchema, GetToolDetailsResponse>
     {
         public override string ToolName => "get-tool-details";
 
@@ -26,7 +26,7 @@ namespace io.github.hatayama.UnityCliLoop
             bool includeDevelopmentOnly = parameters.IncludeDevelopmentOnly;
 
             // Get tool registry and retrieve all registered tools
-            UnityToolRegistry registry = CustomToolManager.GetRegistry();
+            UnityCliLoopToolRegistry registry = UnityCliLoopToolRegistrar.GetRegistry();
             ToolInfo[] allTools = registry.GetRegisteredTools();
 
             // Filter tools based on development-only setting

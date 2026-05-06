@@ -6,7 +6,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// Response schema for RunTests command
     /// Provides type-safe response structure
     /// </summary>
-    public class RunTestsResponse : BaseToolResponse
+    public class RunTestsResponse : UnityCliLoopToolResponse
     {
         /// <summary>
         /// Whether test execution was successful

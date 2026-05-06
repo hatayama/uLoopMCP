@@ -23,7 +23,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// Response schema for Compile command
     /// Provides type-safe response structure
     /// </summary>
-    public class CompileResponse : BaseToolResponse
+    public class CompileResponse : UnityCliLoopToolResponse
     {
         /// <summary>
         /// Whether compilation was successful.

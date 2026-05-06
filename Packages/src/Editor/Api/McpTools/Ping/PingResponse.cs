@@ -4,7 +4,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// Response schema for Ping command
     /// Provides type-safe response structure
     /// </summary>
-    public class PingResponse : BaseToolResponse
+    public class PingResponse : UnityCliLoopToolResponse
     {
         /// <summary>
         /// The response message from Unity

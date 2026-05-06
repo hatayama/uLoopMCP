@@ -6,7 +6,7 @@ namespace Samples
     /// Schema for GetProjectInfo tool parameters
     /// This tool takes no parameters
     /// </summary>
-    public class GetProjectInfoSchema : BaseToolSchema
+    public class GetProjectInfoSchema : UnityCliLoopToolSchema
     {
         // No parameters needed for this tool
     }

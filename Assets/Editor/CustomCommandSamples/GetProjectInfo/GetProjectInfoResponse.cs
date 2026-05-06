@@ -7,7 +7,7 @@ namespace Samples
     /// Response schema for GetProjectInfo tool
     /// Provides detailed Unity project information
     /// </summary>
-    public class GetProjectInfoResponse : BaseToolResponse
+    public class GetProjectInfoResponse : UnityCliLoopToolResponse
     {
         public string ProjectName { get; set; }
         public string CompanyName { get; set; }

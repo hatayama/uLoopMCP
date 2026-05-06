@@ -170,9 +170,9 @@ namespace io.github.hatayama.UnityCliLoop
 
             string json = File.ReadAllText(LegacySettingsFilePath);
             return json.Contains($"\"{LEGACY_ALLOW_THIRD_PARTY_TOOLS_FIELD}\"")
-                || json.Contains($"\"{nameof(LegacySecuritySettingsProbe.enableTestsExecution)}\"")
-                || json.Contains($"\"{nameof(LegacySecuritySettingsProbe.allowMenuItemExecution)}\"")
-                || json.Contains($"\"{nameof(LegacySecuritySettingsProbe.dynamicCodeSecurityLevel)}\"");
+                || json.Contains($"\"{nameof(LegacyUnityCliLoopSecuritySettingProbe.enableTestsExecution)}\"")
+                || json.Contains($"\"{nameof(LegacyUnityCliLoopSecuritySettingProbe.allowMenuItemExecution)}\"")
+                || json.Contains($"\"{nameof(LegacyUnityCliLoopSecuritySettingProbe.dynamicCodeSecurityLevel)}\"");
         }
 
         private static void DeleteIfExists(string path)
@@ -188,7 +188,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// a dedicated probe class to extract them from the legacy JSON.
         /// </summary>
         [Serializable]
-        private class LegacySecuritySettingsProbe
+        private class LegacyUnityCliLoopSecuritySettingProbe
         {
             public bool enableTestsExecution = true;
             public bool allowMenuItemExecution = true;
@@ -215,7 +215,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return;
             }
 
-            LegacySecuritySettingsProbe probe = JsonUtility.FromJson<LegacySecuritySettingsProbe>(legacyJson);
+            LegacyUnityCliLoopSecuritySettingProbe probe = JsonUtility.FromJson<LegacyUnityCliLoopSecuritySettingProbe>(legacyJson);
 
             _cachedSettings = new ULoopSettingsData
             {
@@ -256,17 +256,17 @@ namespace io.github.hatayama.UnityCliLoop
                 return false;
             }
 
-            LegacySecuritySettingsProbe probe = JsonUtility.FromJson<LegacySecuritySettingsProbe>(json);
+            LegacyUnityCliLoopSecuritySettingProbe probe = JsonUtility.FromJson<LegacyUnityCliLoopSecuritySettingProbe>(json);
             bool migrated = false;
 
-            if (json.Contains($"\"{nameof(LegacySecuritySettingsProbe.enableTestsExecution)}\"")
+            if (json.Contains($"\"{nameof(LegacyUnityCliLoopSecuritySettingProbe.enableTestsExecution)}\"")
                 && !probe.enableTestsExecution)
             {
                 ToolSettings.SetToolEnabled(McpConstants.TOOL_NAME_RUN_TESTS, false);
                 migrated = true;
             }
 
-            if (json.Contains($"\"{nameof(LegacySecuritySettingsProbe.allowMenuItemExecution)}\""))
+            if (json.Contains($"\"{nameof(LegacyUnityCliLoopSecuritySettingProbe.allowMenuItemExecution)}\""))
             {
                 migrated = true;
             }

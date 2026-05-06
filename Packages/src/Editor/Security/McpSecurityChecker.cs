@@ -12,7 +12,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// Related classes:
     /// - ULoopSettings: Persistent security settings storage (.uloop/settings.permissions.json)
     /// - McpSecurityException: Custom exception for security violations
-    /// - UnityToolRegistry: Tool registration and execution
+    /// - UnityCliLoopToolRegistry: Tool registration and execution
     /// - McpBridgeServer: IPC bridge that executes tools
     /// </summary>
     public static class McpSecurityChecker
@@ -60,7 +60,7 @@ namespace io.github.hatayama.UnityCliLoop
         private static ToolAttributeInfo? GetToolSecurityInfoFromRegistry(string toolName)
         {
             // Get the tool registry instance
-            var registry = CustomToolManager.GetRegistry();
+            var registry = UnityCliLoopToolRegistrar.GetRegistry();
             if (registry == null)
             {
                 return null;
@@ -73,10 +73,10 @@ namespace io.github.hatayama.UnityCliLoop
                 return null;
             }
 
-            var attribute = toolType.GetCustomAttribute<McpToolAttribute>();
+            var attribute = toolType.GetCustomAttribute<UnityCliLoopToolAttribute>();
             if (attribute == null)
             {
-                return new ToolAttributeInfo(toolName, SecuritySettings.None);
+                return new ToolAttributeInfo(toolName, UnityCliLoopSecuritySetting.None);
             }
 
             return new ToolAttributeInfo(toolName, attribute.RequiredSecuritySetting);
@@ -91,7 +91,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             switch (toolInfo.RequiredSecuritySetting)
             {
-                case SecuritySettings.None:
+                case UnityCliLoopSecuritySetting.None:
                     return true;
                 default:
                     return false; // Unknown setting - block by default
@@ -189,9 +189,9 @@ namespace io.github.hatayama.UnityCliLoop
     internal readonly struct ToolAttributeInfo
     {
         public readonly string ToolName;
-        public readonly SecuritySettings RequiredSecuritySetting;
+        public readonly UnityCliLoopSecuritySetting RequiredSecuritySetting;
 
-        public ToolAttributeInfo(string toolName, SecuritySettings requiredSecuritySetting)
+        public ToolAttributeInfo(string toolName, UnityCliLoopSecuritySetting requiredSecuritySetting)
         {
             ToolName = toolName;
             RequiredSecuritySetting = requiredSecuritySetting;

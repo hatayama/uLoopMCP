@@ -3,7 +3,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// <summary>
     /// Server shutdown response
     /// </summary>
-    public class ServerShutdownResponse : BaseToolResponse
+    public class ServerShutdownResponse : UnityCliLoopToolResponse
     {
         /// <summary>
         /// Whether the operation was successful

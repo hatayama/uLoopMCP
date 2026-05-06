@@ -1,6 +1,6 @@
 namespace io.github.hatayama.UnityCliLoop
 {
-    public class ControlPlayModeResponse : BaseToolResponse
+    public class ControlPlayModeResponse : UnityCliLoopToolResponse
     {
         public bool IsPlaying { get; set; }
         public bool IsPaused { get; set; }

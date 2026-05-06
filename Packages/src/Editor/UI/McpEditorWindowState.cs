@@ -25,18 +25,18 @@ namespace io.github.hatayama.UnityCliLoop
     public record UIState
     {
         public Vector2 MainScrollPosition { get; }
-        public bool ShowSecuritySettings { get; }
+        public bool ShowUnityCliLoopSecuritySetting { get; }
         public bool ShowToolSettings { get; }
         public bool ShowConfiguration { get; }
 
         public UIState(
             Vector2 mainScrollPosition = default,
-            bool showSecuritySettings = true,
+            bool showUnityCliLoopSecuritySetting = true,
             bool showToolSettings = true,
             bool showConfiguration = true)
         {
             MainScrollPosition = mainScrollPosition;
-            ShowSecuritySettings = showSecuritySettings;
+            ShowUnityCliLoopSecuritySetting = showUnityCliLoopSecuritySetting;
             ShowToolSettings = showToolSettings;
             ShowConfiguration = showConfiguration;
         }

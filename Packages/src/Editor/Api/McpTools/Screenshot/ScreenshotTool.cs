@@ -8,8 +8,8 @@ using UnityEditor;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    [McpTool(Description = "Take a screenshot of Unity EditorWindow and save as PNG")]
-    public class ScreenshotTool : AbstractUnityTool<ScreenshotSchema, ScreenshotResponse>
+    [UnityCliLoopTool(Description = "Take a screenshot of Unity EditorWindow and save as PNG")]
+    public class ScreenshotTool : UnityCliLoopTool<ScreenshotSchema, ScreenshotResponse>
     {
         private const int ANNOTATION_OVERLAY_RENDER_WAIT_FRAMES = 2;
 
@@ -231,12 +231,12 @@ namespace io.github.hatayama.UnityCliLoop
             if (parameters.CaptureMode != CaptureMode.rendering &&
                 string.IsNullOrEmpty(parameters.WindowName))
             {
-                throw new ParameterValidationException("WindowName cannot be null or empty");
+                throw new UnityCliLoopToolParameterValidationException("WindowName cannot be null or empty");
             }
 
             if (parameters.ResolutionScale < 0.1f || parameters.ResolutionScale > 1.0f)
             {
-                throw new ParameterValidationException(
+                throw new UnityCliLoopToolParameterValidationException(
                     $"ResolutionScale must be between 0.1 and 1.0, got: {parameters.ResolutionScale}");
             }
 
@@ -245,18 +245,18 @@ namespace io.github.hatayama.UnityCliLoop
             {
                 if (parameters.AnnotateElements)
                 {
-                    throw new ParameterValidationException("AnnotateElements is only supported when CaptureMode=rendering");
+                    throw new UnityCliLoopToolParameterValidationException("AnnotateElements is only supported when CaptureMode=rendering");
                 }
 
                 if (parameters.ElementsOnly)
                 {
-                    throw new ParameterValidationException("ElementsOnly is only supported when CaptureMode=rendering");
+                    throw new UnityCliLoopToolParameterValidationException("ElementsOnly is only supported when CaptureMode=rendering");
                 }
             }
 
             if (parameters.ElementsOnly && !parameters.AnnotateElements)
             {
-                throw new ParameterValidationException("ElementsOnly requires AnnotateElements=true");
+                throw new UnityCliLoopToolParameterValidationException("ElementsOnly requires AnnotateElements=true");
             }
         }
 

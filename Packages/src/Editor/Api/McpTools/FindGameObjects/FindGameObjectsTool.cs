@@ -17,8 +17,8 @@ namespace io.github.hatayama.UnityCliLoop
     /// - FindGameObjectsSchema: Search parameters
     /// - FindGameObjectsResponse: Type-safe response structure
     /// </summary>
-    [McpTool(Description = "Use first when the user asks about the currently selected GameObject in the Unity Hierarchy. Inspect selected object details and component properties with SearchMode.Selected before using execute-dynamic-code. Also search by name, path, regex, tag, layer, or required components. Use get-hierarchy when the child tree under the selection is needed.")]
-    public class FindGameObjectsTool : AbstractUnityTool<FindGameObjectsSchema, FindGameObjectsResponse>
+    [UnityCliLoopTool(Description = "Use first when the user asks about the currently selected GameObject in the Unity Hierarchy. Inspect selected object details and component properties with SearchMode.Selected before using execute-dynamic-code. Also search by name, path, regex, tag, layer, or required components. Use get-hierarchy when the child tree under the selection is needed.")]
+    public class FindGameObjectsTool : UnityCliLoopTool<FindGameObjectsSchema, FindGameObjectsResponse>
     {
         public override string ToolName => "find-game-objects";
         

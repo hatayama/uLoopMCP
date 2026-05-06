@@ -32,7 +32,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// Get command registry
         /// Use this registry when adding new commands
         /// </summary>
-        public static UnityToolRegistry CommandRegistry => CustomToolManager.GetRegistry();
+        public static UnityCliLoopToolRegistry CommandRegistry => UnityCliLoopToolRegistrar.GetRegistry();
 
         /// <summary>
         /// Generic command execution method
@@ -41,14 +41,14 @@ namespace io.github.hatayama.UnityCliLoop
         /// <param name="commandName">Command name</param>
         /// <param name="paramsToken">Parameters</param>
         /// <returns>Execution result</returns>
-        public static async Task<BaseToolResponse> ExecuteCommandAsync(string commandName, JToken paramsToken)
+        public static async Task<UnityCliLoopToolResponse> ExecuteCommandAsync(string commandName, JToken paramsToken)
         {
             Stopwatch registryAcquireStopwatch = Stopwatch.StartNew();
-            UnityToolRegistry registry = CustomToolManager.GetRegistry();
+            UnityCliLoopToolRegistry registry = UnityCliLoopToolRegistrar.GetRegistry();
             registryAcquireStopwatch.Stop();
 
             Stopwatch registryExecuteStopwatch = Stopwatch.StartNew();
-            BaseToolResponse response = await registry.ExecuteToolAsync(commandName, paramsToken);
+            UnityCliLoopToolResponse response = await registry.ExecuteToolAsync(commandName, paramsToken);
             registryExecuteStopwatch.Stop();
 
             AppendExecuteDynamicCodeTimingsIfSupported(
@@ -59,7 +59,7 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         private static void AppendExecuteDynamicCodeTimingsIfSupported(
-            BaseToolResponse response,
+            UnityCliLoopToolResponse response,
             params string[] timingEntries)
         {
             if (response is not ExecuteDynamicCodeResponse executeDynamicCodeResponse)

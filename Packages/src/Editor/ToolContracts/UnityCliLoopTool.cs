@@ -6,18 +6,18 @@ using System.Threading;
 namespace io.github.hatayama.UnityCliLoop
 {
     // Related classes:
-    // - IUnityTool: The interface that this class implements.
-    // - UnityToolRegistry: Registers and manages instances of tool implementations.
-    // - ToolParameterSchemaGenerator: Generates the JSON schema for tool parameters.
+    // - IUnityCliLoopTool: The interface that this class implements.
+    // - UnityCliLoopToolRegistry: Registers and manages instances of tool implementations.
+    // - UnityCliLoopToolParameterSchemaGenerator: Generates the JSON schema for tool parameters.
     /// <summary>
     /// Abstract base class for type-safe Unity tools using Schema and Response types
     /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - Tool Layer (CLI Command Interface)
     /// </summary>
     /// <typeparam name="TSchema">Schema type for tool parameters</typeparam>
     /// <typeparam name="TResponse">Response type for tool results</typeparam>
-    public abstract class AbstractUnityTool<TSchema, TResponse> : IUnityTool
-        where TSchema : BaseToolSchema, new()
-        where TResponse : BaseToolResponse
+    public abstract class UnityCliLoopTool<TSchema, TResponse> : IUnityCliLoopTool
+        where TSchema : UnityCliLoopToolSchema, new()
+        where TResponse : UnityCliLoopToolResponse
     {
         public abstract string ToolName { get; }
 
@@ -25,7 +25,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// Automatically generates parameter schema from TSchema type
         /// </summary>
         public virtual ToolParameterSchema ParameterSchema =>
-            ToolParameterSchemaGenerator.FromDto<TSchema>();
+            UnityCliLoopToolParameterSchemaGenerator.FromDto<TSchema>();
 
         /// <summary>
         /// Execute tool with type-safe Schema parameters
@@ -39,9 +39,9 @@ namespace io.github.hatayama.UnityCliLoop
         protected abstract Task<TResponse> ExecuteAsync(TSchema parameters, CancellationToken cancellationToken);
 
         /// <summary>
-        /// IUnityTool implementation - converts JToken to Schema and returns BaseToolResponse
+        /// IUnityCliLoopTool implementation - converts JToken to Schema and returns UnityCliLoopToolResponse
         /// </summary>
-        public async Task<BaseToolResponse> ExecuteAsync(JToken paramsToken)
+        public async Task<UnityCliLoopToolResponse> ExecuteAsync(JToken paramsToken)
         {
             // Convert JToken to strongly typed Schema
             TSchema parameters = ConvertToSchema(paramsToken);
@@ -49,7 +49,7 @@ namespace io.github.hatayama.UnityCliLoop
             // Execute with type-safe parameters
             TResponse response = await ExecuteAsync(parameters, CancellationToken.None);
 
-            // Return as BaseToolResponse for IUnityTool interface compatibility
+            // Return as UnityCliLoopToolResponse for IUnityCliLoopTool interface compatibility
             return response;
         }
 
@@ -96,7 +96,7 @@ namespace io.github.hatayama.UnityCliLoop
                         $"Received: {received}";
                 }
                 
-                throw new ParameterValidationException(errorMessage, ex);
+                throw new UnityCliLoopToolParameterValidationException(errorMessage, ex);
             }
 
             // If deserialization returns null, create default instance

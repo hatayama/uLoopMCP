@@ -6,11 +6,11 @@ namespace io.github.hatayama.UnityCliLoop
     /// <summary>
     /// Development-only connection test tool.
     /// </summary>
-    [McpTool(
+    [UnityCliLoopTool(
         DisplayDevelopmentOnly = true,
         Description = "Connection test and message echo"
     )]
-    public class PingTool : AbstractUnityTool<PingSchema, PingResponse>
+    public class PingTool : UnityCliLoopTool<PingSchema, PingResponse>
     {
         public override string ToolName => "ping";
 

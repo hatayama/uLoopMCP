@@ -2,7 +2,7 @@ using System.ComponentModel;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    public class SimulateMouseInputSchema : BaseToolSchema
+    public class SimulateMouseInputSchema : UnityCliLoopToolSchema
     {
         [Description("Mouse input action: Click(0) - inject left/right/middle button press+release, LongPress(1) - inject button hold for Duration seconds, MoveDelta(2) - inject mouse delta for camera/look (one-shot), Scroll(3) - inject scroll wheel, SmoothDelta(4) - inject mouse delta smoothly over Duration seconds")]
         public MouseInputAction Action { get; set; } = MouseInputAction.Click;

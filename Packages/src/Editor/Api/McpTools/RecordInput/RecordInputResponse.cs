@@ -2,7 +2,7 @@
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    public class RecordInputResponse : BaseToolResponse
+    public class RecordInputResponse : UnityCliLoopToolResponse
     {
         public bool Success { get; set; }
         public string Message { get; set; } = "";

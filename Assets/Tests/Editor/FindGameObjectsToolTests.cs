@@ -51,7 +51,7 @@ namespace io.github.hatayama.UnityCliLoop
             };
             
             // Act
-            BaseToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
+            UnityCliLoopToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
             FindGameObjectsResponse response = baseResponse as FindGameObjectsResponse;
             
             // Assert
@@ -74,7 +74,7 @@ namespace io.github.hatayama.UnityCliLoop
             JObject paramsJson = new JObject();
             
             // Act
-            BaseToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
+            UnityCliLoopToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
             FindGameObjectsResponse response = baseResponse as FindGameObjectsResponse;
             
             // Assert
@@ -98,7 +98,7 @@ namespace io.github.hatayama.UnityCliLoop
             };
             
             // Act
-            BaseToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
+            UnityCliLoopToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
             FindGameObjectsResponse response = baseResponse as FindGameObjectsResponse;
             
             // Assert
@@ -126,7 +126,7 @@ namespace io.github.hatayama.UnityCliLoop
             };
             
             // Act
-            BaseToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
+            UnityCliLoopToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
             FindGameObjectsResponse response = baseResponse as FindGameObjectsResponse;
             
             // Assert
@@ -159,7 +159,7 @@ namespace io.github.hatayama.UnityCliLoop
             };
             
             // Act
-            BaseToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
+            UnityCliLoopToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
             FindGameObjectsResponse response = baseResponse as FindGameObjectsResponse;
             
             // Assert
@@ -196,7 +196,7 @@ namespace io.github.hatayama.UnityCliLoop
             };
             
             // Act
-            BaseToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
+            UnityCliLoopToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
             FindGameObjectsResponse response = baseResponse as FindGameObjectsResponse;
             
             // Assert
@@ -229,7 +229,7 @@ namespace io.github.hatayama.UnityCliLoop
             try
             {
                 // Act
-                BaseToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
+                UnityCliLoopToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
                 FindGameObjectsResponse response = baseResponse as FindGameObjectsResponse;
                 
                 // Assert
@@ -266,7 +266,7 @@ namespace io.github.hatayama.UnityCliLoop
             };
             
             // Act
-            BaseToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
+            UnityCliLoopToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
             FindGameObjectsResponse response = baseResponse as FindGameObjectsResponse;
             
             // Assert
@@ -295,7 +295,7 @@ namespace io.github.hatayama.UnityCliLoop
             };
             
             // Act
-            BaseToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
+            UnityCliLoopToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
             FindGameObjectsResponse response = baseResponse as FindGameObjectsResponse;
             
             // Assert
@@ -324,7 +324,7 @@ namespace io.github.hatayama.UnityCliLoop
             };
             
             // Act
-            BaseToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
+            UnityCliLoopToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
             FindGameObjectsResponse response = baseResponse as FindGameObjectsResponse;
             
             // Assert
@@ -359,7 +359,7 @@ namespace io.github.hatayama.UnityCliLoop
             try
             {
                 // Act
-                BaseToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
+                UnityCliLoopToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
                 FindGameObjectsResponse response = baseResponse as FindGameObjectsResponse;
                 
                 // Assert
@@ -402,7 +402,7 @@ namespace io.github.hatayama.UnityCliLoop
             try
             {
                 // Act
-                BaseToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
+                UnityCliLoopToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
                 FindGameObjectsResponse response = baseResponse as FindGameObjectsResponse;
                 
                 // Assert
@@ -435,7 +435,7 @@ namespace io.github.hatayama.UnityCliLoop
             try
             {
                 // Act
-                BaseToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
+                UnityCliLoopToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
                 FindGameObjectsResponse response = baseResponse as FindGameObjectsResponse;
                 
                 // Assert
@@ -469,7 +469,7 @@ namespace io.github.hatayama.UnityCliLoop
             try
             {
                 // Act
-                BaseToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
+                UnityCliLoopToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
                 FindGameObjectsResponse response = baseResponse as FindGameObjectsResponse;
 
                 // Assert
@@ -502,7 +502,7 @@ namespace io.github.hatayama.UnityCliLoop
             };
 
             // Act
-            BaseToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
+            UnityCliLoopToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
             FindGameObjectsResponse response = baseResponse as FindGameObjectsResponse;
 
             // Assert
@@ -527,7 +527,7 @@ namespace io.github.hatayama.UnityCliLoop
             try
             {
                 // Act
-                BaseToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
+                UnityCliLoopToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
                 FindGameObjectsResponse response = baseResponse as FindGameObjectsResponse;
 
                 // Assert
@@ -558,7 +558,7 @@ namespace io.github.hatayama.UnityCliLoop
             try
             {
                 // Act
-                BaseToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
+                UnityCliLoopToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
                 FindGameObjectsResponse response = baseResponse as FindGameObjectsResponse;
 
                 // Assert
@@ -601,7 +601,7 @@ namespace io.github.hatayama.UnityCliLoop
             try
             {
                 // Act
-                BaseToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
+                UnityCliLoopToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
                 FindGameObjectsResponse response = baseResponse as FindGameObjectsResponse;
 
                 // Assert
@@ -636,7 +636,7 @@ namespace io.github.hatayama.UnityCliLoop
             try
             {
                 // Act
-                BaseToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
+                UnityCliLoopToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
                 FindGameObjectsResponse response = baseResponse as FindGameObjectsResponse;
 
                 // Assert
@@ -677,7 +677,7 @@ namespace io.github.hatayama.UnityCliLoop
             };
 
             // Act
-            BaseToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
+            UnityCliLoopToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
             FindGameObjectsResponse response = baseResponse as FindGameObjectsResponse;
 
             // Assert
@@ -715,7 +715,7 @@ namespace io.github.hatayama.UnityCliLoop
             try
             {
                 // Act
-                BaseToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
+                UnityCliLoopToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
                 FindGameObjectsResponse response = baseResponse as FindGameObjectsResponse;
 
                 // Assert

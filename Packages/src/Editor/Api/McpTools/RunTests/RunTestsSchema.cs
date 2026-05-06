@@ -18,7 +18,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// Schema for RunTests command parameters
     /// Provides type-safe parameter access with default values
     /// </summary>
-    public class RunTestsSchema : BaseToolSchema
+    public class RunTestsSchema : UnityCliLoopToolSchema
     {
         /// <summary>
         /// Test mode - EditMode(0), PlayMode(1)

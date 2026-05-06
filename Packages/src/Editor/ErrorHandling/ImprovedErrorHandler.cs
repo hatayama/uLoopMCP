@@ -95,7 +95,7 @@ namespace io.github.hatayama.UnityCliLoop
                 };
             }
 
-            if (exception is ParameterValidationException)
+            if (exception is UnityCliLoopToolParameterValidationException)
             {
                 return new TranslationOutput
                 {
@@ -196,7 +196,7 @@ namespace io.github.hatayama.UnityCliLoop
                 {
                     return ErrorSeverity.Medium;
                 }
-                if (exception is ParameterValidationException)
+                if (exception is UnityCliLoopToolParameterValidationException)
                 {
                     return ErrorSeverity.Low;
                 }

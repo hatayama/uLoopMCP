@@ -6,7 +6,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// Response schema for ClearConsole command
     /// Provides type-safe response structure for console clearing operation
     /// </summary>
-    public class ClearConsoleResponse : BaseToolResponse
+    public class ClearConsoleResponse : UnityCliLoopToolResponse
     {
         /// <summary>
         /// Whether the console clear operation was successful

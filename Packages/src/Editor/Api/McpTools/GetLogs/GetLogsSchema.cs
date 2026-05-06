@@ -17,7 +17,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// Schema for GetLogs command parameters
     /// Provides type-safe parameter access with default values
     /// </summary>
-    public class GetLogsSchema : BaseToolSchema
+    public class GetLogsSchema : UnityCliLoopToolSchema
     {
         /// <summary>
         /// Log type to filter (Error, Warning, Log, All)

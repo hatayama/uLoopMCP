@@ -4,11 +4,11 @@ using UnityEngine;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    [McpTool(
+    [UnityCliLoopTool(
         DisplayDevelopmentOnly = true,
         Description = "Get Unity version and project information"
     )]
-    public class GetVersionTool : AbstractUnityTool<GetVersionSchema, GetVersionResponse>
+    public class GetVersionTool : UnityCliLoopTool<GetVersionSchema, GetVersionResponse>
     {
         public override string ToolName => "get-version";
 

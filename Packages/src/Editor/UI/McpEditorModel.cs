@@ -50,7 +50,7 @@ namespace io.github.hatayama.UnityCliLoop
             
             UpdateUIState(ui => new UIState(
                 mainScrollPosition: ui.MainScrollPosition,
-                showSecuritySettings: settings.showSecuritySettings,
+                showUnityCliLoopSecuritySetting: settings.showUnityCliLoopSecuritySetting,
                 showToolSettings: settings.showToolSettings,
                 showConfiguration: ui.ShowConfiguration));
 
@@ -70,7 +70,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             UpdateUIState(ui => new UIState(
                 mainScrollPosition: ui.MainScrollPosition,
-                showSecuritySettings: ui.ShowSecuritySettings,
+                showUnityCliLoopSecuritySetting: ui.ShowUnityCliLoopSecuritySetting,
                 showToolSettings: ui.ShowToolSettings,
                 showConfiguration: ui.ShowConfiguration));
         }
@@ -135,29 +135,29 @@ namespace io.github.hatayama.UnityCliLoop
         {
             UpdateUIState(ui => new UIState(
                 mainScrollPosition: position,
-                showSecuritySettings: ui.ShowSecuritySettings,
+                showUnityCliLoopSecuritySetting: ui.ShowUnityCliLoopSecuritySetting,
                 showToolSettings: ui.ShowToolSettings,
                 showConfiguration: ui.ShowConfiguration));
         }
 
         /// <summary>
-        /// Update ShowSecuritySettings setting with persistence
+        /// Update ShowUnityCliLoopSecuritySetting setting with persistence
         /// </summary>
-        public void UpdateShowSecuritySettings(bool show)
+        public void UpdateShowUnityCliLoopSecuritySetting(bool show)
         {
             UpdateUIState(ui => new UIState(
                 mainScrollPosition: ui.MainScrollPosition,
-                showSecuritySettings: show,
+                showUnityCliLoopSecuritySetting: show,
                 showToolSettings: ui.ShowToolSettings,
                 showConfiguration: ui.ShowConfiguration));
-            McpEditorSettings.SetShowSecuritySettings(show);
+            McpEditorSettings.SetShowUnityCliLoopSecuritySetting(show);
         }
 
         public void UpdateShowToolSettings(bool show)
         {
             UpdateUIState(ui => new UIState(
                 mainScrollPosition: ui.MainScrollPosition,
-                showSecuritySettings: ui.ShowSecuritySettings,
+                showUnityCliLoopSecuritySetting: ui.ShowUnityCliLoopSecuritySetting,
                 showToolSettings: show,
                 showConfiguration: ui.ShowConfiguration));
             McpEditorSettings.SetShowToolSettings(show);
@@ -172,7 +172,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             UpdateUIState(ui => new UIState(
                 mainScrollPosition: ui.MainScrollPosition,
-                showSecuritySettings: ui.ShowSecuritySettings,
+                showUnityCliLoopSecuritySetting: ui.ShowUnityCliLoopSecuritySetting,
                 showToolSettings: ui.ShowToolSettings,
                 showConfiguration: show));
         }

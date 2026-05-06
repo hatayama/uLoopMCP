@@ -2,7 +2,7 @@ using System.ComponentModel;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    public class ReplayInputSchema : BaseToolSchema
+    public class ReplayInputSchema : UnityCliLoopToolSchema
     {
         [Description("Replay action: Start(0) - begin replaying, Stop(1) - stop mid-way, Status(2) - check progress")]
         public ReplayInputAction Action { get; set; } = ReplayInputAction.Start;

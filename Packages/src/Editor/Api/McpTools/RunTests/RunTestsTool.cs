@@ -17,10 +17,10 @@ namespace io.github.hatayama.UnityCliLoop
     /// - RunTestsSchema: Type-safe parameter schema
     /// - RunTestsResponse: Type-safe response structure
     /// </summary>
-    [McpTool(
+    [UnityCliLoopTool(
         Description = "Execute Unity Test Runner with advanced filtering options - exact test methods, regex patterns for classes/namespaces, assembly filtering"
     )]
-    public class RunTestsTool : AbstractUnityTool<RunTestsSchema, RunTestsResponse>
+    public class RunTestsTool : UnityCliLoopTool<RunTestsSchema, RunTestsResponse>
     {
         public override string ToolName => "run-tests";
 

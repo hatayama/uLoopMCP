@@ -22,7 +22,7 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
                 };
 
                 ULoopSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
-                BaseToolResponse response = await tool.ExecuteAsync(paramsToken);
+                UnityCliLoopToolResponse response = await tool.ExecuteAsync(paramsToken);
                 ExecuteDynamicCodeResponse typedResponse = response as ExecuteDynamicCodeResponse;
 
                 Assert.IsNotNull(typedResponse, "Response should be ExecuteDynamicCodeResponse");

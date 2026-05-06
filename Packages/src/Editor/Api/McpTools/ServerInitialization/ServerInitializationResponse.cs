@@ -3,7 +3,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// <summary>
     /// Server initialization response
     /// </summary>
-    public class ServerInitializationResponse : BaseToolResponse
+    public class ServerInitializationResponse : UnityCliLoopToolResponse
     {
         /// <summary>
         /// Whether the operation was successful

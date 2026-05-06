@@ -9,8 +9,8 @@ namespace io.github.hatayama.UnityCliLoop
     /// Related classes: ClearConsoleUseCase, ConsoleUtility, ClearConsoleSchema, ClearConsoleResponse
     /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - UseCase + Tool Pattern (DDD Integration)
     /// </summary>
-    [McpTool(Description = "Clear Unity console logs")]
-    public class ClearConsoleTool : AbstractUnityTool<ClearConsoleSchema, ClearConsoleResponse>
+    [UnityCliLoopTool(Description = "Clear Unity console logs")]
+    public class ClearConsoleTool : UnityCliLoopTool<ClearConsoleSchema, ClearConsoleResponse>
     {
         public override string ToolName => "clear-console";
 

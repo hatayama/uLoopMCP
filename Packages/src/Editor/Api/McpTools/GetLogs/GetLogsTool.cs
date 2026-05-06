@@ -17,8 +17,8 @@ namespace io.github.hatayama.UnityCliLoop
     /// - GetLogsSchema: Type-safe parameter schema
     /// - GetLogsResponse: Type-safe response structure
     /// </summary>
-    [McpTool(Description = "Retrieve logs from Unity Console")]
-    public class GetLogsTool : AbstractUnityTool<GetLogsSchema, GetLogsResponse>
+    [UnityCliLoopTool(Description = "Retrieve logs from Unity Console")]
+    public class GetLogsTool : UnityCliLoopTool<GetLogsSchema, GetLogsResponse>
     {
         public override string ToolName => "get-logs";
 

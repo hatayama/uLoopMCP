@@ -351,7 +351,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private ToolSettingsSectionData CreateToolSettingsData()
         {
-            UnityToolRegistry registry = CustomToolManager.TryGetRegistry();
+            UnityCliLoopToolRegistry registry = UnityCliLoopToolRegistrar.TryGetRegistry();
             if (registry == null)
             {
                 return new ToolSettingsSectionData(
@@ -455,7 +455,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return;
             }
 
-            CustomToolManager.WarmupRegistry();
+            UnityCliLoopToolRegistrar.WarmupRegistry();
             InvalidateToolSettingsCatalog();
             RefreshToolSettingsCatalogIfNeeded();
         }

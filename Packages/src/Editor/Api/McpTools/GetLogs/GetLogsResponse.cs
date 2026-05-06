@@ -30,7 +30,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// Response schema for GetLogs command
     /// Provides type-safe response structure
     /// </summary>
-    public class GetLogsResponse : BaseToolResponse
+    public class GetLogsResponse : UnityCliLoopToolResponse
     {
         /// <summary>
         /// Total number of logs available

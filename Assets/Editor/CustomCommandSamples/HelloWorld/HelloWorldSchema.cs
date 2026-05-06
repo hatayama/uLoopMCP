@@ -18,7 +18,7 @@ namespace Samples
     /// Schema for HelloWorld tool parameters
     /// Provides type-safe parameter access with default values
     /// </summary>
-    public class HelloWorldSchema : BaseToolSchema
+    public class HelloWorldSchema : UnityCliLoopToolSchema
     {
         /// <summary>
         /// Name to greet

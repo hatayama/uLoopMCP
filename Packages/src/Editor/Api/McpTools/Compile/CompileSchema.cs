@@ -6,7 +6,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// Schema for Compile command parameters
     /// Provides type-safe parameter access with default values
     /// </summary>
-    public class CompileSchema : BaseToolSchema
+    public class CompileSchema : UnityCliLoopToolSchema
     {
         /// <summary>
         /// Whether to perform forced recompilation

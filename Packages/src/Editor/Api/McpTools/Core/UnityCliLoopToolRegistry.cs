@@ -11,170 +11,95 @@ namespace io.github.hatayama.UnityCliLoop
 {
     // Related classes:
     // - UnityToolExecutor: Uses this registry to execute _tools.
-    // - IUnityTool: The interface for all _tools stored in this registry.
-    // - AbstractUnityTool: The base class for most tool implementations.
-    // - McpToolAttribute: Attribute used to discover and register _tools automatically.
+    // - IUnityCliLoopTool: The interface for all _tools stored in this registry.
+    // - UnityCliLoopTool: The base class for most tool implementations.
+    // - UnityCliLoopToolAttribute: Attribute used to discover and register _tools automatically.
     /// <summary>
     /// Unity CLI tool registry class
     /// Supports dynamic tool registration, allowing users to add their own _tools
     /// </summary>
-    public class UnityToolRegistry
+    public class UnityCliLoopToolRegistry
     {
-        private readonly Dictionary<string, IUnityTool> _tools = new();
+        private const string ApplicationAssemblyName = "UnityCLILoop.Application";
+        private const string FirstPartyToolsAssemblyName = "UnityCLILoop.FirstPartyTools.Editor";
+
+        private readonly Dictionary<string, IUnityCliLoopTool> _tools = new();
 
         /// <summary>
         /// Singleton instance for global access
         /// </summary>
-        public static UnityToolRegistry Instance { get; private set; }
+        public static UnityCliLoopToolRegistry Instance { get; private set; }
 
         /// <summary>
         /// Default constructor
         /// Auto-registers standard _tools
         /// </summary>
-        public UnityToolRegistry()
+        public UnityCliLoopToolRegistry()
         {
+            UnityCliLoopToolContractVersion.SetCurrent(McpVersion.VERSION);
             Instance = this;
             RegisterDefaultTools();
         }
 
-        /// <summary>
-        /// Register standard _tools
-        /// </summary>
         private void RegisterDefaultTools()
         {
-            // Register _tools with attribute-based discovery
             RegisterToolsWithAttributes();
-
-            // Manual registration for _tools without attributes (for backward compatibility)
-            RegisterManualTools();
         }
 
-        /// <summary>
-        /// Register _tools using attribute-based discovery
-        /// </summary>
         private void RegisterToolsWithAttributes()
         {
-            try
+            Assembly[] assemblies = System.AppDomain.CurrentDomain.GetAssemblies();
+            List<Type> toolTypes = new List<Type>();
+
+            foreach (Assembly assembly in assemblies)
             {
-                // Get all assemblies in the current domain
-                Assembly[] assemblies = System.AppDomain.CurrentDomain.GetAssemblies();
+                Type[] types = assembly.GetTypes()
+                    .Where(type => type.GetCustomAttribute<UnityCliLoopToolAttribute>() != null)
+                    .Where(type => typeof(IUnityCliLoopTool).IsAssignableFrom(type))
+                    .Where(type => !type.IsAbstract && !type.IsInterface)
+                    .ToArray();
 
-                List<Type> toolTypes = new List<Type>();
+                toolTypes.AddRange(types);
+            }
 
-                foreach (Assembly assembly in assemblies)
+            foreach (Type type in toolTypes)
+            {
+                if (!IsValidToolType(type))
                 {
-                    // Find all types with McpTool attribute that implement IUnityTool
-                    Type[] types = assembly.GetTypes()
-                        .Where(type => type.GetCustomAttribute<McpToolAttribute>() != null)
-                        .Where(type => typeof(IUnityTool).IsAssignableFrom(type))
-                        .Where(type => !type.IsAbstract && !type.IsInterface)
-                        .ToArray();
-
-                    toolTypes.AddRange(types);
+                    UnityEngine.Debug.LogWarning($"{McpConstants.SECURITY_LOG_PREFIX} Skipping invalid tool type: {type.FullName}");
+                    continue;
                 }
 
-                // Register all _tools - filtering will be handled by client side
-                foreach (Type type in toolTypes)
-                {
-                    // Security: Validate type before creating instance
-                    if (!IsValidToolType(type))
-                    {
-                        UnityEngine.Debug.LogWarning($"{McpConstants.SECURITY_LOG_PREFIX} Skipping invalid tool type: {type.FullName}");
-                        continue;
-                    }
-                    
-                    IUnityTool tool = (IUnityTool)Activator.CreateInstance(type);
-                    RegisterTool(tool);
-                }
-            }
-            catch (Exception)
-            {
-                throw;
+                IUnityCliLoopTool tool = (IUnityCliLoopTool)Activator.CreateInstance(type);
+                RegisterTool(tool);
             }
         }
 
-        /// <summary>
-        /// Register _tools manually (for backward compatibility)
-        /// </summary>
-        private void RegisterManualTools()
-        {
-            // Only register _tools that don't have the McpTool attribute
-            // This prevents double registration
-
-            if (!IsToolTypeRegistered<PingTool>())
-            {
-                RegisterTool(new PingTool());
-            }
-
-            if (!IsToolTypeRegistered<CompileTool>())
-            {
-                RegisterTool(new CompileTool());
-            }
-
-            if (!IsToolTypeRegistered<GetLogsTool>())
-            {
-                RegisterTool(new GetLogsTool());
-            }
-
-            if (!IsToolTypeRegistered<RunTestsTool>())
-            {
-                RegisterTool(new RunTestsTool());
-            }
-        }
-
-        /// <summary>
-        /// Check if a tool type is already registered
-        /// </summary>
-        private bool IsToolTypeRegistered<T>() where T : IUnityTool
-        {
-            return _tools.Values.Any(tool => tool.GetType() == typeof(T));
-        }
-        
-        /// <summary>
-        /// Security: Validate if the type is safe to instantiate
-        /// </summary>
         private bool IsValidToolType(Type type)
         {
-            try
+            if (!typeof(IUnityCliLoopTool).IsAssignableFrom(type))
             {
-                // Must implement IUnityTool
-                if (!typeof(IUnityTool).IsAssignableFrom(type))
-                {
-                    return false;
-                }
-                
-                // Must not be abstract or interface
-                if (type.IsAbstract || type.IsInterface)
-                {
-                    return false;
-                }
-                
-                // Must have McpTool attribute
-                if (type.GetCustomAttribute<McpToolAttribute>() == null)
-                {
-                    return false;
-                }
-                
-                // Must have parameterless constructor
-                if (type.GetConstructor(Type.EmptyTypes) == null)
-                {
-                    return false;
-                }
-                
-                return true;
-            }
-            catch (Exception ex)
-            {
-                UnityEngine.Debug.LogError($"{McpConstants.SECURITY_LOG_PREFIX} Error validating tool type {type?.FullName}: {ex.Message}");
                 return false;
             }
+
+            if (type.IsAbstract || type.IsInterface)
+            {
+                return false;
+            }
+
+            if (type.GetCustomAttribute<UnityCliLoopToolAttribute>() == null)
+            {
+                return false;
+            }
+
+            return type.GetConstructor(Type.EmptyTypes) != null;
         }
 
         /// <summary>
         /// Register tool
         /// </summary>
         /// <param name="tool">Tool to register</param>
-        public void RegisterTool(IUnityTool tool)
+        public void RegisterTool(IUnityCliLoopTool tool)
         {
             if (tool == null)
             {
@@ -206,9 +131,9 @@ namespace io.github.hatayama.UnityCliLoop
         /// <returns>Execution result</returns>
         /// <exception cref="ArgumentException">When tool is unknown</exception>
         /// <exception cref="McpSecurityException">When tool is blocked by security settings</exception>
-        public async Task<BaseToolResponse> ExecuteToolAsync(string toolName, JToken paramsToken)
+        public async Task<UnityCliLoopToolResponse> ExecuteToolAsync(string toolName, JToken paramsToken)
         {
-            if (!_tools.TryGetValue(toolName, out IUnityTool tool))
+            if (!_tools.TryGetValue(toolName, out IUnityCliLoopTool tool))
             {
                 throw new ArgumentException($"Unknown tool: {toolName}");
             }
@@ -229,7 +154,7 @@ namespace io.github.hatayama.UnityCliLoop
             mainThreadHopStopwatch.Stop();
 
             Stopwatch toolBodyStopwatch = Stopwatch.StartNew();
-            BaseToolResponse response = await tool.ExecuteAsync(paramsToken);
+            UnityCliLoopToolResponse response = await tool.ExecuteAsync(paramsToken);
             toolBodyStopwatch.Stop();
 
             AppendExecuteDynamicCodeTimingsIfSupported(
@@ -240,7 +165,7 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         private static void AppendExecuteDynamicCodeTimingsIfSupported(
-            BaseToolResponse response,
+            UnityCliLoopToolResponse response,
             params string[] timingEntries)
         {
             if (response is not ExecuteDynamicCodeResponse executeDynamicCodeResponse)
@@ -273,9 +198,8 @@ namespace io.github.hatayama.UnityCliLoop
                 .Where(tool => !internalToolNames.Contains(tool.ToolName))
                 .Select(tool =>
             {
-                // Check if tool has McpTool attribute with DisplayDevelopmentOnly
                 bool displayDevelopmentOnly = false;
-                McpToolAttribute attribute = tool.GetType().GetCustomAttribute<McpToolAttribute>();
+                UnityCliLoopToolAttribute attribute = tool.GetType().GetCustomAttribute<UnityCliLoopToolAttribute>();
                 if (attribute != null)
                 {
                     displayDevelopmentOnly = attribute.DisplayDevelopmentOnly;
@@ -312,7 +236,7 @@ namespace io.github.hatayama.UnityCliLoop
                 .Where(tool => !internalToolNames.Contains(tool.ToolName))
                 .Select(tool =>
             {
-                McpToolAttribute attribute = tool.GetType().GetCustomAttribute<McpToolAttribute>();
+                UnityCliLoopToolAttribute attribute = tool.GetType().GetCustomAttribute<UnityCliLoopToolAttribute>();
                 string description = attribute?.Description ?? "";
                 bool displayDevelopmentOnly = attribute?.DisplayDevelopmentOnly ?? false;
                 return new ToolInfo(tool.ToolName, description, tool.ParameterSchema, displayDevelopmentOnly);
@@ -332,7 +256,7 @@ namespace io.github.hatayama.UnityCliLoop
                 .Select(tool =>
             {
                 Type toolType = tool.GetType();
-                McpToolAttribute attribute = toolType.GetCustomAttribute<McpToolAttribute>();
+                UnityCliLoopToolAttribute attribute = toolType.GetCustomAttribute<UnityCliLoopToolAttribute>();
                 string description = attribute?.Description ?? "";
                 bool displayDevelopmentOnly = attribute?.DisplayDevelopmentOnly ?? false;
                 bool isThirdParty = IsThirdPartyAssembly(toolType.Assembly.GetName().Name);
@@ -350,7 +274,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// </summary>
         public bool IsThirdPartyTool(string toolName)
         {
-            if (!_tools.TryGetValue(toolName, out IUnityTool tool))
+            if (!_tools.TryGetValue(toolName, out IUnityCliLoopTool tool))
             {
                 return true;
             }
@@ -360,7 +284,8 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static bool IsThirdPartyAssembly(string assemblyName)
         {
-            return assemblyName != "uLoopMCP.Editor";
+            return assemblyName != ApplicationAssemblyName &&
+                   assemblyName != FirstPartyToolsAssemblyName;
         }
 
         /// <summary>
@@ -370,7 +295,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <returns>Tool type or null if not found</returns>
         public Type GetToolType(string toolName)
         {
-            if (_tools.TryGetValue(toolName, out IUnityTool tool))
+            if (_tools.TryGetValue(toolName, out IUnityCliLoopTool tool))
             {
                 return tool.GetType();
             }

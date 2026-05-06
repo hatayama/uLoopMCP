@@ -7,7 +7,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// The class name is historical and remains part of the public extension API.
     /// </summary>
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
-    public class McpToolAttribute : Attribute
+    public class UnityCliLoopToolAttribute : Attribute
     {
         /// <summary>
         /// Gets whether this tool should only be displayed in development mode
@@ -17,7 +17,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Gets the specific security setting required to execute this command
         /// </summary>
-        public SecuritySettings RequiredSecuritySetting { get; set; } = SecuritySettings.None;
+        public UnityCliLoopSecuritySetting RequiredSecuritySetting { get; set; } = UnityCliLoopSecuritySetting.None;
 
         /// <summary>
         /// Gets or sets the description of this tool
@@ -27,7 +27,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Public parameterless constructor required for attribute usage.
         /// </summary>
-        public McpToolAttribute()
+        public UnityCliLoopToolAttribute()
         {
         }
     }

@@ -5,7 +5,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// Bringing the currently connected Unity Editor window to the foreground
     /// does not require any parameters.
     /// </summary>
-    public class FocusUnityWindowSchema : BaseToolSchema
+    public class FocusUnityWindowSchema : UnityCliLoopToolSchema
     {
     }
 }

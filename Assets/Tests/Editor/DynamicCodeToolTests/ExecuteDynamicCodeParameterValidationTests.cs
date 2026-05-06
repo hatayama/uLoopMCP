@@ -12,7 +12,7 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
     public class ExecuteDynamicCodeParameterValidationTests
     {
         [Test]
-        public void ExecuteAsync_WithStringParameters_ShouldThrowParameterValidationException()
+        public void ExecuteAsync_WithStringParameters_ShouldThrowUnityCliLoopToolParameterValidationException()
         {
             // Arrange
             ExecuteDynamicCodeTool tool = new ExecuteDynamicCodeTool();
@@ -24,7 +24,7 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
             };
 
             // Act & Assert
-            var ex = Assert.ThrowsAsync<ParameterValidationException>(async () =>
+            var ex = Assert.ThrowsAsync<UnityCliLoopToolParameterValidationException>(async () =>
             {
                 await tool.ExecuteAsync(paramsToken);
             });
@@ -49,7 +49,7 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
             };
 
             // Act
-            BaseToolResponse baseResponse = null;
+            UnityCliLoopToolResponse baseResponse = null;
             try
             {
                 baseResponse = await tool.ExecuteAsync(paramsToken);
@@ -80,7 +80,7 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
             };
 
             // Act
-            BaseToolResponse baseResponse = null;
+            UnityCliLoopToolResponse baseResponse = null;
             try
             {
                 baseResponse = await tool.ExecuteAsync(paramsToken);

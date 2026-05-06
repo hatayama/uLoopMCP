@@ -7,7 +7,7 @@ namespace io.github.hatayama.UnityCliLoop
 
     /// Related classes: ExecuteDynamicCodeTool, ExecuteDynamicCodeSchema
     /// </summary>
-    public class ExecuteDynamicCodeResponse : BaseToolResponse
+    public class ExecuteDynamicCodeResponse : UnityCliLoopToolResponse
     {
         private const bool EmitTimingsInJsonResponses = false;
 

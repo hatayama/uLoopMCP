@@ -2,7 +2,7 @@ using System.ComponentModel;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    public class SimulateMouseUiSchema : BaseToolSchema
+    public class SimulateMouseUiSchema : UnityCliLoopToolSchema
     {
         [Description("Mouse action: Click(0) - click with selected Button, Drag(1) - one-shot drag, DragStart(2) - begin drag and hold, DragMove(3) - move while holding drag, DragEnd(4) - release drag, LongPress(5) - press and hold for Duration seconds")]
         public MouseAction Action { get; set; } = MouseAction.Click;

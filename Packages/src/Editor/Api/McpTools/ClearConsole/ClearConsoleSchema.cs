@@ -10,7 +10,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// - ClearConsoleResponse: Type-safe response structure
     /// - ClearConsoleCommand: Command implementation
     /// </summary>
-    public class ClearConsoleSchema : BaseToolSchema
+    public class ClearConsoleSchema : UnityCliLoopToolSchema
     {
         /// <summary>
         /// Whether to add a confirmation log message after clearing

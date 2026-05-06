@@ -7,7 +7,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// Parameter schema for dynamic code execution tool
     /// Related classes: ExecuteDynamicCodeTool, ExecuteDynamicCodeResponse
     /// </summary>
-    public class ExecuteDynamicCodeSchema : BaseToolSchema
+    public class ExecuteDynamicCodeSchema : UnityCliLoopToolSchema
     {
         /// <summary>C# code to execute</summary>
         [Description(@"Editor automation only — no file I/O, no script authoring.

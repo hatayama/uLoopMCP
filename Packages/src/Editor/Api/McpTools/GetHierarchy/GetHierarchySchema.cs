@@ -5,7 +5,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// <summary>
     /// Input parameters for GetHierarchy command
     /// </summary>
-    public class GetHierarchySchema : BaseToolSchema
+    public class GetHierarchySchema : UnityCliLoopToolSchema
     {
         [Description("Whether to include inactive GameObjects in the hierarchy result")]
         public bool IncludeInactive { get; set; } = true;

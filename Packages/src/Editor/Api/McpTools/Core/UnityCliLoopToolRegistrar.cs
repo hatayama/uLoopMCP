@@ -6,23 +6,23 @@ namespace io.github.hatayama.UnityCliLoop
     /// Static class for managing custom tools
     /// Allows users to register and manage their own tools
     /// </summary>
-    public static class CustomToolManager
+    public static class UnityCliLoopToolRegistrar
     {
-        private static UnityToolRegistry _sharedRegistry;
+        private static UnityCliLoopToolRegistry _sharedRegistry;
 
         internal static event Action OnToolsChanged;
 
         /// <summary>
         /// Get shared registry (lazy initialization)
         /// </summary>
-        private static UnityToolRegistry SharedRegistry
+        private static UnityCliLoopToolRegistry SharedRegistry
         {
             get
             {
                 if (_sharedRegistry == null)
                 {
-                    _sharedRegistry = new UnityToolRegistry();
-                    // Standard tools are automatically registered in UnityToolRegistry constructor
+                    _sharedRegistry = new UnityCliLoopToolRegistry();
+                    // Standard tools are automatically registered in UnityCliLoopToolRegistry constructor
                 }
                 return _sharedRegistry;
             }
@@ -32,7 +32,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// Register custom tool
         /// </summary>
         /// <param name="tool">Tool to register</param>
-        public static void RegisterCustomTool(IUnityTool tool)
+        public static void RegisterCustomTool(IUnityCliLoopTool tool)
         {
             SharedRegistry.RegisterTool(tool);
             
@@ -74,13 +74,13 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Get internal registry for the Unity CLI bridge.
         /// </summary>
-        /// <returns>UnityToolRegistry instance</returns>
-        internal static UnityToolRegistry GetRegistry()
+        /// <returns>UnityCliLoopToolRegistry instance</returns>
+        internal static UnityCliLoopToolRegistry GetRegistry()
         {
             return SharedRegistry;
         }
 
-        internal static UnityToolRegistry TryGetRegistry()
+        internal static UnityCliLoopToolRegistry TryGetRegistry()
         {
             return _sharedRegistry;
         }

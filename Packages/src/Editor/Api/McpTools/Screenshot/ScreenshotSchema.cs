@@ -29,7 +29,7 @@ namespace io.github.hatayama.UnityCliLoop
         rendering = 1
     }
 
-    public class ScreenshotSchema : BaseToolSchema
+    public class ScreenshotSchema : UnityCliLoopToolSchema
     {
         [Description("Window name to capture (e.g., 'Game', 'Scene', 'Console', 'Inspector', 'Project', 'Hierarchy', or any EditorWindow title). Ignored when CaptureMode is rendering.")]
         public string WindowName { get; set; } = "Game";

@@ -69,14 +69,14 @@ namespace io.github.hatayama.UnityCliLoop
 
             McpBridgeServer.OnServerStarted += OnServerStateChanged;
             McpBridgeServer.OnServerStopping += OnServerStateChanged;
-            CustomToolManager.OnToolsChanged += OnToolsChanged;
+            UnityCliLoopToolRegistrar.OnToolsChanged += OnToolsChanged;
         }
 
         private void UnsubscribeFromServerEvents()
         {
             McpBridgeServer.OnServerStarted -= OnServerStateChanged;
             McpBridgeServer.OnServerStopping -= OnServerStateChanged;
-            CustomToolManager.OnToolsChanged -= OnToolsChanged;
+            UnityCliLoopToolRegistrar.OnToolsChanged -= OnToolsChanged;
         }
 
         private void OnServerStateChanged()

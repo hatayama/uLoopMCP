@@ -23,7 +23,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// Following the Open-Closed principle, when adding new tools,
     /// create a new class that implements this interface
     /// </summary>
-    public interface IUnityTool
+    public interface IUnityCliLoopTool
     {
         /// <summary>
         /// Get tool name
@@ -40,7 +40,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// </summary>
         /// <param name="paramsToken">JSON token for parameters</param>
         /// <returns>Execution result</returns>
-        Task<BaseToolResponse> ExecuteAsync(JToken paramsToken);
+        Task<UnityCliLoopToolResponse> ExecuteAsync(JToken paramsToken);
     }
 
     /// <summary>

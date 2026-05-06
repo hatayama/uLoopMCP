@@ -43,7 +43,7 @@ namespace io.github.hatayama.UnityCliLoop
         }
     }
 
-    public class ScreenshotResponse : BaseToolResponse
+    public class ScreenshotResponse : UnityCliLoopToolResponse
     {
         public List<ScreenshotInfo> Screenshots { get; set; } = new();
 

@@ -15,17 +15,17 @@ namespace io.github.hatayama.UnityCliLoop
 
             if (string.IsNullOrWhiteSpace(metadata.ExpectedProjectRoot))
             {
-                throw new ParameterValidationException("Invalid x-uloop metadata: expectedProjectRoot is required.");
+                throw new UnityCliLoopToolParameterValidationException("Invalid x-uloop metadata: expectedProjectRoot is required.");
             }
 
             if (string.IsNullOrWhiteSpace(actualProjectRoot))
             {
-                throw new ParameterValidationException("Fast project validation is unavailable. Restart Unity CLI Loop and retry.");
+                throw new UnityCliLoopToolParameterValidationException("Fast project validation is unavailable. Restart Unity CLI Loop and retry.");
             }
 
             if (!string.Equals(metadata.ExpectedProjectRoot, actualProjectRoot, StringComparison.Ordinal))
             {
-                throw new ParameterValidationException("Connected Unity instance belongs to a different project.");
+                throw new UnityCliLoopToolParameterValidationException("Connected Unity instance belongs to a different project.");
             }
         }
     }

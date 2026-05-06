@@ -31,7 +31,7 @@ namespace io.github.hatayama.UnityCliLoop
         public bool suppressSetupWizardAutoShow = false;
 
         // UI State Settings
-        public bool showSecuritySettings = true;
+        public bool showUnityCliLoopSecuritySetting = true;
         public bool showToolSettings = true;
 
         // Default to flat installation so first-time setup does not add an extra grouping layer unless requested.
@@ -224,18 +224,18 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Gets the show security settings flag.
         /// </summary>
-        public static bool GetShowSecuritySettings()
+        public static bool GetShowUnityCliLoopSecuritySetting()
         {
-            return GetSettings().showSecuritySettings;
+            return GetSettings().showUnityCliLoopSecuritySetting;
         }
 
         /// <summary>
         /// Sets the show security settings flag.
         /// </summary>
-        public static void SetShowSecuritySettings(bool showSecuritySettings)
+        public static void SetShowUnityCliLoopSecuritySetting(bool showUnityCliLoopSecuritySetting)
         {
             McpEditorSettingsData settings = GetSettings();
-            McpEditorSettingsData newSettings = settings with { showSecuritySettings = showSecuritySettings };
+            McpEditorSettingsData newSettings = settings with { showUnityCliLoopSecuritySetting = showUnityCliLoopSecuritySetting };
             SaveSettings(newSettings);
         }
 

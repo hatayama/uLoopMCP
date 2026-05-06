@@ -2,7 +2,7 @@ using System.ComponentModel;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    public class FindGameObjectsSchema : BaseToolSchema
+    public class FindGameObjectsSchema : UnityCliLoopToolSchema
     {
         // Search criteria
         public string NamePattern { get; set; } = "";

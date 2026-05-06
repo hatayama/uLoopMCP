@@ -3,7 +3,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// <summary>
     /// Schema for server shutdown request
     /// </summary>
-    public class ServerShutdownSchema : BaseToolSchema
+    public class ServerShutdownSchema : UnityCliLoopToolSchema
     {
         /// <summary>
         /// Force shutdown flag

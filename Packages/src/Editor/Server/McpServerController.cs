@@ -201,7 +201,7 @@ namespace io.github.hatayama.UnityCliLoop
                 mcpServer = result.ServerInstance;
 
                 DynamicCodeStartupTelemetry.MarkServerReady();
-                CustomToolManager.WarmupRegistry();
+                UnityCliLoopToolRegistrar.WarmupRegistry();
                 DynamicCodeServices.ResetServerScopedServices();
                 IPrewarmDynamicCodeUseCase prewarmDynamicCodeUseCase =
                     await DynamicCodeServices.GetPrewarmDynamicCodeUseCaseAsync(serverStartingLockToken);
@@ -589,7 +589,7 @@ namespace io.github.hatayama.UnityCliLoop
                 McpEditorSettings.ClearReconnectingFlags();
                 McpEditorSettings.ClearPostCompileReconnectingUI();
                 DynamicCodeStartupTelemetry.MarkServerReady();
-                CustomToolManager.WarmupRegistry();
+                UnityCliLoopToolRegistrar.WarmupRegistry();
                 DynamicCodeServices.ResetServerScopedServices();
                 IPrewarmDynamicCodeUseCase prewarmDynamicCodeUseCase =
                     await DynamicCodeServices.GetPrewarmDynamicCodeUseCaseAsync(serverStartingLockToken);

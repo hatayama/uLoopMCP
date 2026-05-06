@@ -6,10 +6,10 @@ namespace io.github.hatayama.UnityCliLoop
     /// 
     /// Related classes:
     /// - McpSecurityChecker: Main security check logic
-    /// - McpToolAttribute: Attribute to specify command security settings
+    /// - UnityCliLoopToolAttribute: Attribute to specify command security settings
     /// - RunTestsTool: Test execution tool
     /// </summary>
-    public enum SecuritySettings
+    public enum UnityCliLoopSecuritySetting
     {
         None,
     }

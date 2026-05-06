@@ -6,7 +6,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// Schema for GetToolDetails tool parameters
     /// Provides type-safe parameter access for retrieving tool information
     /// </summary>
-    public class GetToolDetailsSchema : BaseToolSchema
+    public class GetToolDetailsSchema : UnityCliLoopToolSchema
     {
         /// <summary>
         /// Whether to include development-only tools in the results

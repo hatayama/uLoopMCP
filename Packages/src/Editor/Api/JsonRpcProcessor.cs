@@ -175,7 +175,7 @@ namespace io.github.hatayama.UnityCliLoop
                 mainThreadWaitStopwatch.Stop();
 
                 Stopwatch toolStopwatch = Stopwatch.StartNew();
-                BaseToolResponse result = await ExecuteMethod(request.Method, request.Params);
+                UnityCliLoopToolResponse result = await ExecuteMethod(request.Method, request.Params);
                 toolStopwatch.Stop();
 
                 AppendExecuteDynamicCodeTimingsIfSupported(
@@ -191,9 +191,9 @@ namespace io.github.hatayama.UnityCliLoop
                 UnityEngine.Debug.LogError($"[JsonRpcProcessor] JSON serialization error: {ex.Message}\nStack trace: {ex.StackTrace}");
                 return CreateErrorResponse(request.Id, ex);
             }
-            catch (ParameterValidationException ex)
+            catch (UnityCliLoopToolParameterValidationException ex)
             {
-                LogParameterValidationException(ex);
+                LogUnityCliLoopToolParameterValidationException(ex);
                 return CreateErrorResponse(request.Id, ex);
             }
             catch (Exception ex)
@@ -216,14 +216,14 @@ namespace io.github.hatayama.UnityCliLoop
             return BridgeTransportEndpoint.CanonicalizeProjectRoot(projectRoot);
         }
 
-        private static void LogParameterValidationException(ParameterValidationException exception)
+        private static void LogUnityCliLoopToolParameterValidationException(UnityCliLoopToolParameterValidationException exception)
         {
             UnityEngine.Debug.LogError(
                 $"[JsonRpcProcessor] Parameter validation error: {exception.Message}\nStack trace: {exception.StackTrace}");
         }
 
         private static void AppendExecuteDynamicCodeTimingsIfSupported(
-            BaseToolResponse result,
+            UnityCliLoopToolResponse result,
             double mainThreadWaitMilliseconds,
             double toolTotalMilliseconds,
             double requestTotalMilliseconds)
@@ -245,7 +245,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// </summary>
         /// <param name="id">Request ID - must be same type as received (string/number/null per JSON-RPC spec)</param>
         /// <param name="result">Command execution result</param>
-        private static string CreateSuccessResponse(object id, BaseToolResponse result)
+        private static string CreateSuccessResponse(object id, UnityCliLoopToolResponse result)
         {
             JsonSerializerSettings settings = new JsonSerializerSettings
             {
@@ -323,7 +323,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// Execute appropriate handler according to method name
         /// Use new command-based structure
         /// </summary>
-        private static async Task<BaseToolResponse> ExecuteMethod(string method, JToken paramsToken)
+        private static async Task<UnityCliLoopToolResponse> ExecuteMethod(string method, JToken paramsToken)
         {
             return await UnityApiHandler.ExecuteCommandAsync(method, paramsToken);
         }

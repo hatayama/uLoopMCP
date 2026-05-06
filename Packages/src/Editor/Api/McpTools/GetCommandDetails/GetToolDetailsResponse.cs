@@ -4,7 +4,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// Response schema for GetToolDetails tool
     /// Provides type-safe response structure for tool information
     /// </summary>
-    public class GetToolDetailsResponse : BaseToolResponse
+    public class GetToolDetailsResponse : UnityCliLoopToolResponse
     {
         /// <summary>
         /// Array of detailed tool information

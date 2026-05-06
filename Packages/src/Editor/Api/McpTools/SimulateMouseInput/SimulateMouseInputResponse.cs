@@ -2,7 +2,7 @@
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    public class SimulateMouseInputResponse : BaseToolResponse
+    public class SimulateMouseInputResponse : UnityCliLoopToolResponse
     {
         public bool Success { get; set; }
         public string Message { get; set; } = "";

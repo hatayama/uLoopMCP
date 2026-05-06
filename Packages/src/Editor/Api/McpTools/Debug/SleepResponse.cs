@@ -5,9 +5,9 @@ namespace io.github.hatayama.UnityCliLoop
     /// Related classes:
     /// - SleepTool: Implementation that generates this response
     /// - SleepSchema: Input parameters for the sleep tool
-    /// - BaseToolResponse: Base class providing timing information
+    /// - UnityCliLoopToolResponse: Base class providing timing information
     /// </summary>
-    public class SleepResponse : BaseToolResponse
+    public class SleepResponse : UnityCliLoopToolResponse
     {
         /// <summary>
         /// Message indicating the result of the sleep operation

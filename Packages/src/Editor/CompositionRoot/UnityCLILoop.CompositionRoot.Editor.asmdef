@@ -1,0 +1,22 @@
+{
+    "name": "UnityCLILoop.CompositionRoot.Editor",
+    "rootNamespace": "",
+    "references": [
+        "UnityCLILoop.Application",
+        "UnityCLILoop.Domain",
+        "UnityCLILoop.Infrastructure",
+        "UnityCLILoop.Presentation",
+        "UnityCLILoop.ToolContracts"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

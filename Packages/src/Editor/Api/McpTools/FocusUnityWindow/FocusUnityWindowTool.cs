@@ -28,8 +28,8 @@ namespace io.github.hatayama.UnityCliLoop
     /// <summary>
     /// Stub for tool list registration. Actual focus is handled by the CLI.
     /// </summary>
-    [McpTool(Description = "Bring Unity Editor window to front using OS-level commands. Works even when Unity is busy (compiling, domain reload).")]
-    public class FocusUnityWindowTool : AbstractUnityTool<FocusUnityWindowSchema, FocusUnityWindowResponse>
+    [UnityCliLoopTool(Description = "Bring Unity Editor window to front using OS-level commands. Works even when Unity is busy (compiling, domain reload).")]
+    public class FocusUnityWindowTool : UnityCliLoopTool<FocusUnityWindowSchema, FocusUnityWindowResponse>
     {
         /// <inheritdoc />
         public override string ToolName => "focus-window";

@@ -2,7 +2,7 @@ using System.ComponentModel;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    public class RecordInputSchema : BaseToolSchema
+    public class RecordInputSchema : UnityCliLoopToolSchema
     {
         [Description("Recording action: Start(0) - begin recording input, Stop(1) - stop recording and save to file")]
         public RecordInputAction Action { get; set; } = RecordInputAction.Start;

@@ -37,7 +37,7 @@ namespace io.github.hatayama.UnityCliLoop
             JObject paramsJson = new JObject();
             
             // Act
-            BaseToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
+            UnityCliLoopToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
             GetHierarchyResponse response = baseResponse as GetHierarchyResponse;
             
             // Assert
@@ -60,7 +60,7 @@ namespace io.github.hatayama.UnityCliLoop
             };
             
             // Act
-            BaseToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
+            UnityCliLoopToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
             GetHierarchyResponse response = baseResponse as GetHierarchyResponse;
             
             // Assert
@@ -80,7 +80,7 @@ namespace io.github.hatayama.UnityCliLoop
             };
             
             // Act
-            BaseToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
+            UnityCliLoopToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
             GetHierarchyResponse response = baseResponse as GetHierarchyResponse;
             
             // Assert

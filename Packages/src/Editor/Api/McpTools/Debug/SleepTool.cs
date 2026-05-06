@@ -8,13 +8,13 @@ namespace io.github.hatayama.UnityCliLoop
     /// Related classes:
     /// - SleepSchema: Input parameters including sleep duration and timeout
     /// - SleepResponse: Output containing results and timing information
-    /// - AbstractUnityTool: Base class providing timeout infrastructure
+    /// - UnityCliLoopTool: Base class providing timeout infrastructure
     /// </summary>
-    [McpTool(
+    [UnityCliLoopTool(
         DisplayDevelopmentOnly = true,
         Description = "Debug tool that sleeps for specified duration to test timeout functionality"
     )]
-    public class SleepTool : AbstractUnityTool<SleepSchema, SleepResponse>
+    public class SleepTool : UnityCliLoopTool<SleepSchema, SleepResponse>
     {
         public override string ToolName => "debug-sleep";
         

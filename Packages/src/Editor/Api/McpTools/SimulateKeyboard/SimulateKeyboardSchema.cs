@@ -2,7 +2,7 @@ using System.ComponentModel;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    public class SimulateKeyboardSchema : BaseToolSchema
+    public class SimulateKeyboardSchema : UnityCliLoopToolSchema
     {
         [Description("Keyboard action: Press(0) - one-shot key tap (Down then Up), KeyDown(1) - hold key down, KeyUp(2) - release held key")]
         public KeyboardAction Action { get; set; } = KeyboardAction.Press;

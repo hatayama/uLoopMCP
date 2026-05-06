@@ -8,7 +8,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// - SleepTool: Implementation of the debug sleep tool
     /// - SleepResponse: Response structure for the sleep tool
     /// </summary>
-    public class SleepSchema : BaseToolSchema
+    public class SleepSchema : UnityCliLoopToolSchema
     {
         /// <summary>
         /// Number of seconds to sleep for testing purposes (default: 15)
