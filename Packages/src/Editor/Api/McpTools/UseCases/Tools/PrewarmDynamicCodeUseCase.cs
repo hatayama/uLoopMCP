@@ -502,7 +502,7 @@ namespace io.github.hatayama.UnityCliLoop
                 ["x-uloop"] = new JObject
                 {
                     ["expectedProjectRoot"] = BridgeTransportEndpoint.CanonicalizeProjectRoot(
-                        UnityMcpPathResolver.GetProjectRoot())
+                        UnityCliLoopPathResolver.GetProjectRoot())
                 }
             };
 

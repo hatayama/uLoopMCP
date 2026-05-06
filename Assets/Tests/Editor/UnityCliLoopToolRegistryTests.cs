@@ -150,7 +150,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             // Tests that third-party sample tools depend only on the public tool contract assembly.
             string asmdefPath = Path.Combine(
-                UnityMcpPathResolver.GetProjectRoot(),
+                UnityCliLoopPathResolver.GetProjectRoot(),
                 "Assets",
                 "Editor",
                 "CustomCommandSamples",
@@ -166,7 +166,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             // Tests that bundled plugin tools use the same public contract surface as extension tools.
             string asmdefPath = Path.Combine(
-                UnityMcpPathResolver.GetProjectRoot(),
+                UnityCliLoopPathResolver.GetProjectRoot(),
                 "Packages",
                 "src",
                 "Editor",

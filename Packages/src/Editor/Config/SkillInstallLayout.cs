@@ -111,13 +111,13 @@ namespace io.github.hatayama.UnityCliLoop
 
         internal static bool HasInstalledSkills(string targetRoot)
         {
-            string projectRoot = UnityMcpPathResolver.GetProjectRoot();
+            string projectRoot = UnityCliLoopPathResolver.GetProjectRoot();
             return HasInstalledSkills(projectRoot, targetRoot);
         }
 
         internal static bool HasInstalledSkills(string targetRoot, bool groupSkillsUnderUnityCliLoop)
         {
-            string projectRoot = UnityMcpPathResolver.GetProjectRoot();
+            string projectRoot = UnityCliLoopPathResolver.GetProjectRoot();
             return HasInstalledSkills(projectRoot, targetRoot, groupSkillsUnderUnityCliLoop);
         }
 
@@ -652,7 +652,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static string GetCliOnlySkillSourceRoot(string projectRoot)
         {
-            string currentProjectRoot = UnityMcpPathResolver.GetProjectRoot();
+            string currentProjectRoot = UnityCliLoopPathResolver.GetProjectRoot();
             if (!string.Equals(
                 Path.GetFullPath(projectRoot),
                 Path.GetFullPath(currentProjectRoot),
@@ -676,7 +676,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             return string.Equals(
                 Path.GetFullPath(searchRoot),
-                Path.GetFullPath(GetCliOnlySkillSourceRoot(UnityMcpPathResolver.GetProjectRoot())),
+                Path.GetFullPath(GetCliOnlySkillSourceRoot(UnityCliLoopPathResolver.GetProjectRoot())),
                 StringComparison.Ordinal);
         }
 

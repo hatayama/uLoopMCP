@@ -187,7 +187,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <returns>Array of tool information</returns>
         public ToolInfo[] GetRegisteredTools()
         {
-            return GetRegisteredToolsForProjectRoot(UnityMcpPathResolver.GetProjectRoot());
+            return GetRegisteredToolsForProjectRoot(UnityCliLoopPathResolver.GetProjectRoot());
         }
 
         internal ToolInfo[] GetRegisteredToolsForProjectRoot(string projectRoot)
@@ -214,7 +214,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// </summary>
         public ToolInfo[] GetAllRegisteredToolInfos()
         {
-            return GetAllRegisteredToolInfosForProjectRoot(UnityMcpPathResolver.GetProjectRoot());
+            return GetAllRegisteredToolInfosForProjectRoot(UnityCliLoopPathResolver.GetProjectRoot());
         }
 
         internal ToolInfo[] GetAllRegisteredToolInfosForProjectRoot(string projectRoot)
@@ -232,7 +232,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         public ToolSettingsCatalogItem[] GetToolSettingsCatalog()
         {
-            return GetToolSettingsCatalogForProjectRoot(UnityMcpPathResolver.GetProjectRoot());
+            return GetToolSettingsCatalogForProjectRoot(UnityCliLoopPathResolver.GetProjectRoot());
         }
 
         internal ToolSettingsCatalogItem[] GetToolSettingsCatalogForProjectRoot(string projectRoot)

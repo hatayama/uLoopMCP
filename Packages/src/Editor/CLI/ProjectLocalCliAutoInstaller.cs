@@ -53,7 +53,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static void EnsureProjectLocalCliForCurrentProject()
         {
-            string projectRoot = UnityMcpPathResolver.GetProjectRoot();
+            string projectRoot = UnityCliLoopPathResolver.GetProjectRoot();
             CliInstallResult result = EnsureProjectLocalCliCurrent(projectRoot, McpConstants.PackageInfo.version);
             if (result.Success)
             {

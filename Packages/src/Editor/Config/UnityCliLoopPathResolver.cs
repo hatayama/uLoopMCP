@@ -6,7 +6,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// <summary>
     /// Resolves paths that are shared across CLI setup, generated skills, and editor runtime services.
     /// </summary>
-    public static class UnityMcpPathResolver
+    public static class UnityCliLoopPathResolver
     {
         public static string GetProjectRoot()
         {

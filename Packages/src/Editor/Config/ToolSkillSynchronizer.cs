@@ -115,7 +115,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             Debug.Assert(!string.IsNullOrEmpty(toolName), "toolName must not be null or empty");
 
-            string projectRoot = UnityMcpPathResolver.GetProjectRoot();
+            string projectRoot = UnityCliLoopPathResolver.GetProjectRoot();
             RemoveSkillFilesAtProjectRoot(projectRoot, toolName);
         }
 
@@ -147,7 +147,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             Debug.Assert(!string.IsNullOrEmpty(toolName), "toolName must not be null or empty");
 
-            string projectRoot = UnityMcpPathResolver.GetProjectRoot();
+            string projectRoot = UnityCliLoopPathResolver.GetProjectRoot();
 
             foreach (string targetDir in SkillTargetDirs)
             {
@@ -176,7 +176,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         public static List<SkillTargetInfo> DetectTargetsForLayout(bool groupSkillsUnderUnityCliLoop)
         {
-            string projectRoot = UnityMcpPathResolver.GetProjectRoot();
+            string projectRoot = UnityCliLoopPathResolver.GetProjectRoot();
             Debug.Assert(!string.IsNullOrEmpty(projectRoot), "projectRoot must not be null or empty");
 
             return DetectTargetsForLayoutAtProjectRoot(projectRoot, groupSkillsUnderUnityCliLoop);
@@ -184,7 +184,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         public static List<SkillTargetInfo> DetectTargetsForLayoutFast(bool groupSkillsUnderUnityCliLoop)
         {
-            string projectRoot = UnityMcpPathResolver.GetProjectRoot();
+            string projectRoot = UnityCliLoopPathResolver.GetProjectRoot();
             Debug.Assert(!string.IsNullOrEmpty(projectRoot), "projectRoot must not be null or empty");
 
             return DetectTargetsForLayoutFastAtProjectRoot(projectRoot, groupSkillsUnderUnityCliLoop);
@@ -218,7 +218,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         internal static List<SkillTargetInfo> DetectTargets(bool requireSkillsDirectory)
         {
-            string projectRoot = UnityMcpPathResolver.GetProjectRoot();
+            string projectRoot = UnityCliLoopPathResolver.GetProjectRoot();
             Debug.Assert(!string.IsNullOrEmpty(projectRoot), "projectRoot must not be null or empty");
 
             return DetectTargets(projectRoot, requireSkillsDirectory);
@@ -228,7 +228,7 @@ namespace io.github.hatayama.UnityCliLoop
             bool requireSkillsDirectory,
             bool groupSkillsUnderUnityCliLoop)
         {
-            string projectRoot = UnityMcpPathResolver.GetProjectRoot();
+            string projectRoot = UnityCliLoopPathResolver.GetProjectRoot();
             Debug.Assert(!string.IsNullOrEmpty(projectRoot), "projectRoot must not be null or empty");
 
             return DetectTargets(
@@ -243,7 +243,7 @@ namespace io.github.hatayama.UnityCliLoop
             bool groupSkillsUnderUnityCliLoop,
             bool includeFreshnessCheck)
         {
-            string projectRoot = UnityMcpPathResolver.GetProjectRoot();
+            string projectRoot = UnityCliLoopPathResolver.GetProjectRoot();
             Debug.Assert(!string.IsNullOrEmpty(projectRoot), "projectRoot must not be null or empty");
 
             return DetectTargets(
@@ -391,7 +391,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             Debug.Assert(!string.IsNullOrEmpty(toolName), "toolName must not be null or empty");
 
-            string projectRoot = UnityMcpPathResolver.GetProjectRoot();
+            string projectRoot = UnityCliLoopPathResolver.GetProjectRoot();
             Debug.Assert(!string.IsNullOrEmpty(projectRoot), "projectRoot must not be null or empty");
 
             return await InstallSkillFilesForToolAtProjectRoot(
@@ -410,7 +410,7 @@ namespace io.github.hatayama.UnityCliLoop
             bool groupSkillsUnderUnityCliLoop)
         {
             Debug.Assert(targets != null, "targets must not be null");
-            string projectRoot = UnityMcpPathResolver.GetProjectRoot();
+            string projectRoot = UnityCliLoopPathResolver.GetProjectRoot();
             Debug.Assert(!string.IsNullOrEmpty(projectRoot), "projectRoot must not be null or empty");
 
             return await InstallSkillFilesAtProjectRoot(projectRoot, targets, groupSkillsUnderUnityCliLoop);

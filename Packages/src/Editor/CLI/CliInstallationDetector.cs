@@ -74,7 +74,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             UnityEngine.Debug.Assert(!string.IsNullOrEmpty(targetDir), "targetDir must not be null or empty");
 
-            string projectRoot = UnityMcpPathResolver.GetProjectRoot();
+            string projectRoot = UnityCliLoopPathResolver.GetProjectRoot();
             return AreSkillsInstalled(projectRoot, targetDir);
         }
 
@@ -82,7 +82,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             UnityEngine.Debug.Assert(!string.IsNullOrEmpty(targetDir), "targetDir must not be null or empty");
 
-            string projectRoot = UnityMcpPathResolver.GetProjectRoot();
+            string projectRoot = UnityCliLoopPathResolver.GetProjectRoot();
             return AreSkillsInstalled(projectRoot, targetDir, groupSkillsUnderUnityCliLoop);
         }
 

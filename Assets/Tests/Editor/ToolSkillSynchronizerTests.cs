@@ -23,7 +23,7 @@ namespace io.github.hatayama.UnityCliLoop
         [SetUp]
         public void SetUp()
         {
-            _projectRoot = UnityMcpPathResolver.GetProjectRoot();
+            _projectRoot = UnityCliLoopPathResolver.GetProjectRoot();
             _toolSettingsFileExisted = File.Exists(ToolSettingsFilePath);
             _toolSettingsFileContent = _toolSettingsFileExisted ? File.ReadAllText(ToolSettingsFilePath) : null;
             ToolSettings.InvalidateCache();

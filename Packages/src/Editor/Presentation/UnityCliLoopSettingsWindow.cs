@@ -536,7 +536,7 @@ namespace io.github.hatayama.UnityCliLoop
             string cliExecutablePath = CliSetupApplicationFacade.GetCachedCliExecutablePath();
             string packageVersion = McpConstants.PackageInfo.version;
             string requiredDispatcherVersion = GetRequiredDispatcherVersion();
-            string projectRoot = UnityMcpPathResolver.GetProjectRoot();
+            string projectRoot = UnityCliLoopPathResolver.GetProjectRoot();
             CliInstallResult projectLocalResult = CliSetupApplicationFacade.EnsureProjectLocalCliCurrent(
                 projectRoot,
                 packageVersion);
@@ -617,7 +617,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private async void RefreshSelectedTargetInstallStateAsync(CancellationToken ct)
         {
-            string projectRoot = UnityMcpPathResolver.GetProjectRoot();
+            string projectRoot = UnityCliLoopPathResolver.GetProjectRoot();
             SkillInstallState installState = await Task.Run(
                 () => GetSelectedTargetInstallState(projectRoot, includeFreshnessCheck: true));
             if (ct.IsCancellationRequested)
@@ -631,7 +631,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private SkillInstallState GetSelectedTargetInstallState(bool includeFreshnessCheck)
         {
-            string projectRoot = UnityMcpPathResolver.GetProjectRoot();
+            string projectRoot = UnityCliLoopPathResolver.GetProjectRoot();
             return GetSelectedTargetInstallState(projectRoot, includeFreshnessCheck);
         }
 

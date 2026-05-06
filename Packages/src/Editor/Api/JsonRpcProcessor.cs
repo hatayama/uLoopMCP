@@ -212,7 +212,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static string GetCurrentProjectRoot()
         {
-            string projectRoot = UnityMcpPathResolver.GetProjectRoot();
+            string projectRoot = UnityCliLoopPathResolver.GetProjectRoot();
             return BridgeTransportEndpoint.CanonicalizeProjectRoot(projectRoot);
         }
 

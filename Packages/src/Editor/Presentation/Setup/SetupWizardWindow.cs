@@ -377,7 +377,7 @@ namespace io.github.hatayama.UnityCliLoop
         private void RefreshSkillsSection()
         {
             string cachedCliVersion = CliSetupApplicationFacade.GetCachedCliVersion();
-            string projectRoot = UnityMcpPathResolver.GetProjectRoot();
+            string projectRoot = UnityCliLoopPathResolver.GetProjectRoot();
             EnsureProjectLocalCliCurrent(projectRoot);
             bool cliInstalled = IsCliInstalled(cachedCliVersion);
             List<SkillSetupApplicationFacade.SkillTargetInfo> targets = DetectDisplayedSkillTargetsFast(projectRoot);
@@ -417,7 +417,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             await CliSetupApplicationFacade.ForceRefreshCliVersionAsync(CancellationToken.None);
             string cliVersion = CliSetupApplicationFacade.GetCachedCliVersion();
-            string projectRoot = UnityMcpPathResolver.GetProjectRoot();
+            string projectRoot = UnityCliLoopPathResolver.GetProjectRoot();
             EnsureProjectLocalCliCurrent(projectRoot);
             string requiredDispatcherVersion = GetRequiredDispatcherVersion();
             bool cliInstalled = IsCliInstalled(cliVersion);
@@ -463,7 +463,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private async void RefreshDisplayedSkillTargetsAsync(CancellationToken ct)
         {
-            string projectRoot = UnityMcpPathResolver.GetProjectRoot();
+            string projectRoot = UnityCliLoopPathResolver.GetProjectRoot();
             List<SkillSetupApplicationFacade.SkillTargetInfo> targets =
                 await Task.Run(() => DetectDisplayedSkillTargets(projectRoot));
             if (ct.IsCancellationRequested)
@@ -903,7 +903,7 @@ namespace io.github.hatayama.UnityCliLoop
         private async void HandleInstallSkills()
         {
             CancelSkillInstallStateRefresh();
-            string projectRoot = UnityMcpPathResolver.GetProjectRoot();
+            string projectRoot = UnityCliLoopPathResolver.GetProjectRoot();
             List<SkillSetupApplicationFacade.SkillTargetInfo> targets = DetectDisplayedSkillTargets(projectRoot);
             List<SkillSetupApplicationFacade.SkillTargetInfo> installableTargets = _shouldUseFirstInstallSkillsUi
                 ? GetFirstInstallableSkillTargets(targets, _skillsTarget, !_installSkillsFlat)

@@ -157,7 +157,7 @@ namespace io.github.hatayama.UnityCliLoop
         public void EditorUiFiles_WhenLoaded_ContainNoEditorWindowImplementations()
         {
             // Tests that EditorWindow implementations compile under the presentation assembly.
-            string uiRoot = Path.Combine(UnityMcpPathResolver.GetProjectRoot(), "Packages", "src", "Editor", "UI");
+            string uiRoot = Path.Combine(UnityCliLoopPathResolver.GetProjectRoot(), "Packages", "src", "Editor", "UI");
             if (!Directory.Exists(uiRoot))
             {
                 Assert.Pass();
@@ -165,7 +165,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             string[] offendingReferences = Directory.GetFiles(uiRoot, "*.cs", SearchOption.AllDirectories)
                 .Where(path => File.ReadAllText(path).Contains("EditorWindow"))
-                .Select(path => Path.GetRelativePath(UnityMcpPathResolver.GetProjectRoot(), path))
+                .Select(path => Path.GetRelativePath(UnityCliLoopPathResolver.GetProjectRoot(), path))
                 .OrderBy(path => path)
                 .ToArray();
 
@@ -229,6 +229,19 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
+        public void ProductionSources_WhenLoaded_DoNotUseLegacyUnityMcpPathResolverName()
+        {
+            // Tests that path resolution code uses UnityCLILoop naming outside protocol-specific code.
+            string legacyPathResolverName = "Unity" + "McpPathResolver";
+            string[] offendingReferences = ReadProductionSourcePaths()
+                .SelectMany(path => FindForbiddenReferences(path, new[] { legacyPathResolverName }))
+                .OrderBy(reference => reference)
+                .ToArray();
+
+            Assert.That(offendingReferences, Is.Empty);
+        }
+
+        [Test]
         public void EditorUiFiles_WhenLoaded_DoNotUseLegacyMcpSettingsWindowNames()
         {
             // Tests that settings-window UI code uses UnityCLILoop naming instead of legacy MCP naming.
@@ -243,7 +256,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static string[] ReadResolvedReferences(string relativeAsmdefPath)
         {
-            string asmdefPath = Path.Combine(UnityMcpPathResolver.GetProjectRoot(), relativeAsmdefPath);
+            string asmdefPath = Path.Combine(UnityCliLoopPathResolver.GetProjectRoot(), relativeAsmdefPath);
             return ReadResolvedReferencesFromAbsolutePath(asmdefPath);
         }
 
@@ -271,19 +284,19 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static string[] ReadProductionAsmdefPaths()
         {
-            string editorRoot = Path.Combine(UnityMcpPathResolver.GetProjectRoot(), "Packages", "src", "Editor");
+            string editorRoot = Path.Combine(UnityCliLoopPathResolver.GetProjectRoot(), "Packages", "src", "Editor");
             return Directory.GetFiles(editorRoot, "*.asmdef", SearchOption.AllDirectories);
         }
 
         private static string[] ReadPresentationSourcePaths()
         {
-            string presentationRoot = Path.Combine(UnityMcpPathResolver.GetProjectRoot(), "Packages", "src", "Editor", "Presentation");
+            string presentationRoot = Path.Combine(UnityCliLoopPathResolver.GetProjectRoot(), "Packages", "src", "Editor", "Presentation");
             return Directory.GetFiles(presentationRoot, "*.cs", SearchOption.AllDirectories);
         }
 
         private static string[] ReadProductionSourcePaths()
         {
-            string editorRoot = Path.Combine(UnityMcpPathResolver.GetProjectRoot(), "Packages", "src", "Editor");
+            string editorRoot = Path.Combine(UnityCliLoopPathResolver.GetProjectRoot(), "Packages", "src", "Editor");
             return Directory.GetFiles(editorRoot, "*.cs", SearchOption.AllDirectories);
         }
 
@@ -332,7 +345,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static string[] ReadProjectAsmdefPaths()
         {
-            string projectRoot = UnityMcpPathResolver.GetProjectRoot();
+            string projectRoot = UnityCliLoopPathResolver.GetProjectRoot();
             List<string> asmdefPaths = new List<string>();
             string assetsPath = Path.Combine(projectRoot, "Assets");
             string packagesSrcPath = Path.Combine(projectRoot, "Packages", "src");

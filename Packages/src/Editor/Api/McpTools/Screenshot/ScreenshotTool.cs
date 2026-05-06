@@ -266,7 +266,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             if (string.IsNullOrEmpty(outputDirectory))
             {
-                string projectRoot = UnityMcpPathResolver.GetProjectRoot();
+                string projectRoot = UnityCliLoopPathResolver.GetProjectRoot();
                 resolvedDirectory = Path.Combine(projectRoot, McpConstants.OUTPUT_ROOT_DIR, McpConstants.SCREENSHOTS_DIR);
             }
             else
