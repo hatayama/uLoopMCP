@@ -37,6 +37,8 @@ namespace io.github.hatayama.UnityCliLoop
         IUnityCliLoopScreenshotService Screenshot { get; }
         IUnityCliLoopRecordInputService RecordInput { get; }
         IUnityCliLoopReplayInputService ReplayInput { get; }
+        IUnityCliLoopKeyboardSimulationService KeyboardSimulation { get; }
+        IUnityCliLoopMouseInputSimulationService MouseInputSimulation { get; }
     }
 
     /// <summary>

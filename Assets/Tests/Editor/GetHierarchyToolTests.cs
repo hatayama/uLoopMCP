@@ -111,6 +111,8 @@ namespace io.github.hatayama.UnityCliLoop
             public IUnityCliLoopScreenshotService Screenshot => throw new NotSupportedException();
             public IUnityCliLoopRecordInputService RecordInput => throw new NotSupportedException();
             public IUnityCliLoopReplayInputService ReplayInput => throw new NotSupportedException();
+            public IUnityCliLoopKeyboardSimulationService KeyboardSimulation => throw new NotSupportedException();
+            public IUnityCliLoopMouseInputSimulationService MouseInputSimulation => throw new NotSupportedException();
 
             public FakeToolHostServices(IUnityCliLoopHierarchyService hierarchy)
             {

@@ -294,6 +294,36 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
+        public void InputSimulationHostServiceContract_WhenLoaded_CompilesUnderToolContractsAssembly()
+        {
+            // Tests that bundled input simulation tools consume platform behavior through the public host-service boundary.
+            string keyboardServiceAssemblyName = typeof(IUnityCliLoopKeyboardSimulationService).Assembly.GetName().Name;
+            string keyboardRequestAssemblyName = typeof(UnityCliLoopKeyboardSimulationRequest).Assembly.GetName().Name;
+            string keyboardResultAssemblyName = typeof(UnityCliLoopKeyboardSimulationResult).Assembly.GetName().Name;
+            string mouseServiceAssemblyName = typeof(IUnityCliLoopMouseInputSimulationService).Assembly.GetName().Name;
+            string mouseRequestAssemblyName = typeof(UnityCliLoopMouseInputSimulationRequest).Assembly.GetName().Name;
+            string mouseResultAssemblyName = typeof(UnityCliLoopMouseInputSimulationResult).Assembly.GetName().Name;
+
+            Assert.That(keyboardServiceAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
+            Assert.That(keyboardRequestAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
+            Assert.That(keyboardResultAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
+            Assert.That(mouseServiceAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
+            Assert.That(mouseRequestAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
+            Assert.That(mouseResultAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
+        }
+
+        [Test]
+        public void InputSimulationUseCases_WhenLoaded_CompileUnderApplicationAssembly()
+        {
+            // Tests that the application layer owns the keyboard and mouse input simulation host-service implementations.
+            string keyboardUseCaseAssemblyName = typeof(SimulateKeyboardUseCase).Assembly.GetName().Name;
+            string mouseUseCaseAssemblyName = typeof(SimulateMouseInputUseCase).Assembly.GetName().Name;
+
+            Assert.That(keyboardUseCaseAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+            Assert.That(mouseUseCaseAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+        }
+
+        [Test]
         public void PreloadMetadataValidationPorts_WhenLoaded_CompileUnderMetadataValidationAssembly()
         {
             // Tests that preload metadata validation contracts are owned by the metadata validation module.

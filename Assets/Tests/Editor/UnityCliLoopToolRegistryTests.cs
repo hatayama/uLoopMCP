@@ -25,6 +25,8 @@ namespace io.github.hatayama.UnityCliLoop
             Assert.That(registry.IsToolRegistered("screenshot"), Is.True);
             Assert.That(registry.IsToolRegistered("record-input"), Is.True);
             Assert.That(registry.IsToolRegistered("replay-input"), Is.True);
+            Assert.That(registry.IsToolRegistered("simulate-keyboard"), Is.True);
+            Assert.That(registry.IsToolRegistered("simulate-mouse-input"), Is.True);
         }
 
         [Test]
@@ -168,6 +170,32 @@ namespace io.github.hatayama.UnityCliLoop
             Assert.That(toolType, Is.Not.Null);
             Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo("UnityCLILoop.FirstPartyTools.Editor"));
             Assert.That(registry.IsThirdPartyTool("replay-input"), Is.False);
+        }
+
+        [Test]
+        public void GetToolType_WhenSimulateKeyboardComesFromFirstPartyToolsAssembly_ReturnsBundledPluginType()
+        {
+            // Tests that simulate-keyboard is a bundled plugin instead of an application-layer tool.
+            UnityCliLoopToolRegistry registry = new UnityCliLoopToolRegistry();
+
+            System.Type toolType = registry.GetToolType("simulate-keyboard");
+
+            Assert.That(toolType, Is.Not.Null);
+            Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo("UnityCLILoop.FirstPartyTools.Editor"));
+            Assert.That(registry.IsThirdPartyTool("simulate-keyboard"), Is.False);
+        }
+
+        [Test]
+        public void GetToolType_WhenSimulateMouseInputComesFromFirstPartyToolsAssembly_ReturnsBundledPluginType()
+        {
+            // Tests that simulate-mouse-input is a bundled plugin instead of an application-layer tool.
+            UnityCliLoopToolRegistry registry = new UnityCliLoopToolRegistry();
+
+            System.Type toolType = registry.GetToolType("simulate-mouse-input");
+
+            Assert.That(toolType, Is.Not.Null);
+            Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo("UnityCLILoop.FirstPartyTools.Editor"));
+            Assert.That(registry.IsThirdPartyTool("simulate-mouse-input"), Is.False);
         }
 
         [Test]

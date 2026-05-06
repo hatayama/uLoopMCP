@@ -46,6 +46,7 @@
 - Moved `find-game-objects` into `UnityCLILoop.FirstPartyTools.Editor` as a bundled tool plugin that receives GameObject search access through a `ToolContracts` host-service contract.
 - Moved `screenshot` into `UnityCLILoop.FirstPartyTools.Editor` as a bundled tool plugin that receives Unity window and GameView capture access through a `ToolContracts` host-service contract.
 - Moved `record-input` and `replay-input` into `UnityCLILoop.FirstPartyTools.Editor` as bundled tool plugins that receive input recording and replay access through `ToolContracts` host-service contracts.
+- Moved `simulate-keyboard` and `simulate-mouse-input` into `UnityCLILoop.FirstPartyTools.Editor` as bundled tool plugins that receive input simulation access through `ToolContracts` host-service contracts.
 - Moved `execute-dynamic-code` schema and response DTOs into `UnityCLILoop.ToolContracts` because both the bundled tool and the application-side execution pipeline shape those values.
 - Moved concrete tool host-service wiring into `UnityCLILoop.CompositionRoot.Editor`; `UnityCliLoopToolRegistry` now asks an application-side provider for registered host services instead of constructing them directly.
 - Moved concrete dynamic-code compilation service factory into `UnityCLILoop.Infrastructure`; `UnityCLILoop.CompositionRoot.Editor` still owns registration, while Infrastructure owns the factory that creates the compiler service.
@@ -86,6 +87,7 @@
   - `find-game-objects` skill discovery still works after moving under `UnityCLILoop.FirstPartyTools.Editor`.
   - `screenshot` skill discovery still works after moving under `UnityCLILoop.FirstPartyTools.Editor`.
   - `record-input` and `replay-input` skill discovery still works after moving under `UnityCLILoop.FirstPartyTools.Editor`.
+  - `simulate-keyboard` and `simulate-mouse-input` skill discovery still works after moving under `UnityCLILoop.FirstPartyTools.Editor`.
   - `get-hierarchy` is registered from `UnityCLILoop.FirstPartyTools.Editor`.
   - hierarchy host-service contracts compile under `UnityCLILoop.ToolContracts`.
   - hierarchy host-service implementation compiles under `UnityCLILoop.Application`.
@@ -101,6 +103,9 @@
   - `record-input` and `replay-input` are registered from `UnityCLILoop.FirstPartyTools.Editor`.
   - input recording host-service contracts compile under `UnityCLILoop.ToolContracts`.
   - input recording host-service implementations compile under `UnityCLILoop.Application`.
+  - `simulate-keyboard` and `simulate-mouse-input` are registered from `UnityCLILoop.FirstPartyTools.Editor`.
+  - input simulation host-service contracts compile under `UnityCLILoop.ToolContracts`.
+  - input simulation host-service implementations compile under `UnityCLILoop.Application`.
   - concrete tool host services compile under `UnityCLILoop.CompositionRoot.Editor`.
   - `UnityCliLoopToolRegistry` does not directly construct concrete host services.
   - concrete dynamic-code compiler factory compiles under `UnityCLILoop.Infrastructure`.
