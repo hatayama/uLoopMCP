@@ -488,6 +488,17 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
+        public void ServerLifecycleRegistry_WhenLoaded_CompilesUnderApplicationAssembly()
+        {
+            // Tests that application code depends on replaceable server lifecycle events.
+            string registryAssemblyName = typeof(UnityCliLoopServerLifecycleRegistry).Assembly.GetName().Name;
+            string sourceAssemblyName = typeof(IUnityCliLoopServerLifecycleSource).Assembly.GetName().Name;
+
+            Assert.That(registryAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+            Assert.That(sourceAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+        }
+
+        [Test]
         public void PresentationSources_WhenLoaded_DoNotReferenceServerInternals()
         {
             // Tests that Presentation does not depend directly on server transport/controller internals.

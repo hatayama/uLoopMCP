@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Net.Sockets;
@@ -27,10 +28,19 @@ namespace io.github.hatayama.UnityCliLoop
         IUnityCliLoopServerInstance Create();
     }
 
+    public interface IUnityCliLoopServerLifecycleSource
+    {
+        event Action ServerStarted;
+
+        event Action ServerStopping;
+
+        event Action ServerLoopExited;
+    }
+
     public static class UnityCliLoopServerInstanceFactoryRegistry
     {
         private static readonly object SyncRoot = new object();
-        private static IUnityCliLoopServerInstanceFactory _factory = new UnityCliLoopBridgeServerInstanceFactory();
+        private static IUnityCliLoopServerInstanceFactory _factory;
 
         public static void RegisterFactory(IUnityCliLoopServerInstanceFactory factory)
         {
@@ -46,16 +56,168 @@ namespace io.github.hatayama.UnityCliLoop
         {
             lock (SyncRoot)
             {
+                if (_factory == null)
+                {
+                    throw new InvalidOperationException("Unity CLI Loop server factory is not registered.");
+                }
+
                 return _factory.Create();
             }
         }
     }
 
-    internal sealed class UnityCliLoopBridgeServerInstanceFactory : IUnityCliLoopServerInstanceFactory
+    public static class UnityCliLoopServerLifecycleRegistry
     {
-        public IUnityCliLoopServerInstance Create()
+        private static readonly object SyncRoot = new object();
+        private static IUnityCliLoopServerLifecycleSource _source;
+        private static Action _serverStartedHandlers;
+        private static Action _serverStoppingHandlers;
+        private static Action _serverLoopExitedHandlers;
+
+        public static event Action ServerStateChanged
         {
-            return new UnityCliLoopBridgeServer();
+            add
+            {
+                ServerStarted += value;
+                ServerStopping += value;
+            }
+            remove
+            {
+                ServerStarted -= value;
+                ServerStopping -= value;
+            }
+        }
+
+        public static event Action ServerStarted
+        {
+            add
+            {
+                AddHandler(ref _serverStartedHandlers, value, source => source.ServerStarted += value);
+            }
+            remove
+            {
+                RemoveHandler(ref _serverStartedHandlers, value, source => source.ServerStarted -= value);
+            }
+        }
+
+        public static event Action ServerStopping
+        {
+            add
+            {
+                AddHandler(ref _serverStoppingHandlers, value, source => source.ServerStopping += value);
+            }
+            remove
+            {
+                RemoveHandler(ref _serverStoppingHandlers, value, source => source.ServerStopping -= value);
+            }
+        }
+
+        public static event Action ServerLoopExited
+        {
+            add
+            {
+                AddHandler(ref _serverLoopExitedHandlers, value, source => source.ServerLoopExited += value);
+            }
+            remove
+            {
+                RemoveHandler(ref _serverLoopExitedHandlers, value, source => source.ServerLoopExited -= value);
+            }
+        }
+
+        public static void RegisterSource(IUnityCliLoopServerLifecycleSource source)
+        {
+            System.Diagnostics.Debug.Assert(source != null, "source must not be null");
+
+            lock (SyncRoot)
+            {
+                if (_source != null)
+                {
+                    UnwireHandlers(_source);
+                }
+
+                _source = source;
+                WireHandlers(_source);
+            }
+        }
+
+        private static void AddHandler(
+            ref Action handlers,
+            Action value,
+            Action<IUnityCliLoopServerLifecycleSource> wireHandler)
+        {
+            System.Diagnostics.Debug.Assert(value != null, "value must not be null");
+
+            lock (SyncRoot)
+            {
+                handlers += value;
+                if (_source != null)
+                {
+                    wireHandler(_source);
+                }
+            }
+        }
+
+        private static void RemoveHandler(
+            ref Action handlers,
+            Action value,
+            Action<IUnityCliLoopServerLifecycleSource> unwireHandler)
+        {
+            System.Diagnostics.Debug.Assert(value != null, "value must not be null");
+
+            lock (SyncRoot)
+            {
+                handlers -= value;
+                if (_source != null)
+                {
+                    unwireHandler(_source);
+                }
+            }
+        }
+
+        private static void WireHandlers(IUnityCliLoopServerLifecycleSource source)
+        {
+            foreach (Delegate handler in GetHandlers(_serverStartedHandlers))
+            {
+                source.ServerStarted += (Action)handler;
+            }
+
+            foreach (Delegate handler in GetHandlers(_serverStoppingHandlers))
+            {
+                source.ServerStopping += (Action)handler;
+            }
+
+            foreach (Delegate handler in GetHandlers(_serverLoopExitedHandlers))
+            {
+                source.ServerLoopExited += (Action)handler;
+            }
+        }
+
+        private static void UnwireHandlers(IUnityCliLoopServerLifecycleSource source)
+        {
+            foreach (Delegate handler in GetHandlers(_serverStartedHandlers))
+            {
+                source.ServerStarted -= (Action)handler;
+            }
+
+            foreach (Delegate handler in GetHandlers(_serverStoppingHandlers))
+            {
+                source.ServerStopping -= (Action)handler;
+            }
+
+            foreach (Delegate handler in GetHandlers(_serverLoopExitedHandlers))
+            {
+                source.ServerLoopExited -= (Action)handler;
+            }
+        }
+
+        private static IEnumerable<Delegate> GetHandlers(Action handlers)
+        {
+            if (handlers == null)
+            {
+                return Array.Empty<Delegate>();
+            }
+
+            return handlers.GetInvocationList();
         }
     }
 
@@ -126,8 +288,8 @@ namespace io.github.hatayama.UnityCliLoop
             AssemblyReloadEvents.afterAssemblyReload += OnAfterAssemblyReload;
 
             // Domain Reload disabled (Enter Play Mode Settings) causes static constructor re-entry
-            UnityCliLoopBridgeServer.OnServerLoopExited -= OnServerLoopUnexpectedlyExited;
-            UnityCliLoopBridgeServer.OnServerLoopExited += OnServerLoopUnexpectedlyExited;
+            UnityCliLoopServerLifecycleRegistry.ServerLoopExited -= OnServerLoopUnexpectedlyExited;
+            UnityCliLoopServerLifecycleRegistry.ServerLoopExited += OnServerLoopUnexpectedlyExited;
 
             // Recovery binds the project IPC endpoint and may touch config files, so keep it off the
             // synchronous InitializeOnLoad path while preserving automatic startup.
@@ -764,13 +926,11 @@ namespace io.github.hatayama.UnityCliLoop
         {
             add
             {
-                UnityCliLoopBridgeServer.OnServerStarted += value;
-                UnityCliLoopBridgeServer.OnServerStopping += value;
+                UnityCliLoopServerLifecycleRegistry.ServerStateChanged += value;
             }
             remove
             {
-                UnityCliLoopBridgeServer.OnServerStarted -= value;
-                UnityCliLoopBridgeServer.OnServerStopping -= value;
+                UnityCliLoopServerLifecycleRegistry.ServerStateChanged -= value;
             }
         }
 

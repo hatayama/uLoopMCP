@@ -10,6 +10,35 @@ using UnityEngine;
 
 namespace io.github.hatayama.UnityCliLoop
 {
+    public sealed class UnityCliLoopBridgeServerInstanceFactory : IUnityCliLoopServerInstanceFactory
+    {
+        public IUnityCliLoopServerInstance Create()
+        {
+            return new UnityCliLoopBridgeServer();
+        }
+    }
+
+    public sealed class UnityCliLoopBridgeServerLifecycleSource : IUnityCliLoopServerLifecycleSource
+    {
+        public event Action ServerStarted
+        {
+            add => UnityCliLoopBridgeServer.OnServerStarted += value;
+            remove => UnityCliLoopBridgeServer.OnServerStarted -= value;
+        }
+
+        public event Action ServerStopping
+        {
+            add => UnityCliLoopBridgeServer.OnServerStopping += value;
+            remove => UnityCliLoopBridgeServer.OnServerStopping -= value;
+        }
+
+        public event Action ServerLoopExited
+        {
+            add => UnityCliLoopBridgeServer.OnServerLoopExited += value;
+            remove => UnityCliLoopBridgeServer.OnServerLoopExited -= value;
+        }
+    }
+
     /// <summary>
     /// Unity CLI bridge server.
     /// Accepts project-local CLI connections and handles JSON-RPC 2.0 communication.

@@ -17,6 +17,10 @@ namespace io.github.hatayama.UnityCliLoop
             lock (SyncRoot)
             {
                 UnityCliLoopToolHostServicesProvider.RegisterFactory(CreateHostServices);
+                UnityCliLoopServerInstanceFactoryRegistry.RegisterFactory(
+                    new UnityCliLoopBridgeServerInstanceFactory());
+                UnityCliLoopServerLifecycleRegistry.RegisterSource(
+                    new UnityCliLoopBridgeServerLifecycleSource());
             }
         }
 
