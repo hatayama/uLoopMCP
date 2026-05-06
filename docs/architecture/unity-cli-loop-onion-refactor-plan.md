@@ -30,11 +30,19 @@
 - Removed manual built-in tool registration from `UnityCliLoopToolRegistry`.
 - Registered bundled tools and extension tools through the same `[UnityCliLoopTool]` attribute discovery path.
 - Split `Assets/Editor/CustomCommandSamples` into `UnityCLILoop.CustomCommandSamples.Editor`, which references only `UnityCLILoop.ToolContracts`.
+- Moved low-dependency bundled tools into `UnityCLILoop.FirstPartyTools.Editor`:
+  - `ping`
+  - `debug-sleep`
+  - `get-version`
+  - `focus-window`
+- Kept the moved bundled tools on the same public `UnityCLILoop.ToolContracts` surface as third-party tools.
 - Added registry tests proving:
   - bundled tools are discovered through the attribute path.
   - `get-logs` is first-party after the assembly rename.
+  - moved bundled plugin tools are first-party from `UnityCLILoop.FirstPartyTools.Editor`.
   - `hello-world` is registered as an extension tool.
   - the sample extension asmdef references only `UnityCLILoop.ToolContracts`.
+  - `UnityCLILoop.FirstPartyTools.Editor` references only `UnityCLILoop.ToolContracts`.
 
 ## Key Changes
 
@@ -59,7 +67,7 @@
 - Move hosting/catalog/execution policies into `UnityCLILoop.Application`.
 - Move settings windows and editor views into `UnityCLILoop.Presentation`.
 - Move Unity Editor, IPC, file system, dynamic compilation, and protocol adapters into `UnityCLILoop.Infrastructure`.
-- Move bundled tool implementations into `UnityCLILoop.FirstPartyTools.Editor` once their dependencies are either internal to that plugin or exposed through stable contracts.
+- Continue moving bundled tool implementations into `UnityCLILoop.FirstPartyTools.Editor` once their dependencies are either internal to that plugin or exposed through stable contracts.
 - Move startup/DI wiring into `UnityCLILoop.CompositionRoot.Editor`.
 - Add asmdef dependency tests after each physical move, so the dependency direction is enforced by Unity assemblies instead of documentation alone.
 

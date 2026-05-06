@@ -29,6 +29,26 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
+        public void IsThirdPartyTool_WhenToolComesFromFirstPartyToolsAssembly_ReturnsFalse()
+        {
+            // Tests that bundled plugin tools remain first-party after moving out of the application assembly.
+            UnityCliLoopToolRegistry registry = new UnityCliLoopToolRegistry();
+            string[] toolNames = new[]
+            {
+                "ping",
+                "debug-sleep",
+                "get-version",
+                "focus-window"
+            };
+
+            foreach (string toolName in toolNames)
+            {
+                Assert.That(registry.IsToolRegistered(toolName), Is.True);
+                Assert.That(registry.IsThirdPartyTool(toolName), Is.False);
+            }
+        }
+
+        [Test]
         public void Constructor_WhenSampleToolUsesToolContractsAssembly_RegistersAsThirdParty()
         {
             // Tests that a sample extension tool uses the same registry path while remaining outside first-party assemblies.
@@ -48,6 +68,23 @@ namespace io.github.hatayama.UnityCliLoop
                 "Editor",
                 "CustomCommandSamples",
                 "UnityCLILoop.CustomCommandSamples.Editor.asmdef");
+            JObject asmdef = JObject.Parse(File.ReadAllText(asmdefPath));
+            string[] references = asmdef["references"]?.Values<string>().ToArray() ?? new string[0];
+
+            Assert.That(references, Is.EqualTo(new[] { "UnityCLILoop.ToolContracts" }));
+        }
+
+        [Test]
+        public void FirstPartyToolsAsmdef_ReferencesOnlyToolContracts()
+        {
+            // Tests that bundled plugin tools use the same public contract surface as extension tools.
+            string asmdefPath = Path.Combine(
+                UnityMcpPathResolver.GetProjectRoot(),
+                "Packages",
+                "src",
+                "Editor",
+                "FirstPartyTools",
+                "UnityCLILoop.FirstPartyTools.Editor.asmdef");
             JObject asmdef = JObject.Parse(File.ReadAllText(asmdefPath));
             string[] references = asmdef["references"]?.Values<string>().ToArray() ?? new string[0];
 
