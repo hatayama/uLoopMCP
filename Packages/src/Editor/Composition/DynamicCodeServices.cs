@@ -98,8 +98,6 @@ namespace io.github.hatayama.UnityCliLoop
         private static async Task EnsureServerScopedServicesInitializedAsync(
             string serverStartingLockToken = null)
         {
-            DynamicCodeCompilationServiceRegistration.EnsureRegistered();
-
             Task drainTask;
 
             lock (ServerScopedServicesLock)

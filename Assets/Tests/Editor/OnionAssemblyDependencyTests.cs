@@ -113,8 +113,18 @@ namespace io.github.hatayama.UnityCliLoop
                 FirstPartyToolsAssemblyName,
                 InfrastructureAssemblyName,
                 PresentationAssemblyName,
-                ToolContractsAssemblyName
+                ToolContractsAssemblyName,
+                SharedAssemblyName
             }));
+        }
+
+        [Test]
+        public void DynamicCodeCompilerRegistration_WhenLoaded_CompilesUnderCompositionRootAssembly()
+        {
+            // Tests that dynamic-code service registration is owned by the composition root.
+            string registrationAssemblyName = typeof(DynamicCodeCompilationServiceRegistration).Assembly.GetName().Name;
+
+            Assert.That(registrationAssemblyName, Is.EqualTo(CompositionRootAssemblyName));
         }
 
         [Test]
