@@ -7,7 +7,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// <summary>
     /// Application service responsible for session recovery processing
     /// Single responsibility: Server session recovery and retry control
-    /// Related classes: UnityCliLoopEditorSettings, McpBridgeServer
+    /// Related classes: UnityCliLoopEditorSettings, UnityCliLoopBridgeServer
     /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - Application Service Layer (Single Function Implementation)
     /// </summary>
     public static class SessionRecoveryService
@@ -24,7 +24,7 @@ namespace io.github.hatayama.UnityCliLoop
             bool isAfterCompile = UnityCliLoopEditorSettings.GetIsAfterCompile();
 
             // If server is already running
-            McpBridgeServer currentServer = McpServerController.CurrentServer;
+            UnityCliLoopBridgeServer currentServer = UnityCliLoopServerController.CurrentServer;
             if (currentServer?.IsRunning == true)
             {
                 // Server is running, clean up lock files
@@ -51,7 +51,7 @@ namespace io.github.hatayama.UnityCliLoop
             // If server was running and is currently stopped, delegate to centralized controller logic
             if (wasRunning && (currentServer == null || !currentServer.IsRunning))
             {
-                _ = McpServerController.StartRecoveryIfNeededAsync(isAfterCompile, CancellationToken.None).ContinueWith(task =>
+                _ = UnityCliLoopServerController.StartRecoveryIfNeededAsync(isAfterCompile, CancellationToken.None).ContinueWith(task =>
                 {
                     if (task.IsFaulted)
                     {
@@ -74,15 +74,15 @@ namespace io.github.hatayama.UnityCliLoop
             try
             {
                 // Stop existing server instance
-                McpBridgeServer currentServer = McpServerController.CurrentServer;
+                UnityCliLoopBridgeServer currentServer = UnityCliLoopServerController.CurrentServer;
                 if (currentServer != null)
                 {
                     currentServer.Dispose();
                 }
 
-                McpBridgeServer newServer = new McpBridgeServer();
+                UnityCliLoopBridgeServer newServer = new UnityCliLoopBridgeServer();
                 newServer.StartServer();
-                McpServerController.RegisterRecoveredServer(newServer);
+                UnityCliLoopServerController.RegisterRecoveredServer(newServer);
 
                 // Update session state
                 UnityCliLoopEditorSettings.UpdateSettings(s => s with
@@ -123,7 +123,7 @@ namespace io.github.hatayama.UnityCliLoop
         private static async Task RetryServerRestoreAsync(int retryCount)
         {
             await EditorDelay.DelayFrame(5);
-            _ = McpServerController.StartRecoveryIfNeededAsync(false, CancellationToken.None).ContinueWith(task =>
+            _ = UnityCliLoopServerController.StartRecoveryIfNeededAsync(false, CancellationToken.None).ContinueWith(task =>
             {
                 if (task.IsFaulted)
                 {

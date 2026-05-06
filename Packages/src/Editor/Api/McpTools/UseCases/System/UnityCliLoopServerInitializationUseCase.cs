@@ -6,23 +6,23 @@ namespace io.github.hatayama.UnityCliLoop
     /// <summary>
     /// UseCase responsible for temporal cohesion of server initialization processing.
     /// Processing sequence: 1. Editor state validation, 2. Server startup, 3. State update.
-    /// Related classes: McpServerStartupService, SecurityValidationService.
+    /// Related classes: UnityCliLoopServerStartupService, SecurityValidationService.
     /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - UseCase + Tool Pattern (DDD Integration)
     /// </summary>
-    public class McpServerInitializationUseCase : AbstractUseCase<ServerInitializationSchema, ServerInitializationResponse>
+    public class UnityCliLoopServerInitializationUseCase : AbstractUseCase<ServerInitializationSchema, ServerInitializationResponse>
     {
         private readonly SecurityValidationService _securityService;
-        private readonly McpServerStartupService _startupService;
+        private readonly UnityCliLoopServerStartupService _startupService;
 
-        public McpServerInitializationUseCase()
+        public UnityCliLoopServerInitializationUseCase()
         {
             _securityService = new SecurityValidationService();
-            _startupService = new McpServerStartupService();
+            _startupService = new UnityCliLoopServerStartupService();
         }
 
-        public McpServerInitializationUseCase(
+        public UnityCliLoopServerInitializationUseCase(
             SecurityValidationService securityService,
-            McpServerStartupService startupService)
+            UnityCliLoopServerStartupService startupService)
         {
             _securityService = securityService ?? throw new System.ArgumentNullException(nameof(securityService));
             _startupService = startupService ?? throw new System.ArgumentNullException(nameof(startupService));
@@ -47,8 +47,8 @@ namespace io.github.hatayama.UnityCliLoop
                     return Task.FromResult(response);
                 }
 
-                // 4. Server startup - McpServerStartupService
-                ServiceResult<McpBridgeServer> serverResult = _startupService.StartServer(
+                // 4. Server startup - UnityCliLoopServerStartupService
+                ServiceResult<UnityCliLoopBridgeServer> serverResult = _startupService.StartServer(
                     !parameters.PreserveStartupLockUntilExplicitRelease);
                 if (!serverResult.Success)
                 {
@@ -56,7 +56,7 @@ namespace io.github.hatayama.UnityCliLoop
                     response.Message = serverResult.ErrorMessage;
                     return Task.FromResult(response);
                 }
-                McpBridgeServer serverInstance = serverResult.Data;
+                UnityCliLoopBridgeServer serverInstance = serverResult.Data;
 
                 // 5. Session state update
                 ServiceResult<bool> sessionUpdateResult =

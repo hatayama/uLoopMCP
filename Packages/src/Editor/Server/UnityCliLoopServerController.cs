@@ -8,16 +8,16 @@ using UnityEngine;
 namespace io.github.hatayama.UnityCliLoop
 {
     // Related classes:
-    // - McpBridgeServer: The bridge server instance that this class manages.
+    // - UnityCliLoopBridgeServer: The bridge server instance that this class manages.
     // - UnityCliLoopSettingsWindow: The UI for starting and stopping the server.
     // - AssemblyReloadEvents: Used to handle server state across domain reloads.
     /// <summary>
     /// Manages the Unity CLI bridge server state and restores it after assembly reload.
     /// </summary>
     [InitializeOnLoad]
-    public static class McpServerController
+    public static class UnityCliLoopServerController
     {
-        private static McpBridgeServer mcpServer;
+        private static UnityCliLoopBridgeServer bridgeServer;
         private static readonly SemaphoreSlim StartupSemaphore = new SemaphoreSlim(1, 1);
         private static long startupProtectionUntilTicks = 0; // UTC ticks
         private static Task _currentRecoveryTask;
@@ -31,18 +31,18 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// The current Unity CLI bridge server instance.
         /// </summary>
-        public static McpBridgeServer CurrentServer => mcpServer;
+        public static UnityCliLoopBridgeServer CurrentServer => bridgeServer;
 
         /// <summary>
         /// Whether the server is running.
         /// </summary>
-        public static bool IsServerRunning => mcpServer?.IsRunning ?? false;
+        public static bool IsServerRunning => bridgeServer?.IsRunning ?? false;
 
-        internal static void RegisterRecoveredServer(McpBridgeServer server)
+        internal static void RegisterRecoveredServer(UnityCliLoopBridgeServer server)
         {
             System.Diagnostics.Debug.Assert(server != null, "server must not be null");
 
-            mcpServer = server;
+            bridgeServer = server;
             SaveRunningServerState();
         }
 
@@ -51,7 +51,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// </summary>
         public static Task RecoveryTask => _currentRecoveryTask;
 
-        static McpServerController()
+        static UnityCliLoopServerController()
         {
             InitializeOnLoad();
         }
@@ -74,8 +74,8 @@ namespace io.github.hatayama.UnityCliLoop
             AssemblyReloadEvents.afterAssemblyReload += OnAfterAssemblyReload;
 
             // Domain Reload disabled (Enter Play Mode Settings) causes static constructor re-entry
-            McpBridgeServer.OnServerLoopExited -= OnServerLoopUnexpectedlyExited;
-            McpBridgeServer.OnServerLoopExited += OnServerLoopUnexpectedlyExited;
+            UnityCliLoopBridgeServer.OnServerLoopExited -= OnServerLoopUnexpectedlyExited;
+            UnityCliLoopBridgeServer.OnServerLoopExited += OnServerLoopUnexpectedlyExited;
 
             // Recovery binds the project IPC endpoint and may touch config files, so keep it off the
             // synchronous InitializeOnLoad path while preserving automatic startup.
@@ -171,7 +171,7 @@ namespace io.github.hatayama.UnityCliLoop
             try
             {
                 // Always stop the existing server first so the project IPC endpoint is released.
-                if (mcpServer != null)
+                if (bridgeServer != null)
                 {
                     await StopServerWithUseCaseAsync();
                 }
@@ -180,7 +180,7 @@ namespace io.github.hatayama.UnityCliLoop
                 DynamicCodeForegroundWarmupState.Reset();
 
                 // Execute initialization UseCase
-                McpServerInitializationUseCase useCase = new();
+                UnityCliLoopServerInitializationUseCase useCase = new();
                 ServerInitializationSchema schema = new()
                 {
                     PreserveStartupLockUntilExplicitRelease = true
@@ -198,7 +198,7 @@ namespace io.github.hatayama.UnityCliLoop
 
                 // UseCase creates a new server instance, so we keep a reference here
                 // for compatibility with existing code
-                mcpServer = result.ServerInstance;
+                bridgeServer = result.ServerInstance;
 
                 DynamicCodeStartupTelemetry.MarkServerReady();
                 UnityCliLoopToolRegistrar.WarmupRegistry();
@@ -239,7 +239,7 @@ namespace io.github.hatayama.UnityCliLoop
             ClearStartupProtection();
 
             // Execute shutdown UseCase
-            McpServerShutdownUseCase useCase = new(new McpServerStartupService());
+            UnityCliLoopServerShutdownUseCase useCase = new(new UnityCliLoopServerStartupService());
             ServerShutdownSchema schema = new() { ForceShutdown = false };
             System.Threading.CancellationToken cancellationToken = System.Threading.CancellationToken.None;
 
@@ -248,7 +248,7 @@ namespace io.github.hatayama.UnityCliLoop
             if (result.Success)
             {
                 // Server stopped by UseCase, so clear the reference
-                mcpServer = null;
+                bridgeServer = null;
 
                 // Clear session state to reflect server stopped
                 UnityCliLoopEditorSettings.ClearServerSession();
@@ -272,12 +272,12 @@ namespace io.github.hatayama.UnityCliLoop
 
             // Create and execute DomainReloadRecoveryUseCase instance
             DomainReloadRecoveryUseCase useCase = new();
-            ServiceResult<string> result = useCase.ExecuteBeforeDomainReload(mcpServer);
+            ServiceResult<string> result = useCase.ExecuteBeforeDomainReload(bridgeServer);
             
             // Clear instance if server shutdown succeeded
             if (result.Success)
             {
-                mcpServer = null;
+                bridgeServer = null;
             }
 
             DynamicCodeStartupTelemetry.Reset();
@@ -315,7 +315,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             bool isAfterCompile = UnityCliLoopEditorSettings.GetIsAfterCompile();
 
-            if (mcpServer?.IsRunning == true)
+            if (bridgeServer?.IsRunning == true)
             {
                 if (isAfterCompile)
                 {
@@ -342,14 +342,14 @@ namespace io.github.hatayama.UnityCliLoop
             try
             {
                 // If there is an existing server instance, ensure it is stopped.
-                if (mcpServer != null)
+                if (bridgeServer != null)
                 {
-                    mcpServer.Dispose();
-                    mcpServer = null;
+                    bridgeServer.Dispose();
+                    bridgeServer = null;
                 }
 
-                mcpServer = new McpBridgeServer();
-                mcpServer.StartServer();
+                bridgeServer = new UnityCliLoopBridgeServer();
+                bridgeServer.StartServer();
                 SaveRunningServerState();
 
                 // Clear server-side reconnecting flag on successful restoration
@@ -388,15 +388,15 @@ namespace io.github.hatayama.UnityCliLoop
         /// </summary>
         private static void OnEditorQuitting()
         {
-            if (mcpServer != null)
+            if (bridgeServer != null)
             {
                 try
                 {
-                    mcpServer.Dispose();
+                    bridgeServer.Dispose();
                 }
                 finally
                 {
-                    mcpServer = null;
+                    bridgeServer = null;
                 }
             }
             DynamicCodeForegroundWarmupState.Reset();
@@ -423,7 +423,7 @@ namespace io.github.hatayama.UnityCliLoop
                 );
 
                 // Resources already cleaned up by CleanupAfterUnexpectedLoopExit — just clear the reference
-                mcpServer = null;
+                bridgeServer = null;
 
                 // The server just crashed — startup protection blocks recovery if the crash happens
                 // within the 5-second protection window after a successful start
@@ -541,20 +541,20 @@ namespace io.github.hatayama.UnityCliLoop
             try
             {
                 // If any server is already running, ignore this request to prevent double-binding
-                if (mcpServer != null && mcpServer.IsRunning)
+                if (bridgeServer != null && bridgeServer.IsRunning)
                 {
-                    VibeLogger.LogInfo("server_start_ignored", $"already_running endpoint={mcpServer.Endpoint}");
+                    VibeLogger.LogInfo("server_start_ignored", $"already_running endpoint={bridgeServer.Endpoint}");
                     return;
                 }
 
                 serverStartingLockToken = CreateOptionalServerStartingLock();
 
                 // Ensure previous instance is fully disposed before trying to bind a new one
-                if (mcpServer != null)
+                if (bridgeServer != null)
                 {
                     try
                     {
-                        mcpServer.Dispose();
+                        bridgeServer.Dispose();
                         VibeLogger.LogInfo("server_disposed_before_bind", "disposed previous server instance");
                     }
                     catch (Exception ex)
@@ -563,7 +563,7 @@ namespace io.github.hatayama.UnityCliLoop
                     }
                     finally
                     {
-                        mcpServer = null;
+                        bridgeServer = null;
                     }
                 }
 
@@ -618,15 +618,15 @@ namespace io.github.hatayama.UnityCliLoop
             while (true)
             {
                 VibeLogger.LogInfo("binding_attempt", "transport=project_ipc");
-                McpBridgeServer server = null;
+                UnityCliLoopBridgeServer server = null;
                 try
                 {
                     // Defensive: dispose any non-running stale instance before creating a new one
-                    if (mcpServer != null && !mcpServer.IsRunning)
+                    if (bridgeServer != null && !bridgeServer.IsRunning)
                     {
                         try
                         {
-                            mcpServer.Dispose();
+                            bridgeServer.Dispose();
                             VibeLogger.LogInfo("server_disposed_before_bind", "disposed stale instance");
                         }
                         catch (Exception ex)
@@ -635,13 +635,13 @@ namespace io.github.hatayama.UnityCliLoop
                         }
                         finally
                         {
-                            mcpServer = null;
+                            bridgeServer = null;
                         }
                     }
 
-                    server = new McpBridgeServer();
+                    server = new UnityCliLoopBridgeServer();
                     server.StartServer(clearServerStartingLockWhenReady);
-                    mcpServer = server;
+                    bridgeServer = server;
                     VibeLogger.LogInfo("binding_success", $"endpoint={server.Endpoint}");
                     return true;
                 }

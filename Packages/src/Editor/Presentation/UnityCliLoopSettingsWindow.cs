@@ -125,7 +125,7 @@ namespace io.github.hatayama.UnityCliLoop
             _model.EnablePostCompileMode();
             UnityCliLoopEditorSettings.SetShowReconnectingUI(false);
 
-            Task recoveryTask = McpServerController.RecoveryTask;
+            Task recoveryTask = UnityCliLoopServerController.RecoveryTask;
             if (recoveryTask != null && !recoveryTask.IsCompleted)
             {
                 await recoveryTask;
@@ -139,7 +139,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return;
             }
 
-            // McpServerController.[InitializeOnLoad] handles automatic server recovery via RestoreServerStateIfNeeded()
+            // UnityCliLoopServerController.[InitializeOnLoad] handles automatic server recovery via RestoreServerStateIfNeeded()
         }
 
         private void OnDisable()

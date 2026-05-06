@@ -172,13 +172,13 @@ namespace io.github.hatayama.UnityCliLoop
         }
         
         [MenuItem("UnityCliLoop/Debug/EditorDelay Tests/Integration Test")]
-        public static void TestMcpServerControllerIntegration()
+        public static void TestUnityCliLoopServerControllerIntegration()
         {
             Debug.Log("==========================================");
-            Debug.Log("=== McpServerController Integration Test ===");
+            Debug.Log("=== UnityCliLoopServerController Integration Test ===");
             Debug.Log("==========================================");
             
-            Debug.Log("Testing EditorDelay integration with McpServerController...");
+            Debug.Log("Testing EditorDelay integration with UnityCliLoopServerController...");
             Debug.Log("This will simulate the actual usage in server restoration.");
             
             SimulateServerRestorationAsync().Forget();
@@ -188,7 +188,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             Debug.Log("Simulation: Starting server restoration sequence...");
             
-            // Test with the same pattern as McpServerController
+            // Test with the same pattern as UnityCliLoopServerController
             await EditorDelay.DelayFrame(1);
             Debug.Log("Simulation: Phase 1 - Port release wait completed");
             
@@ -230,7 +230,7 @@ namespace io.github.hatayama.UnityCliLoop
             Debug.Log("2. Concurrent Execution Test - Test parallel task execution order");
             Debug.Log("3. Stress Test - Test 100 concurrent tasks");
             Debug.Log("4. Cancellation Test - Test CancellationToken functionality");
-            Debug.Log("5. Integration Test - Test McpServerController integration");
+            Debug.Log("5. Integration Test - Test UnityCliLoopServerController integration");
             Debug.Log("");
             Debug.Log("Status Commands:");
             Debug.Log("- Show Manager Status - Display current state");

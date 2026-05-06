@@ -13,7 +13,7 @@ The rebuild has already moved to a layered shape:
 
 - `Entry`
   - `ExecuteDynamicCodeTool`
-  - `McpServerController`
+  - `UnityCliLoopServerController`
 - `UseCase`
   - `ExecuteDynamicCodeUseCase`
   - `PrewarmDynamicCodeUseCase`

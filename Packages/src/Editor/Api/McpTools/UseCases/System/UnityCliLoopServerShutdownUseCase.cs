@@ -6,14 +6,14 @@ namespace io.github.hatayama.UnityCliLoop
     /// <summary>
     /// UseCase responsible for temporal cohesion of server shutdown processing
     /// Processing sequence: 1. Server stop, 2. Session state clear, 3. Resource disposal
-    /// Related classes: McpServerStartupService, UnityCliLoopEditorSettings
+    /// Related classes: UnityCliLoopServerStartupService, UnityCliLoopEditorSettings
     /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - UseCase + Tool Pattern (DDD Integration)
     /// </summary>
-    public class McpServerShutdownUseCase : AbstractUseCase<ServerShutdownSchema, ServerShutdownResponse>
+    public class UnityCliLoopServerShutdownUseCase : AbstractUseCase<ServerShutdownSchema, ServerShutdownResponse>
     {
-        private readonly McpServerStartupService _startupService;
+        private readonly UnityCliLoopServerStartupService _startupService;
 
-        public McpServerShutdownUseCase(McpServerStartupService startupService)
+        public UnityCliLoopServerShutdownUseCase(UnityCliLoopServerStartupService startupService)
         {
             _startupService = startupService ?? throw new System.ArgumentNullException(nameof(startupService));
         }
@@ -32,7 +32,7 @@ namespace io.github.hatayama.UnityCliLoop
                 cancellationToken.ThrowIfCancellationRequested();
                 
                 // 1. Get current server instance
-                McpBridgeServer currentServer = McpServerController.CurrentServer;
+                UnityCliLoopBridgeServer currentServer = UnityCliLoopServerController.CurrentServer;
                 if (currentServer == null)
                 {
                     response.Success = true;
@@ -42,7 +42,7 @@ namespace io.github.hatayama.UnityCliLoop
 
                 cancellationToken.ThrowIfCancellationRequested();
                 
-                // 2. Server stop processing - McpServerStartupService
+                // 2. Server stop processing - UnityCliLoopServerStartupService
                 var stopResult = _startupService.StopServer(currentServer);
                 if (!stopResult.Success)
                 {

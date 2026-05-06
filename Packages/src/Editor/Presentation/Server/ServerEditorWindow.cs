@@ -27,15 +27,15 @@ namespace io.github.hatayama.UnityCliLoop
         private void OnEnable()
         {
             EditorApplication.update += OnEditorUpdate;
-            McpBridgeServer.OnServerStarted += OnServerStateChanged;
-            McpBridgeServer.OnServerStopping += OnServerStateChanged;
+            UnityCliLoopBridgeServer.OnServerStarted += OnServerStateChanged;
+            UnityCliLoopBridgeServer.OnServerStopping += OnServerStateChanged;
         }
 
         private void OnDisable()
         {
             EditorApplication.update -= OnEditorUpdate;
-            McpBridgeServer.OnServerStarted -= OnServerStateChanged;
-            McpBridgeServer.OnServerStopping -= OnServerStateChanged;
+            UnityCliLoopBridgeServer.OnServerStarted -= OnServerStateChanged;
+            UnityCliLoopBridgeServer.OnServerStopping -= OnServerStateChanged;
         }
 
         private void CreateGUI()
@@ -87,7 +87,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private ServerStatusData CreateServerStatusData()
         {
-            bool isRunning = McpServerController.IsServerRunning;
+            bool isRunning = UnityCliLoopServerController.IsServerRunning;
             string status = isRunning ? "Running" : "Stopped";
             Color statusColor = isRunning ? Color.green : Color.red;
 
@@ -96,15 +96,15 @@ namespace io.github.hatayama.UnityCliLoop
 
         private ServerControlsData CreateServerControlsData()
         {
-            bool isRunning = McpServerController.IsServerRunning;
+            bool isRunning = UnityCliLoopServerController.IsServerRunning;
             return new ServerControlsData(isRunning);
         }
 
         private void ToggleServer()
         {
-            if (McpServerController.IsServerRunning)
+            if (UnityCliLoopServerController.IsServerRunning)
             {
-                McpServerController.StopServer();
+                UnityCliLoopServerController.StopServer();
             }
             else
             {
@@ -116,7 +116,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private void StartServer()
         {
-            McpServerController.StartServer();
+            UnityCliLoopServerController.StartServer();
         }
 
         private void OnServerStateChanged()

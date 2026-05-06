@@ -64,6 +64,7 @@
   - editor domain reload state provider now uses `UnityCliLoopEditorDomainReloadStateProvider` naming instead of the legacy MCP name.
   - project path resolution now uses `UnityCliLoopPathResolver` naming instead of the legacy MCP name.
   - package version, tool security, console log filter, shared constants, and server config now use `UnityCliLoop*` naming instead of legacy MCP names.
+  - project IPC server lifecycle types now use `UnityCliLoop*` naming instead of legacy MCP names.
   - pure platform values `DynamicCodeSecurityLevel` and `ToolDisabledException` now compile under `UnityCLILoop.Domain`.
 - Added asmdef dependency tests proving:
   - `Domain` and `ToolContracts` have no project assembly references.

@@ -72,10 +72,10 @@ namespace io.github.hatayama.UnityCliLoop
             UnityCliLoopEditorSettings.SetIsServerRunning(true);
 
             // Create a running server instance
-            McpBridgeServer server = null;
+            UnityCliLoopBridgeServer server = null;
             try
             {
-                server = new McpBridgeServer();
+                server = new UnityCliLoopBridgeServer();
                 server.StartServer();
 
                 DomainReloadRecoveryUseCase useCase = new();

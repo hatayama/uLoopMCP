@@ -165,7 +165,7 @@ namespace io.github.hatayama.UnityCliLoop
         [Test]
         public void UpdateSessionState_WhenStartingServer_ShouldNotPersistRuntimeIdentity()
         {
-            McpServerStartupService service = new();
+            UnityCliLoopServerStartupService service = new();
 
             ServiceResult<bool> result = service.UpdateSessionState(true);
 

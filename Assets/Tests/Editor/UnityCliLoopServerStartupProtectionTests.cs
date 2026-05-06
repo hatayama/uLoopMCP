@@ -4,12 +4,12 @@ using NUnit.Framework;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    public class McpServerStartupProtectionTests
+    public class UnityCliLoopServerStartupProtectionTests
     {
         [Test]
         public void ClearStartupProtection_ResetsProtectionWindow()
         {
-            Type controllerType = typeof(McpServerController);
+            Type controllerType = typeof(UnityCliLoopServerController);
             FieldInfo field = controllerType.GetField("startupProtectionUntilTicks", BindingFlags.NonPublic | BindingFlags.Static);
             MethodInfo method = controllerType.GetMethod("ClearStartupProtection", BindingFlags.NonPublic | BindingFlags.Static);
 
@@ -21,11 +21,11 @@ namespace io.github.hatayama.UnityCliLoop
                 long futureTicks = DateTime.UtcNow.AddMinutes(1).Ticks;
                 field.SetValue(null, futureTicks);
 
-                Assert.IsTrue(McpServerController.IsStartupProtectionActive(), "Startup protection should be active after setting future ticks");
+                Assert.IsTrue(UnityCliLoopServerController.IsStartupProtectionActive(), "Startup protection should be active after setting future ticks");
 
                 method.Invoke(null, null);
 
-                Assert.IsFalse(McpServerController.IsStartupProtectionActive(), "Startup protection should be cleared by recovery path");
+                Assert.IsFalse(UnityCliLoopServerController.IsStartupProtectionActive(), "Startup protection should be cleared by recovery path");
             }
             finally
             {
@@ -36,13 +36,13 @@ namespace io.github.hatayama.UnityCliLoop
         [Test]
         public void OnBeforeAssemblyReload_ShouldClearStartupProtectionBeforeRecovery()
         {
-            Type controllerType = typeof(McpServerController);
+            Type controllerType = typeof(UnityCliLoopServerController);
             FieldInfo field = controllerType.GetField("startupProtectionUntilTicks", BindingFlags.NonPublic | BindingFlags.Static);
-            FieldInfo serverField = controllerType.GetField("mcpServer", BindingFlags.NonPublic | BindingFlags.Static);
+            FieldInfo serverField = controllerType.GetField("bridgeServer", BindingFlags.NonPublic | BindingFlags.Static);
             MethodInfo method = controllerType.GetMethod("OnBeforeAssemblyReload", BindingFlags.NonPublic | BindingFlags.Static);
 
             Assert.IsNotNull(field, "startupProtectionUntilTicks field should exist");
-            Assert.IsNotNull(serverField, "mcpServer field should exist");
+            Assert.IsNotNull(serverField, "bridgeServer field should exist");
             Assert.IsNotNull(method, "OnBeforeAssemblyReload method should exist");
 
             object originalServer = serverField.GetValue(null);
@@ -50,16 +50,16 @@ namespace io.github.hatayama.UnityCliLoop
 
             try
             {
-                serverField.SetValue(null, new McpBridgeServer());
+                serverField.SetValue(null, new UnityCliLoopBridgeServer());
                 long futureTicks = DateTime.UtcNow.AddMinutes(1).Ticks;
                 field.SetValue(null, futureTicks);
 
-                Assert.IsTrue(McpServerController.IsStartupProtectionActive(), "Startup protection should be active before reload");
+                Assert.IsTrue(UnityCliLoopServerController.IsStartupProtectionActive(), "Startup protection should be active before reload");
 
                 method.Invoke(null, null);
 
                 Assert.IsFalse(
-                    McpServerController.IsStartupProtectionActive(),
+                    UnityCliLoopServerController.IsStartupProtectionActive(),
                     "Assembly reload recovery should clear startup protection so the server can restart"
                 );
             }
@@ -75,13 +75,13 @@ namespace io.github.hatayama.UnityCliLoop
         [Test]
         public async System.Threading.Tasks.Task StopServerWithUseCaseAsync_ShouldClearStartupProtectionBeforeShutdown()
         {
-            Type controllerType = typeof(McpServerController);
+            Type controllerType = typeof(UnityCliLoopServerController);
             FieldInfo field = controllerType.GetField("startupProtectionUntilTicks", BindingFlags.NonPublic | BindingFlags.Static);
-            FieldInfo serverField = controllerType.GetField("mcpServer", BindingFlags.NonPublic | BindingFlags.Static);
+            FieldInfo serverField = controllerType.GetField("bridgeServer", BindingFlags.NonPublic | BindingFlags.Static);
             MethodInfo method = controllerType.GetMethod("StopServerWithUseCaseAsync", BindingFlags.NonPublic | BindingFlags.Static);
 
             Assert.IsNotNull(field, "startupProtectionUntilTicks field should exist");
-            Assert.IsNotNull(serverField, "mcpServer field should exist");
+            Assert.IsNotNull(serverField, "bridgeServer field should exist");
             Assert.IsNotNull(method, "StopServerWithUseCaseAsync method should exist");
 
             object originalServer = serverField.GetValue(null);
@@ -89,17 +89,17 @@ namespace io.github.hatayama.UnityCliLoop
 
             try
             {
-                serverField.SetValue(null, new McpBridgeServer());
+                serverField.SetValue(null, new UnityCliLoopBridgeServer());
                 long futureTicks = DateTime.UtcNow.AddMinutes(1).Ticks;
                 field.SetValue(null, futureTicks);
 
-                Assert.IsTrue(McpServerController.IsStartupProtectionActive(), "Startup protection should be active before shutdown");
+                Assert.IsTrue(UnityCliLoopServerController.IsStartupProtectionActive(), "Startup protection should be active before shutdown");
 
                 System.Threading.Tasks.Task task = (System.Threading.Tasks.Task)method.Invoke(null, null);
                 await task;
 
                 Assert.IsFalse(
-                    McpServerController.IsStartupProtectionActive(),
+                    UnityCliLoopServerController.IsStartupProtectionActive(),
                     "Shutdown path should clear startup protection so recovery can restart the server"
                 );
             }

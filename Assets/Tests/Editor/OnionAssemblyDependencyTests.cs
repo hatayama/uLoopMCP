@@ -333,6 +333,26 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
+        public void ProductionSources_WhenLoaded_DoNotUseLegacyMcpServerLifecycleNames()
+        {
+            // Tests that project IPC server lifecycle types use UnityCLILoop naming outside protocol-specific code.
+            string[] legacyNames =
+            {
+                "Mcp" + "BridgeServer",
+                "Mcp" + "ServerController",
+                "Mcp" + "ServerStartupService",
+                "Mcp" + "ServerInitializationUseCase",
+                "Mcp" + "ServerShutdownUseCase"
+            };
+            string[] offendingReferences = ReadProductionSourcePaths()
+                .SelectMany(path => FindForbiddenReferences(path, legacyNames))
+                .OrderBy(reference => reference)
+                .ToArray();
+
+            Assert.That(offendingReferences, Is.Empty);
+        }
+
+        [Test]
         public void EditorUiFiles_WhenLoaded_DoNotUseLegacyMcpSettingsWindowNames()
         {
             // Tests that settings-window UI code uses UnityCLILoop naming instead of legacy MCP naming.

@@ -23,6 +23,6 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Created server instance
         /// </summary>
-        public McpBridgeServer ServerInstance { get; set; }
+        public UnityCliLoopBridgeServer ServerInstance { get; set; }
     }
 }

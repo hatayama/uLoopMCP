@@ -13,8 +13,8 @@ namespace io.github.hatayama.UnityCliLoop
     /// Related classes:
     /// - UnityCliLoopSettingsWindow: Main presenter that owns this handler
     /// - UnityCliLoopSettingsModel: Model layer for state management
-    /// - McpBridgeServer: Server that provides events
-    /// - McpServerController: Server lifecycle management
+    /// - UnityCliLoopBridgeServer: Server that provides events
+    /// - UnityCliLoopServerController: Server lifecycle management
     /// </summary>
     internal class UnityCliLoopSettingsWindowEventHandler
     {
@@ -70,15 +70,15 @@ namespace io.github.hatayama.UnityCliLoop
         {
             UnsubscribeFromServerEvents();
 
-            McpBridgeServer.OnServerStarted += OnServerStateChanged;
-            McpBridgeServer.OnServerStopping += OnServerStateChanged;
+            UnityCliLoopBridgeServer.OnServerStarted += OnServerStateChanged;
+            UnityCliLoopBridgeServer.OnServerStopping += OnServerStateChanged;
             ToolSettingsApplicationFacade.OnToolsChanged += OnToolsChanged;
         }
 
         private void UnsubscribeFromServerEvents()
         {
-            McpBridgeServer.OnServerStarted -= OnServerStateChanged;
-            McpBridgeServer.OnServerStopping -= OnServerStateChanged;
+            UnityCliLoopBridgeServer.OnServerStarted -= OnServerStateChanged;
+            UnityCliLoopBridgeServer.OnServerStopping -= OnServerStateChanged;
             ToolSettingsApplicationFacade.OnToolsChanged -= OnToolsChanged;
         }
 

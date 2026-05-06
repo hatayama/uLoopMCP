@@ -16,7 +16,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// </summary>
         /// <param name="currentServer">Current server instance</param>
         /// <returns>Processing result</returns>
-        public ServiceResult<string> ExecuteBeforeDomainReload(McpBridgeServer currentServer)
+        public ServiceResult<string> ExecuteBeforeDomainReload(UnityCliLoopBridgeServer currentServer)
         {
             // 1. Generate tracking ID for related operations
             string correlationId = VibeLogger.GenerateCorrelationId();

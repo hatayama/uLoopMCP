@@ -5,28 +5,28 @@ namespace io.github.hatayama.UnityCliLoop
     /// Handles server instance creation, startup, and lifecycle management.
     /// 
     /// Related classes:
-    /// - McpBridgeServer: The actual server instance being managed
+    /// - UnityCliLoopBridgeServer: The actual server instance being managed
     /// - UnityCliLoopEditorSettings: Stores server session state
-    /// - McpServerController: Coordinates overall server management
+    /// - UnityCliLoopServerController: Coordinates overall server management
     /// </summary>
-    public class McpServerStartupService
+    public class UnityCliLoopServerStartupService
     {
         /// <summary>
         /// Creates and starts a new Unity CLI bridge instance.
         /// </summary>
         /// <returns>The created server instance</returns>
-        public ServiceResult<McpBridgeServer> StartServer(
+        public ServiceResult<UnityCliLoopBridgeServer> StartServer(
             bool clearServerStartingLockWhenReady = true)
         {
             try
             {
-                McpBridgeServer server = new();
+                UnityCliLoopBridgeServer server = new();
                 server.StartServer(clearServerStartingLockWhenReady);
-                return ServiceResult<McpBridgeServer>.SuccessResult(server);
+                return ServiceResult<UnityCliLoopBridgeServer>.SuccessResult(server);
             }
             catch (System.Exception ex)
             {
-                return ServiceResult<McpBridgeServer>.FailureResult($"Failed to start server: {ex.Message}");
+                return ServiceResult<UnityCliLoopBridgeServer>.FailureResult($"Failed to start server: {ex.Message}");
             }
         }
 
@@ -35,7 +35,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// </summary>
         /// <param name="server">Server instance to stop</param>
         /// <returns>Success indicator</returns>
-        public ServiceResult<bool> StopServer(McpBridgeServer server)
+        public ServiceResult<bool> StopServer(UnityCliLoopBridgeServer server)
         {
             try
             {
