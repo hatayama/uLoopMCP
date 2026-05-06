@@ -4,6 +4,7 @@
     "references": [
         "UnityCLILoop.Application",
         "UnityCLILoop.Domain",
+        "UnityCLILoop.FirstPartyTools.Editor",
         "UnityCLILoop.Infrastructure",
         "UnityCLILoop.Presentation",
         "UnityCLILoop.ToolContracts"

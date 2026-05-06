@@ -49,6 +49,11 @@
   - `hello-world` is registered as an extension tool.
   - the sample extension asmdef references only `UnityCLILoop.ToolContracts`.
   - `UnityCLILoop.FirstPartyTools.Editor` references only `UnityCLILoop.ToolContracts`.
+- Added asmdef dependency tests proving:
+  - `Domain` and `ToolContracts` have no project assembly references.
+  - `Application` references the inward contracts and does not reference outer onion layers.
+  - `Presentation` and `Infrastructure` are sibling outer layers and do not reference each other.
+  - `CompositionRoot.Editor` is the assembly allowed to reference all onion assemblies.
 
 ## Key Changes
 
@@ -76,7 +81,7 @@
 - Continue moving bundled tool implementations into `UnityCLILoop.FirstPartyTools.Editor` once their dependencies are either internal to that plugin or exposed through stable contracts.
 - Continue splitting internal bridge commands from public tool registration when more CLI-only commands are identified.
 - Move startup/DI wiring into `UnityCLILoop.CompositionRoot.Editor`.
-- Add asmdef dependency tests after each physical move, so the dependency direction is enforced by Unity assemblies instead of documentation alone.
+- Extend asmdef dependency tests after each physical move, so the dependency direction is enforced by Unity assemblies instead of documentation alone.
 
 ## Public Contracts
 
