@@ -36,7 +36,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// Auto-registers standard _tools
         /// </summary>
         public UnityCliLoopToolRegistry()
-            : this(new UnityCliLoopToolHostServices())
+            : this(UnityCliLoopToolHostServicesProvider.Create())
         {
         }
 

@@ -128,6 +128,26 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
+        public void ToolHostServices_WhenLoaded_CompileUnderCompositionRootAssembly()
+        {
+            // Tests that concrete tool host wiring is owned by the composition root.
+            Type hostServicesType = Type.GetType(
+                "io.github.hatayama.UnityCliLoop.UnityCliLoopToolHostServices, " + CompositionRootAssemblyName);
+
+            Assert.That(hostServicesType, Is.Not.Null);
+        }
+
+        [Test]
+        public void ToolRegistry_WhenLoaded_DoesNotCreateConcreteHostServices()
+        {
+            // Tests that the application registry depends on a registered host-services factory instead of wiring concrete services itself.
+            string registrySource = File.ReadAllText(
+                "Packages/src/Editor/Api/Tools/Core/UnityCliLoopToolRegistry.cs");
+
+            Assert.That(registrySource, Does.Not.Contain("new UnityCliLoopToolHostServices"));
+        }
+
+        [Test]
         public void ProductionAsmdefs_WhenLoaded_DoNotReferenceCompositionRootExceptCompositionRootItself()
         {
             // Tests that composition root dependencies do not leak back into production assemblies.

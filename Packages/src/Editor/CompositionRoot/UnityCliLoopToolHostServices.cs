@@ -1,7 +1,7 @@
 namespace io.github.hatayama.UnityCliLoop
 {
     /// <summary>
-    /// Application-owned implementation of host capabilities exposed to tool plugins.
+    /// Composition-root implementation of host capabilities exposed to tool plugins.
     /// </summary>
     internal sealed class UnityCliLoopToolHostServices : IUnityCliLoopToolHostServices
     {

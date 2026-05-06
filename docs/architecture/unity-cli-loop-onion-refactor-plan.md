@@ -41,6 +41,7 @@
 - Moved `compile` into `UnityCLILoop.FirstPartyTools.Editor` as a bundled tool plugin that receives Unity compilation access through a `ToolContracts` host-service contract.
 - Moved `execute-dynamic-code` into `UnityCLILoop.FirstPartyTools.Editor` as a bundled tool plugin that receives dynamic-code execution access through a `ToolContracts` host-service contract.
 - Moved `execute-dynamic-code` schema and response DTOs into `UnityCLILoop.ToolContracts` because both the bundled tool and the application-side execution pipeline shape those values.
+- Moved concrete tool host-service wiring into `UnityCLILoop.CompositionRoot.Editor`; `UnityCliLoopToolRegistry` now asks an application-side provider for registered host services instead of constructing them directly.
 - Added registry tests proving:
   - bundled tools are discovered through the attribute path.
   - `get-logs` is registered from `UnityCLILoop.FirstPartyTools.Editor`.
@@ -58,6 +59,8 @@
   - `get-logs` skill discovery still works after moving under `UnityCLILoop.FirstPartyTools.Editor`.
   - `compile` skill discovery still works after moving under `UnityCLILoop.FirstPartyTools.Editor`.
   - `execute-dynamic-code` skill discovery still works after moving under `UnityCLILoop.FirstPartyTools.Editor`.
+  - concrete tool host services compile under `UnityCLILoop.CompositionRoot.Editor`.
+  - `UnityCliLoopToolRegistry` does not directly construct concrete host services.
   - the sample extension asmdef references only `UnityCLILoop.ToolContracts`.
   - the sample `hello-world` extension executes through the same typed contract path as bundled tools.
   - `UnityCLILoop.FirstPartyTools.Editor` references only `UnityCLILoop.ToolContracts`.
@@ -109,7 +112,7 @@
 - Move Unity Editor, IPC, file system, dynamic compilation, and protocol adapters into `UnityCLILoop.Infrastructure`.
 - Continue moving bundled tool implementations into `UnityCLILoop.FirstPartyTools.Editor` once their dependencies are either internal to that plugin or exposed through stable contracts.
 - Continue splitting internal bridge commands from public tool registration when more CLI-only commands are identified.
-- Move startup/DI wiring into `UnityCLILoop.CompositionRoot.Editor`.
+- Continue moving startup/DI wiring into `UnityCLILoop.CompositionRoot.Editor` as additional concrete service composition points are identified.
 - Extend asmdef dependency tests after each physical move, so the dependency direction is enforced by Unity assemblies instead of documentation alone.
 
 ## Public Contracts
