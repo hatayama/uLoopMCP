@@ -406,6 +406,24 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
+        public void ApplicationToolSources_WhenLoaded_DoNotDeclarePublicToolEntryPoints()
+        {
+            // Tests that bundled tool entry points stay outside the application layer.
+            string[] sourcePaths = Directory.GetFiles("Packages/src/Editor/Api/Tools", "*.cs", SearchOption.AllDirectories);
+            string[] offendingFiles = sourcePaths
+                .Where(path =>
+                {
+                    string source = File.ReadAllText(path);
+                    return source.Contains("[UnityCliLoopTool]") || source.Contains(": UnityCliLoopTool<");
+                })
+                .Select(path => Path.GetRelativePath(UnityCliLoopPathResolver.GetProjectRoot(), path))
+                .OrderBy(path => path)
+                .ToArray();
+
+            Assert.That(offendingFiles, Is.Empty);
+        }
+
+        [Test]
         public void CompositionRootAsmdef_WhenLoaded_ReferencesAllOnionAssemblies()
         {
             // Tests that the composition root is the assembly allowed to wire every layer together.
