@@ -30,16 +30,18 @@
 - Removed manual built-in tool registration from `UnityCliLoopToolRegistry`.
 - Registered bundled tools and extension tools through the same `[UnityCliLoopTool]` attribute discovery path.
 - Split `Assets/Editor/CustomCommandSamples` into `UnityCLILoop.CustomCommandSamples.Editor`, which references only `UnityCLILoop.ToolContracts`.
-- Moved low-dependency bundled tools into `UnityCLILoop.FirstPartyTools.Editor`:
-  - `ping`
-  - `debug-sleep`
+- Moved low-dependency bundled commands into `UnityCLILoop.FirstPartyTools.Editor`:
   - `get-version`
   - `focus-window`
-- Kept the moved bundled tools on the same public `UnityCLILoop.ToolContracts` surface as third-party tools.
+- Removed legacy MCP-era development tools from the runtime registry:
+  - `ping`
+  - `debug-sleep`
+- Kept the moved bundled commands on the same public `UnityCLILoop.ToolContracts` surface as third-party tools until the internal command boundary is introduced.
 - Added registry tests proving:
   - bundled tools are discovered through the attribute path.
   - `get-logs` is first-party after the assembly rename.
-  - moved bundled plugin tools are first-party from `UnityCLILoop.FirstPartyTools.Editor`.
+  - moved bundled plugin commands are first-party from `UnityCLILoop.FirstPartyTools.Editor`.
+  - legacy MCP-era development tools are not registered.
   - `hello-world` is registered as an extension tool.
   - the sample extension asmdef references only `UnityCLILoop.ToolContracts`.
   - `UnityCLILoop.FirstPartyTools.Editor` references only `UnityCLILoop.ToolContracts`.
@@ -68,6 +70,7 @@
 - Move settings windows and editor views into `UnityCLILoop.Presentation`.
 - Move Unity Editor, IPC, file system, dynamic compilation, and protocol adapters into `UnityCLILoop.Infrastructure`.
 - Continue moving bundled tool implementations into `UnityCLILoop.FirstPartyTools.Editor` once their dependencies are either internal to that plugin or exposed through stable contracts.
+- Split internal bridge commands from public tool registration so commands such as `get-version` can support CLI readiness and diagnostics without being treated as extension-facing tools.
 - Move startup/DI wiring into `UnityCLILoop.CompositionRoot.Editor`.
 - Add asmdef dependency tests after each physical move, so the dependency direction is enforced by Unity assemblies instead of documentation alone.
 

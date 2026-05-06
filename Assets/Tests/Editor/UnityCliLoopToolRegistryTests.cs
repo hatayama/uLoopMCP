@@ -35,8 +35,6 @@ namespace io.github.hatayama.UnityCliLoop
             UnityCliLoopToolRegistry registry = new UnityCliLoopToolRegistry();
             string[] toolNames = new[]
             {
-                "ping",
-                "debug-sleep",
                 "get-version",
                 "focus-window"
             };
@@ -46,6 +44,16 @@ namespace io.github.hatayama.UnityCliLoop
                 Assert.That(registry.IsToolRegistered(toolName), Is.True);
                 Assert.That(registry.IsThirdPartyTool(toolName), Is.False);
             }
+        }
+
+        [Test]
+        public void Constructor_WhenLegacyDevelopmentToolsAreRemoved_DoesNotRegisterThem()
+        {
+            // Tests that legacy MCP-era development tools are not exposed through the runtime registry.
+            UnityCliLoopToolRegistry registry = new UnityCliLoopToolRegistry();
+
+            Assert.That(registry.IsToolRegistered("ping"), Is.False);
+            Assert.That(registry.IsToolRegistered("debug-sleep"), Is.False);
         }
 
         [Test]
