@@ -127,6 +127,25 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
+        public async Task ExecuteCommandAsync_WhenSampleToolUsesTypedContract_ReturnsTypedResponse()
+        {
+            // Tests that third-party sample tools execute through the same typed contract path as bundled tools.
+            JObject parameters = JObject.FromObject(new
+            {
+                name = "Masamichi",
+                language = "french",
+                includeTimestamp = false
+            });
+
+            UnityCliLoopToolResponse response = await UnityApiHandler.ExecuteCommandAsync("hello-world", parameters);
+            JObject serializedResponse = JObject.FromObject(response);
+
+            Assert.That(serializedResponse.Value<string>("Message"), Is.EqualTo("Bonjour, Masamichi!"));
+            Assert.That(serializedResponse.Value<string>("Language"), Is.EqualTo("french"));
+            Assert.That(serializedResponse["Timestamp"]?.Type, Is.EqualTo(JTokenType.Null));
+        }
+
+        [Test]
         public void CustomCommandSamplesAsmdef_ReferencesOnlyToolContracts()
         {
             // Tests that third-party sample tools depend only on the public tool contract assembly.
