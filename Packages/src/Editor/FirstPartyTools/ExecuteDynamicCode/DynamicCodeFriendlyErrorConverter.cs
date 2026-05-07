@@ -64,13 +64,55 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 return string.Empty;
             }
 
-            string message = result.ErrorMessage ?? string.Empty;
-            if (result.Logs == null || result.Logs.Count == 0)
+            List<string> messageParts = new();
+            AddCompilationErrorMessages(result, messageParts);
+            AddIfNotEmpty(messageParts, result.ErrorMessage);
+            if (result.Logs != null)
             {
-                return message;
+                for (int index = 0; index < result.Logs.Count; index++)
+                {
+                    AddIfNotEmpty(messageParts, result.Logs[index]);
+                }
             }
 
-            return message + " " + string.Join(" ", result.Logs);
+            return string.Join(" ", messageParts);
+        }
+
+        private static void AddCompilationErrorMessages(
+            ExecutionResult result,
+            List<string> messageParts)
+        {
+            if (result.CompilationErrors == null)
+            {
+                return;
+            }
+
+            for (int index = 0; index < result.CompilationErrors.Count; index++)
+            {
+                CompilationError error = result.CompilationErrors[index];
+                if (error == null)
+                {
+                    continue;
+                }
+
+                if (string.IsNullOrEmpty(error.ErrorCode))
+                {
+                    AddIfNotEmpty(messageParts, error.Message);
+                    continue;
+                }
+
+                AddIfNotEmpty(messageParts, $"{error.ErrorCode}: {error.Message}");
+            }
+        }
+
+        private static void AddIfNotEmpty(List<string> messageParts, string value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return;
+            }
+
+            messageParts.Add(value);
         }
 
         private static bool Contains(string source, string value)

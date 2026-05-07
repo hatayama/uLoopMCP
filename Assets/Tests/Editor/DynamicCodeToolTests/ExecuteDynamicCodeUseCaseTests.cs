@@ -675,6 +675,49 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
             }
         }
 
+        [Test]
+        public async Task ExecuteAsync_WhenKnownCompilePatternExistsOnlyInCompilationErrors_ShouldReturnFriendlyGuidance()
+        {
+            // Tests that friendly guidance is derived from structured compiler diagnostics before logs.
+            MarkForegroundWarmupCompleted();
+            FakeDynamicCodeExecutionRuntime runtime = new(
+                new ExecutionResult
+                {
+                    Success = false,
+                    ErrorMessage = "Compilation error occurred",
+                    CompilationErrors = new List<CompilationError>
+                    {
+                        new CompilationError
+                        {
+                            ErrorCode = "CS8803",
+                            Message = "Top-level statements must precede namespace and type declarations."
+                        }
+                    }
+                });
+            ExecuteDynamicCodeUseCase useCase = new(runtime);
+
+            DynamicCodeSecurityLevel previous = ULoopSettings.GetDynamicCodeSecurityLevel();
+            ULoopSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
+
+            try
+            {
+                ExecuteDynamicCodeResponse response = await useCase.ExecuteAsync(
+                    new ExecuteDynamicCodeSchema
+                    {
+                        Code = "namespace Bad { class Wrapped {} }"
+                    },
+                    CancellationToken.None);
+
+                Assert.That(response.Success, Is.False);
+                Assert.That(response.ErrorMessage, Is.EqualTo("There is an issue with the code structure"));
+                Assert.That(response.Logs, Contains.Item("Solutions:"));
+            }
+            finally
+            {
+                ULoopSettings.SetDynamicCodeSecurityLevel(previous);
+            }
+        }
+
         /// <summary>
         /// Test support type used by editor and play mode fixtures.
         /// </summary>
