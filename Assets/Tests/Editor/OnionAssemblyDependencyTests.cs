@@ -471,9 +471,9 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
-        public void CompositionRootAsmdef_WhenLoaded_ReferencesAllOnionAssemblies()
+        public void CompositionRootAsmdef_WhenLoaded_ReferencesAllStartupAssemblies()
         {
-            // Tests that the composition root is the assembly allowed to wire every layer together.
+            // Tests that the composition root is the assembly allowed to wire every startup assembly together.
             string[] references = ReadResolvedReferences("Packages/src/Editor/CompositionRoot/UnityCLILoop.CompositionRoot.Editor.asmdef");
 
             Assert.That(references, Is.EquivalentTo(new[]
@@ -482,6 +482,7 @@ namespace io.github.hatayama.UnityCliLoop
                 DomainAssemblyName,
                 FirstPartyToolsAssemblyName,
                 InfrastructureAssemblyName,
+                MetadataValidationAssemblyName,
                 PresentationAssemblyName,
                 ToolContractsAssemblyName
             }));
@@ -691,6 +692,25 @@ namespace io.github.hatayama.UnityCliLoop
                 .ToArray();
 
             Assert.That(offendingAssemblyNames, Is.Empty);
+        }
+
+        [Test]
+        public void ProductionEditorStartupHooks_WhenLoaded_AreOwnedOnlyByCompositionRootBootstrap()
+        {
+            // Tests that production Editor startup order is controlled from one composition-root entrypoint.
+            string allowedHookPath = NormalizeRelativePath(
+                Path.Combine(
+                    "Packages",
+                    "src",
+                    "Editor",
+                    "CompositionRoot",
+                    "UnityCliLoopEditorBootstrap.cs"));
+            string[] offendingReferences = ReadProductionSourcePaths()
+                .SelectMany(path => FindForbiddenEditorStartupHookReferences(path, allowedHookPath))
+                .OrderBy(reference => reference)
+                .ToArray();
+
+            Assert.That(offendingReferences, Is.Empty);
         }
 
         [Test]
@@ -1088,6 +1108,34 @@ namespace io.github.hatayama.UnityCliLoop
             }
 
             return violations.ToArray();
+        }
+
+        private static string[] FindForbiddenEditorStartupHookReferences(string path, string allowedHookPath)
+        {
+            string source = File.ReadAllText(path);
+            string relativePath = NormalizeRelativePath(Path.GetRelativePath(UnityCliLoopPathResolver.GetProjectRoot(), path));
+            List<string> violations = new List<string>();
+
+            if (source.Contains("[InitializeOnLoad]")
+                || source.Contains("[UnityEditor.InitializeOnLoad]"))
+            {
+                violations.Add($"{relativePath} declares InitializeOnLoad");
+            }
+
+            bool isAllowedBootstrap = string.Equals(relativePath, allowedHookPath, StringComparison.Ordinal);
+            if (!isAllowedBootstrap
+                && (source.Contains("[InitializeOnLoadMethod]")
+                    || source.Contains("[UnityEditor.InitializeOnLoadMethod]")))
+            {
+                violations.Add($"{relativePath} declares InitializeOnLoadMethod");
+            }
+
+            return violations.ToArray();
+        }
+
+        private static string NormalizeRelativePath(string path)
+        {
+            return path.Replace(Path.DirectorySeparatorChar, '/');
         }
 
         private static Dictionary<string, string> BuildGuidToAssemblyNameMap()

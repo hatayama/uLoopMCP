@@ -6,6 +6,7 @@
         "UnityCLILoop.Domain",
         "UnityCLILoop.FirstPartyTools.Editor",
         "UnityCLILoop.Infrastructure",
+        "uLoopMCP.Editor.MetadataValidation",
         "UnityCLILoop.Presentation",
         "UnityCLILoop.ToolContracts"
     ],

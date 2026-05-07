@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using UnityEditor;
 
 namespace io.github.hatayama.UnityCliLoop
 {
@@ -30,8 +29,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        [InitializeOnLoadMethod]
-        private static void InvalidateOnDomainReload()
+        internal static void InvalidateForEditorStartup()
         {
             _instance = null;
         }

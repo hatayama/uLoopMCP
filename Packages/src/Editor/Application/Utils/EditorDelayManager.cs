@@ -34,7 +34,9 @@ namespace io.github.hatayama.UnityCliLoop
 
         public void Initialize()
         {
+            EditorApplication.update -= UpdateDelayTasks;
             EditorApplication.update += UpdateDelayTasks;
+            EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
         }
 
@@ -163,12 +165,11 @@ namespace io.github.hatayama.UnityCliLoop
         }
     }
 
-    [InitializeOnLoad]
     public static class EditorDelayManager
     {
         private static readonly EditorDelayManagerService ServiceValue = new EditorDelayManagerService();
 
-        static EditorDelayManager()
+        internal static void InitializeForEditorStartup()
         {
             ServiceValue.Initialize();
         }

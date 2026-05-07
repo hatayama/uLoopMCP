@@ -1,17 +1,9 @@
-using UnityEditor;
-
 namespace io.github.hatayama.UnityCliLoop
 {
     public static class UnityCliLoopToolHostServicesRegistration
     {
         private static readonly object SyncRoot = new object();
         private static bool IsRegistered;
-
-        [InitializeOnLoadMethod]
-        private static void Register()
-        {
-            EnsureRegistered();
-        }
 
         internal static void EnsureRegistered()
         {
@@ -36,7 +28,7 @@ namespace io.github.hatayama.UnityCliLoop
                 UnityCliLoopServerApplicationService applicationService =
                     new UnityCliLoopServerApplicationService(controllerService);
                 UnityCliLoopServerApplicationFacade.RegisterService(applicationService);
-                controllerService.InitializeOnLoad();
+                controllerService.InitializeForEditorStartup();
                 IsRegistered = true;
             }
         }

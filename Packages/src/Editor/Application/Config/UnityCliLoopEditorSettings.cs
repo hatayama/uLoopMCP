@@ -675,8 +675,7 @@ namespace io.github.hatayama.UnityCliLoop
             Repository.InvalidateCache();
         }
 
-        [InitializeOnLoadMethod]
-        private static void RecoverSettingsFileOnEditorLoad()
+        internal static void RecoverSettingsFileForEditorStartup()
         {
             if (AssetDatabase.IsAssetImportWorkerProcess())
             {

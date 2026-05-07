@@ -228,12 +228,11 @@ namespace io.github.hatayama.UnityCliLoop
         }
     }
 
-    [InitializeOnLoad]
     internal static class MouseInputState
     {
         private static readonly MouseInputStateService ServiceValue = new MouseInputStateService();
 
-        static MouseInputState()
+        internal static void InitializeForEditorStartup()
         {
             ServiceValue.RegisterPlayModeCallbacks();
         }

@@ -21,8 +21,7 @@ namespace io.github.hatayama.UnityCliLoop
         private const bool ForceFlatSkillInstall = true;
         private static readonly Vector2 MinimumWindowSize = new(360f, 380f);
 
-        [InitializeOnLoadMethod]
-        private static void InitializeOnLoad()
+        internal static void InitializeForEditorStartup()
         {
             if (AssetDatabase.IsAssetImportWorkerProcess()) return;
             if (Application.isBatchMode) return;

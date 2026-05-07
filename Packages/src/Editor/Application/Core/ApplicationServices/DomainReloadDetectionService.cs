@@ -9,7 +9,6 @@ namespace io.github.hatayama.UnityCliLoop
     /// Related classes: UnityCliLoopEditorSettings, UnityCliLoopServerController
     /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - Application Service Layer (Single Function Implementation)
     /// </summary>
-    [InitializeOnLoad]
     public static class DomainReloadDetectionService
     {
         private static bool IsBackgroundUnityProcess()
@@ -18,7 +17,7 @@ namespace io.github.hatayama.UnityCliLoop
             return isAssetImportWorker;
         }
 
-        static DomainReloadDetectionService()
+        internal static void RegisterForEditorStartup()
         {
             if (IsBackgroundUnityProcess())
             {
@@ -26,7 +25,9 @@ namespace io.github.hatayama.UnityCliLoop
                 return;
             }
 
+            AssemblyReloadEvents.beforeAssemblyReload -= OnBeforeAssemblyReload;
             AssemblyReloadEvents.beforeAssemblyReload += OnBeforeAssemblyReload;
+            AssemblyReloadEvents.afterAssemblyReload -= OnAfterAssemblyReload;
             AssemblyReloadEvents.afterAssemblyReload += OnAfterAssemblyReload;
         }
 

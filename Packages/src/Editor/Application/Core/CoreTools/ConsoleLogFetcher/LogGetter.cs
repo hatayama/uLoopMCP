@@ -10,7 +10,6 @@ namespace io.github.hatayama.UnityCliLoop
     /// A class that provides a general-purpose static API for retrieving console logs.
     /// Uses ConsoleLogRetriever to access Unity's console logs directly via reflection.
     /// </summary>
-    [InitializeOnLoad]
     public static class LogGetter
     {
         private static readonly ConsoleLogRetriever LogRetriever;
@@ -25,6 +24,11 @@ namespace io.github.hatayama.UnityCliLoop
         static LogGetter()
         {
             LogRetriever = new ConsoleLogRetriever();
+        }
+
+        internal static void InitializeForEditorStartup()
+        {
+            Debug.Assert(LogRetriever != null, "LogRetriever must be initialized");
         }
 
         private static string NormalizeUnityCliLoopLogType(string unityCliLoopLogType)

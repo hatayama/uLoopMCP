@@ -6,8 +6,7 @@ namespace io.github.hatayama.UnityCliLoop
     // Keeps each Unity project on the package-owned CLI bundle without making the Install CLI button do that work.
     internal static class ProjectLocalCliAutoInstaller
     {
-        [InitializeOnLoadMethod]
-        private static void InitializeOnLoad()
+        internal static void ScheduleForEditorStartup()
         {
             if (AssetDatabase.IsAssetImportWorkerProcess())
             {

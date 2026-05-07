@@ -67,7 +67,6 @@ namespace io.github.hatayama.UnityCliLoop
     /// Handles switching to the main thread using EditorApplication.update.
     /// Reference: https://github.com/Cysharp/UniTask - PlayerLoopHelper implementation
     /// </summary>
-    [InitializeOnLoad]
     public static class MainThreadSwitcher
     {
         private static readonly MainThreadSwitcherService ServiceValue = new MainThreadSwitcherService();
@@ -82,13 +81,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// </summary>
         public static bool IsMainThread => ServiceValue.IsMainThread;
 
-        static MainThreadSwitcher()
-        {
-            Initialize();
-        }
-
-        [InitializeOnLoadMethod]
-        private static void Initialize()
+        internal static void InitializeForEditorStartup()
         {
             ServiceValue.Initialize();
         }

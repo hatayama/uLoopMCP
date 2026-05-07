@@ -476,12 +476,11 @@ namespace io.github.hatayama.UnityCliLoop
         }
     }
 
-    [InitializeOnLoad]
     internal static class InputRecorder
     {
         private static readonly InputRecorderService ServiceValue = new InputRecorderService();
 
-        static InputRecorder()
+        internal static void InitializeForEditorStartup()
         {
             ServiceValue.Initialize();
         }

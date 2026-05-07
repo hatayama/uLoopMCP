@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using UnityEditor;
 using Assembly = System.Reflection.Assembly;
 
 namespace io.github.hatayama.UnityCliLoop
@@ -96,8 +95,7 @@ namespace io.github.hatayama.UnityCliLoop
             return mergedReferences.ToArray();
         }
 
-        [InitializeOnLoadMethod]
-        private static void InvalidateReferenceCacheOnDomainReload()
+        internal static void InvalidateReferenceCacheForEditorStartup()
         {
             lock (ReferenceCatalogLock)
             {

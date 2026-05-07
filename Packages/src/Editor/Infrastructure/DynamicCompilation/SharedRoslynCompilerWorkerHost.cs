@@ -157,8 +157,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        [InitializeOnLoadMethod]
-        private static void RegisterLifecycle()
+        internal static void RegisterLifecycleForEditorStartup()
         {
             AssemblyReloadEvents.beforeAssemblyReload -= ShutdownForReload;
             AssemblyReloadEvents.beforeAssemblyReload += ShutdownForReload;

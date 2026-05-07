@@ -724,12 +724,11 @@ namespace io.github.hatayama.UnityCliLoop
         }
     }
 
-    [InitializeOnLoad]
     internal static class InputReplayer
     {
         private static readonly InputReplayerService ServiceValue = new InputReplayerService();
 
-        static InputReplayer()
+        internal static void InitializeForEditorStartup()
         {
             ServiceValue.RegisterPlayModeCallbacks();
         }

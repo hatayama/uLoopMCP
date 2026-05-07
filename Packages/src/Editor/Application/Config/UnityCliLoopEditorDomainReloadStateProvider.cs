@@ -1,5 +1,3 @@
-using UnityEditor;
-
 namespace io.github.hatayama.UnityCliLoop
 {
     public sealed class UnityCliLoopEditorDomainReloadStateProvider : IDomainReloadStateProvider
@@ -19,8 +17,7 @@ namespace io.github.hatayama.UnityCliLoop
 
     public static class UnityCliLoopEditorDomainReloadStateRegistration
     {
-        [InitializeOnLoadMethod]
-        private static void Register()
+        internal static void RegisterForEditorStartup()
         {
             UnityCliLoopEditorDomainReloadStateProvider.SetDomainReloadInProgressFromMainThread(
                 UnityCliLoopEditorSettings.GetIsDomainReloadInProgress());

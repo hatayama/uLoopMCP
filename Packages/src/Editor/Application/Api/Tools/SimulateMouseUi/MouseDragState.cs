@@ -34,12 +34,11 @@ namespace io.github.hatayama.UnityCliLoop
         }
     }
 
-    [InitializeOnLoad]
     internal static class MouseDragState
     {
         private static readonly MouseDragStateService ServiceValue = new MouseDragStateService();
 
-        static MouseDragState()
+        internal static void InitializeForEditorStartup()
         {
             ServiceValue.RegisterPlayModeCallbacks();
         }

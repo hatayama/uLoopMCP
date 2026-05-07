@@ -252,7 +252,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// </summary>
         public Task RecoveryTask => _currentRecoveryTask;
 
-        public void InitializeOnLoad()
+        public void InitializeForEditorStartup()
         {
             if (IsBackgroundUnityProcess())
             {
@@ -274,7 +274,7 @@ namespace io.github.hatayama.UnityCliLoop
             _serverLifecycleRegistry.ServerLoopExited += OnServerLoopUnexpectedlyExited;
 
             // Recovery binds the project IPC endpoint and may touch config files, so keep it off the
-            // synchronous InitializeOnLoad path while preserving automatic startup.
+            // synchronous Editor startup path while preserving automatic startup.
             ScheduleStartupRecovery(
                 action => EditorApplication.delayCall += () => action(),
                 RestoreServerStateIfNeeded);

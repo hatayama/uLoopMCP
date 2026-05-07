@@ -113,12 +113,11 @@ namespace io.github.hatayama.UnityCliLoop
         }
     }
 
-    [InitializeOnLoad]
     internal static class KeyboardKeyState
     {
         private static readonly KeyboardKeyStateService ServiceValue = new KeyboardKeyStateService();
 
-        static KeyboardKeyState()
+        internal static void InitializeForEditorStartup()
         {
             ServiceValue.RegisterPlayModeCallbacks();
         }

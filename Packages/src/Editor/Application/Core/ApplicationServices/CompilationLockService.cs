@@ -10,16 +10,17 @@ namespace io.github.hatayama.UnityCliLoop
     /// Related classes: DomainReloadDetectionService (similar pattern for domain reload)
     /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - Application Service Layer (Single Function Implementation)
     /// </summary>
-    [InitializeOnLoad]
     public static class CompilationLockService
     {
         private const string LOCK_FILE_NAME = "compiling.lock";
 
         private static string LockFilePath => Path.Combine(UnityEngine.Application.dataPath, "..", "Temp", LOCK_FILE_NAME);
 
-        static CompilationLockService()
+        internal static void RegisterForEditorStartup()
         {
+            CompilationPipeline.compilationStarted -= OnCompilationStarted;
             CompilationPipeline.compilationStarted += OnCompilationStarted;
+            CompilationPipeline.compilationFinished -= OnCompilationFinished;
             CompilationPipeline.compilationFinished += OnCompilationFinished;
         }
 

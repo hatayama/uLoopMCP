@@ -1,11 +1,8 @@
-using UnityEditor;
-
 namespace io.github.hatayama.UnityCliLoop
 {
-    public static class SystemReflectionMetadataPreloadValidatorRegistration
+    internal static class SystemReflectionMetadataPreloadValidatorRegistration
     {
-        [InitializeOnLoadMethod]
-        private static void Register()
+        internal static void RegisterForEditorStartup()
         {
             PreloadAssemblySecurityValidatorRegistry.RegisterValidator(new SystemReflectionMetadataPreloadValidator());
         }
