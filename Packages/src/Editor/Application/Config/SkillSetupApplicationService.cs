@@ -5,9 +5,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-using io.github.hatayama.UnityCliLoop.InternalAPIBridge;
-using io.github.hatayama.UnityCliLoop.ToolContracts;
-
 namespace io.github.hatayama.UnityCliLoop.Application
 {
     // Application-facing data for skill setup targets detected by Infrastructure.

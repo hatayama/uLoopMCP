@@ -3,7 +3,6 @@ using UnityEngine;
 using System.IO;
 using System.Threading;
 
-using io.github.hatayama.UnityCliLoop.Application;
 using io.github.hatayama.UnityCliLoop.FirstPartyTools;
 using io.github.hatayama.UnityCliLoop.ToolContracts;
 

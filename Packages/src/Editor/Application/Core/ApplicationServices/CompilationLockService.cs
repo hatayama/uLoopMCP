@@ -1,9 +1,6 @@
 using System;
 using System.Diagnostics;
 
-using io.github.hatayama.UnityCliLoop.InternalAPIBridge;
-using io.github.hatayama.UnityCliLoop.ToolContracts;
-
 namespace io.github.hatayama.UnityCliLoop.Application
 {
     // Port for the compilation lock file used by external CLI processes.

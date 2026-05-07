@@ -2,8 +2,6 @@ using System;
 using UnityEditor;
 using UnityEngine;
 
-using io.github.hatayama.UnityCliLoop.Application;
-
 namespace io.github.hatayama.UnityCliLoop.Presentation
 {
     internal static class CliUninstallPrompt

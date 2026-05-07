@@ -3,9 +3,6 @@ using System.Diagnostics;
 using System.IO;
 using UnityEngine;
 
-using io.github.hatayama.UnityCliLoop.Application;
-using io.github.hatayama.UnityCliLoop.ToolContracts;
-
 namespace io.github.hatayama.UnityCliLoop.Infrastructure
 {
     /// <summary>

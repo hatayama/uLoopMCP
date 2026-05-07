@@ -2,8 +2,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 
-using io.github.hatayama.UnityCliLoop.ToolContracts;
-
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     public interface IUnityCliLoopGameObjectSearchService

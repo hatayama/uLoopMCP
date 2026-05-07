@@ -3,7 +3,6 @@ using System.Reflection;
 using System.Threading;
 using NUnit.Framework;
 
-using io.github.hatayama.UnityCliLoop.Application;
 using io.github.hatayama.UnityCliLoop.FirstPartyTools;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests

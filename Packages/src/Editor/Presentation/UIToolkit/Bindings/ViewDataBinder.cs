@@ -2,9 +2,6 @@ using System;
 using UnityEngine.UIElements;
 using UnityEditor.UIElements;
 
-using io.github.hatayama.UnityCliLoop.Application;
-using io.github.hatayama.UnityCliLoop.ToolContracts;
-
 namespace io.github.hatayama.UnityCliLoop.Presentation
 {
     /// <summary>

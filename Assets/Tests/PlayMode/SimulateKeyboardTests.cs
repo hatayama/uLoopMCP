@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using io.github.hatayama.UnityCliLoop.FirstPartyTools;
 using io.github.hatayama.UnityCliLoop.Runtime;
 using io.github.hatayama.UnityCliLoop.ToolContracts;
-using io.github.hatayama.UnityCliLoop.Tests.Demo;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using UnityEngine;

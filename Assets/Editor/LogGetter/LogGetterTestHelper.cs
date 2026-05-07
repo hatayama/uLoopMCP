@@ -1,8 +1,6 @@
 using UnityEngine;
 using UnityEditor;
 
-using io.github.hatayama.UnityCliLoop.FirstPartyTools;
-
 namespace io.github.hatayama.UnityCliLoop.Dev
 {
     public class LogGetterTestHelper

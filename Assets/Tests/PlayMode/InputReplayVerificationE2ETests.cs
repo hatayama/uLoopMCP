@@ -2,7 +2,6 @@
 using System.Collections;
 using System.IO;
 using io.github.hatayama.UnityCliLoop.FirstPartyTools;
-using io.github.hatayama.UnityCliLoop.ToolContracts;
 using io.github.hatayama.UnityCliLoop.Tests.Demo;
 using NUnit.Framework;
 using UnityEditor.SceneManagement;

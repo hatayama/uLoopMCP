@@ -2,8 +2,6 @@ using System.Collections;
 using NUnit.Framework;
 using UnityEngine.UIElements;
 
-using io.github.hatayama.UnityCliLoop.Application;
-using io.github.hatayama.UnityCliLoop.FirstPartyTools;
 using io.github.hatayama.UnityCliLoop.Presentation;
 using io.github.hatayama.UnityCliLoop.ToolContracts;
 
