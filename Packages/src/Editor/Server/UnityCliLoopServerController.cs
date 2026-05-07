@@ -37,24 +37,24 @@ namespace io.github.hatayama.UnityCliLoop
         event Action ServerLoopExited;
     }
 
-    public static class UnityCliLoopServerInstanceFactoryRegistry
+    public sealed class UnityCliLoopServerInstanceFactoryRegistryService
     {
-        private static readonly object SyncRoot = new object();
-        private static IUnityCliLoopServerInstanceFactory _factory;
+        private readonly object _syncRoot = new object();
+        private IUnityCliLoopServerInstanceFactory _factory;
 
-        public static void RegisterFactory(IUnityCliLoopServerInstanceFactory factory)
+        public void RegisterFactory(IUnityCliLoopServerInstanceFactory factory)
         {
             System.Diagnostics.Debug.Assert(factory != null, "factory must not be null");
 
-            lock (SyncRoot)
+            lock (_syncRoot)
             {
                 _factory = factory;
             }
         }
 
-        public static IUnityCliLoopServerInstance Create()
+        public IUnityCliLoopServerInstance Create()
         {
-            lock (SyncRoot)
+            lock (_syncRoot)
             {
                 if (_factory == null)
                 {
@@ -66,15 +66,31 @@ namespace io.github.hatayama.UnityCliLoop
         }
     }
 
-    public static class UnityCliLoopServerLifecycleRegistry
+    public static class UnityCliLoopServerInstanceFactoryRegistry
     {
-        private static readonly object SyncRoot = new object();
-        private static IUnityCliLoopServerLifecycleSource _source;
-        private static Action _serverStartedHandlers;
-        private static Action _serverStoppingHandlers;
-        private static Action _serverLoopExitedHandlers;
+        private static readonly UnityCliLoopServerInstanceFactoryRegistryService ServiceValue =
+            new UnityCliLoopServerInstanceFactoryRegistryService();
 
-        public static event Action ServerStateChanged
+        public static void RegisterFactory(IUnityCliLoopServerInstanceFactory factory)
+        {
+            ServiceValue.RegisterFactory(factory);
+        }
+
+        public static IUnityCliLoopServerInstance Create()
+        {
+            return ServiceValue.Create();
+        }
+    }
+
+    public sealed class UnityCliLoopServerLifecycleRegistryService
+    {
+        private readonly object _syncRoot = new object();
+        private IUnityCliLoopServerLifecycleSource _source;
+        private Action _serverStartedHandlers;
+        private Action _serverStoppingHandlers;
+        private Action _serverLoopExitedHandlers;
+
+        public event Action ServerStateChanged
         {
             add
             {
@@ -88,7 +104,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        public static event Action ServerStarted
+        public event Action ServerStarted
         {
             add
             {
@@ -100,7 +116,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        public static event Action ServerStopping
+        public event Action ServerStopping
         {
             add
             {
@@ -112,7 +128,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        public static event Action ServerLoopExited
+        public event Action ServerLoopExited
         {
             add
             {
@@ -124,11 +140,11 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        public static void RegisterSource(IUnityCliLoopServerLifecycleSource source)
+        public void RegisterSource(IUnityCliLoopServerLifecycleSource source)
         {
             System.Diagnostics.Debug.Assert(source != null, "source must not be null");
 
-            lock (SyncRoot)
+            lock (_syncRoot)
             {
                 if (_source != null)
                 {
@@ -140,14 +156,14 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        private static void AddHandler(
+        private void AddHandler(
             ref Action handlers,
             Action value,
             Action<IUnityCliLoopServerLifecycleSource> wireHandler)
         {
             System.Diagnostics.Debug.Assert(value != null, "value must not be null");
 
-            lock (SyncRoot)
+            lock (_syncRoot)
             {
                 handlers += value;
                 if (_source != null)
@@ -157,14 +173,14 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        private static void RemoveHandler(
+        private void RemoveHandler(
             ref Action handlers,
             Action value,
             Action<IUnityCliLoopServerLifecycleSource> unwireHandler)
         {
             System.Diagnostics.Debug.Assert(value != null, "value must not be null");
 
-            lock (SyncRoot)
+            lock (_syncRoot)
             {
                 handlers -= value;
                 if (_source != null)
@@ -174,7 +190,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        private static void WireHandlers(IUnityCliLoopServerLifecycleSource source)
+        private void WireHandlers(IUnityCliLoopServerLifecycleSource source)
         {
             foreach (Delegate handler in GetHandlers(_serverStartedHandlers))
             {
@@ -192,7 +208,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        private static void UnwireHandlers(IUnityCliLoopServerLifecycleSource source)
+        private void UnwireHandlers(IUnityCliLoopServerLifecycleSource source)
         {
             foreach (Delegate handler in GetHandlers(_serverStartedHandlers))
             {
@@ -221,18 +237,52 @@ namespace io.github.hatayama.UnityCliLoop
         }
     }
 
+    public static class UnityCliLoopServerLifecycleRegistry
+    {
+        private static readonly UnityCliLoopServerLifecycleRegistryService ServiceValue =
+            new UnityCliLoopServerLifecycleRegistryService();
+
+        public static event Action ServerStateChanged
+        {
+            add => ServiceValue.ServerStateChanged += value;
+            remove => ServiceValue.ServerStateChanged -= value;
+        }
+
+        public static event Action ServerStarted
+        {
+            add => ServiceValue.ServerStarted += value;
+            remove => ServiceValue.ServerStarted -= value;
+        }
+
+        public static event Action ServerStopping
+        {
+            add => ServiceValue.ServerStopping += value;
+            remove => ServiceValue.ServerStopping -= value;
+        }
+
+        public static event Action ServerLoopExited
+        {
+            add => ServiceValue.ServerLoopExited += value;
+            remove => ServiceValue.ServerLoopExited -= value;
+        }
+
+        public static void RegisterSource(IUnityCliLoopServerLifecycleSource source)
+        {
+            ServiceValue.RegisterSource(source);
+        }
+    }
+
     /// <summary>
     /// Manages the Unity CLI bridge server state and restores it after assembly reload.
     /// </summary>
-    [InitializeOnLoad]
-    public static class UnityCliLoopServerController
+    public sealed class UnityCliLoopServerControllerService
     {
-        private static IUnityCliLoopServerInstance bridgeServer;
-        private static readonly SemaphoreSlim StartupSemaphore = new SemaphoreSlim(1, 1);
-        private static long startupProtectionUntilTicks = 0; // UTC ticks
-        private static Task _currentRecoveryTask;
+        private IUnityCliLoopServerInstance _bridgeServer;
+        private readonly SemaphoreSlim _startupSemaphore = new SemaphoreSlim(1, 1);
+        private long _startupProtectionUntilTicks = 0;
+        private Task _currentRecoveryTask;
 
-        private static bool IsBackgroundUnityProcess()
+        private bool IsBackgroundUnityProcess()
         {
             bool isAssetImportWorker = AssetDatabase.IsAssetImportWorkerProcess();
             return isAssetImportWorker;
@@ -241,32 +291,27 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// The current Unity CLI bridge server instance.
         /// </summary>
-        public static IUnityCliLoopServerInstance CurrentServer => bridgeServer;
+        public IUnityCliLoopServerInstance CurrentServer => _bridgeServer;
 
         /// <summary>
         /// Whether the server is running.
         /// </summary>
-        public static bool IsServerRunning => bridgeServer?.IsRunning ?? false;
+        public bool IsServerRunning => _bridgeServer?.IsRunning ?? false;
 
-        internal static void RegisterRecoveredServer(IUnityCliLoopServerInstance server)
+        internal void RegisterRecoveredServer(IUnityCliLoopServerInstance server)
         {
             System.Diagnostics.Debug.Assert(server != null, "server must not be null");
 
-            bridgeServer = server;
+            _bridgeServer = server;
             SaveRunningServerState();
         }
 
         /// <summary>
         /// Current recovery task. Can be awaited by other components to ensure recovery completes first.
         /// </summary>
-        public static Task RecoveryTask => _currentRecoveryTask;
+        public Task RecoveryTask => _currentRecoveryTask;
 
-        static UnityCliLoopServerController()
-        {
-            InitializeOnLoad();
-        }
-
-        private static void InitializeOnLoad()
+        public void InitializeOnLoad()
         {
             if (IsBackgroundUnityProcess())
             {
@@ -294,7 +339,7 @@ namespace io.github.hatayama.UnityCliLoop
                 RestoreServerStateIfNeeded);
         }
 
-        internal static Task ScheduleStartupRecovery(
+        internal Task ScheduleStartupRecovery(
             Action<Action> scheduleDelayCall,
             Func<Task> restoreServerState)
         {
@@ -332,7 +377,7 @@ namespace io.github.hatayama.UnityCliLoop
             return scheduledRecoveryCompletionSource.Task;
         }
 
-        private static void CompleteScheduledStartupRecovery(
+        private void CompleteScheduledStartupRecovery(
             Task restoreTask,
             TaskCompletionSource<bool> scheduledRecoveryCompletionSource)
         {
@@ -358,7 +403,7 @@ namespace io.github.hatayama.UnityCliLoop
             scheduledRecoveryCompletionSource.SetResult(true);
         }
 
-        public static async void StartServer()
+        public async void StartServer()
         {
             await StartServerWithUseCaseAsync();
         }
@@ -366,7 +411,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Starts the server using new UseCase implementation.
         /// </summary>
-        private static async Task StartServerWithUseCaseAsync()
+        private async Task StartServerWithUseCaseAsync()
         {
             if (IsBackgroundUnityProcess())
             {
@@ -381,7 +426,7 @@ namespace io.github.hatayama.UnityCliLoop
             try
             {
                 // Always stop the existing server first so the project IPC endpoint is released.
-                if (bridgeServer != null)
+                if (_bridgeServer != null)
                 {
                     await StopServerWithUseCaseAsync();
                 }
@@ -397,7 +442,7 @@ namespace io.github.hatayama.UnityCliLoop
                 };
                 System.Threading.CancellationToken cancellationToken = System.Threading.CancellationToken.None;
 
-                var result = await useCase.ExecuteAsync(schema, cancellationToken);
+                ServerInitializationResponse result = await useCase.ExecuteAsync(schema, cancellationToken);
 
                 if (!result.Success)
                 {
@@ -408,7 +453,7 @@ namespace io.github.hatayama.UnityCliLoop
 
                 // UseCase creates a new server instance, so we keep a reference here
                 // for compatibility with existing code
-                bridgeServer = result.ServerInstance;
+                _bridgeServer = result.ServerInstance;
 
                 DynamicCodeStartupTelemetry.MarkServerReady();
                 UnityCliLoopToolRegistrar.WarmupRegistry();
@@ -430,7 +475,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Stops the server.
         /// </summary>
-        public static async void StopServer()
+        public async void StopServer()
         {
             await StopServerWithUseCaseAsync();
         }
@@ -438,7 +483,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Stops the server using new UseCase implementation.
         /// </summary>
-        private static async Task StopServerWithUseCaseAsync()
+        private async Task StopServerWithUseCaseAsync()
         {
             if (IsBackgroundUnityProcess())
             {
@@ -453,12 +498,12 @@ namespace io.github.hatayama.UnityCliLoop
             ServerShutdownSchema schema = new() { ForceShutdown = false };
             System.Threading.CancellationToken cancellationToken = System.Threading.CancellationToken.None;
 
-            var result = await useCase.ExecuteAsync(schema, cancellationToken);
+                ServerShutdownResponse result = await useCase.ExecuteAsync(schema, cancellationToken);
 
             if (result.Success)
             {
                 // Server stopped by UseCase, so clear the reference
-                bridgeServer = null;
+                _bridgeServer = null;
 
                 // Clear session state to reflect server stopped
                 UnityCliLoopEditorSettings.ClearServerSession();
@@ -476,18 +521,18 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Processing before assembly reload.
         /// </summary>
-        private static void OnBeforeAssemblyReload()
+        private void OnBeforeAssemblyReload()
         {
             ClearStartupProtection();
 
             // Create and execute DomainReloadRecoveryUseCase instance
             DomainReloadRecoveryUseCase useCase = new();
-            ServiceResult<string> result = useCase.ExecuteBeforeDomainReload(bridgeServer);
+            ServiceResult<string> result = useCase.ExecuteBeforeDomainReload(_bridgeServer);
             
             // Clear instance if server shutdown succeeded
             if (result.Success)
             {
-                bridgeServer = null;
+                _bridgeServer = null;
             }
 
             DynamicCodeStartupTelemetry.Reset();
@@ -498,7 +543,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Processing after assembly reload.
         /// </summary>
-        private static void OnAfterAssemblyReload()
+        private void OnAfterAssemblyReload()
         {
             // Create and execute DomainReloadRecoveryUseCase instance
             DomainReloadRecoveryUseCase useCase = new();
@@ -515,7 +560,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Restores the server state if necessary.
         /// </summary>
-        private static Task RestoreServerStateIfNeeded()
+        private Task RestoreServerStateIfNeeded()
         {
             if (IsBackgroundUnityProcess())
             {
@@ -525,7 +570,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             bool isAfterCompile = UnityCliLoopEditorSettings.GetIsAfterCompile();
 
-            if (bridgeServer?.IsRunning == true)
+            if (_bridgeServer?.IsRunning == true)
             {
                 if (isAfterCompile)
                 {
@@ -545,21 +590,21 @@ namespace io.github.hatayama.UnityCliLoop
             return StartRecoveryIfNeededAsync(isAfterCompile, CancellationToken.None);
         }
 
-        private static void TryRestoreServerWithRetry(int retryCount)
+        private void TryRestoreServerWithRetry(int retryCount)
         {
             const int maxRetries = 3;
 
             try
             {
                 // If there is an existing server instance, ensure it is stopped.
-                if (bridgeServer != null)
+                if (_bridgeServer != null)
                 {
-                    bridgeServer.Dispose();
-                    bridgeServer = null;
+                    _bridgeServer.Dispose();
+                    _bridgeServer = null;
                 }
 
-                bridgeServer = UnityCliLoopServerInstanceFactoryRegistry.Create();
-                bridgeServer.StartServer();
+                _bridgeServer = UnityCliLoopServerInstanceFactoryRegistry.Create();
+                _bridgeServer.StartServer();
                 SaveRunningServerState();
 
                 // Clear server-side reconnecting flag on successful restoration
@@ -596,17 +641,17 @@ namespace io.github.hatayama.UnityCliLoop
         /// Disposes the bridge listener and marks the server as stopped so the CLI
         /// does not attempt to connect to a stale IPC endpoint after the editor closes.
         /// </summary>
-        private static void OnEditorQuitting()
+        private void OnEditorQuitting()
         {
-            if (bridgeServer != null)
+            if (_bridgeServer != null)
             {
                 try
                 {
-                    bridgeServer.Dispose();
+                    _bridgeServer.Dispose();
                 }
                 finally
                 {
-                    bridgeServer = null;
+                    _bridgeServer = null;
                 }
             }
             DynamicCodeForegroundWarmupState.Reset();
@@ -619,7 +664,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// VibeLogger with SerializedObject, etc.) are main-thread-only.
         /// EditorApplication.delayCall marshals the recovery to the next editor tick.
         /// </summary>
-        private static void OnServerLoopUnexpectedlyExited()
+        private void OnServerLoopUnexpectedlyExited()
         {
             // OnServerLoopExited fires from thread pool — marshal to main thread for Unity API safety
             EditorApplication.delayCall += () =>
@@ -633,11 +678,11 @@ namespace io.github.hatayama.UnityCliLoop
                 );
 
                 // Resources already cleaned up by CleanupAfterUnexpectedLoopExit — just clear the reference
-                bridgeServer = null;
+                _bridgeServer = null;
 
                 // The server just crashed — startup protection blocks recovery if the crash happens
                 // within the 5-second protection window after a successful start
-                System.Threading.Volatile.Write(ref startupProtectionUntilTicks, 0L);
+                System.Threading.Volatile.Write(ref _startupProtectionUntilTicks, 0L);
 
                 _currentRecoveryTask = StartRecoveryIfNeededAsync(false, CancellationToken.None);
                 _ = _currentRecoveryTask.ContinueWith(task =>
@@ -661,7 +706,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Retry server restore with frame delay on the same project IPC endpoint.
         /// </summary>
-        private static async Task RetryServerRestoreAsync(int retryCount)
+        private async Task RetryServerRestoreAsync(int retryCount)
         {
             await EditorDelay.DelayFrame(5);
             TryRestoreServerWithRetry(retryCount + 1);
@@ -670,7 +715,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Start UI display timeout timer for reconnecting message
         /// </summary>
-        private static async Task StartReconnectionUITimeoutAsync()
+        private async Task StartReconnectionUITimeoutAsync()
         {
             // Wait for the timeout period (convert seconds to frames at ~60fps)
             int timeoutFrames = UnityCliLoopConstants.RECONNECTION_TIMEOUT_SECONDS * 60;
@@ -699,32 +744,32 @@ namespace io.github.hatayama.UnityCliLoop
 
         }
 
-        public static bool IsStartupProtectionActive()
+        public bool IsStartupProtectionActive()
         {
             long nowTicks = DateTime.UtcNow.Ticks;
-            return nowTicks < System.Threading.Volatile.Read(ref startupProtectionUntilTicks);
+            return nowTicks < System.Threading.Volatile.Read(ref _startupProtectionUntilTicks);
         }
 
-        private static void ActivateStartupProtection(int milliseconds)
+        private void ActivateStartupProtection(int milliseconds)
         {
             long untilTicks = DateTime.UtcNow.AddMilliseconds(milliseconds).Ticks;
-            System.Threading.Volatile.Write(ref startupProtectionUntilTicks, untilTicks);
+            System.Threading.Volatile.Write(ref _startupProtectionUntilTicks, untilTicks);
             VibeLogger.LogInfo("startup_protection_active", $"window={milliseconds}ms");
         }
 
         /// <summary>
         /// Clears startup protection so recovery paths can restart the server immediately.
         /// </summary>
-        private static void ClearStartupProtection()
+        private void ClearStartupProtection()
         {
-            System.Threading.Volatile.Write(ref startupProtectionUntilTicks, 0L);
+            System.Threading.Volatile.Write(ref _startupProtectionUntilTicks, 0L);
         }
 
         /// <summary>
         /// Centralized, coalesced recovery start.
         /// Attempts recovery on the project IPC endpoint for up to 5 seconds.
         /// </summary>
-        public static async Task StartRecoveryIfNeededAsync(bool isAfterCompile, CancellationToken cancellationToken)
+        public async Task StartRecoveryIfNeededAsync(bool isAfterCompile, CancellationToken cancellationToken)
         {
             if (IsBackgroundUnityProcess())
             {
@@ -746,25 +791,25 @@ namespace io.github.hatayama.UnityCliLoop
                 return;
             }
 
-            await StartupSemaphore.WaitAsync(cancellationToken);
+            await _startupSemaphore.WaitAsync(cancellationToken);
             string serverStartingLockToken = null;
             try
             {
                 // If any server is already running, ignore this request to prevent double-binding
-                if (bridgeServer != null && bridgeServer.IsRunning)
+                if (_bridgeServer != null && _bridgeServer.IsRunning)
                 {
-                    VibeLogger.LogInfo("server_start_ignored", $"already_running endpoint={bridgeServer.Endpoint}");
+                    VibeLogger.LogInfo("server_start_ignored", $"already_running endpoint={_bridgeServer.Endpoint}");
                     return;
                 }
 
                 serverStartingLockToken = CreateOptionalServerStartingLock();
 
                 // Ensure previous instance is fully disposed before trying to bind a new one
-                if (bridgeServer != null)
+                if (_bridgeServer != null)
                 {
                     try
                     {
-                        bridgeServer.Dispose();
+                        _bridgeServer.Dispose();
                         VibeLogger.LogInfo("server_disposed_before_bind", "disposed previous server instance");
                     }
                     catch (Exception ex)
@@ -773,7 +818,7 @@ namespace io.github.hatayama.UnityCliLoop
                     }
                     finally
                     {
-                        bridgeServer = null;
+                        _bridgeServer = null;
                     }
                 }
 
@@ -814,11 +859,11 @@ namespace io.github.hatayama.UnityCliLoop
             }
             finally
             {
-                StartupSemaphore.Release();
+                _startupSemaphore.Release();
             }
         }
 
-        private static async Task<bool> TryBindWithWaitAsync(
+        private async Task<bool> TryBindWithWaitAsync(
             int maxWaitMs,
             int stepMs,
             CancellationToken cancellationToken,
@@ -832,11 +877,11 @@ namespace io.github.hatayama.UnityCliLoop
                 try
                 {
                     // Defensive: dispose any non-running stale instance before creating a new one
-                    if (bridgeServer != null && !bridgeServer.IsRunning)
+                    if (_bridgeServer != null && !_bridgeServer.IsRunning)
                     {
                         try
                         {
-                            bridgeServer.Dispose();
+                            _bridgeServer.Dispose();
                             VibeLogger.LogInfo("server_disposed_before_bind", "disposed stale instance");
                         }
                         catch (Exception ex)
@@ -845,13 +890,13 @@ namespace io.github.hatayama.UnityCliLoop
                         }
                         finally
                         {
-                            bridgeServer = null;
+                            _bridgeServer = null;
                         }
                     }
 
                     server = UnityCliLoopServerInstanceFactoryRegistry.Create();
                     server.StartServer(clearServerStartingLockWhenReady);
-                    bridgeServer = server;
+                    _bridgeServer = server;
                     VibeLogger.LogInfo("binding_success", $"endpoint={server.Endpoint}");
                     return true;
                 }
@@ -892,7 +937,7 @@ namespace io.github.hatayama.UnityCliLoop
             UnityCliLoopEditorSettings.SetIsServerRunning(true);
         }
 
-        internal static string CreateOptionalServerStartingLock(Func<string> createLockFile = null)
+        internal string CreateOptionalServerStartingLock(Func<string> createLockFile = null)
         {
             Func<string> createLockFileCore = createLockFile ?? ServerStartingLockService.CreateLockFile;
             string serverStartingLockToken = createLockFileCore();
@@ -909,6 +954,61 @@ namespace io.github.hatayama.UnityCliLoop
                 "server_starting_lock_optional",
                 "Proceeding without serverstarting.lock because the readiness hint could not be created.");
             return null;
+        }
+    }
+
+    [InitializeOnLoad]
+    public static class UnityCliLoopServerController
+    {
+        private static readonly UnityCliLoopServerControllerService ServiceValue =
+            new UnityCliLoopServerControllerService();
+
+        static UnityCliLoopServerController()
+        {
+            ServiceValue.InitializeOnLoad();
+        }
+
+        public static IUnityCliLoopServerInstance CurrentServer => ServiceValue.CurrentServer;
+
+        public static bool IsServerRunning => ServiceValue.IsServerRunning;
+
+        internal static void RegisterRecoveredServer(IUnityCliLoopServerInstance server)
+        {
+            ServiceValue.RegisterRecoveredServer(server);
+        }
+
+        public static Task RecoveryTask => ServiceValue.RecoveryTask;
+
+        internal static Task ScheduleStartupRecovery(
+            Action<Action> scheduleDelayCall,
+            Func<Task> restoreServerState)
+        {
+            return ServiceValue.ScheduleStartupRecovery(scheduleDelayCall, restoreServerState);
+        }
+
+        public static void StartServer()
+        {
+            ServiceValue.StartServer();
+        }
+
+        public static void StopServer()
+        {
+            ServiceValue.StopServer();
+        }
+
+        public static bool IsStartupProtectionActive()
+        {
+            return ServiceValue.IsStartupProtectionActive();
+        }
+
+        public static Task StartRecoveryIfNeededAsync(bool isAfterCompile, CancellationToken cancellationToken)
+        {
+            return ServiceValue.StartRecoveryIfNeededAsync(isAfterCompile, cancellationToken);
+        }
+
+        internal static string CreateOptionalServerStartingLock(Func<string> createLockFile = null)
+        {
+            return ServiceValue.CreateOptionalServerStartingLock(createLockFile);
         }
     }
 
