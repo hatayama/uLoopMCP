@@ -12,52 +12,52 @@ using UnityEngine.InputSystem.LowLevel;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    [InitializeOnLoad]
-    internal static class InputReplayer
+    internal sealed class InputReplayerService
     {
-        private static readonly Dictionary<string, Key> _keyLookup = BuildKeyLookup();
-        private static readonly Key[] _allKeys = BuildAllKeys();
-        private static readonly Dictionary<string, MouseButton> _buttonLookup = new(StringComparer.OrdinalIgnoreCase)
+        private readonly Dictionary<string, Key> _keyLookup = BuildKeyLookup();
+        private readonly Key[] _allKeys = BuildAllKeys();
+        private readonly Dictionary<string, MouseButton> _buttonLookup =
+            new Dictionary<string, MouseButton>(StringComparer.OrdinalIgnoreCase)
         {
             { "Left", MouseButton.Left },
             { "Right", MouseButton.Right },
             { "Middle", MouseButton.Middle }
         };
-        private static readonly Key[] _emptyKeys = Array.Empty<Key>();
-        private static readonly MouseButton[] _emptyButtons = Array.Empty<MouseButton>();
+        private readonly Key[] _emptyKeys = Array.Empty<Key>();
+        private readonly MouseButton[] _emptyButtons = Array.Empty<MouseButton>();
 
-        private static bool _isReplaying;
-        private static InputRecordingData? _data;
-        private static int _eventIndex;
-        private static int _currentFrame;
-        private static bool _loop;
-        private static bool _showOverlay;
-        private static readonly HashSet<Key> _replayHeldKeys = new();
-        private static readonly HashSet<MouseButton> _replayHeldButtons = new();
-        private static readonly List<BaseInputModule> _disabledInputModules = new();
-        private static Vector2? _replayMousePosition;
+        private bool _isReplaying;
+        private InputRecordingData? _data;
+        private int _eventIndex;
+        private int _currentFrame;
+        private bool _loop;
+        private bool _showOverlay;
+        private readonly HashSet<Key> _replayHeldKeys = new HashSet<Key>();
+        private readonly HashSet<MouseButton> _replayHeldButtons = new HashSet<MouseButton>();
+        private readonly List<BaseInputModule> _disabledInputModules = new List<BaseInputModule>();
+        private Vector2? _replayMousePosition;
 
         // UI replay goes through ExecuteEvents so verification does not depend on
         // GameView focus or the active input module's update timing.
-        private static bool _hasMousePosition;
-        private static bool _prevLeftButtonHeld;
-        private static Vector2? _previousReplayMousePosition;
-        private static bool _suppressIdleUiOverlay;
-        private static PointerEventData? _pointerData;
-        private static GameObject? _currentPressTarget;
-        private static GameObject? _currentDragTarget;
-        private static bool _isDragging;
-        private static Vector2 _pressScreenPosition;
-        private static float _pressTime;
+        private bool _hasMousePosition;
+        private bool _prevLeftButtonHeld;
+        private Vector2? _previousReplayMousePosition;
+        private bool _suppressIdleUiOverlay;
+        private PointerEventData? _pointerData;
+        private GameObject? _currentPressTarget;
+        private GameObject? _currentDragTarget;
+        private bool _isDragging;
+        private Vector2 _pressScreenPosition;
+        private float _pressTime;
 
-        public static event Action? ReplayStarted;
-        public static event Action? ReplayCompleted;
+        public event Action? ReplayStarted;
+        public event Action? ReplayCompleted;
 
-        public static bool IsReplaying => _isReplaying;
-        public static int CurrentFrame => _currentFrame;
-        public static int TotalFrames => _data?.Metadata.TotalFrames ?? 0;
+        public bool IsReplaying => _isReplaying;
+        public int CurrentFrame => _currentFrame;
+        public int TotalFrames => _data?.Metadata.TotalFrames ?? 0;
 
-        public static float Progress
+        public float Progress
         {
             get
             {
@@ -66,13 +66,13 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        static InputReplayer()
+        public void RegisterPlayModeCallbacks()
         {
             EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
         }
 
-        public static void StartReplay(InputRecordingData data, bool loop, bool showOverlay)
+        public void StartReplay(InputRecordingData data, bool loop, bool showOverlay)
         {
             Debug.Assert(!_isReplaying, "Cannot start replay while already replaying");
             Debug.Assert(EditorApplication.isPlaying, "PlayMode must be active to start replay");
@@ -99,7 +99,7 @@ namespace io.github.hatayama.UnityCliLoop
             ReplayStarted?.Invoke();
         }
 
-        public static void StopReplay()
+        public void StopReplay()
         {
             if (!_isReplaying)
             {
@@ -126,7 +126,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        private static void OnAfterUpdate()
+        private void OnAfterUpdate()
         {
             if (!_isReplaying || _data == null)
             {
@@ -175,7 +175,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        private static void CollectFrameState(ref Vector2 frameDelta, ref Vector2 frameScroll)
+        private void CollectFrameState(ref Vector2 frameDelta, ref Vector2 frameScroll)
         {
             Debug.Assert(_data != null, "_data must not be null while replaying");
 
@@ -191,7 +191,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        private static void ApplyCurrentFrameSnapshot(
+        private void ApplyCurrentFrameSnapshot(
             Keyboard? keyboard,
             Mouse? mouse,
             Vector2 frameDelta,
@@ -208,7 +208,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        private static void ProcessEvent(
+        private void ProcessEvent(
             RecordedInputEvent evt,
             ref Vector2 frameDelta,
             ref Vector2 frameScroll)
@@ -239,7 +239,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        private static void ProcessKeyDown(string keyName)
+        private void ProcessKeyDown(string keyName)
         {
             if (!_keyLookup.TryGetValue(keyName, out Key key))
             {
@@ -250,7 +250,7 @@ namespace io.github.hatayama.UnityCliLoop
             SimulateKeyboardOverlayState.AddHeldKey(keyName);
         }
 
-        private static void ProcessKeyUp(string keyName)
+        private void ProcessKeyUp(string keyName)
         {
             if (!_keyLookup.TryGetValue(keyName, out Key key))
             {
@@ -261,7 +261,7 @@ namespace io.github.hatayama.UnityCliLoop
             SimulateKeyboardOverlayState.RemoveHeldKey(keyName);
         }
 
-        private static void ProcessMouseClick(string buttonName)
+        private void ProcessMouseClick(string buttonName)
         {
             if (!_buttonLookup.TryGetValue(buttonName, out MouseButton button))
             {
@@ -275,7 +275,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        private static void ProcessMouseRelease(string buttonName)
+        private void ProcessMouseRelease(string buttonName)
         {
             if (!_buttonLookup.TryGetValue(buttonName, out MouseButton button))
             {
@@ -289,7 +289,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        private static void ProcessMouseDelta(string data, ref Vector2 frameDelta)
+        private void ProcessMouseDelta(string data, ref Vector2 frameDelta)
         {
             frameDelta = InputRecorder.ParseVector2(data);
             if (!_hasMousePosition)
@@ -298,12 +298,12 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        private static void ProcessMousePosition(string data)
+        private void ProcessMousePosition(string data)
         {
             _replayMousePosition = InputRecorder.ParseVector2(data);
         }
 
-        private static void ProcessMouseScroll(string data, ref Vector2 frameScroll)
+        private void ProcessMouseScroll(string data, ref Vector2 frameScroll)
         {
             if (!float.TryParse(data, NumberStyles.Float, CultureInfo.InvariantCulture, out float scrollY))
             {
@@ -318,7 +318,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        private static void ApplyKeyboardSnapshot(Keyboard keyboard, IReadOnlyCollection<Key> heldKeys)
+        private void ApplyKeyboardSnapshot(Keyboard keyboard, IReadOnlyCollection<Key> heldKeys)
         {
             InputUpdateType updateType = InputUpdateTypeResolver.Resolve();
             using (StateEvent.From(keyboard, out InputEventPtr eventPtr))
@@ -347,7 +347,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        private static void ApplyMouseSnapshot(
+        private void ApplyMouseSnapshot(
             Mouse mouse,
             IReadOnlyCollection<MouseButton> heldButtons,
             Vector2 delta,
@@ -377,7 +377,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        private static void ReleaseAllHeldInputs()
+        private void ReleaseAllHeldInputs()
         {
             Keyboard? keyboard = Keyboard.current;
             if (keyboard != null)
@@ -443,7 +443,7 @@ namespace io.github.hatayama.UnityCliLoop
             return lookup;
         }
 
-        private static void ApplyUiEvents()
+        private void ApplyUiEvents()
         {
             if (!_replayMousePosition.HasValue)
             {
@@ -520,7 +520,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        private static void OnUiPointerDown(Vector2 screenPos, EventSystem eventSystem)
+        private void OnUiPointerDown(Vector2 screenPos, EventSystem eventSystem)
         {
             RaycastResult? hit = UiRaycastHelper.RaycastUI(screenPos, eventSystem);
 
@@ -562,7 +562,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        private static void OnUiDrag(Vector2 screenPos)
+        private void OnUiDrag(Vector2 screenPos)
         {
             if (_pointerData == null)
             {
@@ -596,7 +596,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        private static void OnUiPointerUp(Vector2 screenPos, EventSystem eventSystem)
+        private void OnUiPointerUp(Vector2 screenPos, EventSystem eventSystem)
         {
             if (_pointerData == null)
             {
@@ -658,7 +658,7 @@ namespace io.github.hatayama.UnityCliLoop
             return false;
         }
 
-        private static void SetUiInputModulesSuppressed(bool suppressed)
+        private void SetUiInputModulesSuppressed(bool suppressed)
         {
             if (!suppressed)
             {
@@ -688,7 +688,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        private static void RestoreUiInputModules()
+        private void RestoreUiInputModules()
         {
             for (int i = 0; i < _disabledInputModules.Count; i++)
             {
@@ -702,7 +702,7 @@ namespace io.github.hatayama.UnityCliLoop
             _disabledInputModules.Clear();
         }
 
-        private static void ResetUiReplayState()
+        private void ResetUiReplayState()
         {
             _replayMousePosition = null;
             _previousReplayMousePosition = null;
@@ -715,12 +715,50 @@ namespace io.github.hatayama.UnityCliLoop
             _pressTime = 0f;
         }
 
-        private static void OnPlayModeStateChanged(PlayModeStateChange state)
+        private void OnPlayModeStateChanged(PlayModeStateChange state)
         {
             if (state == PlayModeStateChange.ExitingPlayMode)
             {
                 StopReplay();
             }
+        }
+    }
+
+    [InitializeOnLoad]
+    internal static class InputReplayer
+    {
+        private static readonly InputReplayerService ServiceValue = new InputReplayerService();
+
+        static InputReplayer()
+        {
+            ServiceValue.RegisterPlayModeCallbacks();
+        }
+
+        public static event Action? ReplayStarted
+        {
+            add => ServiceValue.ReplayStarted += value;
+            remove => ServiceValue.ReplayStarted -= value;
+        }
+
+        public static event Action? ReplayCompleted
+        {
+            add => ServiceValue.ReplayCompleted += value;
+            remove => ServiceValue.ReplayCompleted -= value;
+        }
+
+        public static bool IsReplaying => ServiceValue.IsReplaying;
+        public static int CurrentFrame => ServiceValue.CurrentFrame;
+        public static int TotalFrames => ServiceValue.TotalFrames;
+        public static float Progress => ServiceValue.Progress;
+
+        public static void StartReplay(InputRecordingData data, bool loop, bool showOverlay)
+        {
+            ServiceValue.StartReplay(data, loop, showOverlay);
+        }
+
+        public static void StopReplay()
+        {
+            ServiceValue.StopReplay();
         }
     }
 }
