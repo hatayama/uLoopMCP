@@ -2,19 +2,16 @@ using System;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    /// <summary>
-    /// Application-side factory slot for host services supplied by the composition root.
-    /// </summary>
-    internal static class UnityCliLoopToolHostServicesProvider
+    internal sealed class UnityCliLoopToolHostServicesFactoryRegistry
     {
-        private static Func<IUnityCliLoopToolHostServices> _factory;
+        private Func<IUnityCliLoopToolHostServices> _factory;
 
-        public static void RegisterFactory(Func<IUnityCliLoopToolHostServices> factory)
+        public void RegisterFactory(Func<IUnityCliLoopToolHostServices> factory)
         {
             _factory = factory ?? throw new ArgumentNullException(nameof(factory));
         }
 
-        public static IUnityCliLoopToolHostServices Create()
+        public IUnityCliLoopToolHostServices Create()
         {
             if (_factory == null)
             {
@@ -22,6 +19,25 @@ namespace io.github.hatayama.UnityCliLoop
             }
 
             return _factory();
+        }
+    }
+
+    /// <summary>
+    /// Application-side factory slot for host services supplied by the composition root.
+    /// </summary>
+    internal static class UnityCliLoopToolHostServicesProvider
+    {
+        private static readonly UnityCliLoopToolHostServicesFactoryRegistry RegistryValue =
+            new UnityCliLoopToolHostServicesFactoryRegistry();
+
+        public static void RegisterFactory(Func<IUnityCliLoopToolHostServices> factory)
+        {
+            RegistryValue.RegisterFactory(factory);
+        }
+
+        public static IUnityCliLoopToolHostServices Create()
+        {
+            return RegistryValue.Create();
         }
     }
 }

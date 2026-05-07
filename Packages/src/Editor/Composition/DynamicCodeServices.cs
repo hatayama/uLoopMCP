@@ -5,63 +5,67 @@ using io.github.hatayama.UnityCliLoop.Factory;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    internal static class DynamicCodeServices
+    internal sealed class DynamicCodeServicesRegistry
     {
-        private static readonly object ServerScopedServicesLock = new();
-        private static TimeSpan s_serverScopedDrainTimeout = TimeSpan.FromSeconds(5);
-        private static Task _serverScopedDrainTask = Task.CompletedTask;
-        private static CancellationTokenSource _serverScopedLifetimeCancellationTokenSource;
-        private static IDynamicCodeExecutorPool _executorPool;
-        private static IDynamicCodeExecutionRuntime _runtimeFacade;
-        private static IPrewarmDynamicCodeUseCase _prewarmDynamicCodeUseCase;
+        private readonly object _serverScopedServicesLock = new();
+        private TimeSpan _serverScopedDrainTimeout = TimeSpan.FromSeconds(5);
+        private Task _serverScopedDrainTask = Task.CompletedTask;
+        private CancellationTokenSource _serverScopedLifetimeCancellationTokenSource;
+        private IDynamicCodeExecutorPool _executorPool;
+        private IDynamicCodeExecutionRuntime _runtimeFacade;
+        private IPrewarmDynamicCodeUseCase _prewarmDynamicCodeUseCase;
 
-        private static readonly Lazy<IDynamicCodeSourcePreparationService> SourcePreparationServiceValue =
+        private readonly Lazy<IDynamicCodeSourcePreparationService> _sourcePreparationServiceValue =
             new Lazy<IDynamicCodeSourcePreparationService>(
                 DynamicCompilationRuntimeServicesRegistry.CreateSourcePreparationService);
 
-        private static readonly Lazy<ICompiledAssemblyBuilder> AssemblyBuilderValue =
+        private readonly Lazy<ICompiledAssemblyBuilder> _assemblyBuilderValue =
             new Lazy<ICompiledAssemblyBuilder>(
                 DynamicCompilationRuntimeServicesRegistry.CreateAssemblyBuilder);
 
-        public static IDynamicCodeSourcePreparationService SourcePreparationService => SourcePreparationServiceValue.Value;
+        public IDynamicCodeSourcePreparationService SourcePreparationService => _sourcePreparationServiceValue.Value;
 
-        public static ICompiledAssemblyBuilder AssemblyBuilder => AssemblyBuilderValue.Value;
+        public ICompiledAssemblyBuilder AssemblyBuilder => _assemblyBuilderValue.Value;
 
-        public static CompiledCommandEntryPointResolver CommandEntryPointResolver { get; } =
+        public CompiledCommandEntryPointResolver CommandEntryPointResolver { get; } =
             new CompiledCommandEntryPointResolver();
 
-        private static readonly Lazy<RegistryDynamicCodeExecutorFactory> ExecutorFactoryValue =
-            new Lazy<RegistryDynamicCodeExecutorFactory>(
+        private readonly Lazy<RegistryDynamicCodeExecutorFactory> _executorFactoryValue;
+
+        public DynamicCodeServicesRegistry()
+        {
+            _executorFactoryValue = new Lazy<RegistryDynamicCodeExecutorFactory>(
                 () => new RegistryDynamicCodeExecutorFactory(
                     SourcePreparationService,
                     CommandEntryPointResolver));
+        }
 
-        public static RegistryDynamicCodeExecutorFactory ExecutorFactory => ExecutorFactoryValue.Value;
+        public RegistryDynamicCodeExecutorFactory ExecutorFactory => _executorFactoryValue.Value;
 
-        public static async Task<IExecuteDynamicCodeUseCase> GetExecuteDynamicCodeUseCaseAsync()
+        public async Task<IExecuteDynamicCodeUseCase> GetExecuteDynamicCodeUseCaseAsync()
         {
             IDynamicCodeExecutionRuntime runtimeFacade = await GetRuntimeFacadeAsync();
             return new ExecuteDynamicCodeUseCase(runtimeFacade);
         }
 
-        public static async Task<IPrewarmDynamicCodeUseCase> GetPrewarmDynamicCodeUseCaseAsync(
+        public async Task<IPrewarmDynamicCodeUseCase> GetPrewarmDynamicCodeUseCaseAsync(
             string serverStartingLockToken = null)
         {
             await EnsureServerScopedServicesInitializedAsync(serverStartingLockToken);
 
-            lock (ServerScopedServicesLock)
+            lock (_serverScopedServicesLock)
             {
                 return _prewarmDynamicCodeUseCase;
             }
         }
 
-        public static void ResetServerScopedServices()
+        public void ResetServerScopedServices()
         {
             CancellationTokenSource lifetimeCancellationTokenSource;
             IDynamicCodeExecutionRuntime runtimeFacade;
             Task shutdownTask;
 
-            lock (ServerScopedServicesLock)
+            lock (_serverScopedServicesLock)
             {
                 lifetimeCancellationTokenSource = _serverScopedLifetimeCancellationTokenSource;
                 runtimeFacade = _runtimeFacade;
@@ -76,22 +80,22 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        private static async Task<IDynamicCodeExecutionRuntime> GetRuntimeFacadeAsync()
+        private async Task<IDynamicCodeExecutionRuntime> GetRuntimeFacadeAsync()
         {
             await EnsureServerScopedServicesInitializedAsync();
 
-            lock (ServerScopedServicesLock)
+            lock (_serverScopedServicesLock)
             {
                 return _runtimeFacade;
             }
         }
 
-        private static async Task EnsureServerScopedServicesInitializedAsync(
+        private async Task EnsureServerScopedServicesInitializedAsync(
             string serverStartingLockToken = null)
         {
             Task drainTask;
 
-            lock (ServerScopedServicesLock)
+            lock (_serverScopedServicesLock)
             {
                 if (_runtimeFacade != null)
                 {
@@ -104,7 +108,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             await AwaitDrainTaskAsync(drainTask);
 
-            lock (ServerScopedServicesLock)
+            lock (_serverScopedServicesLock)
             {
                 if (_runtimeFacade != null)
                 {
@@ -125,7 +129,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        private static void AttachServerStartingLockTokenIfNeeded(string serverStartingLockToken)
+        private void AttachServerStartingLockTokenIfNeeded(string serverStartingLockToken)
         {
             if (string.IsNullOrEmpty(serverStartingLockToken))
             {
@@ -138,7 +142,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        private static Task CreateShutdownTask(
+        private Task CreateShutdownTask(
             CancellationTokenSource lifetimeCancellationTokenSource,
             IDynamicCodeExecutionRuntime runtimeFacade)
         {
@@ -150,7 +154,7 @@ namespace io.github.hatayama.UnityCliLoop
             return ShutdownServerScopedServicesAsync(lifetimeCancellationTokenSource, runtimeFacade);
         }
 
-        private static Task ChainDrainTask(Task currentDrainTask, Task nextDrainTask)
+        private Task ChainDrainTask(Task currentDrainTask, Task nextDrainTask)
         {
             Task observedCurrentDrainTask = CreateObservedDrainTask(
                 currentDrainTask,
@@ -211,7 +215,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        internal static async Task AwaitDrainTaskAsync(Task drainTask)
+        internal async Task AwaitDrainTaskAsync(Task drainTask)
         {
             if (drainTask == null)
             {
@@ -224,7 +228,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return;
             }
 
-            TimeSpan timeout = s_serverScopedDrainTimeout;
+            TimeSpan timeout = _serverScopedDrainTimeout;
             UnityEngine.Debug.Assert(timeout > TimeSpan.Zero, "server-scoped drain timeout must be positive");
 
             Task completedTask = await Task.WhenAny(drainTask, Task.Delay(timeout));
@@ -262,22 +266,22 @@ namespace io.github.hatayama.UnityCliLoop
             lifetimeCancellationTokenSource?.Dispose();
         }
 
-        internal static TimeSpan SwapDrainTimeoutForTests(TimeSpan timeout)
+        internal TimeSpan SwapDrainTimeoutForTests(TimeSpan timeout)
         {
             UnityEngine.Debug.Assert(timeout > TimeSpan.Zero, "timeout must be positive");
 
-            TimeSpan previous = s_serverScopedDrainTimeout;
-            s_serverScopedDrainTimeout = timeout;
+            TimeSpan previous = _serverScopedDrainTimeout;
+            _serverScopedDrainTimeout = timeout;
             return previous;
         }
 
-        internal static void SetServerScopedServicesForTests(
+        internal void SetServerScopedServicesForTests(
             CancellationTokenSource lifetimeCancellationTokenSource,
             IDynamicCodeExecutorPool executorPool,
             IDynamicCodeExecutionRuntime runtimeFacade,
             IPrewarmDynamicCodeUseCase prewarmDynamicCodeUseCase)
         {
-            lock (ServerScopedServicesLock)
+            lock (_serverScopedServicesLock)
             {
                 _serverScopedLifetimeCancellationTokenSource = lifetimeCancellationTokenSource;
                 _executorPool = executorPool;
@@ -286,17 +290,17 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        internal static Task GetServerScopedDrainTaskForTests()
+        internal Task GetServerScopedDrainTaskForTests()
         {
-            lock (ServerScopedServicesLock)
+            lock (_serverScopedServicesLock)
             {
                 return _serverScopedDrainTask;
             }
         }
 
-        internal static void ResetStateForTests()
+        internal void ResetStateForTests()
         {
-            lock (ServerScopedServicesLock)
+            lock (_serverScopedServicesLock)
             {
                 _serverScopedLifetimeCancellationTokenSource = null;
                 _executorPool = null;
@@ -304,6 +308,81 @@ namespace io.github.hatayama.UnityCliLoop
                 _prewarmDynamicCodeUseCase = null;
                 _serverScopedDrainTask = Task.CompletedTask;
             }
+        }
+    }
+
+    internal static class DynamicCodeServices
+    {
+        private static readonly DynamicCodeServicesRegistry RegistryValue =
+            new DynamicCodeServicesRegistry();
+
+        public static IDynamicCodeSourcePreparationService SourcePreparationService
+        {
+            get { return RegistryValue.SourcePreparationService; }
+        }
+
+        public static ICompiledAssemblyBuilder AssemblyBuilder
+        {
+            get { return RegistryValue.AssemblyBuilder; }
+        }
+
+        public static CompiledCommandEntryPointResolver CommandEntryPointResolver
+        {
+            get { return RegistryValue.CommandEntryPointResolver; }
+        }
+
+        public static RegistryDynamicCodeExecutorFactory ExecutorFactory
+        {
+            get { return RegistryValue.ExecutorFactory; }
+        }
+
+        public static Task<IExecuteDynamicCodeUseCase> GetExecuteDynamicCodeUseCaseAsync()
+        {
+            return RegistryValue.GetExecuteDynamicCodeUseCaseAsync();
+        }
+
+        public static Task<IPrewarmDynamicCodeUseCase> GetPrewarmDynamicCodeUseCaseAsync(
+            string serverStartingLockToken = null)
+        {
+            return RegistryValue.GetPrewarmDynamicCodeUseCaseAsync(serverStartingLockToken);
+        }
+
+        public static void ResetServerScopedServices()
+        {
+            RegistryValue.ResetServerScopedServices();
+        }
+
+        internal static Task AwaitDrainTaskAsync(Task drainTask)
+        {
+            return RegistryValue.AwaitDrainTaskAsync(drainTask);
+        }
+
+        internal static TimeSpan SwapDrainTimeoutForTests(TimeSpan timeout)
+        {
+            return RegistryValue.SwapDrainTimeoutForTests(timeout);
+        }
+
+        internal static void SetServerScopedServicesForTests(
+            CancellationTokenSource lifetimeCancellationTokenSource,
+            IDynamicCodeExecutorPool executorPool,
+            IDynamicCodeExecutionRuntime runtimeFacade,
+            IPrewarmDynamicCodeUseCase prewarmDynamicCodeUseCase)
+        {
+            RegistryValue.SetServerScopedServicesForTests(
+                lifetimeCancellationTokenSource,
+                executorPool,
+                runtimeFacade,
+                prewarmDynamicCodeUseCase);
+        }
+
+        internal static Task GetServerScopedDrainTaskForTests()
+        {
+            return RegistryValue.GetServerScopedDrainTaskForTests();
+        }
+
+        internal static void ResetStateForTests()
+        {
+            RegistryValue.ResetStateForTests();
         }
     }
 }
