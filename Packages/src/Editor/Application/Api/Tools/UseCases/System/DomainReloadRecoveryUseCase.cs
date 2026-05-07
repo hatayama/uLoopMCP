@@ -104,9 +104,6 @@ namespace io.github.hatayama.UnityCliLoop
                 return Task.FromResult(ServiceResult<string>.FailureResult($"Server restoration failed: {restoreResult.ErrorMessage}"));
             }
 
-            // 5. Process pending compile requests (currently disabled)
-            ProcessPendingCompileRequests(correlationId);
-
             return Task.FromResult(ServiceResult<string>.SuccessResult(correlationId));
         }
 
@@ -146,35 +143,5 @@ namespace io.github.hatayama.UnityCliLoop
             );
         }
 
-        /// <summary>
-        /// Process pending compile requests
-        /// Note: Currently disabled by feature flag (to avoid main thread errors)
-        /// </summary>
-        /// <param name="correlationId">Correlation ID for tracking related operations</param>
-        private void ProcessPendingCompileRequests(string correlationId)
-        {
-            // Feature flag control - currently disabled, can be enabled via editor settings in the future
-            // TODO: Add UnityCliLoopEditorSettings.GetEnablePendingCompileProcessing() when needed
-            bool enablePendingCompileProcessing = false;
-            
-            if (enablePendingCompileProcessing)
-            {
-                // Planned to be enabled after main thread issue resolution
-                // CompileSessionState.StartForcedRecompile();
-                VibeLogger.LogInfo(
-                    "pending_compile_processing", 
-                    "Processing pending compile requests", 
-                    correlationId: correlationId
-                );
-            }
-            else
-            {
-                VibeLogger.LogInfo(
-                    "pending_compile_processing_disabled", 
-                    "Pending compile request processing is disabled via feature flag", 
-                    correlationId: correlationId
-                );
-            }
-        }
     }
 }
