@@ -11,22 +11,6 @@ namespace io.github.hatayama.UnityCliLoop.ToolContracts
 
         public const int INTERNAL_ERROR_CODE = -32603;
 
-        public const string UNKNOWN_CLIENT_ENDPOINT = "Unknown";
-
-        public const string DEFAULT_LOG_TYPE = "All";
-
-        public const int DEFAULT_MAX_LOG_COUNT = 100;
-
-        public const string DEFAULT_SEARCH_TEXT = "";
-
-        public const bool DEFAULT_INCLUDE_STACK_TRACE = true;
-
-        public const int DEFAULT_LINE_NUMBER = 0;
-
-        public const string TIMESTAMP_FORMAT = "yyyy-MM-dd HH:mm:ss";
-
-        public const string ISO_DATETIME_FORMAT = "yyyy-MM-ddTHH:mm:ss.fffZ";
-
         // JSON payloads are already bounded by the command lifecycle; the serializer depth limit is disabled to avoid false failures on nested Unity data.
         public const int DEFAULT_JSON_MAX_DEPTH = int.MaxValue;
     }

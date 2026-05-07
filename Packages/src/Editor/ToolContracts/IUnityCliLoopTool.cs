@@ -5,20 +5,6 @@ using System.Collections.Generic;
 namespace io.github.hatayama.UnityCliLoop.ToolContracts
 {
     /// <summary>
-    /// Constants for parameter schema property names
-    /// Ensures consistency between Unity and client sides
-    /// </summary>
-    public static class ParameterSchemaConstants
-    {
-        public const string TYPE_PROPERTY = "Type";
-        public const string DESCRIPTION_PROPERTY = "Description";
-        public const string DEFAULT_VALUE_PROPERTY = "DefaultValue";
-        public const string ENUM_PROPERTY = "Enum";
-        public const string PROPERTIES_PROPERTY = "Properties";
-        public const string REQUIRED_PROPERTY = "Required";
-    }
-
-    /// <summary>
     /// Base interface for Unity CLI tool handlers.
     /// Following the Open-Closed principle, when adding new tools,
     /// create a new class that implements this interface
