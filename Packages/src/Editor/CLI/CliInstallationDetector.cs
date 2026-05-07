@@ -333,84 +333,89 @@ namespace io.github.hatayama.UnityCliLoop
     }
 
     /// <summary>
-    /// Holds shared editor setup services until editor windows receive services from the composition root.
-    /// </summary>
-    internal static class CliSetupApplicationServices
-    {
-        private static readonly CliSetupApplicationService ServiceValue =
-            new CliSetupApplicationService(new CliInstallationDetector());
-
-        public static CliSetupApplicationService Service
-        {
-            get { return ServiceValue; }
-        }
-    }
-
-    /// <summary>
     /// Compatibility facade for editor setup UI workflows.
     /// </summary>
     public static class CliSetupApplicationFacade
     {
+        private static CliSetupApplicationService ServiceValue;
+
+        internal static void RegisterService(CliSetupApplicationService service)
+        {
+            UnityEngine.Debug.Assert(service != null, "service must not be null");
+
+            ServiceValue = service ?? throw new ArgumentNullException(nameof(service));
+        }
+
+        private static CliSetupApplicationService GetService()
+        {
+            if (ServiceValue == null)
+            {
+                throw new InvalidOperationException("Unity CLI Loop CLI setup service is not registered.");
+            }
+
+            return ServiceValue;
+        }
+
         public static bool IsCliCheckCompleted()
         {
-            return CliSetupApplicationServices.Service.IsCliCheckCompleted();
+            return GetService().IsCliCheckCompleted();
         }
 
         public static bool IsCliInstalled()
         {
-            return CliSetupApplicationServices.Service.IsCliInstalled();
+            return GetService().IsCliInstalled();
         }
 
         public static string GetCachedCliVersion()
         {
-            return CliSetupApplicationServices.Service.GetCachedCliVersion();
+            return GetService().GetCachedCliVersion();
         }
 
         public static string GetCachedCliExecutablePath()
         {
-            return CliSetupApplicationServices.Service.GetCachedCliExecutablePath();
+            return GetService().GetCachedCliExecutablePath();
         }
 
         public static Task RefreshCliVersionAsync(CancellationToken ct)
         {
-            return CliSetupApplicationServices.Service.RefreshCliVersionAsync(ct);
+            return GetService().RefreshCliVersionAsync(ct);
         }
 
         public static Task ForceRefreshCliVersionAsync(CancellationToken ct)
         {
-            return CliSetupApplicationServices.Service.ForceRefreshCliVersionAsync(ct);
+            return GetService().ForceRefreshCliVersionAsync(ct);
         }
 
         public static void InvalidateCliCache()
         {
-            CliSetupApplicationServices.Service.InvalidateCliCache();
+            GetService().InvalidateCliCache();
         }
 
         public static string GetRequiredDispatcherVersion(string packageVersion)
         {
-            return CliSetupApplicationServices.Service.GetRequiredDispatcherVersion(packageVersion);
+            return GetService().GetRequiredDispatcherVersion(packageVersion);
         }
 
         public static CliInstallResult EnsureProjectLocalCliCurrent(string projectRoot, string packageVersion)
         {
-            return CliSetupApplicationServices.Service.EnsureProjectLocalCliCurrent(projectRoot, packageVersion);
+            return GetService().EnsureProjectLocalCliCurrent(projectRoot, packageVersion);
         }
 
         public static bool IsPackageOwnedCurrentUserInstallPath(
             string cliExecutablePath,
             RuntimePlatform platform)
         {
-            return CliSetupApplicationServices.Service.IsPackageOwnedCurrentUserInstallPath(cliExecutablePath, platform);
+            return GetService().IsPackageOwnedCurrentUserInstallPath(cliExecutablePath, platform);
         }
 
         public static bool IsCliVersionLessThan(string leftVersion, string rightVersion)
         {
-            return CliSetupApplicationServices.Service.IsCliVersionLessThan(leftVersion, rightVersion);
+            return GetService().IsCliVersionLessThan(leftVersion, rightVersion);
         }
 
         public static bool IsCliVersionGreaterThanOrEqual(string leftVersion, string rightVersion)
         {
-            return CliSetupApplicationServices.Service.IsCliVersionGreaterThanOrEqual(leftVersion, rightVersion);
+            return GetService().IsCliVersionGreaterThanOrEqual(leftVersion, rightVersion);
         }
 
         public static Task<CliInstallResult> InstallGlobalCliAsync(
@@ -418,12 +423,12 @@ namespace io.github.hatayama.UnityCliLoop
             string packageVersion,
             CancellationToken ct)
         {
-            return CliSetupApplicationServices.Service.InstallGlobalCliAsync(platform, packageVersion, ct);
+            return GetService().InstallGlobalCliAsync(platform, packageVersion, ct);
         }
 
         public static Task<CliInstallResult> UninstallGlobalCliAsync(RuntimePlatform platform, CancellationToken ct)
         {
-            return CliSetupApplicationServices.Service.UninstallGlobalCliAsync(platform, ct);
+            return GetService().UninstallGlobalCliAsync(platform, ct);
         }
 
         public static NativeCliInstallCommand GetGlobalCliInstallCommand(
@@ -431,7 +436,7 @@ namespace io.github.hatayama.UnityCliLoop
             string packageVersion,
             bool removeLegacyLaunchers)
         {
-            return CliSetupApplicationServices.Service.GetGlobalCliInstallCommand(platform, packageVersion, removeLegacyLaunchers);
+            return GetService().GetGlobalCliInstallCommand(platform, packageVersion, removeLegacyLaunchers);
         }
     }
 
