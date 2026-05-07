@@ -197,6 +197,15 @@
 - Keep `Presentation` and `Infrastructure` as sibling outer layers that do not reference each other.
 - Keep `CompositionRoot.Editor` as the only assembly that references all layers and first-party tools for DI wiring and registration.
 - Keep `FirstPartyTools.Editor` as an outer plugin assembly that references only `ToolContracts`.
+- Move editor/runtime session state out of static facades and into instance services where the state has a lifecycle:
+  - CLI setup and skill installation detection
+  - tool, ULoop, and editor settings repositories
+  - tool registrar and host-service provider registries
+  - dynamic-code server-scoped services and startup telemetry
+  - server controller, server factory, and lifecycle registries
+  - editor delay scheduling and main-thread continuation scheduling
+  - input recording, replay, simulation, overlay, and VibeLogger state
+- Keep static entrypoints only where Unity callbacks, current public API, or generated skill compatibility still require a static surface; those entrypoints delegate to instance services.
 
 ## Follow-up Opportunities
 
@@ -230,7 +239,9 @@
   - `CompositionRoot.Editor` is the only assembly that can reference all layers and first-party tools.
 - Add contract tests for `[UnityCliLoopTool]` and `UnityCliLoopTool<TSchema, TResponse>` registration and execution.
 - Add first-party parity coverage showing `GetLogs` and a Hello World style tool use the same catalog and execution path.
-- Run `unicli exec Compile --json` after C# changes and confirm there are no errors or warnings.
+- Add source-level guard coverage so migrated static facades do not regain direct mutable static fields.
+- Run `uloop compile` after C# changes and confirm there are no errors or warnings.
+- Run focused EditMode and PlayMode suites around onion boundaries, static facade state, server startup protection, input replay, and input simulation.
 
 ## Assumptions
 
