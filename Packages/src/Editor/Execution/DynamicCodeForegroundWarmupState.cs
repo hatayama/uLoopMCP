@@ -1,13 +1,13 @@
 namespace io.github.hatayama.UnityCliLoop
 {
-    internal static class DynamicCodeForegroundWarmupState
+    internal sealed class DynamicCodeForegroundWarmupStateService
     {
-        private static readonly object SyncRoot = new();
-        private static ForegroundWarmupStatus _status = ForegroundWarmupStatus.Pending;
+        private readonly object _syncRoot = new();
+        private ForegroundWarmupStatus _status = ForegroundWarmupStatus.Pending;
 
-        internal static bool TryBegin()
+        internal bool TryBegin()
         {
-            lock (SyncRoot)
+            lock (_syncRoot)
             {
                 if (_status != ForegroundWarmupStatus.Pending)
                 {
@@ -19,9 +19,9 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        internal static void MarkCompleted()
+        internal void MarkCompleted()
         {
-            lock (SyncRoot)
+            lock (_syncRoot)
             {
                 if (_status == ForegroundWarmupStatus.Completed)
                 {
@@ -35,9 +35,9 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        internal static void MarkCompletedByBackgroundWarmup()
+        internal void MarkCompletedByBackgroundWarmup()
         {
-            lock (SyncRoot)
+            lock (_syncRoot)
             {
                 // Why: startup and recovery already run their own hidden prewarm before users see the
                 // first foreground request, so that successful background path should satisfy the
@@ -49,9 +49,9 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        internal static void MarkCompletedByForegroundExecution()
+        internal void MarkCompletedByForegroundExecution()
         {
-            lock (SyncRoot)
+            lock (_syncRoot)
             {
                 // Why: a real foreground execution succeeding after a transient hidden-warmup miss
                 // proves the user-visible path is already usable for the next request.
@@ -61,9 +61,9 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        internal static void ResetAfterIncompleteAttempt()
+        internal void ResetAfterIncompleteAttempt()
         {
-            lock (SyncRoot)
+            lock (_syncRoot)
             {
                 // Why: a failed hidden warmup leaves the next foreground execution cold, so the next
                 // request still needs one more chance to pay that startup tax before users do.
@@ -78,9 +78,9 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        internal static void Reset()
+        internal void Reset()
         {
-            lock (SyncRoot)
+            lock (_syncRoot)
             {
                 _status = ForegroundWarmupStatus.Pending;
             }
@@ -91,6 +91,42 @@ namespace io.github.hatayama.UnityCliLoop
             Pending,
             Running,
             Completed
+        }
+    }
+
+    internal static class DynamicCodeForegroundWarmupState
+    {
+        private static readonly DynamicCodeForegroundWarmupStateService ServiceValue =
+            new DynamicCodeForegroundWarmupStateService();
+
+        internal static bool TryBegin()
+        {
+            return ServiceValue.TryBegin();
+        }
+
+        internal static void MarkCompleted()
+        {
+            ServiceValue.MarkCompleted();
+        }
+
+        internal static void MarkCompletedByBackgroundWarmup()
+        {
+            ServiceValue.MarkCompletedByBackgroundWarmup();
+        }
+
+        internal static void MarkCompletedByForegroundExecution()
+        {
+            ServiceValue.MarkCompletedByForegroundExecution();
+        }
+
+        internal static void ResetAfterIncompleteAttempt()
+        {
+            ServiceValue.ResetAfterIncompleteAttempt();
+        }
+
+        internal static void Reset()
+        {
+            ServiceValue.Reset();
         }
     }
 }

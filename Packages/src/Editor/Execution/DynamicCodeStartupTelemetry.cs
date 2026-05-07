@@ -3,20 +3,20 @@ using System.Diagnostics;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    internal static class DynamicCodeStartupTelemetry
+    internal sealed class DynamicCodeStartupTelemetryService
     {
-        private static readonly object SyncRoot = new();
+        private readonly object _syncRoot = new();
 
-        private static long _serverReadyTimestamp;
-        private static long _prewarmStateTimestamp;
-        private static long _prewarmStartedTimestamp;
-        private static long _prewarmFinishedTimestamp;
-        private static string _prewarmState = "NotRequested";
-        private static string _prewarmDetail = string.Empty;
+        private long _serverReadyTimestamp;
+        private long _prewarmStateTimestamp;
+        private long _prewarmStartedTimestamp;
+        private long _prewarmFinishedTimestamp;
+        private string _prewarmState = "NotRequested";
+        private string _prewarmDetail = string.Empty;
 
-        public static void MarkServerReady()
+        public void MarkServerReady()
         {
-            lock (SyncRoot)
+            lock (_syncRoot)
             {
                 _serverReadyTimestamp = Stopwatch.GetTimestamp();
                 _prewarmStateTimestamp = 0;
@@ -27,14 +27,14 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        public static void MarkPrewarmQueued()
+        public void MarkPrewarmQueued()
         {
             UpdatePrewarmState("Queued", string.Empty, false);
         }
 
-        public static void MarkPrewarmStarted()
+        public void MarkPrewarmStarted()
         {
-            lock (SyncRoot)
+            lock (_syncRoot)
             {
                 _prewarmStartedTimestamp = Stopwatch.GetTimestamp();
             }
@@ -42,27 +42,27 @@ namespace io.github.hatayama.UnityCliLoop
             UpdatePrewarmState("Running", string.Empty, false);
         }
 
-        public static void MarkPrewarmCompleted()
+        public void MarkPrewarmCompleted()
         {
             UpdatePrewarmState("Completed", string.Empty, true);
         }
 
-        public static void MarkPrewarmSkipped(string detail)
+        public void MarkPrewarmSkipped(string detail)
         {
             UpdatePrewarmState("Skipped", detail, true);
         }
 
-        public static void MarkPrewarmYielded(string detail)
+        public void MarkPrewarmYielded(string detail)
         {
             UpdatePrewarmState("Yielded", detail, true);
         }
 
-        public static void MarkPrewarmFailed(string detail)
+        public void MarkPrewarmFailed(string detail)
         {
             UpdatePrewarmState("Failed", detail, true);
         }
 
-        public static List<string> CreateTimingEntries()
+        public List<string> CreateTimingEntries()
         {
             long serverReadyTimestamp;
             long prewarmStateTimestamp;
@@ -71,7 +71,7 @@ namespace io.github.hatayama.UnityCliLoop
             string prewarmState;
             string prewarmDetail;
 
-            lock (SyncRoot)
+            lock (_syncRoot)
             {
                 serverReadyTimestamp = _serverReadyTimestamp;
                 prewarmStateTimestamp = _prewarmStateTimestamp;
@@ -108,9 +108,9 @@ namespace io.github.hatayama.UnityCliLoop
             return entries;
         }
 
-        internal static void Reset()
+        internal void Reset()
         {
-            lock (SyncRoot)
+            lock (_syncRoot)
             {
                 _serverReadyTimestamp = 0;
                 _prewarmStateTimestamp = 0;
@@ -121,9 +121,9 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        private static void UpdatePrewarmState(string state, string detail, bool terminal)
+        private void UpdatePrewarmState(string state, string detail, bool terminal)
         {
-            lock (SyncRoot)
+            lock (_syncRoot)
             {
                 _prewarmState = state;
                 _prewarmDetail = detail ?? string.Empty;
@@ -142,6 +142,57 @@ namespace io.github.hatayama.UnityCliLoop
         {
             long elapsedTicks = endTimestamp - startTimestamp;
             return elapsedTicks * 1000d / Stopwatch.Frequency;
+        }
+    }
+
+    internal static class DynamicCodeStartupTelemetry
+    {
+        private static readonly DynamicCodeStartupTelemetryService ServiceValue =
+            new DynamicCodeStartupTelemetryService();
+
+        public static void MarkServerReady()
+        {
+            ServiceValue.MarkServerReady();
+        }
+
+        public static void MarkPrewarmQueued()
+        {
+            ServiceValue.MarkPrewarmQueued();
+        }
+
+        public static void MarkPrewarmStarted()
+        {
+            ServiceValue.MarkPrewarmStarted();
+        }
+
+        public static void MarkPrewarmCompleted()
+        {
+            ServiceValue.MarkPrewarmCompleted();
+        }
+
+        public static void MarkPrewarmSkipped(string detail)
+        {
+            ServiceValue.MarkPrewarmSkipped(detail);
+        }
+
+        public static void MarkPrewarmYielded(string detail)
+        {
+            ServiceValue.MarkPrewarmYielded(detail);
+        }
+
+        public static void MarkPrewarmFailed(string detail)
+        {
+            ServiceValue.MarkPrewarmFailed(detail);
+        }
+
+        public static List<string> CreateTimingEntries()
+        {
+            return ServiceValue.CreateTimingEntries();
+        }
+
+        internal static void Reset()
+        {
+            ServiceValue.Reset();
         }
     }
 }

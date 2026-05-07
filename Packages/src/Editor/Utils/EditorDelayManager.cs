@@ -9,12 +9,11 @@ namespace io.github.hatayama.UnityCliLoop
     /// Delay processing management class for Unity Editor
     /// Driven by EditorApplication.update to manage frame-based waiting processes
     /// </summary>
-    [InitializeOnLoad]
-    public static class EditorDelayManager
+    public sealed class EditorDelayManagerService
     {
-        private static readonly List<DelayTask> delayTasks = new();
-        private static readonly object lockObject = new();
-        private static int currentFrameCount = 0;
+        private readonly List<DelayTask> _delayTasks = new();
+        private readonly object _lockObject = new();
+        private int _currentFrameCount = 0;
 
         /// <summary>
         /// Class representing a waiting task
@@ -33,11 +32,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        /// <summary>
-        /// Static constructor
-        /// Register frame processing to EditorApplication.update
-        /// </summary>
-        static EditorDelayManager()
+        public void Initialize()
         {
             EditorApplication.update += UpdateDelayTasks;
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
@@ -49,7 +44,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <param name="continuation">Process to execute after waiting completion</param>
         /// <param name="frames">Number of frames to wait</param>
         /// <param name="cancellationToken">Cancellation token</param>
-        public static void RegisterDelay(Action continuation, int frames, CancellationToken cancellationToken)
+        public void RegisterDelay(Action continuation, int frames, CancellationToken cancellationToken)
         {
             if (continuation == null)
             {
@@ -63,32 +58,32 @@ namespace io.github.hatayama.UnityCliLoop
                 return;
             }
 
-            lock (lockObject)
+            lock (_lockObject)
             {
-                delayTasks.Add(new DelayTask(continuation, frames, cancellationToken));
+                _delayTasks.Add(new DelayTask(continuation, frames, cancellationToken));
             }
         }
 
         /// <summary>
         /// Update processing for waiting tasks called every frame
         /// </summary>
-        private static void UpdateDelayTasks()
+        private void UpdateDelayTasks()
         {
             // Update frame counter
-            currentFrameCount++;
+            _currentFrameCount++;
 
-            if (delayTasks.Count == 0) return;
+            if (_delayTasks.Count == 0) return;
 
-            lock (lockObject)
+            lock (_lockObject)
             {
-                for (int i = delayTasks.Count - 1; i >= 0; i--)
+                for (int i = _delayTasks.Count - 1; i >= 0; i--)
                 {
-                    DelayTask task = delayTasks[i];
+                    DelayTask task = _delayTasks[i];
 
                     // Remove cancelled tasks by throwing exceptions
                     if (task.CancellationToken.IsCancellationRequested)
                     {
-                        delayTasks.RemoveAt(i);
+                        _delayTasks.RemoveAt(i);
                         task.Continuation.Invoke();
                         continue;
                     }
@@ -99,7 +94,7 @@ namespace io.github.hatayama.UnityCliLoop
                     // Execute and remove completed waiting tasks
                     if (task.RemainingFrames <= 0)
                     {
-                        delayTasks.RemoveAt(i);
+                        _delayTasks.RemoveAt(i);
                         task.Continuation.Invoke();
                     }
                 }
@@ -109,13 +104,13 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Get current number of waiting tasks (for debugging)
         /// </summary>
-        public static int PendingTaskCount
+        public int PendingTaskCount
         {
             get
             {
-                lock (lockObject)
+                lock (_lockObject)
                 {
-                    return delayTasks.Count;
+                    return _delayTasks.Count;
                 }
             }
         }
@@ -123,13 +118,13 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Get current frame count (for testing)
         /// </summary>
-        public static int CurrentFrameCount
+        public int CurrentFrameCount
         {
             get
             {
-                lock (lockObject)
+                lock (_lockObject)
                 {
-                    return currentFrameCount;
+                    return _currentFrameCount;
                 }
             }
         }
@@ -137,7 +132,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Event handler for PlayMode state changes
         /// </summary>
-        private static void OnPlayModeStateChanged(PlayModeStateChange state)
+        private void OnPlayModeStateChanged(PlayModeStateChange state)
         {
             if (state == PlayModeStateChange.ExitingEditMode || state == PlayModeStateChange.ExitingPlayMode)
             {
@@ -148,23 +143,59 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Reset frame counter (for testing and internal use)
         /// </summary>
-        public static void ResetFrameCount()
+        public void ResetFrameCount()
         {
-            lock (lockObject)
+            lock (_lockObject)
             {
-                currentFrameCount = 0;
+                _currentFrameCount = 0;
             }
         }
 
         /// <summary>
         /// Clear all waiting tasks (for testing)
         /// </summary>
+        public void ClearAllTasks()
+        {
+            lock (_lockObject)
+            {
+                _delayTasks.Clear();
+            }
+        }
+    }
+
+    [InitializeOnLoad]
+    public static class EditorDelayManager
+    {
+        private static readonly EditorDelayManagerService ServiceValue = new EditorDelayManagerService();
+
+        static EditorDelayManager()
+        {
+            ServiceValue.Initialize();
+        }
+
+        public static void RegisterDelay(Action continuation, int frames, CancellationToken cancellationToken)
+        {
+            ServiceValue.RegisterDelay(continuation, frames, cancellationToken);
+        }
+
+        public static int PendingTaskCount
+        {
+            get { return ServiceValue.PendingTaskCount; }
+        }
+
+        public static int CurrentFrameCount
+        {
+            get { return ServiceValue.CurrentFrameCount; }
+        }
+
+        public static void ResetFrameCount()
+        {
+            ServiceValue.ResetFrameCount();
+        }
+
         public static void ClearAllTasks()
         {
-            lock (lockObject)
-            {
-                delayTasks.Clear();
-            }
+            ServiceValue.ClearAllTasks();
         }
     }
 }
