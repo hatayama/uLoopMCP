@@ -5,6 +5,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Carries the result data produced by Compiled Assembly Load behavior.
+    /// </summary>
     public sealed class CompiledAssemblyLoadResult
     {
         public bool Success { get; }

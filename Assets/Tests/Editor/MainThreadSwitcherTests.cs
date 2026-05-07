@@ -10,6 +10,9 @@ using io.github.hatayama.UnityCliLoop.Application;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor
 {
+    /// <summary>
+    /// Test fixture that verifies Main Thread Switcher behavior.
+    /// </summary>
     public class MainThreadSwitcherTests
     {
         private int mainThreadId;

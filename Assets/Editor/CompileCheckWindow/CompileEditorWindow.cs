@@ -9,6 +9,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.Dev
 {
+    /// <summary>
+    /// Defines the Unity Editor window for Compile Editor workflows.
+    /// </summary>
     public class CompileEditorWindow : EditorWindow
     {
         private CompileController _compileController;

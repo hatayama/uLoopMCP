@@ -4,6 +4,9 @@ using UnityEngine;
 
 namespace io.github.hatayama.UnityCliLoop.Runtime
 {
+    /// <summary>
+    /// Provides Simulate Mouse UI Overlay State operations for its owning module.
+    /// </summary>
     public sealed class SimulateMouseUiOverlayStateService
     {
         public bool IsActive { get; private set; }
@@ -116,6 +119,9 @@ namespace io.github.hatayama.UnityCliLoop.Runtime
         }
     }
 
+    /// <summary>
+    /// Stores Simulate Mouse UI Overlay state shared by the owning workflow.
+    /// </summary>
     public static class SimulateMouseUiOverlayState
     {
         private static readonly SimulateMouseUiOverlayStateService ServiceValue =

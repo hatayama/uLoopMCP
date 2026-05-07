@@ -8,6 +8,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.Dev
 {
+    /// <summary>
+    /// Provides Find Game Objects Test Menu behavior for Unity CLI Loop.
+    /// </summary>
     public static class FindGameObjectsTestMenu
     {
         [MenuItem("UnityCliLoop/Debug/FindGameObjects Tests/Test Camera Search")]

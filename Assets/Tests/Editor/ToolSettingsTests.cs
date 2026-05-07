@@ -6,6 +6,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor
 {
+    /// <summary>
+    /// Test fixture that verifies Tool Settings behavior.
+    /// </summary>
     [TestFixture]
     public class ToolSettingsTests
     {

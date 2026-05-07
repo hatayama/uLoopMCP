@@ -4,6 +4,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Carries the response data returned by the Replay Input tool.
+    /// </summary>
     public class ReplayInputResponse : UnityCliLoopToolResponse
     {
         public bool Success { get; set; }

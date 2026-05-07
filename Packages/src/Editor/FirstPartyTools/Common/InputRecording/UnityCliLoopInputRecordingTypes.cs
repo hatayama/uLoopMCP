@@ -14,6 +14,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         Task<UnityCliLoopReplayInputResult> ReplayInputAsync(UnityCliLoopReplayInputRequest request, CancellationToken ct);
     }
 
+    /// <summary>
+    /// Carries the request data needed for Unity CLI Loop Record Input behavior.
+    /// </summary>
     public sealed class UnityCliLoopRecordInputRequest
     {
         public RecordInputAction Action { get; set; } = RecordInputAction.Start;
@@ -23,6 +26,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         public bool ShowOverlay { get; set; } = true;
     }
 
+    /// <summary>
+    /// Carries the result data produced by Unity CLI Loop Record Input behavior.
+    /// </summary>
     public sealed class UnityCliLoopRecordInputResult
     {
         public bool Success { get; set; }
@@ -33,6 +39,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         public float? DurationSeconds { get; set; }
     }
 
+    /// <summary>
+    /// Carries the request data needed for Unity CLI Loop Replay Input behavior.
+    /// </summary>
     public sealed class UnityCliLoopReplayInputRequest
     {
         public ReplayInputAction Action { get; set; } = ReplayInputAction.Start;
@@ -41,6 +50,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         public bool Loop { get; set; }
     }
 
+    /// <summary>
+    /// Carries the result data produced by Unity CLI Loop Replay Input behavior.
+    /// </summary>
     public sealed class UnityCliLoopReplayInputResult
     {
         public bool Success { get; set; }

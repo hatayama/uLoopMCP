@@ -4,6 +4,9 @@ using UnityEditor.Compilation;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Provides Compiler Diagnostics behavior for Unity CLI Loop.
+    /// </summary>
     public sealed class CompilerDiagnostics
     {
         public List<CompilationError> Errors { get; }

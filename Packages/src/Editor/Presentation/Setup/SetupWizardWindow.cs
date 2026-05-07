@@ -14,6 +14,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.Presentation
 {
+    /// <summary>
+    /// Defines the Unity Editor window for Setup Wizard workflows.
+    /// </summary>
     public class SetupWizardWindow : EditorWindow
     {
         private const string WindowTitle = "Unity CLI Loop Setup";

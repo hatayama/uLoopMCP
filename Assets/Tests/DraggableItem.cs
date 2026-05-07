@@ -4,6 +4,9 @@ using UnityEngine.EventSystems;
 namespace io.github.hatayama.UnityCliLoop.Tests
 {
 
+/// <summary>
+/// Test support type used by editor and play mode fixtures.
+/// </summary>
 public class DraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
 {
     private RectTransform rectTransform;

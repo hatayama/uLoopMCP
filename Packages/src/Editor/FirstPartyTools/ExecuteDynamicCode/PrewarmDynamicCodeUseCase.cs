@@ -6,6 +6,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Coordinates the Prewarm Dynamic Code workflow for a first-party tool.
+    /// </summary>
     internal sealed class PrewarmDynamicCodeUseCase : IPrewarmDynamicCodeUseCase
     {
         private const int AutoPrewarmDelayFrameCount = 1;

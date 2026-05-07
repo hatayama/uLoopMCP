@@ -5,6 +5,9 @@ using io.github.hatayama.UnityCliLoop.FirstPartyTools;
 
 namespace io.github.hatayama.UnityCliLoop.Dev
 {
+    /// <summary>
+    /// Provides Compile Checker Example behavior for Unity CLI Loop.
+    /// </summary>
     public class CompileCheckerExample
     {
         [MenuItem("UnityCliLoop/Debug/Compile Tests/Compile Checker Usage Example")]

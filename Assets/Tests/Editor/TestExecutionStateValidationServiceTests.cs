@@ -6,6 +6,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor
 {
+    /// <summary>
+    /// Test fixture that verifies Test Execution State Validation Service behavior.
+    /// </summary>
     public class TestExecutionStateValidationServiceTests
     {
         [Test]
@@ -126,6 +129,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             Assert.That(result.ErrorMessage, Does.Contain("Prefab Stage: Assets/Scenes/Crosshair.prefab"));
         }
 
+        /// <summary>
+        /// Test support type used by editor and play mode fixtures.
+        /// </summary>
         private sealed class StubTestExecutionStateValidationService : TestExecutionStateValidationService
         {
             private readonly bool _isPlaying;

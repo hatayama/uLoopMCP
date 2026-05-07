@@ -4,6 +4,9 @@ using io.github.hatayama.UnityCliLoop.Runtime;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Creates Record Replay Overlay instances with the dependencies required by this module.
+    /// </summary>
     internal static class RecordReplayOverlayFactory
     {
         public static void EnsureRecordOverlay()

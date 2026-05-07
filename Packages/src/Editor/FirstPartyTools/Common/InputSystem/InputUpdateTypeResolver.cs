@@ -8,6 +8,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     // Projects can process Input System events in dynamic, fixed, or manual mode.
     // Input simulation must follow that configured loop to avoid frame mismatches.
+    /// <summary>
+    /// Resolves Input Update Type values from the available runtime context.
+    /// </summary>
     internal static class InputUpdateTypeResolver
     {
         public static InputUpdateType Resolve()

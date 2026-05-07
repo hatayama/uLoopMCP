@@ -6,6 +6,9 @@ using System.Threading;
 
 namespace io.github.hatayama.UnityCliLoop.Infrastructure
 {
+    /// <summary>
+    /// Provides Bridge Client Connection behavior for Unity CLI Loop.
+    /// </summary>
     internal sealed class BridgeClientConnection : IDisposable
     {
         public string Endpoint { get; }
@@ -31,6 +34,9 @@ namespace io.github.hatayama.UnityCliLoop.Infrastructure
         void Stop();
     }
 
+    /// <summary>
+    /// Creates Bridge Transport Listener instances with the dependencies required by this module.
+    /// </summary>
     internal static class BridgeTransportListenerFactory
     {
         public static IBridgeTransportListener Create(BridgeTransportEndpoint endpoint)
@@ -47,6 +53,9 @@ namespace io.github.hatayama.UnityCliLoop.Infrastructure
         }
     }
 
+    /// <summary>
+    /// Provides Unix Domain Socket Bridge Transport Listener behavior for Unity CLI Loop.
+    /// </summary>
     internal sealed class UnixDomainSocketBridgeTransportListener : IBridgeTransportListener
     {
         private Socket _listener;
@@ -115,6 +124,9 @@ namespace io.github.hatayama.UnityCliLoop.Infrastructure
         }
     }
 
+    /// <summary>
+    /// Provides Windows Named Pipe Bridge Transport Listener behavior for Unity CLI Loop.
+    /// </summary>
     internal sealed class WindowsNamedPipeBridgeTransportListener : IBridgeTransportListener
     {
         private NamedPipeServerStream _activePipe;

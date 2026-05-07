@@ -5,6 +5,9 @@ using UnityEngine;
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     // Builds slash-separated hierarchy paths shared by screenshot metadata and UI input targeting.
+    /// <summary>
+    /// Provides utility operations for Game Object Path behavior.
+    /// </summary>
     internal static class GameObjectPathUtility
     {
         public static string GetFullPath(GameObject gameObject)

@@ -18,6 +18,9 @@ namespace io.github.hatayama.UnityCliLoop.Application
     }
 
     // Static facade retained for Unity callbacks and recovery paths outside constructor control.
+    /// <summary>
+    /// Provides Domain Reload Detection operations for its owning module.
+    /// </summary>
     public static class DomainReloadDetectionService
     {
         private static IDomainReloadDetectionService ServiceValue;

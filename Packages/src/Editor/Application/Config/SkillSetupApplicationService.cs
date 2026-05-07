@@ -59,6 +59,9 @@ namespace io.github.hatayama.UnityCliLoop.Application
     }
 
     // Application service that keeps Presentation dependent on a stable use-case boundary.
+    /// <summary>
+    /// Provides Skill Setup Application operations for its owning module.
+    /// </summary>
     public sealed class SkillSetupApplicationService
     {
         private readonly ISkillSetupPort _skillSetupPort;
@@ -128,6 +131,9 @@ namespace io.github.hatayama.UnityCliLoop.Application
     }
 
     // Static facade retained for Unity Editor callbacks that are not constructed by the composition root.
+    /// <summary>
+    /// Provides a narrow facade over Skill Setup Application behavior.
+    /// </summary>
     public static class SkillSetupApplicationFacade
     {
         private static SkillSetupApplicationService ServiceValue;

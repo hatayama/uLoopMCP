@@ -4,6 +4,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Describes the parameters accepted by the Find Game Objects tool.
+    /// </summary>
     public class FindGameObjectsSchema : UnityCliLoopToolSchema
     {
         // Search criteria

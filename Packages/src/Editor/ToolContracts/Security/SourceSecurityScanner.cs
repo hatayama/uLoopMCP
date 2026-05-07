@@ -113,6 +113,9 @@ namespace io.github.hatayama.UnityCliLoop.ToolContracts
             return StripCommentsAndStringsRegex.Replace(source, match => new string(' ', match.Length));
         }
 
+        /// <summary>
+        /// Provides Dangerous Pattern behavior for Unity CLI Loop.
+        /// </summary>
         private sealed class DangerousPattern
         {
             public string TypeName { get; }

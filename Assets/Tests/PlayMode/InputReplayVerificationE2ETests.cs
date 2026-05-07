@@ -11,6 +11,9 @@ using UnityEngine.TestTools;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.PlayMode
 {
+    /// <summary>
+    /// Test fixture that verifies Input Replay Verification 2 E behavior.
+    /// </summary>
     public class InputReplayVerificationE2ETests
     {
         private const string SCENE_PATH = "Assets/Scenes/InputReplayVerificationScene.unity";

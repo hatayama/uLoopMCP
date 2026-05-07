@@ -10,6 +10,9 @@ using Debug = UnityEngine.Debug;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Builds Compiled Assembly data from the inputs provided by this module.
+    /// </summary>
     internal sealed class CompiledAssemblyBuilder : ICompiledAssemblyBuilder
     {
         private static int _compileCounter;
@@ -19,6 +22,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         private readonly DynamicReferenceSetBuilderService _referenceSetBuilder;
         private readonly DynamicCompilationBackend _compilationBackend;
 
+        /// <summary>
+        /// Carries the result data produced by Build Attempt behavior.
+        /// </summary>
         private sealed class BuildAttemptResult
         {
             public string UpdatedSource { get; }

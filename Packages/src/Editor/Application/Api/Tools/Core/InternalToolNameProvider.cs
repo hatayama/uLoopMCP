@@ -8,6 +8,9 @@ namespace io.github.hatayama.UnityCliLoop.Application
         HashSet<string> GetInternalToolNames(string projectRoot);
     }
 
+    /// <summary>
+    /// Provides Empty Internal Tool Name dependencies to callers without exposing construction details.
+    /// </summary>
     public sealed class EmptyInternalToolNameProvider : IInternalToolNameProvider
     {
         public HashSet<string> GetInternalToolNames(string projectRoot)

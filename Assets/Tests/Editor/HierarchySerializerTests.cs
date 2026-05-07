@@ -5,6 +5,9 @@ using io.github.hatayama.UnityCliLoop.FirstPartyTools;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor
 {
+    /// <summary>
+    /// Test fixture that verifies Hierarchy Serializer behavior.
+    /// </summary>
     public class HierarchySerializerTests
     {
         private HierarchySerializer serializer;

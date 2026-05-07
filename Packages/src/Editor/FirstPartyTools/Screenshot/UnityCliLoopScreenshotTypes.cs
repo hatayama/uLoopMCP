@@ -22,12 +22,18 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         rendering = 1
     }
 
+    /// <summary>
+    /// Provides Unity CLI Loop Screenshot Coordinate System behavior for Unity CLI Loop.
+    /// </summary>
     public static class UnityCliLoopScreenshotCoordinateSystem
     {
         public const string Window = "window";
         public const string GameView = "gameView";
     }
 
+    /// <summary>
+    /// Carries the request data needed for Unity CLI Loop Screenshot behavior.
+    /// </summary>
     public sealed class UnityCliLoopScreenshotRequest
     {
         public string WindowName { get; set; } = "Game";
@@ -39,6 +45,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         public bool ElementsOnly { get; set; }
     }
 
+    /// <summary>
+    /// Describes Unity CLI Loop Screenshot information collected by the owning workflow.
+    /// </summary>
     public sealed class UnityCliLoopScreenshotInfo
     {
         public string ImagePath { get; set; } = "";
@@ -51,6 +60,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         public List<UIElementInfo> AnnotatedElements { get; set; } = new List<UIElementInfo>();
     }
 
+    /// <summary>
+    /// Carries the result data produced by Unity CLI Loop Screenshot behavior.
+    /// </summary>
     public sealed class UnityCliLoopScreenshotResult
     {
         public List<UnityCliLoopScreenshotInfo> Screenshots { get; set; } = new List<UnityCliLoopScreenshotInfo>();

@@ -165,6 +165,9 @@ namespace io.github.hatayama.UnityCliLoop.ToolContracts
         }
     }
 
+    /// <summary>
+    /// Manages Editor Delay state and operations for the owning workflow.
+    /// </summary>
     public static class EditorDelayManager
     {
         private static readonly EditorDelayManagerService ServiceValue = new EditorDelayManagerService();

@@ -10,6 +10,9 @@ using io.github.hatayama.UnityCliLoop.FirstPartyTools;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor
 {
+    /// <summary>
+    /// Test fixture that verifies Hierarchy Service behavior.
+    /// </summary>
     public class HierarchyServiceTests
     {
         private GameObject testRoot;

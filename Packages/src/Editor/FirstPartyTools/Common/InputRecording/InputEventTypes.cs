@@ -1,6 +1,9 @@
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Provides Input Event Types behavior for Unity CLI Loop.
+    /// </summary>
     internal static class InputEventTypes
     {
         public const string KEY_DOWN = "key_down";

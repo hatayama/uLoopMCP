@@ -7,6 +7,9 @@ using UnityEngine.UI;
 namespace io.github.hatayama.UnityCliLoop.Tests.Demo
 {
     // Cycles bullet color via mouse scroll wheel and shows a HUD indicator.
+    /// <summary>
+    /// Test support type used by editor and play mode fixtures.
+    /// </summary>
     public class DemoWeaponSelector : MonoBehaviour
     {
         private static readonly Color[] BULLET_COLORS =

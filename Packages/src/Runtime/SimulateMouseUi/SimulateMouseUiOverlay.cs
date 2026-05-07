@@ -7,6 +7,9 @@ namespace io.github.hatayama.UnityCliLoop.Runtime
 {
     // Canvas-based overlay that visualizes SimulateMouseUi cursor position and drag state on Game View.
     // Animation is driven externally via SetCursorScale/SetAlpha from async functions in SimulateMouseUiTool.
+    /// <summary>
+    /// Drives the runtime overlay used by Simulate Mouse UI behavior.
+    /// </summary>
     public class SimulateMouseUiOverlay : MonoBehaviour
     {
         private const float WAYPOINT_MARKER_DIAMETER = 12f;

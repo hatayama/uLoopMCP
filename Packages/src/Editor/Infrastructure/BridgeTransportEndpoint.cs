@@ -12,6 +12,9 @@ namespace io.github.hatayama.UnityCliLoop.Infrastructure
         WindowsNamedPipe
     }
 
+    /// <summary>
+    /// Represents the endpoint used by Bridge Transport communication.
+    /// </summary>
     internal sealed class BridgeTransportEndpoint
     {
         public BridgeTransportKind Kind { get; }

@@ -5,6 +5,9 @@ using io.github.hatayama.UnityCliLoop.Infrastructure;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor
 {
+    /// <summary>
+    /// Test fixture that verifies Unity CLI Loop Server Startup Protection behavior.
+    /// </summary>
     public class UnityCliLoopServerStartupProtectionTests
     {
         [Test]
@@ -86,6 +89,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
                 lifecycleRegistry);
         }
 
+        /// <summary>
+        /// Test support type used by editor and play mode fixtures.
+        /// </summary>
         private sealed class TestServerInstanceFactory : IUnityCliLoopServerInstanceFactory
         {
             public IUnityCliLoopServerInstance Create()
@@ -94,6 +100,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             }
         }
 
+        /// <summary>
+        /// Test support type used by editor and play mode fixtures.
+        /// </summary>
         private sealed class TestServerInstance : IUnityCliLoopServerInstance
         {
             public bool IsRunning => false;

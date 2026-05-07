@@ -5,6 +5,9 @@ using System.Text;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Provides Dynamic Code Literal Hoister behavior for Unity CLI Loop.
+    /// </summary>
     internal static class DynamicCodeLiteralHoister
     {
         private const string LiteralParameterPrefix = "__uloop_literal_";
@@ -844,6 +847,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         }
     }
 
+    /// <summary>
+    /// Carries the result data produced by Hoisted Literal Rewrite behavior.
+    /// </summary>
     internal sealed class HoistedLiteralRewriteResult
     {
         public string RewrittenSource { get; }

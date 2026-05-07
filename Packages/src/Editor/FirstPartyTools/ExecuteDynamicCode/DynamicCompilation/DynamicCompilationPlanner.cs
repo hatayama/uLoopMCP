@@ -3,6 +3,9 @@ using UnityEngine;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Provides Dynamic Compilation Planner behavior for Unity CLI Loop.
+    /// </summary>
     internal sealed class DynamicCompilationPlanner : IDynamicCompilationPlanner
     {
         private readonly IDynamicCodeSourcePreparationService _sourcePreparationService;

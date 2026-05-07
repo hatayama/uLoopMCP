@@ -5,6 +5,9 @@ using io.github.hatayama.UnityCliLoop.FirstPartyTools;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
 {
+    /// <summary>
+    /// Test fixture that verifies External Compiler Path Resolver behavior.
+    /// </summary>
     [TestFixture]
     public class ExternalCompilerPathResolverTests
     {

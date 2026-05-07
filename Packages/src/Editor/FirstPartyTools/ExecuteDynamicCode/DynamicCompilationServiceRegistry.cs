@@ -13,6 +13,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         void ShutdownForServerReset();
     }
 
+    /// <summary>
+    /// Provides Dynamic Compilation Service Registry operations for its owning module.
+    /// </summary>
     public sealed class DynamicCompilationServiceRegistryService
     {
         private readonly object _syncRoot = new object();

@@ -13,6 +13,9 @@ using UnityEngine.TestTools;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.PlayMode
 {
+    /// <summary>
+    /// Test fixture that verifies Simulate Mouse Input behavior.
+    /// </summary>
     public class SimulateMouseInputTests : InputTestFixture
     {
         private SimulateMouseInputTool tool = null!;

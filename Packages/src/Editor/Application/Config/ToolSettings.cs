@@ -19,6 +19,9 @@ namespace io.github.hatayama.UnityCliLoop.Application
     }
 
     // Static facade retained for Unity callbacks and legacy call sites outside constructor control.
+    /// <summary>
+    /// Holds Tool settings used by Unity CLI Loop.
+    /// </summary>
     public static class ToolSettings
     {
         private static IToolSettingsPort ServiceValue;
@@ -75,6 +78,9 @@ namespace io.github.hatayama.UnityCliLoop.Application
     }
 
     // Application facade for tool catalog and security settings workflows.
+    /// <summary>
+    /// Provides a narrow facade over Tool Settings Application behavior.
+    /// </summary>
     public static class ToolSettingsApplicationFacade
     {
         public readonly struct ToolCatalogItem

@@ -12,6 +12,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Demo.Editor
     // verification controller accordingly. The Recordings EditorWindow (or CLI)
     // starts recording/replay; this bridge resets the controller so logging
     // stays in sync within the same frame.
+    /// <summary>
+    /// Test support type used by editor and play mode fixtures.
+    /// </summary>
     [InitializeOnLoad]
     internal static class InputReplayVerificationEditorBridge
     {

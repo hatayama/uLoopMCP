@@ -10,6 +10,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor
 {
+    /// <summary>
+    /// Test fixture that verifies Unity CLI Loop Editor Settings Recovery behavior.
+    /// </summary>
     [TestFixture]
     public class UnityCliLoopEditorSettingsRecoveryTests
     {
@@ -200,6 +203,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             }
         }
 
+        /// <summary>
+        /// Test support type used by editor and play mode fixtures.
+        /// </summary>
         private sealed class TestServerInstanceFactory : IUnityCliLoopServerInstanceFactory
         {
             public IUnityCliLoopServerInstance Create()
@@ -208,6 +214,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             }
         }
 
+        /// <summary>
+        /// Test support type used by editor and play mode fixtures.
+        /// </summary>
         private sealed class TestServerInstance : IUnityCliLoopServerInstance
         {
             public bool IsRunning => false;

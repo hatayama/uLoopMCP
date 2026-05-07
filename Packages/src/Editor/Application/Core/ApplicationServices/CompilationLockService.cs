@@ -11,6 +11,9 @@ namespace io.github.hatayama.UnityCliLoop.Application
     }
 
     // Static facade retained for Unity callbacks and server cleanup paths outside constructor control.
+    /// <summary>
+    /// Provides Compilation Lock operations for its owning module.
+    /// </summary>
     public static class CompilationLockService
     {
         private static ICompilationLockService ServiceValue;

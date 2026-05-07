@@ -22,6 +22,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         assembly = 3
     }
 
+    /// <summary>
+    /// Carries the request data needed for Unity CLI Loop Test Execution behavior.
+    /// </summary>
     public sealed class UnityCliLoopTestExecutionRequest
     {
         public UnityCliLoopTestMode TestMode { get; set; } = UnityCliLoopTestMode.EditMode;
@@ -30,6 +33,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         public bool SaveBeforeRun { get; set; }
     }
 
+    /// <summary>
+    /// Carries the result data produced by Unity CLI Loop Test Execution behavior.
+    /// </summary>
     public sealed class UnityCliLoopTestExecutionResult
     {
         public bool Success { get; set; }

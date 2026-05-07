@@ -6,6 +6,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Manages pooled Dynamic Code Executor instances for reuse by this module.
+    /// </summary>
     internal sealed class DynamicCodeExecutorPool : IDynamicCodeExecutorPool
     {
         private readonly IDynamicCodeExecutorProvider _executorProvider;

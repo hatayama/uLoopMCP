@@ -317,6 +317,9 @@ namespace io.github.hatayama.UnityCliLoop.Infrastructure
         }
     }
 
+    /// <summary>
+    /// Provides Project Local CLI Installer operations for its owning module.
+    /// </summary>
     public sealed class ProjectLocalCliInstallerService : IProjectLocalCliInstaller
     {
         public string DetectBundledRequiredDispatcherVersion()

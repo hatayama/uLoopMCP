@@ -13,6 +13,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Provides Shared Roslyn Compiler Worker Host behavior for Unity CLI Loop.
+    /// </summary>
     internal static class SharedRoslynCompilerWorkerHost
     {
         private const int SharedCompilerWorkerMaxAttempts = 2;
@@ -42,6 +45,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         private static Process _sharedCompilerWorkerProcess;
         private static string _workerDirectoryPath;
 
+        /// <summary>
+        /// Carries the result data produced by Worker Attempt behavior.
+        /// </summary>
         private sealed class WorkerAttemptResult
         {
             public CompilerMessage[] Messages { get; }
@@ -77,6 +83,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             }
         }
 
+        /// <summary>
+        /// Carries the result data produced by Worker Startup behavior.
+        /// </summary>
         private sealed class WorkerStartupResult
         {
             public bool IsReady { get; }
@@ -103,6 +112,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             }
         }
 
+        /// <summary>
+        /// Carries the result data produced by Worker Assembly Build behavior.
+        /// </summary>
         private sealed class WorkerAssemblyBuildResult
         {
             public bool StartedSuccessfully { get; }
@@ -136,6 +148,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             }
         }
 
+        /// <summary>
+        /// Provides Worker Paths behavior for Unity CLI Loop.
+        /// </summary>
         private sealed class WorkerPaths
         {
             public string DirectoryPath { get; }

@@ -11,6 +11,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.Infrastructure
 {
+    /// <summary>
+    /// Provides Skill Install Layout behavior for Unity CLI Loop.
+    /// </summary>
     internal static class SkillInstallLayout
     {
         internal const string SkillsDirName = "skills";
@@ -47,6 +50,9 @@ namespace io.github.hatayama.UnityCliLoop.Infrastructure
             ".yml"
         };
 
+        /// <summary>
+        /// Provides Skill Source Definition behavior for Unity CLI Loop.
+        /// </summary>
         private sealed class SkillSourceDefinition
         {
             public readonly string Name;

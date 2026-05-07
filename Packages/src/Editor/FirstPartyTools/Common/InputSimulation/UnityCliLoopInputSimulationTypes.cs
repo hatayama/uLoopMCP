@@ -58,12 +58,18 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         Middle = 2
     }
 
+    /// <summary>
+    /// Provides Unity CLI Loop Input Simulation Defaults behavior for Unity CLI Loop.
+    /// </summary>
     public static class UnityCliLoopInputSimulationDefaults
     {
         public const float MouseUiDragSpeed = 2000f;
         public const float MouseUiDuration = 0.5f;
     }
 
+    /// <summary>
+    /// Carries the request data needed for Unity CLI Loop Keyboard Simulation behavior.
+    /// </summary>
     public sealed class UnityCliLoopKeyboardSimulationRequest
     {
         public UnityCliLoopKeyboardAction Action { get; set; } = UnityCliLoopKeyboardAction.Press;
@@ -71,6 +77,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         public float Duration { get; set; }
     }
 
+    /// <summary>
+    /// Carries the result data produced by Unity CLI Loop Keyboard Simulation behavior.
+    /// </summary>
     public sealed class UnityCliLoopKeyboardSimulationResult
     {
         public bool Success { get; set; }
@@ -79,6 +88,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         public string? KeyName { get; set; }
     }
 
+    /// <summary>
+    /// Carries the request data needed for Unity CLI Loop Mouse Input Simulation behavior.
+    /// </summary>
     public sealed class UnityCliLoopMouseInputSimulationRequest
     {
         public UnityCliLoopMouseInputAction Action { get; set; } = UnityCliLoopMouseInputAction.Click;
@@ -92,6 +104,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         public float ScrollY { get; set; }
     }
 
+    /// <summary>
+    /// Carries the result data produced by Unity CLI Loop Mouse Input Simulation behavior.
+    /// </summary>
     public sealed class UnityCliLoopMouseInputSimulationResult
     {
         public bool Success { get; set; }
@@ -102,6 +117,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         public float? PositionY { get; set; }
     }
 
+    /// <summary>
+    /// Carries the request data needed for Unity CLI Loop Mouse UI Simulation behavior.
+    /// </summary>
     public sealed class UnityCliLoopMouseUiSimulationRequest
     {
         public UnityCliLoopMouseUiAction Action { get; set; } = UnityCliLoopMouseUiAction.Click;
@@ -117,6 +135,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         public string DropTargetPath { get; set; } = "";
     }
 
+    /// <summary>
+    /// Carries the result data produced by Unity CLI Loop Mouse UI Simulation behavior.
+    /// </summary>
     public sealed class UnityCliLoopMouseUiSimulationResult
     {
         public bool Success { get; set; }

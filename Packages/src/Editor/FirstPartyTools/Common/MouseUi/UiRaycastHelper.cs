@@ -7,6 +7,9 @@ using UnityEngine.UI;
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     // Shared UI raycast logic used by SimulateMouseUiTool and InputReplayer.
+    /// <summary>
+    /// Provides helper operations for UI Raycast behavior.
+    /// </summary>
     internal static class UiRaycastHelper
     {
         public static RaycastResult? RaycastUI(Vector2 screenPosition, EventSystem eventSystem)

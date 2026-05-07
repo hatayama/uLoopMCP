@@ -4,6 +4,9 @@ using UnityEngine;
 
 namespace io.github.hatayama.UnityCliLoop.Runtime
 {
+    /// <summary>
+    /// Provides Key Symbol Map behavior for Unity CLI Loop.
+    /// </summary>
     public static class KeySymbolMap
     {
         private static readonly Dictionary<string, string> Symbols = new()

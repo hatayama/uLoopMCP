@@ -2,6 +2,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Centralizes constants used by Record Input behavior.
+    /// </summary>
     internal static class RecordInputConstants
     {
         public const string INPUT_RECORDINGS_DIR = "InputRecordings";

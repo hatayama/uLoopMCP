@@ -11,6 +11,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.Presentation
 {
+    /// <summary>
+    /// Defines the Unity Editor window for Unity CLI Loop Settings workflows.
+    /// </summary>
     public class UnityCliLoopSettingsWindow : EditorWindow
     {
         private const bool ForceFlatSkillInstall = true;

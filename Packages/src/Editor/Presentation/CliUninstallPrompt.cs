@@ -4,6 +4,9 @@ using UnityEngine;
 
 namespace io.github.hatayama.UnityCliLoop.Presentation
 {
+    /// <summary>
+    /// Provides CLI Uninstall Prompt behavior for Unity CLI Loop.
+    /// </summary>
     internal static class CliUninstallPrompt
     {
         private const string DialogTitle = "Uninstall uLoop CLI?";

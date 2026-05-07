@@ -5,6 +5,9 @@ using UnityEditor.Compilation;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Parses External Compiler Message data into the model used by this module.
+    /// </summary>
     internal static class ExternalCompilerMessageParser
     {
         private static readonly Regex DiagnosticRegex = new(

@@ -11,6 +11,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
 {
+    /// <summary>
+    /// Test fixture that verifies Execute Dynamic Code Use Case behavior.
+    /// </summary>
     [TestFixture]
     public class ExecuteDynamicCodeUseCaseTests
     {
@@ -544,6 +547,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
             }
         }
 
+        /// <summary>
+        /// Test support type used by editor and play mode fixtures.
+        /// </summary>
         private sealed class FakeDynamicCodeExecutionRuntime : IDynamicCodeExecutionRuntime
         {
             private readonly Queue<ExecutionResult> _results;
@@ -605,6 +611,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
             DynamicCodeForegroundWarmupState.MarkCompleted();
         }
 
+        /// <summary>
+        /// Test support type used by editor and play mode fixtures.
+        /// </summary>
         private sealed class CancellingDynamicCodeExecutionRuntime : IDynamicCodeExecutionRuntime
         {
             public bool SupportsAutoPrewarm()

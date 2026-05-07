@@ -1,6 +1,9 @@
 
 namespace io.github.hatayama.UnityCliLoop.Application
 {
+    /// <summary>
+    /// Centralizes constants used by CLI behavior.
+    /// </summary>
     public static class CliConstants
     {
         public const string EXECUTABLE_NAME = "uloop";

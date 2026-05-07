@@ -9,6 +9,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Defines the Unity Editor window for Recordings Editor workflows.
+    /// </summary>
     public class RecordingsEditorWindow : EditorWindow
     {
         private const string UXML_RELATIVE_PATH = "Editor/Presentation/Recordings/RecordingsEditorWindow.uxml";

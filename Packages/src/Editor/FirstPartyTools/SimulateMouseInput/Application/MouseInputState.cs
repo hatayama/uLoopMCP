@@ -13,6 +13,9 @@ using io.github.hatayama.UnityCliLoop.Runtime;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Provides Mouse Input State operations for its owning module.
+    /// </summary>
     internal sealed class MouseInputStateService
     {
         private readonly HashSet<RuntimeMouseButton> _heldButtons = new HashSet<RuntimeMouseButton>();
@@ -222,6 +225,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         }
     }
 
+    /// <summary>
+    /// Stores Mouse Input state shared by the owning workflow.
+    /// </summary>
     internal static class MouseInputState
     {
         private static readonly MouseInputStateService ServiceValue = new MouseInputStateService();

@@ -4,6 +4,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Describes the parameters accepted by the Simulate Keyboard tool.
+    /// </summary>
     public class SimulateKeyboardSchema : UnityCliLoopToolSchema
     {
         [Description("Keyboard action: Press(0) - one-shot key tap (Down then Up), KeyDown(1) - hold key down, KeyUp(2) - release held key")]

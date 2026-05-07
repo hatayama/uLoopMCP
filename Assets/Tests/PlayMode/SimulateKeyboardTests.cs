@@ -17,6 +17,9 @@ using UnityEngine.TestTools;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.PlayMode
 {
+    /// <summary>
+    /// Test fixture that verifies Simulate Keyboard behavior.
+    /// </summary>
     public class SimulateKeyboardTests : InputTestFixture
     {
         private GameObject eventSystemGo = null!;
@@ -600,6 +603,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.PlayMode
         }
     }
 
+    /// <summary>
+    /// Test support type used by editor and play mode fixtures.
+    /// </summary>
     public class FramePressObserver : MonoBehaviour
     {
         public int SpacePressedFrameCount { get; private set; }
@@ -650,6 +656,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.PlayMode
         }
     }
 
+    /// <summary>
+    /// Test support type used by editor and play mode fixtures.
+    /// </summary>
     public class FrameStateObserver : MonoBehaviour
     {
         public int WPressedUpdateCount { get; private set; }
@@ -679,6 +688,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.PlayMode
         }
     }
 
+    /// <summary>
+    /// Test support type used by editor and play mode fixtures.
+    /// </summary>
     public class ManualModeFramePressObserver : MonoBehaviour
     {
         public int EnterPressedStateCount { get; private set; }
@@ -711,6 +723,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.PlayMode
         }
     }
 
+    /// <summary>
+    /// Test support type used by editor and play mode fixtures.
+    /// </summary>
     public class TestableSimulateKeyboardTool : SimulateKeyboardTool
     {
         public Task<SimulateKeyboardResponse> ExecuteWithCancellationAsync(

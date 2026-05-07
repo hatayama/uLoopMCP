@@ -7,6 +7,9 @@ using io.github.hatayama.UnityCliLoop.FirstPartyTools;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
 {
+    /// <summary>
+    /// Test fixture that verifies Compiled Command Entry Point Resolver behavior.
+    /// </summary>
     [TestFixture]
     public class CompiledCommandEntryPointResolverTests
     {
@@ -33,6 +36,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor.Dynamic
 {
+    /// <summary>
+    /// Test support type used by editor and play mode fixtures.
+    /// </summary>
     public class DynamicCommand
     {
         public string Execute()

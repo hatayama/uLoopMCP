@@ -3,6 +3,9 @@ using System.Diagnostics;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Provides Dynamic Code Startup Telemetry operations for its owning module.
+    /// </summary>
     internal sealed class DynamicCodeStartupTelemetryService
     {
         private readonly object _syncRoot = new();
@@ -145,6 +148,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         }
     }
 
+    /// <summary>
+    /// Provides Dynamic Code Startup Telemetry behavior for Unity CLI Loop.
+    /// </summary>
     internal static class DynamicCodeStartupTelemetry
     {
         private static readonly DynamicCodeStartupTelemetryService ServiceValue =

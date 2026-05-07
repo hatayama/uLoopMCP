@@ -14,6 +14,9 @@ using io.github.hatayama.UnityCliLoop.Runtime;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Provides Input Recorder operations for its owning module.
+    /// </summary>
     internal sealed class InputRecorderService
     {
         private readonly Key[] _defaultScanKeys =
@@ -478,6 +481,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         }
     }
 
+    /// <summary>
+    /// Provides Input Recorder behavior for Unity CLI Loop.
+    /// </summary>
     internal static class InputRecorder
     {
         private static readonly InputRecorderService ServiceValue = new InputRecorderService();

@@ -1,6 +1,9 @@
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Provides Hoisted Literal Binding behavior for Unity CLI Loop.
+    /// </summary>
     public sealed class HoistedLiteralBinding
     {
         public string ParameterName { get; }

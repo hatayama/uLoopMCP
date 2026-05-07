@@ -5,6 +5,9 @@ using io.github.hatayama.UnityCliLoop.FirstPartyTools;
 
 namespace io.github.hatayama.UnityCliLoop.Dev
 {
+    /// <summary>
+    /// Defines the Unity Editor window for Log Getter Editor workflows.
+    /// </summary>
     public class LogGetterEditorWindow : EditorWindow
     {
         private LogGetterPresenter _presenter;

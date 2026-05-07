@@ -107,6 +107,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             return new DomainReloadRecoveryUseCase(sessionRecoveryService);
         }
 
+        /// <summary>
+        /// Test support type used by editor and play mode fixtures.
+        /// </summary>
         private sealed class TestRecoveryCoordinator : IUnityCliLoopServerRecoveryCoordinator
         {
             public IUnityCliLoopServerInstance CurrentServer => null;

@@ -31,6 +31,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         }
     }
 
+    /// <summary>
+    /// Provides Scene Hierarchy Stats behavior for Unity CLI Loop.
+    /// </summary>
     [Serializable]
     public class SceneHierarchyStats
     {

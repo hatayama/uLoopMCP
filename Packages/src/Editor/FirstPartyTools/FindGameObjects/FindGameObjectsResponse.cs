@@ -2,6 +2,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Carries the response data returned by the Find Game Objects tool.
+    /// </summary>
     public class FindGameObjectsResponse : UnityCliLoopToolResponse
     {
         public FindGameObjectResult[] results { get; set; }
@@ -16,6 +19,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         public ProcessingError[] processingErrors { get; set; }
     }
 
+    /// <summary>
+    /// Carries the result data produced by Find Game Object behavior.
+    /// </summary>
     public class FindGameObjectResult
     {
         public string name { get; set; }
@@ -26,6 +32,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         public ComponentInfo[] components { get; set; }
     }
 
+    /// <summary>
+    /// Provides Processing Error behavior for Unity CLI Loop.
+    /// </summary>
     public class ProcessingError
     {
         public string gameObjectName { get; set; }

@@ -10,6 +10,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Demo
     // Base class for replay verification controllers.
     // Provides event logging, log persistence, and frame-normalized comparison.
     // Subclasses override RecordEvents() to capture scene-specific state each frame.
+    /// <summary>
+    /// Test support type used by editor and play mode fixtures.
+    /// </summary>
     public abstract class ReplayVerificationControllerBase : MonoBehaviour
     {
         private const int TARGET_FRAME_RATE = 60;

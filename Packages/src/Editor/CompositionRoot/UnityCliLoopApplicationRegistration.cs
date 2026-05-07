@@ -3,6 +3,9 @@ using io.github.hatayama.UnityCliLoop.Infrastructure;
 
 namespace io.github.hatayama.UnityCliLoop.CompositionRoot
 {
+    /// <summary>
+    /// Provides Unity CLI Loop Application Registration behavior for Unity CLI Loop.
+    /// </summary>
     internal sealed class UnityCliLoopApplicationRegistration
     {
         internal void Register()

@@ -3,6 +3,9 @@ using UnityEngine;
 
 namespace io.github.hatayama.UnityCliLoop.Runtime
 {
+    /// <summary>
+    /// Provides Simulate Mouse Input Overlay State operations for its owning module.
+    /// </summary>
     public sealed class SimulateMouseInputOverlayStateService
     {
         private const float BUTTON_MIN_DISPLAY_DURATION = 0.05f;
@@ -129,6 +132,9 @@ namespace io.github.hatayama.UnityCliLoop.Runtime
         }
     }
 
+    /// <summary>
+    /// Stores Simulate Mouse Input Overlay state shared by the owning workflow.
+    /// </summary>
     public static class SimulateMouseInputOverlayState
     {
         private static readonly SimulateMouseInputOverlayStateService ServiceValue =

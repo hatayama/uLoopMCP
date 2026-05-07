@@ -2,6 +2,9 @@ using UnityEngine;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Demo
 {
+    /// <summary>
+    /// Test support type used by editor and play mode fixtures.
+    /// </summary>
     [CreateAssetMenu(fileName = "NewBlock", menuName = "Minecraft/Block Definition")]
     public class BlockDefinition : ScriptableObject
     {

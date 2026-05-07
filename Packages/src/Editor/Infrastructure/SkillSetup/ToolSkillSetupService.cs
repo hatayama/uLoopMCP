@@ -9,6 +9,9 @@ using io.github.hatayama.UnityCliLoop.Application;
 namespace io.github.hatayama.UnityCliLoop.Infrastructure
 {
     // Infrastructure adapter for project skill files managed by Unity CLI Loop.
+    /// <summary>
+    /// Provides Tool Skill Setup operations for its owning module.
+    /// </summary>
     public sealed class ToolSkillSetupService : ISkillSetupPort
     {
         public void RemoveSkillFiles(string toolName)

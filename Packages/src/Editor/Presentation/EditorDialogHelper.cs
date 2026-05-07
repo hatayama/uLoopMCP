@@ -2,6 +2,9 @@ using UnityEditor;
 
 namespace io.github.hatayama.UnityCliLoop.Presentation
 {
+    /// <summary>
+    /// Provides helper operations for Editor Dialog behavior.
+    /// </summary>
     public static class EditorDialogHelper
     {
         public static void ShowSkillsInstalledDialog()

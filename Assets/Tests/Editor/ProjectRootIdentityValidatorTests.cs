@@ -4,6 +4,9 @@ using io.github.hatayama.UnityCliLoop.Domain;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor
 {
+    /// <summary>
+    /// Test fixture that verifies Project Root Identity Validator behavior.
+    /// </summary>
     [TestFixture]
     public sealed class ProjectRootIdentityValidatorTests
     {

@@ -6,6 +6,9 @@ using io.github.hatayama.UnityCliLoop.FirstPartyTools;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
 {
+    /// <summary>
+    /// Test fixture that verifies Execute Dynamic Code Response Timing Augmenter behavior.
+    /// </summary>
     [TestFixture]
     public class ExecuteDynamicCodeResponseTimingAugmenterTests
     {

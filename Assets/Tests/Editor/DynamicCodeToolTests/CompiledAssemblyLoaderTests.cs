@@ -10,6 +10,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
 {
+    /// <summary>
+    /// Test fixture that verifies Compiled Assembly Loader behavior.
+    /// </summary>
     [TestFixture]
     public class CompiledAssemblyLoaderTests
     {
@@ -131,6 +134,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
             File.WriteAllLines(responsePath, lines);
         }
 
+        /// <summary>
+        /// Test support type used by editor and play mode fixtures.
+        /// </summary>
         private sealed class AllowAllPreloadAssemblySecurityValidator : IPreloadAssemblySecurityValidator
         {
             public SecurityValidationResult Validate(byte[] assemblyBytes)
@@ -144,6 +150,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
             }
         }
 
+        /// <summary>
+        /// Test support type used by editor and play mode fixtures.
+        /// </summary>
         private sealed class AllowAllOverridePreloadAssemblySecurityValidator :
             IPreloadAssemblySecurityValidator,
             IOverrideDefaultPreloadAssemblySecurityValidation

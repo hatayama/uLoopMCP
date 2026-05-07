@@ -2,6 +2,9 @@ using System.Diagnostics;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Keeps the registered Preload Assembly Security Validator entries for lookup by the owning module.
+    /// </summary>
     public static class PreloadAssemblySecurityValidatorRegistry
     {
         private static readonly object SyncRoot = new object();

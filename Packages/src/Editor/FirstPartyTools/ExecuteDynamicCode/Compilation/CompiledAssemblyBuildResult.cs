@@ -2,6 +2,9 @@ using System.Collections.Generic;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Carries the result data produced by Compiled Assembly Build behavior.
+    /// </summary>
     public sealed class CompiledAssemblyBuildResult
     {
         public string UpdatedSource { get; }

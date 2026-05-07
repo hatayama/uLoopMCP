@@ -271,6 +271,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             });
         }
 
+        /// <summary>
+        /// Provides Metadata Type Name Decoder behavior for Unity CLI Loop.
+        /// </summary>
         private sealed class MetadataTypeNameDecoder : ISignatureTypeProvider<string, object>
         {
             private readonly MetadataReader _reader;

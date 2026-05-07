@@ -9,6 +9,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
 {
+    /// <summary>
+    /// Test fixture that verifies Dynamic Code Executor Pool behavior.
+    /// </summary>
     [TestFixture]
     public class DynamicCodeExecutorPoolTests
     {
@@ -68,6 +71,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
             Assert.That(second, Is.Not.SameAs(first));
         }
 
+        /// <summary>
+        /// Test support type used by editor and play mode fixtures.
+        /// </summary>
         private sealed class FakeDynamicCodeExecutorProvider : IDynamicCodeExecutorProvider
         {
             public Dictionary<DynamicCodeSecurityLevel, int> CreateCallsBySecurityLevel { get; } = new();
@@ -89,6 +95,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
             }
         }
 
+        /// <summary>
+        /// Test support type used by editor and play mode fixtures.
+        /// </summary>
         private sealed class SequenceDynamicCodeExecutorProvider : IDynamicCodeExecutorProvider
         {
             private readonly Queue<IDynamicCodeExecutor> _executors;
@@ -104,6 +113,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
             }
         }
 
+        /// <summary>
+        /// Test support type used by editor and play mode fixtures.
+        /// </summary>
         private sealed class FakeDynamicCodeExecutor : IDynamicCodeExecutor
         {
             public int DisposeCallCount { get; private set; }

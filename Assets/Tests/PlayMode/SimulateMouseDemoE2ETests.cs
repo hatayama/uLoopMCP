@@ -14,6 +14,9 @@ using UnityEngine.TestTools;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.PlayMode
 {
+    /// <summary>
+    /// Test fixture that verifies Simulate Mouse Demo 2 E behavior.
+    /// </summary>
     public class SimulateMouseDemoE2ETests
     {
         private const string SCENE_PATH = "Assets/Scenes/SimulateMouseDemoScene.unity";
@@ -130,6 +133,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.PlayMode
         // Keeps Game View resolution-dependent UI replay fixtures deterministic.
         // Unity's Game View size dropdown has no public setter, so the helper uses
         // the same internal editor boundary already used by this project for Game View capture.
+        /// <summary>
+        /// Test support type used by editor and play mode fixtures.
+        /// </summary>
         private sealed class GameViewSizeFixture
         {
             private readonly int _originalSelectedSizeIndex;

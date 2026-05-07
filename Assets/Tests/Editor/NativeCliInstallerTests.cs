@@ -8,6 +8,9 @@ using io.github.hatayama.UnityCliLoop.Infrastructure;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor
 {
+    /// <summary>
+    /// Test fixture that verifies Native CLI Installer behavior.
+    /// </summary>
     public class NativeCliInstallerTests
     {
         [Test]

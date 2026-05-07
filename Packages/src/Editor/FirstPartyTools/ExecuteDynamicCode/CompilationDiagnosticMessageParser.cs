@@ -2,6 +2,9 @@ using System.Text.RegularExpressions;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Parses Compilation Diagnostic Message data into the model used by this module.
+    /// </summary>
     public static class CompilationDiagnosticMessageParser
     {
         private static readonly Regex TypeNamePattern = new Regex(@"['""]([^'""]+)['""]", RegexOptions.Compiled);

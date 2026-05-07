@@ -4,6 +4,9 @@ using io.github.hatayama.UnityCliLoop.Infrastructure;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor
 {
+    /// <summary>
+    /// Test fixture that verifies Node Environment Resolver behavior.
+    /// </summary>
     [TestFixture]
     public class NodeEnvironmentResolverTests
     {

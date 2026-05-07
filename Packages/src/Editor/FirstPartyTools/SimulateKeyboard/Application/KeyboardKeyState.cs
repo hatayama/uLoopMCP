@@ -9,6 +9,9 @@ using io.github.hatayama.UnityCliLoop.Runtime;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Provides Keyboard Key State operations for its owning module.
+    /// </summary>
     internal sealed class KeyboardKeyStateService
     {
         private readonly HashSet<Key> _heldKeys = new HashSet<Key>();
@@ -115,6 +118,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         }
     }
 
+    /// <summary>
+    /// Stores Keyboard Key state shared by the owning workflow.
+    /// </summary>
     internal static class KeyboardKeyState
     {
         private static readonly KeyboardKeyStateService ServiceValue = new KeyboardKeyStateService();

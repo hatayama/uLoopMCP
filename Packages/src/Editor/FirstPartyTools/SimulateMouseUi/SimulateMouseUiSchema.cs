@@ -4,6 +4,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Describes the parameters accepted by the Simulate Mouse UI tool.
+    /// </summary>
     public class SimulateMouseUiSchema : UnityCliLoopToolSchema
     {
         [Description("Mouse action: Click(0) - click with selected Button, Drag(1) - one-shot drag, DragStart(2) - begin drag and hold, DragMove(3) - move while holding drag, DragEnd(4) - release drag, LongPress(5) - press and hold for Duration seconds")]

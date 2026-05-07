@@ -12,8 +12,14 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Provides Roslyn Compiler Backend behavior for Unity CLI Loop.
+    /// </summary>
     internal static class RoslynCompilerBackend
     {
+        /// <summary>
+        /// Carries the result data produced by One Shot Compile behavior.
+        /// </summary>
         private sealed class OneShotCompileResult
         {
             public DynamicCompilationBackendResult BackendResult { get; }
@@ -349,6 +355,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             return $"\"{value}\"";
         }
 
+        /// <summary>
+        /// Carries the result data produced by One Shot Process Completion behavior.
+        /// </summary>
         internal sealed class OneShotProcessCompletionResult
         {
             public string StandardOutput { get; }

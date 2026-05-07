@@ -3,6 +3,9 @@ using UnityEngine;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor
 {
+    /// <summary>
+    /// Test support type used by editor and play mode fixtures.
+    /// </summary>
     public sealed class TestSessionManager : ScriptableSingleton<TestSessionManager>
     {
         [SerializeField] private bool testBoolValue;

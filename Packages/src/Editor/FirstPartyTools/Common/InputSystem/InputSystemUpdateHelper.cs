@@ -14,6 +14,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
     // Shared helper for applying Input System state changes at the correct update phase.
     // Both keyboard and mouse simulation need frame-precise timing so that
     // wasPressedThisFrame / wasReleasedThisFrame detect the injected state.
+    /// <summary>
+    /// Provides helper operations for Input System Update behavior.
+    /// </summary>
     internal static class InputSystemUpdateHelper
     {
         public static Task ApplyOnNextConfiguredUpdate(Action apply, CancellationToken ct)

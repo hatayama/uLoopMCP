@@ -4,6 +4,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Describes the parameters accepted by the Replay Input tool.
+    /// </summary>
     public class ReplayInputSchema : UnityCliLoopToolSchema
     {
         [Description("Replay action: Start(0) - begin replaying, Stop(1) - stop mid-way, Status(2) - check progress")]

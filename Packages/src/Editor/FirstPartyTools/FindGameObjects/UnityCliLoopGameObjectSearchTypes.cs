@@ -20,6 +20,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         Selected = 4
     }
 
+    /// <summary>
+    /// Carries the request data needed for Unity CLI Loop Game Object Search behavior.
+    /// </summary>
     public sealed class UnityCliLoopGameObjectSearchRequest
     {
         public string NamePattern { get; set; } = "";
@@ -32,6 +35,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         public bool IncludeInheritedProperties { get; set; }
     }
 
+    /// <summary>
+    /// Carries the result data produced by Unity CLI Loop Game Object Search behavior.
+    /// </summary>
     public sealed class UnityCliLoopGameObjectSearchResult
     {
         public UnityCliLoopGameObjectResult[] Results { get; set; }
@@ -42,6 +48,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         public UnityCliLoopGameObjectProcessingError[] ProcessingErrors { get; set; }
     }
 
+    /// <summary>
+    /// Carries the result data produced by Unity CLI Loop Game Object behavior.
+    /// </summary>
     public sealed class UnityCliLoopGameObjectResult
     {
         [JsonProperty("name")]
@@ -63,6 +72,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         public ComponentInfo[] Components { get; set; }
     }
 
+    /// <summary>
+    /// Provides Unity CLI Loop Game Object Processing Error behavior for Unity CLI Loop.
+    /// </summary>
     public sealed class UnityCliLoopGameObjectProcessingError
     {
         [JsonProperty("gameObjectName")]

@@ -206,6 +206,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         }
     }
 
+    /// <summary>
+    /// Carries the result data produced by Auto Using behavior.
+    /// </summary>
     internal sealed class AutoUsingResult
     {
         public string UpdatedSource { get; }

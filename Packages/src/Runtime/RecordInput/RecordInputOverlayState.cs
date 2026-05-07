@@ -9,6 +9,9 @@ namespace io.github.hatayama.UnityCliLoop.Runtime
         Recording
     }
 
+    /// <summary>
+    /// Provides Record Input Overlay State operations for its owning module.
+    /// </summary>
     public sealed class RecordInputOverlayStateService
     {
         private RecordInputOverlayPhase _phase;
@@ -62,6 +65,9 @@ namespace io.github.hatayama.UnityCliLoop.Runtime
         }
     }
 
+    /// <summary>
+    /// Stores Record Input Overlay state shared by the owning workflow.
+    /// </summary>
     public static class RecordInputOverlayState
     {
         private static readonly RecordInputOverlayStateService ServiceValue = new RecordInputOverlayStateService();

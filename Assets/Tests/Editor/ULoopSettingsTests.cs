@@ -7,6 +7,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor
 {
+    /// <summary>
+    /// Test fixture that verifies U Loop Settings behavior.
+    /// </summary>
     [TestFixture]
     public class ULoopSettingsTests
     {
@@ -395,6 +398,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             ToolSettings.InvalidateCache();
         }
 
+        /// <summary>
+        /// Test support type used by editor and play mode fixtures.
+        /// </summary>
         [System.Serializable]
         private class LegacySettingsFixture
         {
@@ -405,6 +411,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             public bool showDeveloperTools = false;
         }
 
+        /// <summary>
+        /// Test support type used by editor and play mode fixtures.
+        /// </summary>
         [System.Serializable]
         private class SettingsFileFixture
         {

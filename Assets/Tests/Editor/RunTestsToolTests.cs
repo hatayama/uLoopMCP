@@ -4,6 +4,9 @@ using io.github.hatayama.UnityCliLoop.FirstPartyTools;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor
 {
+    /// <summary>
+    /// Test fixture that verifies Run Tests Tool behavior.
+    /// </summary>
     public class RunTestsToolTests
     {
         private RunTestsTool runTestsTool;

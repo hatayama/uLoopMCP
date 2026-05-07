@@ -87,6 +87,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
     }
 
     // Bridges the recordings window to input record/replay services without exposing service internals to Presentation.
+    /// <summary>
+    /// Provides Recordings Application operations for its owning module.
+    /// </summary>
     public sealed class RecordingsApplicationService
     {
         private const string JsonFilePattern = "*.json";
@@ -285,6 +288,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         }
     }
 
+    /// <summary>
+    /// Provides a narrow facade over Recordings Application behavior.
+    /// </summary>
     public static class RecordingsApplicationFacade
     {
         private static readonly RecordingsApplicationService ServiceValue = new RecordingsApplicationService();

@@ -7,6 +7,9 @@ using io.github.hatayama.UnityCliLoop.Runtime;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Provides Mouse Drag State operations for its owning module.
+    /// </summary>
     internal sealed class MouseDragStateService
     {
         internal bool IsDragging => Target != null && PointerData != null;
@@ -36,6 +39,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         }
     }
 
+    /// <summary>
+    /// Stores Mouse Drag state shared by the owning workflow.
+    /// </summary>
     internal static class MouseDragState
     {
         private static readonly MouseDragStateService ServiceValue = new MouseDragStateService();

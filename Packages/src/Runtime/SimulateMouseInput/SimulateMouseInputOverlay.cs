@@ -6,6 +6,9 @@ namespace io.github.hatayama.UnityCliLoop.Runtime
 {
     // Overlay that renders a mouse device icon on Game View and highlights
     // pressed buttons / scroll direction during simulate-mouse-input tool calls.
+    /// <summary>
+    /// Drives the runtime overlay used by Simulate Mouse Input behavior.
+    /// </summary>
     public class SimulateMouseInputOverlay : MonoBehaviour
     {
         private const float DISPLAY_DURATION = 1.0f;

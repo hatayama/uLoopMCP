@@ -17,6 +17,9 @@ namespace io.github.hatayama.UnityCliLoop.Application
     }
 
     // Static facade retained for Unity callbacks and legacy call sites outside constructor control.
+    /// <summary>
+    /// Holds U Loop settings used by Unity CLI Loop.
+    /// </summary>
     public static class ULoopSettings
     {
         private static IULoopSettingsPort ServiceValue;

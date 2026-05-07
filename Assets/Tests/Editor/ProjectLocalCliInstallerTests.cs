@@ -11,6 +11,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor
 {
+    /// <summary>
+    /// Test fixture that verifies Project Local CLI Installer behavior.
+    /// </summary>
     public class ProjectLocalCliInstallerTests
     {
         private string _temporaryRoot;

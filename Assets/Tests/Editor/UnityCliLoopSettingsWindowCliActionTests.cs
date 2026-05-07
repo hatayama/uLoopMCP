@@ -4,6 +4,9 @@ using io.github.hatayama.UnityCliLoop.Presentation;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor
 {
+    /// <summary>
+    /// Test fixture that verifies Unity CLI Loop Settings Window CLI Action behavior.
+    /// </summary>
     public class UnityCliLoopSettingsWindowCliActionTests
     {
         [TestCase(null, "3.0.0", true, false)]

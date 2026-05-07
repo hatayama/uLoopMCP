@@ -15,6 +15,9 @@ using io.github.hatayama.UnityCliLoop.Runtime;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Provides Input Replayer operations for its owning module.
+    /// </summary>
     internal sealed class InputReplayerService
     {
         private readonly Dictionary<string, Key> _keyLookup = BuildKeyLookup();
@@ -727,6 +730,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         }
     }
 
+    /// <summary>
+    /// Provides Input Replayer behavior for Unity CLI Loop.
+    /// </summary>
     internal static class InputReplayer
     {
         private static readonly InputReplayerService ServiceValue = new InputReplayerService();

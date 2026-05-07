@@ -4,6 +4,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Demo
 {
     // simulate-keyboard cannot reproduce mouse-driven actions (look, click),
     // so this script uses random automation to exercise them during PlayMode
+    /// <summary>
+    /// Test support type used by editor and play mode fixtures.
+    /// </summary>
     [DisallowMultipleComponent]
     public class AutoPlayer : MonoBehaviour
     {

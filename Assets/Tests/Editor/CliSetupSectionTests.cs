@@ -5,6 +5,9 @@ using io.github.hatayama.UnityCliLoop.Presentation;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor
 {
+    /// <summary>
+    /// Test fixture that verifies CLI Setup Section behavior.
+    /// </summary>
     public class CliSetupSectionTests
     {
         [TestCase(false, false, false, false, false, false, null, "3.0.0", "Install CLI")]

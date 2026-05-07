@@ -8,6 +8,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
     // Creates a temporary Screen Space Overlay Canvas that draws bounding boxes and labels
     // over interactive UI elements. The overlay is captured by GameView's m_RenderTexture
     // (OnGUI-based overlays are NOT included in the RT).
+    /// <summary>
+    /// Provides UI Element Annotator behavior for Unity CLI Loop.
+    /// </summary>
     public static class UIElementAnnotator
     {
         private const int OVERLAY_SORT_ORDER = 32767;

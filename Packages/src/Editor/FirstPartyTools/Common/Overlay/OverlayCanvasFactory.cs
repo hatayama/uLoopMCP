@@ -6,6 +6,9 @@ using io.github.hatayama.UnityCliLoop.Runtime;
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     // Instantiates the InputVisualizationCanvas prefab and manages its lifecycle.
+    /// <summary>
+    /// Provides Overlay Canvas Factory operations for its owning module.
+    /// </summary>
     internal sealed class OverlayCanvasFactoryService
     {
         private const string CANVAS_PREFAB_PATH = "Packages/io.github.hatayama.uloopmcp/Runtime/Common/InputVisualizationCanvas.prefab";
@@ -63,6 +66,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         }
     }
 
+    /// <summary>
+    /// Creates Overlay Canvas instances with the dependencies required by this module.
+    /// </summary>
     internal static class OverlayCanvasFactory
     {
         private static readonly OverlayCanvasFactoryService ServiceValue = new OverlayCanvasFactoryService();

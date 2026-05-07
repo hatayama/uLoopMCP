@@ -3,6 +3,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools.Factory
 {
+    /// <summary>
+    /// Creates Registry Dynamic Code Executor instances with the dependencies required by this module.
+    /// </summary>
     internal sealed class RegistryDynamicCodeExecutorFactory : IDynamicCodeExecutorProvider
     {
         private readonly DynamicCompilationServiceRegistryService _compilationServiceRegistry;

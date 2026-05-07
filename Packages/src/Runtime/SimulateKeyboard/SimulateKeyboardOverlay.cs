@@ -5,6 +5,9 @@ using UnityEngine.UI;
 
 namespace io.github.hatayama.UnityCliLoop.Runtime
 {
+    /// <summary>
+    /// Drives the runtime overlay used by Simulate Keyboard behavior.
+    /// </summary>
     public class SimulateKeyboardOverlay : MonoBehaviour
     {
         public const float CONTAINER_BACKGROUND_ALPHA = 0.8f;

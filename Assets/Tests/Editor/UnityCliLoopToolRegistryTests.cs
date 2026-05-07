@@ -10,6 +10,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor
 {
+    /// <summary>
+    /// Test support type used by editor and play mode fixtures.
+    /// </summary>
     internal static class ToolRegistryTestFactory
     {
         public static UnityCliLoopToolRegistry Create()
@@ -18,6 +21,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
         }
     }
 
+    /// <summary>
+    /// Test fixture that verifies Unity CLI Loop Tool Registry behavior.
+    /// </summary>
     [TestFixture]
     public sealed class UnityCliLoopToolRegistryTests
     {

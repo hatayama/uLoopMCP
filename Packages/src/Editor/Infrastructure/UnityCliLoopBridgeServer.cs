@@ -13,6 +13,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.Infrastructure
 {
+    /// <summary>
+    /// Creates Unity CLI Loop Bridge Server Instance instances with the dependencies required by this module.
+    /// </summary>
     public sealed class UnityCliLoopBridgeServerInstanceFactory :
         IUnityCliLoopServerInstanceFactory,
         IUnityCliLoopServerLifecycleSource

@@ -29,6 +29,9 @@ namespace io.github.hatayama.UnityCliLoop.Infrastructure
         public bool IsNotification => Id == null;
     }
 
+    /// <summary>
+    /// Provides JSON RPC Request Uloop Metadata behavior for Unity CLI Loop.
+    /// </summary>
     internal class JsonRpcRequestUloopMetadata
     {
         public string ExpectedProjectRoot { get; set; }

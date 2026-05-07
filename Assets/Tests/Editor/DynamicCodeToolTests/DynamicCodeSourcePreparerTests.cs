@@ -4,6 +4,9 @@ using io.github.hatayama.UnityCliLoop.FirstPartyTools;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
 {
+    /// <summary>
+    /// Test fixture that verifies Dynamic Code Source Preparer behavior.
+    /// </summary>
     [TestFixture]
     public class DynamicCodeSourcePreparerTests
     {

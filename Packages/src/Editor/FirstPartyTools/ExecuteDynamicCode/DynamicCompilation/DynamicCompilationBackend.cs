@@ -6,6 +6,9 @@ using UnityEditor.Compilation;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Carries the result data produced by Dynamic Compilation Backend behavior.
+    /// </summary>
     internal sealed class DynamicCompilationBackendResult
     {
         public CompilerMessage[] CompilerMessages { get; }
@@ -21,6 +24,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         }
     }
 
+    /// <summary>
+    /// Provides Dynamic Compilation Backend behavior for Unity CLI Loop.
+    /// </summary>
     internal sealed class DynamicCompilationBackend
     {
         public Task<DynamicCompilationBackendResult> CompileAsync(

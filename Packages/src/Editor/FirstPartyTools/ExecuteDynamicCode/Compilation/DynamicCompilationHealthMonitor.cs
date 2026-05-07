@@ -6,6 +6,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Monitors Dynamic Compilation Health state and reports meaningful transitions.
+    /// </summary>
     public static class DynamicCompilationHealthMonitor
     {
         private static readonly object ReportedIssueLock = new();
@@ -139,6 +142,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             return $"[{UnityCliLoopConstants.PROJECT_NAME}] {message}\noperation: {operation}{diagnosticSourceLine}\ncontext: {context}";
         }
 
+        /// <summary>
+        /// Provides Console Diagnostic Source Scope behavior for Unity CLI Loop.
+        /// </summary>
         private sealed class ConsoleDiagnosticSourceScope : System.IDisposable
         {
             private readonly string _previousSource;
@@ -154,6 +160,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             }
         }
 
+        /// <summary>
+        /// Provides Empty Disposable behavior for Unity CLI Loop.
+        /// </summary>
         private sealed class EmptyDisposable : System.IDisposable
         {
             public static readonly EmptyDisposable Instance = new EmptyDisposable();

@@ -8,6 +8,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         Task<UnityCliLoopHierarchyResult> GetHierarchyAsync(UnityCliLoopHierarchyRequest request, CancellationToken ct);
     }
 
+    /// <summary>
+    /// Carries the request data needed for Unity CLI Loop Hierarchy behavior.
+    /// </summary>
     public sealed class UnityCliLoopHierarchyRequest
     {
         public bool IncludeInactive { get; set; } = true;
@@ -19,6 +22,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         public bool UseSelection { get; set; }
     }
 
+    /// <summary>
+    /// Carries the result data produced by Unity CLI Loop Hierarchy behavior.
+    /// </summary>
     public sealed class UnityCliLoopHierarchyResult
     {
         public string FilePath { get; }

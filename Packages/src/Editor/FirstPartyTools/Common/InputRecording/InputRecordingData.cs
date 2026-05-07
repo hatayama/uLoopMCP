@@ -4,6 +4,9 @@ using System.Collections.Generic;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Holds serialized data for Input Recording behavior.
+    /// </summary>
     [Serializable]
     internal class InputRecordingData
     {
@@ -21,6 +24,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         }
     }
 
+    /// <summary>
+    /// Provides Input Recording Metadata behavior for Unity CLI Loop.
+    /// </summary>
     [Serializable]
     internal class InputRecordingMetadata
     {
@@ -29,6 +35,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         public float DurationSeconds { get; set; }
     }
 
+    /// <summary>
+    /// Provides Input Frame Events behavior for Unity CLI Loop.
+    /// </summary>
     [Serializable]
     internal class InputFrameEvents
     {
@@ -36,6 +45,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         public List<RecordedInputEvent> Events { get; set; } = new();
     }
 
+    /// <summary>
+    /// Provides Recorded Input Event behavior for Unity CLI Loop.
+    /// </summary>
     [Serializable]
     internal class RecordedInputEvent
     {

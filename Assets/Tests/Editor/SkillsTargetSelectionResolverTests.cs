@@ -6,6 +6,9 @@ using io.github.hatayama.UnityCliLoop.Presentation;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor
 {
+    /// <summary>
+    /// Test fixture that verifies Skills Target Selection Resolver behavior.
+    /// </summary>
     public class SkillsTargetSelectionResolverTests
     {
         [TestCase(SkillsTarget.Claude, true, "Claude Code", ".claude", "skills install --claude")]

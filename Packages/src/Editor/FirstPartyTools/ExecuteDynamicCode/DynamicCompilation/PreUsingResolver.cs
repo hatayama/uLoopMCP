@@ -355,6 +355,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         }
     }
 
+    /// <summary>
+    /// Carries the result data produced by Pre Using behavior.
+    /// </summary>
     internal sealed class PreUsingResult
     {
         public string UpdatedSource { get; }

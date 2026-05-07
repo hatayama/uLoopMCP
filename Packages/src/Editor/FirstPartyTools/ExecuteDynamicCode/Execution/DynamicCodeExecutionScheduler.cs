@@ -4,6 +4,9 @@ using System.Threading.Tasks;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Schedules Dynamic Code Execution work at the point the owning workflow expects.
+    /// </summary>
     internal sealed class DynamicCodeExecutionScheduler : IDisposable
     {
         private const int BusyHandoffWindowMilliseconds = 50;

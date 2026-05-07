@@ -6,6 +6,9 @@ using Microsoft.Win32.SafeHandles;
 
 namespace io.github.hatayama.UnityCliLoop.Domain
 {
+    /// <summary>
+    /// Carries the result data produced by Project Root Identity Validation behavior.
+    /// </summary>
     public sealed class ProjectRootIdentityValidationResult
     {
         public bool IsValid { get; }
@@ -29,6 +32,9 @@ namespace io.github.hatayama.UnityCliLoop.Domain
         }
     }
 
+    /// <summary>
+    /// Validates Project Root Identity data before the owning workflow continues.
+    /// </summary>
     public static class ProjectRootIdentityValidator
     {
         public static ProjectRootIdentityValidationResult Validate(
@@ -54,6 +60,9 @@ namespace io.github.hatayama.UnityCliLoop.Domain
         }
     }
 
+    /// <summary>
+    /// Provides Project Root Canonicalizer behavior for Unity CLI Loop.
+    /// </summary>
     public static class ProjectRootCanonicalizer
     {
         private const string LIBC = "libc";

@@ -3,6 +3,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.Infrastructure
 {
+    /// <summary>
+    /// Validates JSON RPC Request Identity data before the owning workflow continues.
+    /// </summary>
     internal static class JsonRpcRequestIdentityValidator
     {
         public static void Validate(

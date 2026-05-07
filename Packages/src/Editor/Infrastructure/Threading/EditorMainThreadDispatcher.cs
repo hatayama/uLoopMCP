@@ -8,6 +8,9 @@ using io.github.hatayama.UnityCliLoop.Application;
 namespace io.github.hatayama.UnityCliLoop.Infrastructure
 {
     // Infrastructure dispatcher backed by Unity Editor's update loop.
+    /// <summary>
+    /// Provides Editor Main Thread Dispatcher behavior for Unity CLI Loop.
+    /// </summary>
     public sealed class EditorMainThreadDispatcher : IMainThreadDispatcher
     {
         private readonly ConcurrentQueue<Action> _continuationQueue = new ConcurrentQueue<Action>();

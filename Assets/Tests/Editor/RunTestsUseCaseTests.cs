@@ -8,6 +8,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor
 {
+    /// <summary>
+    /// Test fixture that verifies Run Tests Use Case behavior.
+    /// </summary>
     public class RunTestsUseCaseTests
     {
         [Test]
@@ -40,6 +43,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             Assert.That(validationService.SaveBeforeRun, Is.True);
         }
 
+        /// <summary>
+        /// Test support type used by editor and play mode fixtures.
+        /// </summary>
         private sealed class StubTestExecutionStateValidationService : TestExecutionStateValidationService
         {
             private readonly ValidationResult _result;
@@ -58,6 +64,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             }
         }
 
+        /// <summary>
+        /// Test support type used by editor and play mode fixtures.
+        /// </summary>
         private sealed class StubTestExecutionService : TestExecutionService
         {
             public bool WasCalled { get; private set; }

@@ -1,6 +1,9 @@
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Provides Dynamic Code Foreground Warmup State operations for its owning module.
+    /// </summary>
     internal sealed class DynamicCodeForegroundWarmupStateService
     {
         private readonly object _syncRoot = new();
@@ -95,6 +98,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         }
     }
 
+    /// <summary>
+    /// Stores Dynamic Code Foreground Warmup state shared by the owning workflow.
+    /// </summary>
     internal static class DynamicCodeForegroundWarmupState
     {
         private static readonly DynamicCodeForegroundWarmupStateService ServiceValue =

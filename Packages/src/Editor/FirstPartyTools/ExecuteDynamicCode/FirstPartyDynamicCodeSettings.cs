@@ -7,6 +7,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     // Reads the shared dynamic-code permission setting without depending on the platform settings layer.
+    /// <summary>
+    /// Holds First Party Dynamic Code settings used by Unity CLI Loop.
+    /// </summary>
     internal static class FirstPartyDynamicCodeSettings
     {
         public static DynamicCodeSecurityLevel GetDynamicCodeSecurityLevel()
@@ -36,6 +39,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             return (DynamicCodeSecurityLevel)settings.dynamicCodeSecurityLevel;
         }
 
+        /// <summary>
+        /// Holds Dynamic Code Permission settings used by Unity CLI Loop.
+        /// </summary>
         [Serializable]
         private sealed class DynamicCodePermissionSettings
         {

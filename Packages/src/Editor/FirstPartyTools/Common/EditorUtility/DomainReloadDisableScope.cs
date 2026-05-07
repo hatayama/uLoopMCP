@@ -3,6 +3,9 @@ using UnityEditor;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Provides Domain Reload Disable Scope behavior for Unity CLI Loop.
+    /// </summary>
     public class DomainReloadDisableScope : IDisposable
     {
         private readonly bool _originalEnabled;

@@ -4,6 +4,9 @@ using io.github.hatayama.UnityCliLoop.Application;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor
 {
+    /// <summary>
+    /// Test fixture that verifies Domain Reload State Registry behavior.
+    /// </summary>
     public class DomainReloadStateRegistryTests
     {
         private IDomainReloadStateProvider _previousProvider;
@@ -61,6 +64,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             }
         }
 
+        /// <summary>
+        /// Test support type used by editor and play mode fixtures.
+        /// </summary>
         private sealed class StubDomainReloadStateProvider : IDomainReloadStateProvider
         {
             private readonly bool _isDomainReloadInProgress;

@@ -2,6 +2,9 @@ using System.Collections.Generic;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Provides Execute Dynamic Code Response Timing Augmenter behavior for Unity CLI Loop.
+    /// </summary>
     internal static class ExecuteDynamicCodeResponseTimingAugmenter
     {
         public static void AppendTimingEntries(

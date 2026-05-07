@@ -2,6 +2,9 @@ using System.Diagnostics;
 
 namespace io.github.hatayama.UnityCliLoop.Application
 {
+    /// <summary>
+    /// Keeps the registered Domain Reload State entries for lookup by the owning module.
+    /// </summary>
     public static class DomainReloadStateRegistry
     {
         private static readonly object SyncRoot = new object();

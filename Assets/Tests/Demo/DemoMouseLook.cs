@@ -9,6 +9,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Demo
     // Orbits the Cinemachine camera around the character without rotating the character.
     // Mouse delta.x rotates the camera's FollowOffset around Y axis,
     // mouse delta.y tilts the camera pitch via the Composer's TrackedObjectOffset.
+    /// <summary>
+    /// Test support type used by editor and play mode fixtures.
+    /// </summary>
     public class DemoMouseLook : MonoBehaviour
     {
         [SerializeField] private float horizontalSensitivity = 0.4f;

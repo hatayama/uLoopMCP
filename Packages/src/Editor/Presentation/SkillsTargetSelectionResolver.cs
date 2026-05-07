@@ -26,6 +26,9 @@ namespace io.github.hatayama.UnityCliLoop.Presentation
         }
     }
 
+    /// <summary>
+    /// Resolves Skills Target Selection values from the available runtime context.
+    /// </summary>
     public static class SkillsTargetSelectionResolver
     {
         public static SkillsTargetSelection Resolve(

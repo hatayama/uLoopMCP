@@ -8,6 +8,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor
 {
     // Guards the facade/service split introduced by the onion-architecture refactor.
+    /// <summary>
+    /// Test fixture that verifies Static Facade State Guard behavior.
+    /// </summary>
     public sealed class StaticFacadeStateGuardTests
     {
         private static readonly string[] MigratedFacadePaths = new string[]

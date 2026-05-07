@@ -3,6 +3,9 @@ using System.Diagnostics;
 
 namespace io.github.hatayama.UnityCliLoop.ToolContracts
 {
+    /// <summary>
+    /// Provides helper operations for Process Start behavior.
+    /// </summary>
     public static class ProcessStartHelper
     {
         // NativeErrorCode 2 (ERROR_FILE_NOT_FOUND) and 3 (ERROR_PATH_NOT_FOUND) on Windows

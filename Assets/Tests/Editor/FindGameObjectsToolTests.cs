@@ -10,6 +10,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor
 {
+    /// <summary>
+    /// Test fixture that verifies Find Game Objects Tool behavior.
+    /// </summary>
     public class FindGameObjectsToolTests
     {
         private FindGameObjectsTool tool;

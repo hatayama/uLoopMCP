@@ -479,6 +479,9 @@ namespace io.github.hatayama.UnityCliLoop.Presentation
             _toolListView.style.height = (visibleRows * ToolListRowHeight) + 2;
         }
 
+        /// <summary>
+        /// Holds serialized data for Tool List Row behavior.
+        /// </summary>
         private sealed class ToolListRowData
         {
             public readonly bool IsHeader;

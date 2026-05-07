@@ -6,6 +6,9 @@ using UnityEditor;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Resolves External Compiler Path values from the available runtime context.
+    /// </summary>
     internal static class ExternalCompilerPathResolver
     {
         public static ExternalCompilerPaths Resolve()

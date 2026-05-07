@@ -3,6 +3,9 @@ using System.Collections.Generic;
 
 namespace io.github.hatayama.UnityCliLoop.Runtime
 {
+    /// <summary>
+    /// Provides Simulate Keyboard Overlay State operations for its owning module.
+    /// </summary>
     public sealed class SimulateKeyboardOverlayStateService
     {
         private readonly List<string> _heldKeys = new List<string>();
@@ -59,6 +62,9 @@ namespace io.github.hatayama.UnityCliLoop.Runtime
         }
     }
 
+    /// <summary>
+    /// Stores Simulate Keyboard Overlay state shared by the owning workflow.
+    /// </summary>
     public static class SimulateKeyboardOverlayState
     {
         private static readonly SimulateKeyboardOverlayStateService ServiceValue =

@@ -3,6 +3,9 @@ using System.Diagnostics;
 
 namespace io.github.hatayama.UnityCliLoop.Application
 {
+    /// <summary>
+    /// Holds serialized data for Compile Request behavior.
+    /// </summary>
     [Serializable]
     public class CompileRequestData
     {
@@ -82,6 +85,9 @@ namespace io.github.hatayama.UnityCliLoop.Application
     }
 
     // Static facade retained for Unity callbacks and legacy call sites outside constructor control.
+    /// <summary>
+    /// Holds Unity CLI Loop Editor settings used by Unity CLI Loop.
+    /// </summary>
     public static class UnityCliLoopEditorSettings
     {
         private static IUnityCliLoopEditorSettingsPort ServiceValue;

@@ -11,6 +11,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Demo
     // Deterministic controller for verifying record/replay accuracy.
     // Uses fixed per-frame movement (no deltaTime) to ensure identical
     // results between recording and replay at the same frame rate.
+    /// <summary>
+    /// Test support type used by editor and play mode fixtures.
+    /// </summary>
     public class InputReplayVerificationController : ReplayVerificationControllerBase
     {
         private const float MOVE_SPEED = 0.1f;

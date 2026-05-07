@@ -9,6 +9,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Provides Test Execution State Validation operations for its owning module.
+    /// </summary>
     public class TestExecutionStateValidationService
     {
         private const string UnsavedEditorChangesFailureMessage =

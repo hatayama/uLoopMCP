@@ -30,6 +30,9 @@ namespace io.github.hatayama.UnityCliLoop.ToolContracts
         private readonly object _lockObject = new object();
         private bool _hasCleanedUpOnStartup = false;
         
+        /// <summary>
+        /// Represents one Vibe Log entry in the owning workflow.
+        /// </summary>
         [Serializable]
         public class VibeLogEntry
         {
@@ -46,6 +49,9 @@ namespace io.github.hatayama.UnityCliLoop.ToolContracts
             public EnvironmentInfo environment;
         }
         
+        /// <summary>
+        /// Describes Environment information collected by the owning workflow.
+        /// </summary>
         [Serializable]
         public class EnvironmentInfo
         {
@@ -347,6 +353,9 @@ namespace io.github.hatayama.UnityCliLoop.ToolContracts
         }
     }
 
+    /// <summary>
+    /// Provides Vibe Logger behavior for Unity CLI Loop.
+    /// </summary>
     public static class VibeLogger
     {
         private static readonly VibeLoggerService ServiceValue = new VibeLoggerService();

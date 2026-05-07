@@ -3,6 +3,9 @@ using UnityEngine.UI;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Demo
 {
+    /// <summary>
+    /// Test support type used by editor and play mode fixtures.
+    /// </summary>
     public class CrosshairUI : MonoBehaviour
     {
         [SerializeField] private Image crosshairImage;

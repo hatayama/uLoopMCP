@@ -220,6 +220,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             return new List<string>(values);
         }
 
+        /// <summary>
+        /// Carries the result data produced by Cached Compilation behavior.
+        /// </summary>
         private sealed class CachedCompilationResult
         {
             public Assembly CompiledAssembly { get; }

@@ -5,6 +5,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor
 {
+    /// <summary>
+    /// Test fixture that verifies Unity CLI Loop Settings Window Refresh Policy behavior.
+    /// </summary>
     public class UnityCliLoopSettingsWindowRefreshPolicyTests
     {
         [Test]

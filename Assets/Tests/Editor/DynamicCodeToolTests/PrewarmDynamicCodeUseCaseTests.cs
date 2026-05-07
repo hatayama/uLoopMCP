@@ -7,6 +7,9 @@ using io.github.hatayama.UnityCliLoop.FirstPartyTools;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
 {
+    /// <summary>
+    /// Test fixture that verifies Prewarm Dynamic Code Use Case behavior.
+    /// </summary>
     [TestFixture]
     public class PrewarmDynamicCodeUseCaseTests
     {
@@ -128,6 +131,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
             }
         }
 
+        /// <summary>
+        /// Test support type used by editor and play mode fixtures.
+        /// </summary>
         private sealed class FakePrewarmRuntime : IDynamicCodeExecutionRuntime
         {
             private readonly bool _supportsAutoPrewarm;

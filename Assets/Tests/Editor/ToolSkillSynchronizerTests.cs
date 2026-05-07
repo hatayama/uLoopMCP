@@ -12,6 +12,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor
 {
+    /// <summary>
+    /// Test fixture that verifies Tool Skill Synchronizer behavior.
+    /// </summary>
     [TestFixture]
     public class ToolSkillSynchronizerTests
     {
@@ -1638,6 +1641,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
                 "{\n  \"dependencies\": {\n" + dependenciesContent + "\n  }\n}");
         }
 
+        /// <summary>
+        /// Test support type used by editor and play mode fixtures.
+        /// </summary>
         private sealed class FakeUnityTool : IUnityCliLoopTool
         {
             public string ToolName { get; }
@@ -1655,6 +1661,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             }
         }
 
+        /// <summary>
+        /// Test support type used by editor and play mode fixtures.
+        /// </summary>
         private sealed class FakeToolResponse : UnityCliLoopToolResponse
         {
         }

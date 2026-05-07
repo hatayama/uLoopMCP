@@ -8,6 +8,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
 {
+    /// <summary>
+    /// Test fixture that verifies Pre Using Resolver Added Namespaces behavior.
+    /// </summary>
     [TestFixture]
     public class PreUsingResolverAddedNamespacesTests
     {
@@ -73,6 +76,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
         }
     }
 
+    /// <summary>
+    /// Test fixture that verifies Auto Injected Namespaces Integration behavior.
+    /// </summary>
     [TestFixture]
     public class AutoInjectedNamespacesIntegrationTests
     {
@@ -179,6 +185,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
             DynamicCodeCompiler compiler = new(DynamicCodeSecurityLevel.Restricted);
             CompilationRequest request = new()            {
                 Code = @"
+                    /// <summary>
+                    /// Test fixture that verifies Raw Mode Missing Using behavior.
+                    /// </summary>
                     public class RawModeMissingUsingTest
                     {
                         public async System.Threading.Tasks.Task<object> ExecuteAsync(
@@ -208,6 +217,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
             DynamicCodeCompiler compiler = new(DynamicCodeSecurityLevel.Restricted);
             CompilationRequest request = new()            {
                 Code = @"
+                    /// <summary>
+                    /// Test fixture that verifies Raw Mode Auto Injected behavior.
+                    /// </summary>
                     public class RawModeAutoInjectedTest
                     {
                         public async System.Threading.Tasks.Task<object> ExecuteAsync(

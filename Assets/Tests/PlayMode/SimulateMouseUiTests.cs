@@ -13,6 +13,9 @@ using UnityEngine.UI;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.PlayMode
 {
+    /// <summary>
+    /// Test fixture that verifies Simulate Mouse UI behavior.
+    /// </summary>
     public class SimulateMouseUiTests
     {
         private GameObject canvasGo = null!;
@@ -656,6 +659,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.PlayMode
     }
 
     // Tracks pointer click events for testing
+    /// <summary>
+    /// Test support type used by editor and play mode fixtures.
+    /// </summary>
     public class ClickTracker : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IPointerClickHandler
     {
         public bool PointerDownCalled { get; private set; }
@@ -668,6 +674,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.PlayMode
     }
 
     // Tracks drag events and moves the element for testing
+    /// <summary>
+    /// Test support type used by editor and play mode fixtures.
+    /// </summary>
     public class DragTracker : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
     {
         public bool BeginDragCalled { get; private set; }
@@ -696,6 +705,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.PlayMode
         public void OnEndDrag(PointerEventData eventData) { EndDragCalled = true; }
     }
 
+    /// <summary>
+    /// Test support type used by editor and play mode fixtures.
+    /// </summary>
     public class DropTracker : MonoBehaviour, IDropHandler
     {
         public bool DropCalled { get; private set; }

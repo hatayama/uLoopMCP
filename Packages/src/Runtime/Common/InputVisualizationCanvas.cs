@@ -4,6 +4,9 @@ using UnityEngine.UI;
 namespace io.github.hatayama.UnityCliLoop.Runtime
 {
     // Orchestrator that owns the shared Canvas and holds references to all input visualization overlays.
+    /// <summary>
+    /// Provides the Unity component behavior for Input Visualization Canvas.
+    /// </summary>
     public class InputVisualizationCanvas : MonoBehaviour
     {
         [SerializeField] private SimulateKeyboardOverlay _keyboardOverlay = null!;

@@ -3,6 +3,9 @@ using System.Collections.Generic;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Provides Dynamic Code Source Preparer behavior for Unity CLI Loop.
+    /// </summary>
     internal static class DynamicCodeSourcePreparer
     {
         private const string InterpolatedStringMarker = "$\"";

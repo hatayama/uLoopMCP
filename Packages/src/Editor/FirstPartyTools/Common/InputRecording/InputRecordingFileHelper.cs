@@ -11,6 +11,9 @@ using Newtonsoft.Json.Serialization;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Provides helper operations for Input Recording File behavior.
+    /// </summary>
     internal static class InputRecordingFileHelper
     {
         private const string JSON_FILE_PATTERN = "*.json";

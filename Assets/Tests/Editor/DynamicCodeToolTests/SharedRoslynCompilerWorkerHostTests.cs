@@ -8,6 +8,9 @@ using io.github.hatayama.UnityCliLoop.FirstPartyTools;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
 {
+    /// <summary>
+    /// Test fixture that verifies Shared Roslyn Compiler Worker Host behavior.
+    /// </summary>
     [TestFixture]
     public class SharedRoslynCompilerWorkerHostTests
     {

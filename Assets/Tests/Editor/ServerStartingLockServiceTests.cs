@@ -6,6 +6,9 @@ using io.github.hatayama.UnityCliLoop.Infrastructure;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor
 {
+    /// <summary>
+    /// Test fixture that verifies Server Starting Lock Service behavior.
+    /// </summary>
     [TestFixture]
     public class ServerStartingLockServiceTests
     {

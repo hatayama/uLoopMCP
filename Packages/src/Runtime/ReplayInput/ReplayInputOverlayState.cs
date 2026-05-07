@@ -2,6 +2,9 @@
 
 namespace io.github.hatayama.UnityCliLoop.Runtime
 {
+    /// <summary>
+    /// Provides Replay Input Overlay State operations for its owning module.
+    /// </summary>
     public sealed class ReplayInputOverlayStateService
     {
         private bool _isActive;
@@ -39,6 +42,9 @@ namespace io.github.hatayama.UnityCliLoop.Runtime
         }
     }
 
+    /// <summary>
+    /// Stores Replay Input Overlay state shared by the owning workflow.
+    /// </summary>
     public static class ReplayInputOverlayState
     {
         private static readonly ReplayInputOverlayStateService ServiceValue = new ReplayInputOverlayStateService();

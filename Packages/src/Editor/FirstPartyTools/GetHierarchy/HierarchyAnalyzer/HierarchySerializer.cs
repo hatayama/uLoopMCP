@@ -170,12 +170,18 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         }
     }
     
+        /// <summary>
+        /// Describes optional settings that tune Hierarchy Serialization behavior.
+        /// </summary>
         public class HierarchySerializationOptions
     {
         public bool IncludePaths { get; set; }
             public string UseComponentsLut { get; set; } = "auto"; // auto|true|false
     }
 
+    /// <summary>
+    /// Carries the result data produced by Hierarchy Serialization behavior.
+    /// </summary>
     public class HierarchySerializationResult
     {
         public readonly List<SceneHierarchyGroup> Groups;

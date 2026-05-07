@@ -8,6 +8,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
 {
+    /// <summary>
+    /// Test fixture that verifies Pre Using Resolver Extract Type Identifiers behavior.
+    /// </summary>
     [TestFixture]
     public class PreUsingResolverExtractTypeIdentifiersTests
     {
@@ -160,6 +163,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
         }
     }
 
+    /// <summary>
+    /// Test fixture that verifies Pre Using Resolver Resolve behavior.
+    /// </summary>
     [TestFixture]
     public class PreUsingResolverResolveTests
     {
@@ -251,6 +257,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
         }
     }
 
+    /// <summary>
+    /// Test fixture that verifies Pre Using Resolver Integration behavior.
+    /// </summary>
     [TestFixture]
     public class PreUsingResolverIntegrationTests
     {
@@ -300,6 +309,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
                 Code = @"
                     using System.Text;
 
+                    /// <summary>
+                    /// Test support type used by editor and play mode fixtures.
+                    /// </summary>
                     public class RawModeTestClass
                     {
                         public async System.Threading.Tasks.Task<object> ExecuteAsync(

@@ -13,6 +13,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor
 {
+    /// <summary>
+    /// Test fixture that verifies Setup Wizard Window behavior.
+    /// </summary>
     public class SetupWizardWindowTests
     {
         private static readonly string SettingsFilePath =

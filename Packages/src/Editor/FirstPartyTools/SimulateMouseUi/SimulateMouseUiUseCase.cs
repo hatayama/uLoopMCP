@@ -1121,6 +1121,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             };
         }
 
+        /// <summary>
+        /// Provides Mouse UI Simulation Command behavior for Unity CLI Loop.
+        /// </summary>
         private sealed class MouseUiSimulationCommand
         {
             private MouseUiSimulationCommand(UnityCliLoopMouseUiSimulationRequest request)

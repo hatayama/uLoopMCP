@@ -6,6 +6,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
 {
+    /// <summary>
+    /// Test fixture that verifies Dynamic Code Executor Factory behavior.
+    /// </summary>
     public class DynamicCodeExecutorFactoryTests
     {
         private IDynamicCompilationServiceFactory _previousFactory;

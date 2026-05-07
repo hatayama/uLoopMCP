@@ -10,6 +10,9 @@ using io.github.hatayama.UnityCliLoop.Tests.Demo;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Demo.Editor
 {
+    /// <summary>
+    /// Test support type used by editor and play mode fixtures.
+    /// </summary>
     public static class MinecraftSceneBuilder
     {
         private const string ScenePath = "Assets/Scenes/Minecraft.unity";

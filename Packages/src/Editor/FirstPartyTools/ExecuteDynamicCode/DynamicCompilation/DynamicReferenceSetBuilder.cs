@@ -5,6 +5,9 @@ using Assembly = System.Reflection.Assembly;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Builds Dynamic Reference Set data from the inputs provided by this module.
+    /// </summary>
     internal static class DynamicReferenceSetBuilder
     {
         private static readonly object ReferenceCatalogLock = new();

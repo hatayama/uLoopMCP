@@ -3,6 +3,9 @@ using System.Threading.Tasks;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Provides Dynamic Code Execution Scheduler Hooks behavior for Unity CLI Loop.
+    /// </summary>
     internal sealed class DynamicCodeExecutionSchedulerHooks
     {
         public Action AfterSemaphoreEntered { get; set; }

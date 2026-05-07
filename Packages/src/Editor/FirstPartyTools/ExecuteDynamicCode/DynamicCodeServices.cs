@@ -7,6 +7,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Keeps the registered Dynamic Code Services entries for lookup by the owning module.
+    /// </summary>
     internal sealed class DynamicCodeServicesRegistry
     {
         private readonly IDynamicCompilationRuntimeServicesFactory _runtimeServicesFactory;
@@ -310,6 +313,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         }
     }
 
+    /// <summary>
+    /// Provides Dynamic Code Services behavior for Unity CLI Loop.
+    /// </summary>
     internal static class DynamicCodeServices
     {
         private static readonly object SyncRoot = new object();

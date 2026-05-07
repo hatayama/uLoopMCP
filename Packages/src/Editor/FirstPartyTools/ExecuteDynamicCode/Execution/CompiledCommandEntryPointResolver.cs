@@ -6,6 +6,9 @@ using Assembly = System.Reflection.Assembly;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Resolves Compiled Command Entry Point values from the available runtime context.
+    /// </summary>
     internal sealed class CompiledCommandEntryPointResolver
     {
         private const string WrappedExecuteMethodName = "Execute";

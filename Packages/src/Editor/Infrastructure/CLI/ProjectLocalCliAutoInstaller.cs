@@ -7,6 +7,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 namespace io.github.hatayama.UnityCliLoop.Infrastructure
 {
     // Keeps each Unity project on the package-owned CLI bundle without making the Install CLI button do that work.
+    /// <summary>
+    /// Provides Project Local CLI Auto Installer behavior for Unity CLI Loop.
+    /// </summary>
     internal static class ProjectLocalCliAutoInstaller
     {
         internal static void ScheduleForEditorStartup()

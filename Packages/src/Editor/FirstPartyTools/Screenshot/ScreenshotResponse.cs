@@ -6,6 +6,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Describes Screenshot information collected by the owning workflow.
+    /// </summary>
     public class ScreenshotInfo
     {
         public string ImagePath { get; set; } = "";
@@ -28,6 +31,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         public List<UIElementInfo> AnnotatedElements { get; set; } = new List<UIElementInfo>();
     }
 
+    /// <summary>
+    /// Carries the response data returned by the Screenshot tool.
+    /// </summary>
     public class ScreenshotResponse : UnityCliLoopToolResponse
     {
         public List<ScreenshotInfo> Screenshots { get; set; } = new List<ScreenshotInfo>();

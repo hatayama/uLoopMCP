@@ -6,6 +6,9 @@ using io.github.hatayama.UnityCliLoop.Application;
 
 namespace io.github.hatayama.UnityCliLoop.Presentation
 {
+    /// <summary>
+    /// Builds the CLI Setup section of the Unity Editor UI.
+    /// </summary>
     public class CliSetupSection
     {
         private readonly VisualElement _cliStatusIcon;

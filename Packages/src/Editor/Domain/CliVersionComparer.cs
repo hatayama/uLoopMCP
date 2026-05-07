@@ -3,6 +3,9 @@ using System;
 namespace io.github.hatayama.UnityCliLoop.Domain
 {
     // Compares npm-style CLI versions for platform compatibility checks.
+    /// <summary>
+    /// Provides CLI Version Comparer behavior for Unity CLI Loop.
+    /// </summary>
     public static class CliVersionComparer
     {
         public static bool IsVersionLessThan(string leftVersion, string rightVersion)

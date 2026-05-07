@@ -13,6 +13,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor
 {
+    /// <summary>
+    /// Test fixture that verifies Onion Assembly Dependency behavior.
+    /// </summary>
     [TestFixture]
     public sealed class OnionAssemblyDependencyTests
     {

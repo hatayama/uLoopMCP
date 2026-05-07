@@ -47,6 +47,9 @@ namespace io.github.hatayama.UnityCliLoop.Application
         void RemoveServerStateChangedHandler(Action handler);
     }
 
+    /// <summary>
+    /// Provides Unity CLI Loop Server Lifecycle Registry operations for its owning module.
+    /// </summary>
     public sealed class UnityCliLoopServerLifecycleRegistryService
     {
         private readonly object _syncRoot = new object();
@@ -194,6 +197,9 @@ namespace io.github.hatayama.UnityCliLoop.Application
         }
     }
 
+    /// <summary>
+    /// Provides Unity CLI Loop Server Application operations for its owning module.
+    /// </summary>
     public sealed class UnityCliLoopServerApplicationService
     {
         private readonly IUnityCliLoopServerController _controller;

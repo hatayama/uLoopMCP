@@ -3,6 +3,9 @@ using UnityEditor;
 
 namespace io.github.hatayama.UnityCliLoop.Dev
 {
+    /// <summary>
+    /// Provides helper operations for Log Getter Test behavior.
+    /// </summary>
     public class LogGetterTestHelper
     {
         [MenuItem("UnityCliLoop/Debug/LogGetter Tests/Output Test Logs")]

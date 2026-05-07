@@ -8,6 +8,9 @@ using io.github.hatayama.UnityCliLoop.Runtime;
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     // Converts the runtime mouse-button value into the Input System control used by injected events.
+    /// <summary>
+    /// Resolves Mouse Button Control values from the available runtime context.
+    /// </summary>
     internal static class MouseButtonControlResolver
     {
         public static ButtonControl GetButtonControl(Mouse mouse, MouseButton button)

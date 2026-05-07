@@ -9,6 +9,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
 {
+    /// <summary>
+    /// Test fixture that verifies Dynamic Code Executor behavior.
+    /// </summary>
     [TestFixture]
     public class DynamicCodeExecutorTests
     {
@@ -99,6 +102,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
             Assert.That(invoker.ExecuteAsyncCallCount, Is.EqualTo(0));
         }
 
+        /// <summary>
+        /// Test support type used by editor and play mode fixtures.
+        /// </summary>
         private sealed class CancelledCompilationService : IDynamicCompilationService
         {
             public Task<CompilationResult> CompileAsync(CompilationRequest request, CancellationToken ct = default)
@@ -107,6 +113,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
             }
         }
 
+        /// <summary>
+        /// Test support type used by editor and play mode fixtures.
+        /// </summary>
         private sealed class CountingCompiledCommandInvoker : ICompiledCommandInvoker
         {
             public int ExecuteAsyncCallCount { get; private set; }
@@ -118,6 +127,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
             }
         }
 
+        /// <summary>
+        /// Test support type used by editor and play mode fixtures.
+        /// </summary>
         private sealed class NullTimingCompilationService : IDynamicCompilationService
         {
             private readonly CompilationResult _result;
@@ -151,6 +163,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
             }
         }
 
+        /// <summary>
+        /// Test support type used by editor and play mode fixtures.
+        /// </summary>
         private sealed class AdvisoryCompilationService : IDynamicCompilationService
         {
             private readonly CompilationResult _result;

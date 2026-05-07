@@ -1128,6 +1128,9 @@ namespace io.github.hatayama.UnityCliLoop.Infrastructure
         }
     }
 
+    /// <summary>
+    /// Provides Native CLI Installer operations for its owning module.
+    /// </summary>
     public sealed class NativeCliInstallerService : INativeCliInstaller
     {
         public bool IsPackageOwnedCurrentUserInstallPath(string cliExecutablePath, RuntimePlatform platform)

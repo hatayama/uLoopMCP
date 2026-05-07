@@ -2,6 +2,9 @@ using System.Collections.Generic;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Formats Dynamic Compilation Timing data for output to callers.
+    /// </summary>
     internal static class DynamicCompilationTimingFormatter
     {
         private const string CacheHitTimingEntry = "[Perf] CacheHit: true";

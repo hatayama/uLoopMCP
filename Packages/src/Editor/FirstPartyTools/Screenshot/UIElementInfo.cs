@@ -1,6 +1,9 @@
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Describes UI Element information collected by the owning workflow.
+    /// </summary>
     public class UIElementInfo
     {
         public string Name { get; set; } = "";

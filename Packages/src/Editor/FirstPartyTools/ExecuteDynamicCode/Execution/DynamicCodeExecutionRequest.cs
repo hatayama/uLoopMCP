@@ -2,6 +2,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Carries the request data needed for Dynamic Code Execution behavior.
+    /// </summary>
     internal sealed class DynamicCodeExecutionRequest
     {
         public string Code { get; set; }

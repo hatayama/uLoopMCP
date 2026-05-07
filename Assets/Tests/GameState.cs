@@ -3,6 +3,9 @@ using UnityEngine;
 namespace io.github.hatayama.UnityCliLoop.Tests
 {
 
+/// <summary>
+/// Test support type used by editor and play mode fixtures.
+/// </summary>
 public class GameState : MonoBehaviour
 {
     public int hp = 100;
