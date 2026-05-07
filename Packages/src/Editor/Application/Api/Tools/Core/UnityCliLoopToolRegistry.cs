@@ -24,9 +24,11 @@ namespace io.github.hatayama.UnityCliLoop
         private const string FirstPartyToolsAssemblyNamePrefix = "UnityCLILoop.FirstPartyTools.";
 
         private readonly Dictionary<string, IUnityCliLoopTool> _tools = new();
+        private readonly IInternalToolNameProvider _internalToolNameProvider;
 
-        internal UnityCliLoopToolRegistry()
+        internal UnityCliLoopToolRegistry(IInternalToolNameProvider internalToolNameProvider = null)
         {
+            _internalToolNameProvider = internalToolNameProvider ?? new EmptyInternalToolNameProvider();
             RegisterDefaultTools();
         }
 
@@ -171,7 +173,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         internal ToolInfo[] GetRegisteredToolsForProjectRoot(string projectRoot)
         {
-            HashSet<string> internalToolNames = SkillInstallLayout.GetInternalSkillToolNames(projectRoot);
+            HashSet<string> internalToolNames = _internalToolNameProvider.GetInternalToolNames(projectRoot);
             return _tools.Values
                 .Where(tool => ToolSettings.IsToolEnabled(tool.ToolName))
                 .Where(tool => !internalToolNames.Contains(tool.ToolName))
@@ -198,7 +200,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         internal ToolInfo[] GetAllRegisteredToolInfosForProjectRoot(string projectRoot)
         {
-            HashSet<string> internalToolNames = SkillInstallLayout.GetInternalSkillToolNames(projectRoot);
+            HashSet<string> internalToolNames = _internalToolNameProvider.GetInternalToolNames(projectRoot);
             return _tools.Values
                 .Where(tool => !internalToolNames.Contains(tool.ToolName))
                 .Select(tool =>
@@ -216,7 +218,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         internal ToolSettingsCatalogItem[] GetToolSettingsCatalogForProjectRoot(string projectRoot)
         {
-            HashSet<string> internalToolNames = SkillInstallLayout.GetInternalSkillToolNames(projectRoot);
+            HashSet<string> internalToolNames = _internalToolNameProvider.GetInternalToolNames(projectRoot);
             return _tools.Values
                 .Where(tool => !internalToolNames.Contains(tool.ToolName))
                 .Select(tool =>

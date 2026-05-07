@@ -7,12 +7,16 @@ namespace io.github.hatayama.UnityCliLoop
     /// </summary>
     public sealed class UnityCliLoopToolRegistrarService
     {
+        private readonly IInternalToolNameProvider _internalToolNameProvider;
         private UnityCliLoopToolRegistry _sharedRegistry;
 
         internal event Action OnToolsChanged;
 
-        public UnityCliLoopToolRegistrarService()
+        public UnityCliLoopToolRegistrarService(IInternalToolNameProvider internalToolNameProvider)
         {
+            UnityEngine.Debug.Assert(internalToolNameProvider != null, "internalToolNameProvider must not be null");
+
+            _internalToolNameProvider = internalToolNameProvider ?? throw new ArgumentNullException(nameof(internalToolNameProvider));
         }
 
         /// <summary>
@@ -24,7 +28,7 @@ namespace io.github.hatayama.UnityCliLoop
             {
                 if (_sharedRegistry == null)
                 {
-                    _sharedRegistry = new UnityCliLoopToolRegistry();
+                    _sharedRegistry = new UnityCliLoopToolRegistry(_internalToolNameProvider);
                     // Standard tools are automatically registered in UnityCliLoopToolRegistry constructor
                 }
                 return _sharedRegistry;

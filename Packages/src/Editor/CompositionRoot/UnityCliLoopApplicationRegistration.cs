@@ -14,7 +14,10 @@ namespace io.github.hatayama.UnityCliLoop
                     return;
                 }
 
-                UnityCliLoopToolRegistrar.RegisterService(new UnityCliLoopToolRegistrarService());
+                UnityCliLoopToolRegistrar.RegisterService(new UnityCliLoopToolRegistrarService(
+                    new SkillInstallLayoutInternalToolNameProvider()));
+                SkillSetupApplicationFacade.RegisterService(new SkillSetupApplicationService(
+                    new ToolSkillSetupService()));
                 CliSetupApplicationFacade.RegisterService(new CliSetupApplicationService(
                     new CliInstallationDetector(),
                     new ProjectLocalCliInstallerService(),
