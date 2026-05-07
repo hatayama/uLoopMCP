@@ -14,31 +14,17 @@ namespace io.github.hatayama.UnityCliLoop
                     return;
                 }
 
-                UnityCliLoopToolRegistrar.RegisterService(CreateToolRegistrarService());
-                CliSetupApplicationFacade.RegisterService(CreateCliSetupApplicationService());
-                UnityCliLoopBridgeServerInstanceFactory serverFactory =
-                    new UnityCliLoopBridgeServerInstanceFactory();
-                UnityCliLoopServerLifecycleRegistryService lifecycleRegistry =
-                    new UnityCliLoopServerLifecycleRegistryService();
+                UnityCliLoopToolRegistrar.RegisterService(new UnityCliLoopToolRegistrarService());
+                CliSetupApplicationFacade.RegisterService(new CliSetupApplicationService(new CliInstallationDetector()));
+                UnityCliLoopBridgeServerInstanceFactory serverFactory = new();
+                UnityCliLoopServerLifecycleRegistryService lifecycleRegistry = new();
                 lifecycleRegistry.RegisterSource(serverFactory);
-                UnityCliLoopServerControllerService controllerService =
-                    new UnityCliLoopServerControllerService(serverFactory, lifecycleRegistry);
-                UnityCliLoopServerApplicationService applicationService =
-                    new UnityCliLoopServerApplicationService(controllerService);
+                UnityCliLoopServerControllerService controllerService = new(serverFactory, lifecycleRegistry);
+                UnityCliLoopServerApplicationService applicationService = new(controllerService);
                 UnityCliLoopServerApplicationFacade.RegisterService(applicationService);
                 controllerService.InitializeForEditorStartup();
                 IsRegistered = true;
             }
-        }
-
-        private static UnityCliLoopToolRegistrarService CreateToolRegistrarService()
-        {
-            return new UnityCliLoopToolRegistrarService();
-        }
-
-        private static CliSetupApplicationService CreateCliSetupApplicationService()
-        {
-            return new CliSetupApplicationService(new CliInstallationDetector());
         }
     }
 }
