@@ -180,6 +180,7 @@ namespace io.github.hatayama.UnityCliLoop.Infrastructure
                 Stopwatch toolStopwatch = Stopwatch.StartNew();
                 UnityCliLoopToolResponse result = await ExecuteMethod(request.Method, request.Params);
                 toolStopwatch.Stop();
+                result.SetVersion(UnityCliLoopVersion.VERSION);
 
                 string response = CreateSuccessResponse(request.Id, result);
                 return response;

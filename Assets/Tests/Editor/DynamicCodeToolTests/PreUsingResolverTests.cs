@@ -424,7 +424,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
             DynamicCodeCompiler compiler = new(DynamicCodeSecurityLevel.Restricted);
             CompilationRequest request = new()            {
                 Code = @"
-                    io.github.hatayama.UnityCliLoop.DynamicAssemblyTest test = new();
+                    io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests.DynamicAssemblyTest test = new();
                     return test.HelloWorld();
                 ",
                 ClassName = "FullyQualifiedCustomAsmdefPreUsingCommand",

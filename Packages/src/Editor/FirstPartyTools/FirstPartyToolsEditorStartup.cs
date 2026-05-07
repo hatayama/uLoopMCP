@@ -18,5 +18,10 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             SimulateMouseUiEditorStartup.Initialize();
 #endif
         }
+
+        public static void ResetServerScopedServices()
+        {
+            ExecuteDynamicCodeEditorStartup.ResetServerScopedServices();
+        }
     }
 }

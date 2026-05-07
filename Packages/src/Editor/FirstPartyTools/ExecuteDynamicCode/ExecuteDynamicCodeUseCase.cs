@@ -18,10 +18,12 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         private const string ForegroundWarmupCode =
             "using UnityEngine; LogType previous = Debug.unityLogger.filterLogType; Debug.unityLogger.filterLogType = LogType.Warning; try { Debug.Log(\"Unity CLI Loop dynamic code prewarm\"); return \"Unity CLI Loop dynamic code prewarm\"; } finally { Debug.unityLogger.filterLogType = previous; }";
         private readonly IDynamicCodeExecutionRuntime _runtime;
+        private readonly DynamicCodeFriendlyErrorConverter _friendlyErrorConverter;
 
         public ExecuteDynamicCodeUseCase(IDynamicCodeExecutionRuntime runtime)
         {
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+            _friendlyErrorConverter = new DynamicCodeFriendlyErrorConverter();
         }
 
         public async Task<ExecuteDynamicCodeResponse> ExecuteAsync(
@@ -394,7 +396,10 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
             if (!result.Success)
             {
+                DynamicCodeFriendlyError friendlyError = _friendlyErrorConverter.Convert(result);
+                response.ErrorMessage = friendlyError.FriendlyMessage;
                 response.Logs = result.Logs != null ? new List<string>(result.Logs) : new List<string>();
+                AddFriendlyFailureDetails(response.Logs, friendlyError);
 
                 if (result.CompilationErrors?.Any() == true)
                 {
@@ -446,6 +451,38 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             }
 
             return response;
+        }
+
+        private static void AddFriendlyFailureDetails(
+            List<string> logs,
+            DynamicCodeFriendlyError friendlyError)
+        {
+            System.Diagnostics.Debug.Assert(logs != null, "logs must not be null");
+            System.Diagnostics.Debug.Assert(friendlyError != null, "friendlyError must not be null");
+
+            AddLogIfNotEmpty(logs, "Explanation: ", friendlyError.Explanation);
+            AddLogIfNotEmpty(logs, "Example: ", friendlyError.Example);
+
+            if (friendlyError.SuggestedSolutions.Count == 0)
+            {
+                return;
+            }
+
+            logs.Add("Solutions:");
+            foreach (string solution in friendlyError.SuggestedSolutions)
+            {
+                logs.Add("- " + solution);
+            }
+        }
+
+        private static void AddLogIfNotEmpty(List<string> logs, string prefix, string value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return;
+            }
+
+            logs.Add(prefix + value);
         }
 
         private static List<CompilationErrorDto> BuildDiagnostics(

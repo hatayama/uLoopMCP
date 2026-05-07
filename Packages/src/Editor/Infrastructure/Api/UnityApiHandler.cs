@@ -46,9 +46,12 @@ namespace io.github.hatayama.UnityCliLoop.Infrastructure
         /// <returns>Execution result</returns>
         public static async Task<UnityCliLoopToolResponse> ExecuteCommandAsync(string commandName, JToken paramsToken)
         {
+            UnityCliLoopToolResponse response;
             if (InternalBridgeCommandRouter.IsInternalCommand(commandName))
             {
-                return InternalBridgeCommandRouter.Execute(commandName, paramsToken);
+                response = InternalBridgeCommandRouter.Execute(commandName, paramsToken);
+                response.SetVersion(UnityCliLoopVersion.VERSION);
+                return response;
             }
 
             Stopwatch registryAcquireStopwatch = Stopwatch.StartNew();
@@ -56,8 +59,9 @@ namespace io.github.hatayama.UnityCliLoop.Infrastructure
             registryAcquireStopwatch.Stop();
 
             Stopwatch registryExecuteStopwatch = Stopwatch.StartNew();
-            UnityCliLoopToolResponse response = await registry.ExecuteToolAsync(commandName, paramsToken);
+            response = await registry.ExecuteToolAsync(commandName, paramsToken);
             registryExecuteStopwatch.Stop();
+            response.SetVersion(UnityCliLoopVersion.VERSION);
             return response;
         }
     }

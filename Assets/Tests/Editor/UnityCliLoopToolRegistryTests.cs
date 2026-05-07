@@ -282,6 +282,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
 
             GetVersionResponse getVersionResponse = response as GetVersionResponse;
             Assert.That(getVersionResponse, Is.Not.Null);
+            Assert.That(getVersionResponse.Ver, Is.EqualTo(UnityCliLoopVersion.VERSION));
             Assert.That(getVersionResponse.UnityVersion, Is.Not.Empty);
             Assert.That(getVersionResponse.IsEditor, Is.True);
         }
@@ -296,6 +297,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
 
             GetToolDetailsResponse getToolDetailsResponse = response as GetToolDetailsResponse;
             Assert.That(getToolDetailsResponse, Is.Not.Null);
+            Assert.That(getToolDetailsResponse.Ver, Is.EqualTo(UnityCliLoopVersion.VERSION));
 
             string[] toolNames = getToolDetailsResponse.Tools
                 .Select(tool => tool.Name)

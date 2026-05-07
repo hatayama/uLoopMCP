@@ -138,12 +138,12 @@ func resolvePackageRootCandidate(candidate string) string {
 	if _, err := os.Stat(candidate); err != nil {
 		return ""
 	}
-	directToolsPath := filepath.Join(candidate, "Editor", "Api", "Tools")
+	directToolsPath := filepath.Join(candidate, "Editor", "FirstPartyTools")
 	if _, err := os.Stat(directToolsPath); err == nil {
 		return candidate
 	}
 	nestedRoot := filepath.Join(candidate, "Packages", "src")
-	nestedToolsPath := filepath.Join(nestedRoot, "Editor", "Api", "Tools")
+	nestedToolsPath := filepath.Join(nestedRoot, "Editor", "FirstPartyTools")
 	if _, err := os.Stat(nestedToolsPath); err == nil {
 		return nestedRoot
 	}

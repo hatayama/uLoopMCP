@@ -756,6 +756,11 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             Shutdown();
         }
 
+        internal static void ShutdownForServerReset()
+        {
+            Shutdown();
+        }
+
         internal static Action<string> SwapWorkerDirectoryDeleterForTests(Action<string> deleter)
         {
             Debug.Assert(deleter != null, "deleter must not be null");

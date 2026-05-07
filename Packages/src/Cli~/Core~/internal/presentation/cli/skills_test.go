@@ -137,6 +137,21 @@ name: uloop-project
 	assertSkillContentContains(t, skills, "uloop-project", "# asset project")
 }
 
+// Tests that package root probing uses the current first-party tool marker.
+func TestResolvePackageRootCandidateUsesFirstPartyToolsMarker(t *testing.T) {
+	projectRoot := t.TempDir()
+	markerPath := filepath.Join(projectRoot, "Packages", "src", "Editor", "FirstPartyTools")
+	if err := os.MkdirAll(markerPath, 0o755); err != nil {
+		t.Fatalf("failed to create marker path: %v", err)
+	}
+
+	actualRoot := resolvePackageRootCandidate(projectRoot)
+	expectedRoot := filepath.Join(projectRoot, "Packages", "src")
+	if actualRoot != expectedRoot {
+		t.Fatalf("package root mismatch: actual=%s expected=%s", actualRoot, expectedRoot)
+	}
+}
+
 // Tests that direct SKILL.md files without a frontmatter name use their own directory name.
 func TestCollectSkillDefinitionsUsesDirectoryNameWhenDirectSkillOmitsName(t *testing.T) {
 	projectRoot := t.TempDir()

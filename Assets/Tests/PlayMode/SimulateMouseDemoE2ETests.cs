@@ -152,10 +152,14 @@ namespace io.github.hatayama.UnityCliLoop.Tests.PlayMode
                 object sizeGroup = GetStandaloneSizeGroup();
                 string[] displayTexts = GetDisplayTexts(sizeGroup);
                 int fixtureSizeIndex = FindSizeIndex(displayTexts, requiredDisplayText);
-                Assert.GreaterOrEqual(
-                    fixtureSizeIndex,
-                    0,
-                    $"Game View size containing '{requiredDisplayText}' must exist for the replay fixture.");
+                if (fixtureSizeIndex < 0)
+                {
+                    AddFixedResolutionSize(sizeGroup, requiredDisplayText);
+                    displayTexts = GetDisplayTexts(sizeGroup);
+                    fixtureSizeIndex = FindSizeIndex(displayTexts, requiredDisplayText);
+                }
+
+                Assert.GreaterOrEqual(fixtureSizeIndex, 0, $"Game View size containing '{requiredDisplayText}' must exist for the replay fixture.");
 
                 selectedSizeIndexProperty.SetValue(gameView, fixtureSizeIndex, null);
                 gameView.Repaint();
@@ -264,6 +268,33 @@ namespace io.github.hatayama.UnityCliLoop.Tests.PlayMode
                 }
 
                 return -1;
+            }
+
+            private static void AddFixedResolutionSize(object sizeGroup, string requiredDisplayText)
+            {
+                string[] dimensions = requiredDisplayText.Split('x');
+                Assert.That(dimensions, Has.Length.EqualTo(2), "Fixture Game View size must use WIDTHxHEIGHT format.");
+                bool parsedWidth = int.TryParse(dimensions[0], out int width);
+                bool parsedHeight = int.TryParse(dimensions[1], out int height);
+                Assert.IsTrue(parsedWidth, "Fixture Game View width must be numeric.");
+                Assert.IsTrue(parsedHeight, "Fixture Game View height must be numeric.");
+
+                Type gameViewSizeType = GetEditorType("UnityEditor.GameViewSize");
+                Type gameViewSizeKindType = GetEditorType("UnityEditor.GameViewSizeType");
+                object fixedResolution = Enum.Parse(gameViewSizeKindType, "FixedResolution");
+                object gameViewSize = Activator.CreateInstance(
+                    gameViewSizeType,
+                    fixedResolution,
+                    width,
+                    height,
+                    requiredDisplayText);
+                Assert.IsNotNull(gameViewSize, "Game View custom size instance must be created.");
+
+                MethodInfo addCustomSizeMethod = sizeGroup.GetType().GetMethod(
+                    "AddCustomSize",
+                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                Assert.IsNotNull(addCustomSizeMethod, "GameViewSizeGroup.AddCustomSize method must exist.");
+                addCustomSizeMethod.Invoke(sizeGroup, new object[] { gameViewSize });
             }
         }
     }
