@@ -90,16 +90,24 @@ namespace io.github.hatayama.UnityCliLoop
 
         private int _countdownGeneration;
 
-        public event Action ReplayCompleted
+        public void AddReplayCompletedHandler(Action handler)
         {
-            add => InputReplayer.ReplayCompleted += value;
-            remove => InputReplayer.ReplayCompleted -= value;
+            InputReplayer.AddReplayCompletedHandler(handler);
         }
 
-        public event Action RecordingStopped
+        public void RemoveReplayCompletedHandler(Action handler)
         {
-            add => InputRecorder.RecordingStopped += value;
-            remove => InputRecorder.RecordingStopped -= value;
+            InputReplayer.RemoveReplayCompletedHandler(handler);
+        }
+
+        public void AddRecordingStoppedHandler(Action handler)
+        {
+            InputRecorder.AddRecordingStoppedHandler(handler);
+        }
+
+        public void RemoveRecordingStoppedHandler(Action handler)
+        {
+            InputRecorder.RemoveRecordingStoppedHandler(handler);
         }
 
         public RecordingApplicationResult ToggleRecording(int requestedDelaySeconds)
@@ -278,16 +286,24 @@ namespace io.github.hatayama.UnityCliLoop
     {
         private static readonly RecordingsApplicationService ServiceValue = new RecordingsApplicationService();
 
-        public static event Action ReplayCompleted
+        public static void AddReplayCompletedHandler(Action handler)
         {
-            add => ServiceValue.ReplayCompleted += value;
-            remove => ServiceValue.ReplayCompleted -= value;
+            ServiceValue.AddReplayCompletedHandler(handler);
         }
 
-        public static event Action RecordingStopped
+        public static void RemoveReplayCompletedHandler(Action handler)
         {
-            add => ServiceValue.RecordingStopped += value;
-            remove => ServiceValue.RecordingStopped -= value;
+            ServiceValue.RemoveReplayCompletedHandler(handler);
+        }
+
+        public static void AddRecordingStoppedHandler(Action handler)
+        {
+            ServiceValue.AddRecordingStoppedHandler(handler);
+        }
+
+        public static void RemoveRecordingStoppedHandler(Action handler)
+        {
+            ServiceValue.RemoveRecordingStoppedHandler(handler);
         }
 
         public static RecordingApplicationResult ToggleRecording(int requestedDelaySeconds)

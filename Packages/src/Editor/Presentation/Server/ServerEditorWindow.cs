@@ -27,13 +27,13 @@ namespace io.github.hatayama.UnityCliLoop
         private void OnEnable()
         {
             EditorApplication.update += OnEditorUpdate;
-            UnityCliLoopServerApplicationFacade.ServerStateChanged += OnServerStateChanged;
+            UnityCliLoopServerApplicationFacade.AddServerStateChangedHandler(OnServerStateChanged);
         }
 
         private void OnDisable()
         {
             EditorApplication.update -= OnEditorUpdate;
-            UnityCliLoopServerApplicationFacade.ServerStateChanged -= OnServerStateChanged;
+            UnityCliLoopServerApplicationFacade.RemoveServerStateChangedHandler(OnServerStateChanged);
         }
 
         private void CreateGUI()

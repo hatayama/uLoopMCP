@@ -734,16 +734,24 @@ namespace io.github.hatayama.UnityCliLoop
             ServiceValue.RegisterPlayModeCallbacks();
         }
 
-        public static event Action? ReplayStarted
+        public static void AddReplayStartedHandler(Action handler)
         {
-            add => ServiceValue.ReplayStarted += value;
-            remove => ServiceValue.ReplayStarted -= value;
+            ServiceValue.ReplayStarted += handler;
         }
 
-        public static event Action? ReplayCompleted
+        public static void RemoveReplayStartedHandler(Action handler)
         {
-            add => ServiceValue.ReplayCompleted += value;
-            remove => ServiceValue.ReplayCompleted -= value;
+            ServiceValue.ReplayStarted -= handler;
+        }
+
+        public static void AddReplayCompletedHandler(Action handler)
+        {
+            ServiceValue.ReplayCompleted += handler;
+        }
+
+        public static void RemoveReplayCompletedHandler(Action handler)
+        {
+            ServiceValue.ReplayCompleted -= handler;
         }
 
         public static bool IsReplaying => ServiceValue.IsReplaying;

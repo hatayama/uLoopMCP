@@ -64,14 +64,14 @@ namespace io.github.hatayama.UnityCliLoop
         {
             UnsubscribeFromServerEvents();
 
-            UnityCliLoopServerApplicationFacade.ServerStateChanged += OnServerStateChanged;
-            ToolSettingsApplicationFacade.OnToolsChanged += OnToolsChanged;
+            UnityCliLoopServerApplicationFacade.AddServerStateChangedHandler(OnServerStateChanged);
+            ToolSettingsApplicationFacade.AddToolsChangedHandler(OnToolsChanged);
         }
 
         private void UnsubscribeFromServerEvents()
         {
-            UnityCliLoopServerApplicationFacade.ServerStateChanged -= OnServerStateChanged;
-            ToolSettingsApplicationFacade.OnToolsChanged -= OnToolsChanged;
+            UnityCliLoopServerApplicationFacade.RemoveServerStateChangedHandler(OnServerStateChanged);
+            ToolSettingsApplicationFacade.RemoveToolsChangedHandler(OnToolsChanged);
         }
 
         private void OnServerStateChanged()

@@ -22,7 +22,7 @@ namespace Tests.PlayMode
         public IEnumerator SetUp()
         {
             _replayCompleted = false;
-            InputReplayer.ReplayCompleted += OnReplayCompleted;
+            InputReplayer.AddReplayCompletedHandler(OnReplayCompleted);
 
             AsyncOperation loadOp = EditorSceneManager.LoadSceneAsyncInPlayMode(
                 SCENE_PATH,
@@ -42,7 +42,7 @@ namespace Tests.PlayMode
         [UnityTearDown]
         public IEnumerator TearDown()
         {
-            InputReplayer.ReplayCompleted -= OnReplayCompleted;
+            InputReplayer.RemoveReplayCompletedHandler(OnReplayCompleted);
 
             if (InputReplayer.IsReplaying)
             {

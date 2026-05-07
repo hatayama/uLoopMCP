@@ -27,7 +27,7 @@ namespace Tests.PlayMode
         public IEnumerator SetUp()
         {
             _replayCompleted = false;
-            InputReplayer.ReplayCompleted += OnReplayCompleted;
+            InputReplayer.AddReplayCompletedHandler(OnReplayCompleted);
             _gameViewSizeFixture = new GameViewSizeFixture(FIXTURE_GAME_VIEW_SIZE);
 
             AsyncOperation loadOp = EditorSceneManager.LoadSceneAsyncInPlayMode(
@@ -48,7 +48,7 @@ namespace Tests.PlayMode
         [UnityTearDown]
         public IEnumerator TearDown()
         {
-            InputReplayer.ReplayCompleted -= OnReplayCompleted;
+            InputReplayer.RemoveReplayCompletedHandler(OnReplayCompleted);
 
             if (InputReplayer.IsReplaying)
             {

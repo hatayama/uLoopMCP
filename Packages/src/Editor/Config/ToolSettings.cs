@@ -189,10 +189,14 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        public static event Action OnToolsChanged
+        public static void AddToolsChangedHandler(Action handler)
         {
-            add => UnityCliLoopToolRegistrar.OnToolsChanged += value;
-            remove => UnityCliLoopToolRegistrar.OnToolsChanged -= value;
+            UnityCliLoopToolRegistrar.AddToolsChangedHandler(handler);
+        }
+
+        public static void RemoveToolsChangedHandler(Action handler)
+        {
+            UnityCliLoopToolRegistrar.RemoveToolsChangedHandler(handler);
         }
 
         public static DynamicCodeSecurityLevel GetDynamicCodeSecurityLevel()

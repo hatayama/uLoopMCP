@@ -242,28 +242,24 @@ namespace io.github.hatayama.UnityCliLoop
         private static readonly UnityCliLoopServerLifecycleRegistryService ServiceValue =
             new UnityCliLoopServerLifecycleRegistryService();
 
-        public static event Action ServerStateChanged
+        public static void AddServerStateChangedHandler(Action handler)
         {
-            add => ServiceValue.ServerStateChanged += value;
-            remove => ServiceValue.ServerStateChanged -= value;
+            ServiceValue.ServerStateChanged += handler;
         }
 
-        public static event Action ServerStarted
+        public static void RemoveServerStateChangedHandler(Action handler)
         {
-            add => ServiceValue.ServerStarted += value;
-            remove => ServiceValue.ServerStarted -= value;
+            ServiceValue.ServerStateChanged -= handler;
         }
 
-        public static event Action ServerStopping
+        public static void AddServerLoopExitedHandler(Action handler)
         {
-            add => ServiceValue.ServerStopping += value;
-            remove => ServiceValue.ServerStopping -= value;
+            ServiceValue.ServerLoopExited += handler;
         }
 
-        public static event Action ServerLoopExited
+        public static void RemoveServerLoopExitedHandler(Action handler)
         {
-            add => ServiceValue.ServerLoopExited += value;
-            remove => ServiceValue.ServerLoopExited -= value;
+            ServiceValue.ServerLoopExited -= handler;
         }
 
         public static void RegisterSource(IUnityCliLoopServerLifecycleSource source)
@@ -329,8 +325,8 @@ namespace io.github.hatayama.UnityCliLoop
             AssemblyReloadEvents.afterAssemblyReload += OnAfterAssemblyReload;
 
             // Domain Reload disabled (Enter Play Mode Settings) causes static constructor re-entry
-            UnityCliLoopServerLifecycleRegistry.ServerLoopExited -= OnServerLoopUnexpectedlyExited;
-            UnityCliLoopServerLifecycleRegistry.ServerLoopExited += OnServerLoopUnexpectedlyExited;
+            UnityCliLoopServerLifecycleRegistry.RemoveServerLoopExitedHandler(OnServerLoopUnexpectedlyExited);
+            UnityCliLoopServerLifecycleRegistry.AddServerLoopExitedHandler(OnServerLoopUnexpectedlyExited);
 
             // Recovery binds the project IPC endpoint and may touch config files, so keep it off the
             // synchronous InitializeOnLoad path while preserving automatic startup.
@@ -1023,16 +1019,14 @@ namespace io.github.hatayama.UnityCliLoop
     /// </summary>
     public static class UnityCliLoopServerApplicationFacade
     {
-        public static event Action ServerStateChanged
+        public static void AddServerStateChangedHandler(Action handler)
         {
-            add
-            {
-                UnityCliLoopServerLifecycleRegistry.ServerStateChanged += value;
-            }
-            remove
-            {
-                UnityCliLoopServerLifecycleRegistry.ServerStateChanged -= value;
-            }
+            UnityCliLoopServerLifecycleRegistry.AddServerStateChangedHandler(handler);
+        }
+
+        public static void RemoveServerStateChangedHandler(Action handler)
+        {
+            UnityCliLoopServerLifecycleRegistry.RemoveServerStateChangedHandler(handler);
         }
 
         public static bool IsServerRunning => UnityCliLoopServerController.IsServerRunning;

@@ -118,10 +118,14 @@ namespace io.github.hatayama.UnityCliLoop
         private static readonly UnityCliLoopToolRegistrarService ServiceValue =
             new UnityCliLoopToolRegistrarService();
 
-        internal static event Action OnToolsChanged
+        internal static void AddToolsChangedHandler(Action handler)
         {
-            add => Service.OnToolsChanged += value;
-            remove => Service.OnToolsChanged -= value;
+            Service.OnToolsChanged += handler;
+        }
+
+        internal static void RemoveToolsChangedHandler(Action handler)
+        {
+            Service.OnToolsChanged -= handler;
         }
 
         public static UnityCliLoopToolRegistrarService Service

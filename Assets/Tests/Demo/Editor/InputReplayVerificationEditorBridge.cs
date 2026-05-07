@@ -14,17 +14,17 @@ namespace io.github.hatayama.UnityCliLoop
     {
         static InputReplayVerificationEditorBridge()
         {
-            InputRecorder.RecordingStarted -= OnRecordingStarted;
-            InputRecorder.RecordingStarted += OnRecordingStarted;
+            InputRecorder.RemoveRecordingStartedHandler(OnRecordingStarted);
+            InputRecorder.AddRecordingStartedHandler(OnRecordingStarted);
 
-            InputRecorder.RecordingStopped -= OnRecordingStopped;
-            InputRecorder.RecordingStopped += OnRecordingStopped;
+            InputRecorder.RemoveRecordingStoppedHandler(OnRecordingStopped);
+            InputRecorder.AddRecordingStoppedHandler(OnRecordingStopped);
 
-            InputReplayer.ReplayStarted -= OnReplayStarted;
-            InputReplayer.ReplayStarted += OnReplayStarted;
+            InputReplayer.RemoveReplayStartedHandler(OnReplayStarted);
+            InputReplayer.AddReplayStartedHandler(OnReplayStarted);
 
-            InputReplayer.ReplayCompleted -= OnReplayCompleted;
-            InputReplayer.ReplayCompleted += OnReplayCompleted;
+            InputReplayer.RemoveReplayCompletedHandler(OnReplayCompleted);
+            InputReplayer.AddReplayCompletedHandler(OnReplayCompleted);
         }
 
         private static void OnRecordingStarted()

@@ -60,16 +60,16 @@ namespace io.github.hatayama.UnityCliLoop
         private void OnEnable()
         {
             EditorApplication.update += OnEditorUpdate;
-            RecordingsApplicationFacade.ReplayCompleted += OnReplayCompleted;
-            RecordingsApplicationFacade.RecordingStopped += OnRecordingStopped;
+            RecordingsApplicationFacade.AddReplayCompletedHandler(OnReplayCompleted);
+            RecordingsApplicationFacade.AddRecordingStoppedHandler(OnRecordingStopped);
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
         }
 
         private void OnDisable()
         {
             EditorApplication.update -= OnEditorUpdate;
-            RecordingsApplicationFacade.ReplayCompleted -= OnReplayCompleted;
-            RecordingsApplicationFacade.RecordingStopped -= OnRecordingStopped;
+            RecordingsApplicationFacade.RemoveReplayCompletedHandler(OnReplayCompleted);
+            RecordingsApplicationFacade.RemoveRecordingStoppedHandler(OnRecordingStopped);
             EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
             UnbindEvents();
         }

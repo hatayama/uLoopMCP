@@ -486,16 +486,24 @@ namespace io.github.hatayama.UnityCliLoop
             ServiceValue.Initialize();
         }
 
-        public static event Action? RecordingStarted
+        public static void AddRecordingStartedHandler(Action handler)
         {
-            add => ServiceValue.RecordingStarted += value;
-            remove => ServiceValue.RecordingStarted -= value;
+            ServiceValue.RecordingStarted += handler;
         }
 
-        public static event Action? RecordingStopped
+        public static void RemoveRecordingStartedHandler(Action handler)
         {
-            add => ServiceValue.RecordingStopped += value;
-            remove => ServiceValue.RecordingStopped -= value;
+            ServiceValue.RecordingStarted -= handler;
+        }
+
+        public static void AddRecordingStoppedHandler(Action handler)
+        {
+            ServiceValue.RecordingStopped += handler;
+        }
+
+        public static void RemoveRecordingStoppedHandler(Action handler)
+        {
+            ServiceValue.RecordingStopped -= handler;
         }
 
         public static bool IsRecording => ServiceValue.IsRecording;

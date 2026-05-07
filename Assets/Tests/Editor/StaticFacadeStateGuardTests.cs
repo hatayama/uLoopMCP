@@ -46,7 +46,7 @@ namespace io.github.hatayama.UnityCliLoop
             RegexOptions.Compiled);
 
         private static readonly Regex DirectStaticEventPattern = new Regex(
-            @"\b(private|internal|public|protected)\s+static\s+event\s+[^;]+;",
+            @"\b(private|internal|public|protected)\s+static\s+event\b",
             RegexOptions.Compiled);
 
         [Test]
@@ -59,9 +59,9 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
-        public void ProductionSources_WhenScanned_DoNotDeclareDirectStaticEvents()
+        public void ProductionSources_WhenScanned_DoNotDeclareStaticEvents()
         {
-            // Tests that static entrypoints cannot own event handler lists directly.
+            // Tests that static entrypoints do not hide event subscription lifetimes.
             List<string> violations = FindDirectStaticEventViolations();
 
             Assert.That(violations, Is.Empty, string.Join("\n", violations));
