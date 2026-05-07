@@ -1,9 +1,9 @@
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     // Keeps bundled tool initialization inside the bundled-tool assembly.
-    internal static class FirstPartyToolsEditorStartup
+    public static class FirstPartyToolsEditorStartup
     {
-        internal static void Initialize()
+        public static void Initialize()
         {
             ExecuteDynamicCodeEditorStartup.Initialize();
             GetLogsEditorStartup.Initialize();
