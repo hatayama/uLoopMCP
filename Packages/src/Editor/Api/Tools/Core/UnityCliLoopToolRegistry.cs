@@ -27,11 +27,6 @@ namespace io.github.hatayama.UnityCliLoop
         private readonly Dictionary<string, IUnityCliLoopTool> _tools = new();
 
         /// <summary>
-        /// Singleton instance for global access
-        /// </summary>
-        public static UnityCliLoopToolRegistry Instance { get; private set; }
-
-        /// <summary>
         /// Default constructor
         /// Auto-registers standard _tools
         /// </summary>
@@ -44,7 +39,6 @@ namespace io.github.hatayama.UnityCliLoop
         {
             _hostServices = hostServices ?? throw new ArgumentNullException(nameof(hostServices));
             UnityCliLoopToolContractVersion.SetCurrent(UnityCliLoopVersion.VERSION);
-            Instance = this;
             RegisterDefaultTools();
         }
 
