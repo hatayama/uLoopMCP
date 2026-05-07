@@ -8,11 +8,8 @@ namespace io.github.hatayama.UnityCliLoop
         [InitializeOnLoadMethod]
         private static void Initialize()
         {
-            UnityCliLoopApplicationRegistration.EnsureRegistered();
-            ApplicationEditorStartup.Initialize();
-            FirstPartyToolsEditorStartup.Initialize();
-            InfrastructureEditorStartup.Initialize();
-            PresentationEditorStartup.Initialize();
+            UnityCliLoopEditorBootstrapper bootstrapper = new();
+            bootstrapper.Initialize();
         }
     }
 }

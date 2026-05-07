@@ -1,16 +1,9 @@
 namespace io.github.hatayama.UnityCliLoop
 {
-    public static class UnityCliLoopApplicationRegistration
+    internal sealed class UnityCliLoopApplicationRegistration
     {
-        private static bool IsRegistered;
-
-        internal static void EnsureRegistered()
+        internal void Register()
         {
-            if (IsRegistered)
-            {
-                return;
-            }
-
             ToolSettingsRepository toolSettingsRepository = new();
             UnityCliLoopEditorSettingsRepository editorSettingsRepository = new();
             ULoopSettingsRepository uLoopSettingsRepository = new();
@@ -35,7 +28,6 @@ namespace io.github.hatayama.UnityCliLoop
             UnityCliLoopServerApplicationService applicationService = new(controllerService);
             UnityCliLoopServerApplicationFacade.RegisterService(applicationService);
             controllerService.InitializeForEditorStartup();
-            IsRegistered = true;
         }
     }
 }
