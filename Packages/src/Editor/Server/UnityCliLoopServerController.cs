@@ -195,7 +195,9 @@ namespace io.github.hatayama.UnityCliLoop
     /// <summary>
     /// Manages the Unity CLI bridge server state and restores it after assembly reload.
     /// </summary>
-    public sealed class UnityCliLoopServerControllerService : IUnityCliLoopServerRecoveryCoordinator
+    public sealed class UnityCliLoopServerControllerService :
+        IUnityCliLoopServerRecoveryCoordinator,
+        IUnityCliLoopServerStateReader
     {
         private readonly IUnityCliLoopServerInstanceFactory _serverInstanceFactory;
         private readonly UnityCliLoopServerLifecycleRegistryService _serverLifecycleRegistry;
@@ -435,7 +437,7 @@ namespace io.github.hatayama.UnityCliLoop
             UnityCliLoopServerStartupService startupService =
                 new UnityCliLoopServerStartupService(_serverInstanceFactory);
             UnityCliLoopServerShutdownUseCase useCase =
-                new UnityCliLoopServerShutdownUseCase(startupService);
+                new UnityCliLoopServerShutdownUseCase(startupService, this);
             ServerShutdownSchema schema = new() { ForceShutdown = false };
             System.Threading.CancellationToken cancellationToken = System.Threading.CancellationToken.None;
 
@@ -918,84 +920,39 @@ namespace io.github.hatayama.UnityCliLoop
         }
     }
 
-    public static class UnityCliLoopServerController
+    public sealed class UnityCliLoopServerApplicationService
     {
-        private static UnityCliLoopServerControllerService ServiceValue;
+        private readonly UnityCliLoopServerControllerService _controllerService;
 
-        internal static void RegisterService(UnityCliLoopServerControllerService service)
+        public UnityCliLoopServerApplicationService(UnityCliLoopServerControllerService controllerService)
         {
-            System.Diagnostics.Debug.Assert(service != null, "service must not be null");
+            System.Diagnostics.Debug.Assert(controllerService != null, "controllerService must not be null");
 
-            ServiceValue = service ?? throw new ArgumentNullException(nameof(service));
-            ServiceValue.InitializeOnLoad();
+            _controllerService = controllerService ?? throw new ArgumentNullException(nameof(controllerService));
         }
 
-        private static UnityCliLoopServerControllerService GetService()
-        {
-            if (ServiceValue == null)
-            {
-                throw new InvalidOperationException("Unity CLI Loop server controller service is not registered.");
-            }
+        public bool IsServerRunning => _controllerService.IsServerRunning;
 
-            return ServiceValue;
+        public Task RecoveryTask => _controllerService.RecoveryTask;
+
+        public void StartServer()
+        {
+            _controllerService.StartServer();
         }
 
-        public static IUnityCliLoopServerInstance CurrentServer => GetService().CurrentServer;
-
-        public static bool IsServerRunning => GetService().IsServerRunning;
-
-        internal static void RegisterRecoveredServer(IUnityCliLoopServerInstance server)
+        public void StopServer()
         {
-            GetService().RegisterRecoveredServer(server);
+            _controllerService.StopServer();
         }
 
-        public static Task RecoveryTask => GetService().RecoveryTask;
-
-        internal static Task ScheduleStartupRecovery(
-            Action<Action> scheduleDelayCall,
-            Func<Task> restoreServerState)
+        public void AddServerStateChangedHandler(Action handler)
         {
-            return GetService().ScheduleStartupRecovery(scheduleDelayCall, restoreServerState);
+            _controllerService.AddServerStateChangedHandler(handler);
         }
 
-        public static void StartServer()
+        public void RemoveServerStateChangedHandler(Action handler)
         {
-            GetService().StartServer();
-        }
-
-        public static void StopServer()
-        {
-            GetService().StopServer();
-        }
-
-        public static bool IsStartupProtectionActive()
-        {
-            return GetService().IsStartupProtectionActive();
-        }
-
-        public static Task StartRecoveryIfNeededAsync(bool isAfterCompile, CancellationToken cancellationToken)
-        {
-            return GetService().StartRecoveryIfNeededAsync(isAfterCompile, cancellationToken);
-        }
-
-        internal static string CreateOptionalServerStartingLock(Func<string> createLockFile = null)
-        {
-            return GetService().CreateOptionalServerStartingLock(createLockFile);
-        }
-
-        internal static IUnityCliLoopServerInstance CreateServerInstanceForRecovery()
-        {
-            return GetService().CreateServerInstanceForRecovery();
-        }
-
-        internal static void AddServerStateChangedHandler(Action handler)
-        {
-            GetService().AddServerStateChangedHandler(handler);
-        }
-
-        internal static void RemoveServerStateChangedHandler(Action handler)
-        {
-            GetService().RemoveServerStateChangedHandler(handler);
+            _controllerService.RemoveServerStateChangedHandler(handler);
         }
     }
 
@@ -1005,28 +962,47 @@ namespace io.github.hatayama.UnityCliLoop
     /// </summary>
     public static class UnityCliLoopServerApplicationFacade
     {
+        private static UnityCliLoopServerApplicationService ServiceValue;
+
+        internal static void RegisterService(UnityCliLoopServerApplicationService service)
+        {
+            System.Diagnostics.Debug.Assert(service != null, "service must not be null");
+
+            ServiceValue = service ?? throw new ArgumentNullException(nameof(service));
+        }
+
+        private static UnityCliLoopServerApplicationService GetService()
+        {
+            if (ServiceValue == null)
+            {
+                throw new InvalidOperationException("Unity CLI Loop server application service is not registered.");
+            }
+
+            return ServiceValue;
+        }
+
         public static void AddServerStateChangedHandler(Action handler)
         {
-            UnityCliLoopServerController.AddServerStateChangedHandler(handler);
+            GetService().AddServerStateChangedHandler(handler);
         }
 
         public static void RemoveServerStateChangedHandler(Action handler)
         {
-            UnityCliLoopServerController.RemoveServerStateChangedHandler(handler);
+            GetService().RemoveServerStateChangedHandler(handler);
         }
 
-        public static bool IsServerRunning => UnityCliLoopServerController.IsServerRunning;
+        public static bool IsServerRunning => GetService().IsServerRunning;
 
-        public static Task RecoveryTask => UnityCliLoopServerController.RecoveryTask;
+        public static Task RecoveryTask => GetService().RecoveryTask;
 
         public static void StartServer()
         {
-            UnityCliLoopServerController.StartServer();
+            GetService().StartServer();
         }
 
         public static void StopServer()
         {
-            UnityCliLoopServerController.StopServer();
+            GetService().StopServer();
         }
     }
 }

@@ -30,7 +30,10 @@ namespace io.github.hatayama.UnityCliLoop
                 lifecycleRegistry.RegisterSource(serverFactory);
                 UnityCliLoopServerControllerService controllerService =
                     new UnityCliLoopServerControllerService(serverFactory, lifecycleRegistry);
-                UnityCliLoopServerController.RegisterService(controllerService);
+                UnityCliLoopServerApplicationService applicationService =
+                    new UnityCliLoopServerApplicationService(controllerService);
+                UnityCliLoopServerApplicationFacade.RegisterService(applicationService);
+                controllerService.InitializeOnLoad();
                 IsRegistered = true;
             }
         }

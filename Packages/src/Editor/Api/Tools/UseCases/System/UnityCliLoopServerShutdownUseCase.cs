@@ -3,6 +3,11 @@ using System.Threading;
 
 namespace io.github.hatayama.UnityCliLoop
 {
+    internal interface IUnityCliLoopServerStateReader
+    {
+        IUnityCliLoopServerInstance CurrentServer { get; }
+    }
+
     /// <summary>
     /// UseCase responsible for temporal cohesion of server shutdown processing
     /// Processing sequence: 1. Server stop, 2. Session state clear, 3. Resource disposal
@@ -12,10 +17,14 @@ namespace io.github.hatayama.UnityCliLoop
     public class UnityCliLoopServerShutdownUseCase : AbstractUseCase<ServerShutdownSchema, ServerShutdownResponse>
     {
         private readonly UnityCliLoopServerStartupService _startupService;
+        private readonly IUnityCliLoopServerStateReader _serverStateReader;
 
-        public UnityCliLoopServerShutdownUseCase(UnityCliLoopServerStartupService startupService)
+        internal UnityCliLoopServerShutdownUseCase(
+            UnityCliLoopServerStartupService startupService,
+            IUnityCliLoopServerStateReader serverStateReader)
         {
             _startupService = startupService ?? throw new System.ArgumentNullException(nameof(startupService));
+            _serverStateReader = serverStateReader ?? throw new System.ArgumentNullException(nameof(serverStateReader));
         }
         /// <summary>
         /// Execute server shutdown processing
@@ -32,7 +41,7 @@ namespace io.github.hatayama.UnityCliLoop
                 cancellationToken.ThrowIfCancellationRequested();
                 
                 // 1. Get current server instance
-                IUnityCliLoopServerInstance currentServer = UnityCliLoopServerController.CurrentServer;
+                IUnityCliLoopServerInstance currentServer = _serverStateReader.CurrentServer;
                 if (currentServer == null)
                 {
                     response.Success = true;

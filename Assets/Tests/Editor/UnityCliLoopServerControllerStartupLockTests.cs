@@ -8,7 +8,10 @@ namespace io.github.hatayama.UnityCliLoop
         [Test]
         public void CreateOptionalServerStartingLock_WhenLockCreationSucceeds_ShouldReturnOwnershipToken()
         {
-            string token = UnityCliLoopServerController.CreateOptionalServerStartingLock(() => "token-123");
+            // Tests that optional startup locks return the ownership token when creation succeeds.
+            UnityCliLoopServerControllerService service = CreateControllerService();
+
+            string token = service.CreateOptionalServerStartingLock(() => "token-123");
 
             Assert.That(token, Is.EqualTo("token-123"));
         }
@@ -16,7 +19,10 @@ namespace io.github.hatayama.UnityCliLoop
         [Test]
         public void CreateOptionalServerStartingLock_WhenLockCreationFails_ShouldContinueWithoutThrowing()
         {
-            string token = UnityCliLoopServerController.CreateOptionalServerStartingLock(() => null);
+            // Tests that optional startup locks do not fail server startup when creation fails.
+            UnityCliLoopServerControllerService service = CreateControllerService();
+
+            string token = service.CreateOptionalServerStartingLock(() => null);
 
             Assert.That(token, Is.Null);
         }
@@ -24,10 +30,12 @@ namespace io.github.hatayama.UnityCliLoop
         [Test]
         public void ScheduleStartupRecovery_WhenCalled_ExposesRecoveryTaskBeforeDeferredActionRuns()
         {
+            // Tests that deferred startup recovery exposes its pending task before execution.
             System.Action scheduledAction = null;
             bool recoveryExecuted = false;
+            UnityCliLoopServerControllerService service = CreateControllerService();
 
-            Task recoveryTask = UnityCliLoopServerController.ScheduleStartupRecovery(
+            Task recoveryTask = service.ScheduleStartupRecovery(
                 action => scheduledAction = action,
                 () =>
                 {
@@ -37,52 +45,91 @@ namespace io.github.hatayama.UnityCliLoop
 
             Assert.That(recoveryExecuted, Is.False);
             Assert.That(scheduledAction, Is.Not.Null);
-            Assert.That(recoveryTask, Is.SameAs(UnityCliLoopServerController.RecoveryTask));
+            Assert.That(recoveryTask, Is.SameAs(service.RecoveryTask));
             Assert.That(recoveryTask.IsCompleted, Is.False);
 
             scheduledAction();
 
             Assert.That(recoveryExecuted, Is.True);
             Assert.That(recoveryTask.IsCompleted, Is.True);
-            Assert.That(UnityCliLoopServerController.RecoveryTask, Is.Null);
+            Assert.That(service.RecoveryTask, Is.Null);
         }
 
         [Test]
         public void ScheduleStartupRecovery_WhenRecoveryThrowsSynchronously_FaultsTaskAndClearsRecoveryTask()
         {
+            // Tests that synchronous startup recovery failures fault and clear the tracked task.
             System.Action scheduledAction = null;
+            UnityCliLoopServerControllerService service = CreateControllerService();
 
-            Task recoveryTask = UnityCliLoopServerController.ScheduleStartupRecovery(
+            Task recoveryTask = service.ScheduleStartupRecovery(
                 action => scheduledAction = action,
                 () => throw new System.InvalidOperationException("restore failed"));
 
             scheduledAction();
 
             Assert.That(recoveryTask.IsFaulted, Is.True);
-            Assert.That(UnityCliLoopServerController.RecoveryTask, Is.Null);
+            Assert.That(service.RecoveryTask, Is.Null);
             Assert.ThrowsAsync<System.InvalidOperationException>(async () => await recoveryTask);
         }
 
         [Test]
         public async Task ScheduleStartupRecovery_WhenRecoveryIsAsync_KeepsTaskIncompleteUntilRecoveryCompletes()
         {
+            // Tests that asynchronous startup recovery remains pending until its restore task completes.
             System.Action scheduledAction = null;
             TaskCompletionSource<bool> recoveryCompletionSource = new TaskCompletionSource<bool>();
+            UnityCliLoopServerControllerService service = CreateControllerService();
 
-            Task recoveryTask = UnityCliLoopServerController.ScheduleStartupRecovery(
+            Task recoveryTask = service.ScheduleStartupRecovery(
                 action => scheduledAction = action,
                 () => recoveryCompletionSource.Task);
 
             scheduledAction();
 
             Assert.That(recoveryTask.IsCompleted, Is.False);
-            Assert.That(UnityCliLoopServerController.RecoveryTask, Is.SameAs(recoveryTask));
+            Assert.That(service.RecoveryTask, Is.SameAs(recoveryTask));
 
             recoveryCompletionSource.SetResult(true);
             await recoveryTask;
 
             Assert.That(recoveryTask.IsCompleted, Is.True);
-            Assert.That(UnityCliLoopServerController.RecoveryTask, Is.Null);
+            Assert.That(service.RecoveryTask, Is.Null);
+        }
+
+        private static UnityCliLoopServerControllerService CreateControllerService()
+        {
+            TestServerInstanceFactory serverInstanceFactory = new TestServerInstanceFactory();
+            UnityCliLoopServerLifecycleRegistryService lifecycleRegistry =
+                new UnityCliLoopServerLifecycleRegistryService();
+            return new UnityCliLoopServerControllerService(serverInstanceFactory, lifecycleRegistry);
+        }
+
+        private sealed class TestServerInstanceFactory : IUnityCliLoopServerInstanceFactory
+        {
+            public IUnityCliLoopServerInstance Create()
+            {
+                return new TestServerInstance();
+            }
+        }
+
+        private sealed class TestServerInstance : IUnityCliLoopServerInstance
+        {
+            public bool IsRunning => false;
+
+            public string Endpoint => "test";
+
+            public void StartServer(bool clearServerStartingLockWhenReady = true)
+            {
+            }
+
+            public void StopServer()
+            {
+            }
+
+            public void Dispose()
+            {
+            }
         }
     }
 }
