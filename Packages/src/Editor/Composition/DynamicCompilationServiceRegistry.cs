@@ -11,83 +11,41 @@ namespace io.github.hatayama.UnityCliLoop
         void ShutdownForServerReset();
     }
 
-    public static class DynamicCompilationRuntimeServicesRegistry
+    public sealed class DynamicCompilationServiceRegistryService
     {
-        private static readonly object SyncRoot = new object();
-        private static IDynamicCompilationRuntimeServicesFactory _factory;
+        private readonly object _syncRoot = new object();
+        private IDynamicCompilationServiceFactory _factory;
 
-        public static void RegisterFactory(IDynamicCompilationRuntimeServicesFactory factory)
+        public DynamicCompilationServiceRegistryService(IDynamicCompilationServiceFactory factory)
         {
-            Debug.Assert(factory != null, "factory must not be null");
-
-            lock (SyncRoot)
-            {
-                _factory = factory;
-            }
+            RegisterFactory(factory);
         }
 
-        public static IDynamicCodeSourcePreparationService CreateSourcePreparationService()
-        {
-            IDynamicCompilationRuntimeServicesFactory factory = GetFactory();
-            return factory.CreateSourcePreparationService();
-        }
-
-        public static ICompiledAssemblyBuilder CreateAssemblyBuilder()
-        {
-            IDynamicCompilationRuntimeServicesFactory factory = GetFactory();
-            return factory.CreateAssemblyBuilder();
-        }
-
-        public static void ShutdownForServerReset()
-        {
-            IDynamicCompilationRuntimeServicesFactory factory = GetFactory();
-            factory.ShutdownForServerReset();
-        }
-
-        private static IDynamicCompilationRuntimeServicesFactory GetFactory()
-        {
-            lock (SyncRoot)
-            {
-                if (_factory == null)
-                {
-                    throw new System.InvalidOperationException("Dynamic compilation runtime services factory is not registered.");
-                }
-
-                return _factory;
-            }
-        }
-    }
-
-    public static class DynamicCompilationServiceRegistry
-    {
-        private static readonly object SyncRoot = new object();
-        private static IDynamicCompilationServiceFactory _factory;
-
-        public static bool HasRegisteredFactory
+        public bool HasRegisteredFactory
         {
             get
             {
-                lock (SyncRoot)
+                lock (_syncRoot)
                 {
                     return _factory != null;
                 }
             }
         }
 
-        public static void RegisterFactory(IDynamicCompilationServiceFactory factory)
+        public void RegisterFactory(IDynamicCompilationServiceFactory factory)
         {
             Debug.Assert(factory != null, "factory must not be null");
 
-            lock (SyncRoot)
+            lock (_syncRoot)
             {
                 _factory = factory;
             }
         }
 
-        public static bool TryCreate(DynamicCodeSecurityLevel securityLevel, out IDynamicCompilationService service)
+        public bool TryCreate(DynamicCodeSecurityLevel securityLevel, out IDynamicCompilationService service)
         {
             IDynamicCompilationServiceFactory factory;
-            lock (SyncRoot)
+            lock (_syncRoot)
             {
                 factory = _factory;
             }
@@ -102,9 +60,9 @@ namespace io.github.hatayama.UnityCliLoop
             return service != null;
         }
 
-        public static IDynamicCompilationServiceFactory SwapFactoryForTests(IDynamicCompilationServiceFactory factory)
+        public IDynamicCompilationServiceFactory SwapFactoryForTests(IDynamicCompilationServiceFactory factory)
         {
-            lock (SyncRoot)
+            lock (_syncRoot)
             {
                 IDynamicCompilationServiceFactory previousFactory = _factory;
                 _factory = factory;

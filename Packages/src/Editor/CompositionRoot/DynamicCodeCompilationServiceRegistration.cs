@@ -5,6 +5,7 @@ namespace io.github.hatayama.UnityCliLoop
     public static class DynamicCodeCompilationServiceRegistration
     {
         private static readonly object SyncRoot = new object();
+        private static bool IsRegistered;
 
         [InitializeOnLoadMethod]
         private static void Register()
@@ -12,19 +13,24 @@ namespace io.github.hatayama.UnityCliLoop
             EnsureRegistered();
         }
 
-        internal static void EnsureRegistered()
+        internal static DynamicCodeServicesRegistry EnsureRegistered()
         {
             lock (SyncRoot)
             {
-                DynamicCompilationRuntimeServicesRegistry.RegisterFactory(
-                    new DynamicCompilationRuntimeServicesFactory());
-
-                if (DynamicCompilationServiceRegistry.HasRegisteredFactory)
+                if (IsRegistered)
                 {
-                    return;
+                    return DynamicCodeServices.GetRegistry();
                 }
 
-                DynamicCompilationServiceRegistry.RegisterFactory(new DynamicCodeCompilationServiceFactory());
+                DynamicCompilationServiceRegistryService compilationServiceRegistry =
+                    new DynamicCompilationServiceRegistryService(new DynamicCodeCompilationServiceFactory());
+                DynamicCodeServicesRegistry dynamicCodeServicesRegistry =
+                    new DynamicCodeServicesRegistry(
+                        new DynamicCompilationRuntimeServicesFactory(),
+                        compilationServiceRegistry);
+                DynamicCodeServices.RegisterRegistry(dynamicCodeServicesRegistry);
+                IsRegistered = true;
+                return dynamicCodeServicesRegistry;
             }
         }
     }

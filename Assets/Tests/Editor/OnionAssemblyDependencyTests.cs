@@ -152,9 +152,9 @@ namespace io.github.hatayama.UnityCliLoop
             // Tests that dynamic-code compilation ports are owned by the application layer.
             string serviceAssemblyName = typeof(IDynamicCompilationService).Assembly.GetName().Name;
             string factoryAssemblyName = typeof(IDynamicCompilationServiceFactory).Assembly.GetName().Name;
-            string registryAssemblyName = typeof(DynamicCompilationServiceRegistry).Assembly.GetName().Name;
+            string registryAssemblyName = typeof(DynamicCompilationServiceRegistryService).Assembly.GetName().Name;
             string runtimeFactoryAssemblyName = typeof(IDynamicCompilationRuntimeServicesFactory).Assembly.GetName().Name;
-            string runtimeRegistryAssemblyName = typeof(DynamicCompilationRuntimeServicesRegistry).Assembly.GetName().Name;
+            string dynamicServicesAssemblyName = typeof(DynamicCodeServicesRegistry).Assembly.GetName().Name;
             string sourcePreparationAssemblyName = typeof(IDynamicCodeSourcePreparationService).Assembly.GetName().Name;
             string assemblyBuilderAssemblyName = typeof(ICompiledAssemblyBuilder).Assembly.GetName().Name;
 
@@ -162,7 +162,7 @@ namespace io.github.hatayama.UnityCliLoop
             Assert.That(factoryAssemblyName, Is.EqualTo(ApplicationAssemblyName));
             Assert.That(registryAssemblyName, Is.EqualTo(ApplicationAssemblyName));
             Assert.That(runtimeFactoryAssemblyName, Is.EqualTo(ApplicationAssemblyName));
-            Assert.That(runtimeRegistryAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+            Assert.That(dynamicServicesAssemblyName, Is.EqualTo(ApplicationAssemblyName));
             Assert.That(sourcePreparationAssemblyName, Is.EqualTo(ApplicationAssemblyName));
             Assert.That(assemblyBuilderAssemblyName, Is.EqualTo(ApplicationAssemblyName));
         }

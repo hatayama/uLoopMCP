@@ -2,13 +2,16 @@ namespace io.github.hatayama.UnityCliLoop.Factory
 {
     internal sealed class RegistryDynamicCodeExecutorFactory : IDynamicCodeExecutorProvider
     {
+        private readonly DynamicCompilationServiceRegistryService _compilationServiceRegistry;
         private readonly IDynamicCodeSourcePreparationService _sourcePreparationService;
         private readonly CompiledCommandEntryPointResolver _entryPointResolver;
 
         public RegistryDynamicCodeExecutorFactory(
+            DynamicCompilationServiceRegistryService compilationServiceRegistry,
             IDynamicCodeSourcePreparationService sourcePreparationService,
             CompiledCommandEntryPointResolver entryPointResolver)
         {
+            _compilationServiceRegistry = compilationServiceRegistry;
             _sourcePreparationService = sourcePreparationService;
             _entryPointResolver = entryPointResolver;
         }
@@ -17,7 +20,7 @@ namespace io.github.hatayama.UnityCliLoop.Factory
         {
             string correlationId = UnityCliLoopConstants.GenerateCorrelationId();
             IDynamicCompilationService compiler;
-            if (!DynamicCompilationServiceRegistry.TryCreate(securityLevel, out compiler))
+            if (!_compilationServiceRegistry.TryCreate(securityLevel, out compiler))
             {
                 VibeLogger.LogWarning(
                     "dynamic_executor_stub_created",

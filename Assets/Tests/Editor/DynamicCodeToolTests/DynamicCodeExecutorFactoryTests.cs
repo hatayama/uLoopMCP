@@ -10,13 +10,14 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
         [SetUp]
         public void SetUp()
         {
-            _previousFactory = DynamicCompilationServiceRegistry.SwapFactoryForTests(null);
+            DynamicCodeCompilationServiceRegistration.EnsureRegistered();
+            _previousFactory = DynamicCodeServices.SwapCompilationFactoryForTests(null);
         }
 
         [TearDown]
         public void TearDown()
         {
-            DynamicCompilationServiceRegistry.SwapFactoryForTests(_previousFactory);
+            DynamicCodeServices.SwapCompilationFactoryForTests(_previousFactory);
         }
 
         [Test]

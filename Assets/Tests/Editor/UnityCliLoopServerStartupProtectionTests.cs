@@ -78,7 +78,20 @@ namespace io.github.hatayama.UnityCliLoop
             TestServerInstanceFactory serverInstanceFactory = new TestServerInstanceFactory();
             UnityCliLoopServerLifecycleRegistryService lifecycleRegistry =
                 new UnityCliLoopServerLifecycleRegistryService();
-            return new UnityCliLoopServerControllerService(serverInstanceFactory, lifecycleRegistry);
+            DynamicCodeServicesRegistry dynamicCodeServices = CreateDynamicCodeServicesRegistry();
+            return new UnityCliLoopServerControllerService(
+                serverInstanceFactory,
+                lifecycleRegistry,
+                dynamicCodeServices);
+        }
+
+        private static DynamicCodeServicesRegistry CreateDynamicCodeServicesRegistry()
+        {
+            DynamicCompilationServiceRegistryService compilationServiceRegistry =
+                new DynamicCompilationServiceRegistryService(new DynamicCodeCompilationServiceFactory());
+            return new DynamicCodeServicesRegistry(
+                new DynamicCompilationRuntimeServicesFactory(),
+                compilationServiceRegistry);
         }
 
         private sealed class TestServerInstanceFactory : IUnityCliLoopServerInstanceFactory

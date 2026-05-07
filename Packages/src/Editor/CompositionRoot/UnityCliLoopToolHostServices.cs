@@ -19,12 +19,14 @@ namespace io.github.hatayama.UnityCliLoop
         public IUnityCliLoopMouseInputSimulationService MouseInputSimulation { get; }
         public IUnityCliLoopMouseUiSimulationService MouseUiSimulation { get; }
 
-        public UnityCliLoopToolHostServices()
+        public UnityCliLoopToolHostServices(DynamicCodeServicesRegistry dynamicCodeServices)
         {
+            UnityEngine.Debug.Assert(dynamicCodeServices != null, "dynamicCodeServices must not be null");
+
             ConsoleLogs = new LogRetrievalService();
             ConsoleClear = new ConsoleClearService();
             Compilation = new CompileUseCase();
-            DynamicCodeExecution = new UnityCliLoopDynamicCodeExecutionHostService();
+            DynamicCodeExecution = new UnityCliLoopDynamicCodeExecutionHostService(dynamicCodeServices);
             Hierarchy = new GetHierarchyUseCase(new HierarchyService(), new HierarchySerializer());
             TestExecution = new RunTestsUseCase();
             GameObjectSearch = new FindGameObjectsUseCase(new GameObjectFinderService(), new ComponentSerializer());

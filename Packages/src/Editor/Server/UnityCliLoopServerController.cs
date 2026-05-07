@@ -202,20 +202,24 @@ namespace io.github.hatayama.UnityCliLoop
         private readonly IUnityCliLoopServerInstanceFactory _serverInstanceFactory;
         private readonly UnityCliLoopServerLifecycleRegistryService _serverLifecycleRegistry;
         private readonly SessionRecoveryService _sessionRecoveryService;
+        private readonly DynamicCodeServicesRegistry _dynamicCodeServices;
         private IUnityCliLoopServerInstance _bridgeServer;
         private readonly SemaphoreSlim _startupSemaphore = new SemaphoreSlim(1, 1);
         private long _startupProtectionUntilTicks = 0;
         private Task _currentRecoveryTask;
 
-        public UnityCliLoopServerControllerService(
+        internal UnityCliLoopServerControllerService(
             IUnityCliLoopServerInstanceFactory serverInstanceFactory,
-            UnityCliLoopServerLifecycleRegistryService serverLifecycleRegistry)
+            UnityCliLoopServerLifecycleRegistryService serverLifecycleRegistry,
+            DynamicCodeServicesRegistry dynamicCodeServices)
         {
             System.Diagnostics.Debug.Assert(serverInstanceFactory != null, "serverInstanceFactory must not be null");
             System.Diagnostics.Debug.Assert(serverLifecycleRegistry != null, "serverLifecycleRegistry must not be null");
+            System.Diagnostics.Debug.Assert(dynamicCodeServices != null, "dynamicCodeServices must not be null");
 
             _serverInstanceFactory = serverInstanceFactory ?? throw new ArgumentNullException(nameof(serverInstanceFactory));
             _serverLifecycleRegistry = serverLifecycleRegistry ?? throw new ArgumentNullException(nameof(serverLifecycleRegistry));
+            _dynamicCodeServices = dynamicCodeServices ?? throw new ArgumentNullException(nameof(dynamicCodeServices));
             _sessionRecoveryService = new SessionRecoveryService(this);
         }
 
@@ -398,9 +402,9 @@ namespace io.github.hatayama.UnityCliLoop
 
                 DynamicCodeStartupTelemetry.MarkServerReady();
                 UnityCliLoopToolRegistrar.WarmupRegistry();
-                DynamicCodeServices.ResetServerScopedServices();
+                _dynamicCodeServices.ResetServerScopedServices();
                 IPrewarmDynamicCodeUseCase prewarmDynamicCodeUseCase =
-                    await DynamicCodeServices.GetPrewarmDynamicCodeUseCaseAsync(serverStartingLockToken);
+                    await _dynamicCodeServices.GetPrewarmDynamicCodeUseCaseAsync(serverStartingLockToken);
                 prewarmDynamicCodeUseCase.Request();
                 startupLockReleasedByPrewarm = true;
             }
@@ -452,7 +456,7 @@ namespace io.github.hatayama.UnityCliLoop
                 UnityCliLoopEditorSettings.ClearServerSession();
                 DynamicCodeStartupTelemetry.Reset();
                 DynamicCodeForegroundWarmupState.Reset();
-                DynamicCodeServices.ResetServerScopedServices();
+                _dynamicCodeServices.ResetServerScopedServices();
             }
             else
             {
@@ -480,7 +484,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             DynamicCodeStartupTelemetry.Reset();
             DynamicCodeForegroundWarmupState.Reset();
-            DynamicCodeServices.ResetServerScopedServices();
+            _dynamicCodeServices.ResetServerScopedServices();
         }
 
         /// <summary>
@@ -598,7 +602,7 @@ namespace io.github.hatayama.UnityCliLoop
                 }
             }
             DynamicCodeForegroundWarmupState.Reset();
-            DynamicCodeServices.ResetServerScopedServices();
+            _dynamicCodeServices.ResetServerScopedServices();
             UnityCliLoopEditorSettings.ClearServerSession();
         }
 
@@ -793,9 +797,9 @@ namespace io.github.hatayama.UnityCliLoop
                 UnityCliLoopEditorSettings.ClearPostCompileReconnectingUI();
                 DynamicCodeStartupTelemetry.MarkServerReady();
                 UnityCliLoopToolRegistrar.WarmupRegistry();
-                DynamicCodeServices.ResetServerScopedServices();
+                _dynamicCodeServices.ResetServerScopedServices();
                 IPrewarmDynamicCodeUseCase prewarmDynamicCodeUseCase =
-                    await DynamicCodeServices.GetPrewarmDynamicCodeUseCaseAsync(serverStartingLockToken);
+                    await _dynamicCodeServices.GetPrewarmDynamicCodeUseCaseAsync(serverStartingLockToken);
                 prewarmDynamicCodeUseCase.Request();
 
                 ActivateStartupProtection(5000);

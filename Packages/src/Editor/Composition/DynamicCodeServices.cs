@@ -7,6 +7,8 @@ namespace io.github.hatayama.UnityCliLoop
 {
     internal sealed class DynamicCodeServicesRegistry
     {
+        private readonly IDynamicCompilationRuntimeServicesFactory _runtimeServicesFactory;
+        private readonly DynamicCompilationServiceRegistryService _compilationServiceRegistry;
         private readonly object _serverScopedServicesLock = new();
         private TimeSpan _serverScopedDrainTimeout = TimeSpan.FromSeconds(5);
         private Task _serverScopedDrainTask = Task.CompletedTask;
@@ -15,13 +17,9 @@ namespace io.github.hatayama.UnityCliLoop
         private IDynamicCodeExecutionRuntime _runtimeFacade;
         private IPrewarmDynamicCodeUseCase _prewarmDynamicCodeUseCase;
 
-        private readonly Lazy<IDynamicCodeSourcePreparationService> _sourcePreparationServiceValue =
-            new Lazy<IDynamicCodeSourcePreparationService>(
-                DynamicCompilationRuntimeServicesRegistry.CreateSourcePreparationService);
+        private readonly Lazy<IDynamicCodeSourcePreparationService> _sourcePreparationServiceValue;
 
-        private readonly Lazy<ICompiledAssemblyBuilder> _assemblyBuilderValue =
-            new Lazy<ICompiledAssemblyBuilder>(
-                DynamicCompilationRuntimeServicesRegistry.CreateAssemblyBuilder);
+        private readonly Lazy<ICompiledAssemblyBuilder> _assemblyBuilderValue;
 
         public IDynamicCodeSourcePreparationService SourcePreparationService => _sourcePreparationServiceValue.Value;
 
@@ -32,10 +30,22 @@ namespace io.github.hatayama.UnityCliLoop
 
         private readonly Lazy<RegistryDynamicCodeExecutorFactory> _executorFactoryValue;
 
-        public DynamicCodeServicesRegistry()
+        public DynamicCodeServicesRegistry(
+            IDynamicCompilationRuntimeServicesFactory runtimeServicesFactory,
+            DynamicCompilationServiceRegistryService compilationServiceRegistry)
         {
+            UnityEngine.Debug.Assert(runtimeServicesFactory != null, "runtimeServicesFactory must not be null");
+            UnityEngine.Debug.Assert(compilationServiceRegistry != null, "compilationServiceRegistry must not be null");
+
+            _runtimeServicesFactory = runtimeServicesFactory ?? throw new ArgumentNullException(nameof(runtimeServicesFactory));
+            _compilationServiceRegistry = compilationServiceRegistry ?? throw new ArgumentNullException(nameof(compilationServiceRegistry));
+            _sourcePreparationServiceValue = new Lazy<IDynamicCodeSourcePreparationService>(
+                _runtimeServicesFactory.CreateSourcePreparationService);
+            _assemblyBuilderValue = new Lazy<ICompiledAssemblyBuilder>(
+                _runtimeServicesFactory.CreateAssemblyBuilder);
             _executorFactoryValue = new Lazy<RegistryDynamicCodeExecutorFactory>(
                 () => new RegistryDynamicCodeExecutorFactory(
+                    _compilationServiceRegistry,
                     SourcePreparationService,
                     CommandEntryPointResolver));
         }
@@ -247,12 +257,12 @@ namespace io.github.hatayama.UnityCliLoop
                 });
         }
 
-        private static async Task ShutdownServerScopedServicesAsync(
+        private async Task ShutdownServerScopedServicesAsync(
             CancellationTokenSource lifetimeCancellationTokenSource,
             IDynamicCodeExecutionRuntime runtimeFacade)
         {
             lifetimeCancellationTokenSource?.Cancel();
-            DynamicCompilationRuntimeServicesRegistry.ShutdownForServerReset();
+            _runtimeServicesFactory.ShutdownForServerReset();
 
             if (runtimeFacade is IShutdownAwareDynamicCodeExecutionRuntime shutdownAwareRuntime)
             {
@@ -309,57 +319,79 @@ namespace io.github.hatayama.UnityCliLoop
                 _serverScopedDrainTask = Task.CompletedTask;
             }
         }
+
+        internal IDynamicCompilationServiceFactory SwapCompilationFactoryForTests(
+            IDynamicCompilationServiceFactory factory)
+        {
+            return _compilationServiceRegistry.SwapFactoryForTests(factory);
+        }
     }
 
     internal static class DynamicCodeServices
     {
-        private static readonly DynamicCodeServicesRegistry RegistryValue =
-            new DynamicCodeServicesRegistry();
+        private static DynamicCodeServicesRegistry RegistryValue;
+
+        internal static void RegisterRegistry(DynamicCodeServicesRegistry registry)
+        {
+            UnityEngine.Debug.Assert(registry != null, "registry must not be null");
+
+            RegistryValue = registry ?? throw new ArgumentNullException(nameof(registry));
+        }
+
+        internal static DynamicCodeServicesRegistry GetRegistry()
+        {
+            if (RegistryValue == null)
+            {
+                throw new InvalidOperationException("Dynamic code services registry is not registered.");
+            }
+
+            return RegistryValue;
+        }
 
         public static IDynamicCodeSourcePreparationService SourcePreparationService
         {
-            get { return RegistryValue.SourcePreparationService; }
+            get { return GetRegistry().SourcePreparationService; }
         }
 
         public static ICompiledAssemblyBuilder AssemblyBuilder
         {
-            get { return RegistryValue.AssemblyBuilder; }
+            get { return GetRegistry().AssemblyBuilder; }
         }
 
         public static CompiledCommandEntryPointResolver CommandEntryPointResolver
         {
-            get { return RegistryValue.CommandEntryPointResolver; }
+            get { return GetRegistry().CommandEntryPointResolver; }
         }
 
         public static RegistryDynamicCodeExecutorFactory ExecutorFactory
         {
-            get { return RegistryValue.ExecutorFactory; }
+            get { return GetRegistry().ExecutorFactory; }
         }
 
         public static Task<IExecuteDynamicCodeUseCase> GetExecuteDynamicCodeUseCaseAsync()
         {
-            return RegistryValue.GetExecuteDynamicCodeUseCaseAsync();
+            return GetRegistry().GetExecuteDynamicCodeUseCaseAsync();
         }
 
         public static Task<IPrewarmDynamicCodeUseCase> GetPrewarmDynamicCodeUseCaseAsync(
             string serverStartingLockToken = null)
         {
-            return RegistryValue.GetPrewarmDynamicCodeUseCaseAsync(serverStartingLockToken);
+            return GetRegistry().GetPrewarmDynamicCodeUseCaseAsync(serverStartingLockToken);
         }
 
         public static void ResetServerScopedServices()
         {
-            RegistryValue.ResetServerScopedServices();
+            GetRegistry().ResetServerScopedServices();
         }
 
         internal static Task AwaitDrainTaskAsync(Task drainTask)
         {
-            return RegistryValue.AwaitDrainTaskAsync(drainTask);
+            return GetRegistry().AwaitDrainTaskAsync(drainTask);
         }
 
         internal static TimeSpan SwapDrainTimeoutForTests(TimeSpan timeout)
         {
-            return RegistryValue.SwapDrainTimeoutForTests(timeout);
+            return GetRegistry().SwapDrainTimeoutForTests(timeout);
         }
 
         internal static void SetServerScopedServicesForTests(
@@ -368,7 +400,7 @@ namespace io.github.hatayama.UnityCliLoop
             IDynamicCodeExecutionRuntime runtimeFacade,
             IPrewarmDynamicCodeUseCase prewarmDynamicCodeUseCase)
         {
-            RegistryValue.SetServerScopedServicesForTests(
+            GetRegistry().SetServerScopedServicesForTests(
                 lifetimeCancellationTokenSource,
                 executorPool,
                 runtimeFacade,
@@ -377,12 +409,18 @@ namespace io.github.hatayama.UnityCliLoop
 
         internal static Task GetServerScopedDrainTaskForTests()
         {
-            return RegistryValue.GetServerScopedDrainTaskForTests();
+            return GetRegistry().GetServerScopedDrainTaskForTests();
         }
 
         internal static void ResetStateForTests()
         {
-            RegistryValue.ResetStateForTests();
+            GetRegistry().ResetStateForTests();
+        }
+
+        internal static IDynamicCompilationServiceFactory SwapCompilationFactoryForTests(
+            IDynamicCompilationServiceFactory factory)
+        {
+            return GetRegistry().SwapCompilationFactoryForTests(factory);
         }
     }
 }
