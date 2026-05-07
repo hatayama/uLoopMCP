@@ -52,9 +52,9 @@ namespace io.github.hatayama.UnityCliLoop
     /// Management class for Unity CLI Loop Editor settings.
     /// Saves as a JSON file in the UserSettings folder.
     /// </summary>
-    public static class UnityCliLoopEditorSettings
+    public sealed class UnityCliLoopEditorSettingsRepository
     {
-        private static string SettingsFilePath => Path.Combine(UnityCliLoopConstants.USER_SETTINGS_FOLDER, UnityCliLoopConstants.SETTINGS_FILE_NAME);
+        private string SettingsFilePath => Path.Combine(UnityCliLoopConstants.USER_SETTINGS_FOLDER, UnityCliLoopConstants.SETTINGS_FILE_NAME);
         private static readonly string[] LegacyTransientSettingKeys =
         {
             "customPort",
@@ -67,25 +67,14 @@ namespace io.github.hatayama.UnityCliLoop
             "connectedLLMTools"
         };
 
-        private static UnityCliLoopEditorSettingsData _cachedSettings;
+        private UnityCliLoopEditorSettingsData _cachedSettings;
 
-        internal static void InvalidateCache()
+        public void InvalidateCache()
         {
             _cachedSettings = null;
         }
 
-        [InitializeOnLoadMethod]
-        private static void RecoverSettingsFileOnEditorLoad()
-        {
-            if (AssetDatabase.IsAssetImportWorkerProcess())
-            {
-                return;
-            }
-
-            RecoverSettingsFileIfNeeded();
-        }
-
-        internal static void RecoverSettingsFileIfNeeded()
+        public void RecoverSettingsFileIfNeeded()
         {
             if (!IsValidSettingsPath(SettingsFilePath))
             {
@@ -99,7 +88,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Gets the settings data.
         /// </summary>
-        public static UnityCliLoopEditorSettingsData GetSettings()
+        public UnityCliLoopEditorSettingsData GetSettings()
         {
             if (_cachedSettings == null)
             {
@@ -112,7 +101,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Saves the settings data.
         /// </summary>
-        public static void SaveSettings(UnityCliLoopEditorSettingsData settings)
+        public void SaveSettings(UnityCliLoopEditorSettingsData settings)
         {
             // Security: Validate settings file path
             if (!IsValidSettingsPath(SettingsFilePath))
@@ -146,7 +135,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// Applies a transformation to the current settings and saves once.
         /// Use when multiple fields need to be updated together to avoid redundant writes.
         /// </summary>
-        public static void UpdateSettings(Func<UnityCliLoopEditorSettingsData, UnityCliLoopEditorSettingsData> transform)
+        public void UpdateSettings(Func<UnityCliLoopEditorSettingsData, UnityCliLoopEditorSettingsData> transform)
         {
             Debug.Assert(transform != null, "transform must not be null");
 
@@ -158,7 +147,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Gets the Developer Tools display setting.
         /// </summary>
-        public static bool GetShowDeveloperTools()
+        public bool GetShowDeveloperTools()
         {
             return GetSettings().showDeveloperTools;
         }
@@ -166,19 +155,19 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Saves the Developer Tools display setting.
         /// </summary>
-        public static void SetShowDeveloperTools(bool show)
+        public void SetShowDeveloperTools(bool show)
         {
             UnityCliLoopEditorSettingsData settings = GetSettings();
             UnityCliLoopEditorSettingsData updatedSettings = settings with { showDeveloperTools = show };
             SaveSettings(updatedSettings);
         }
 
-        public static string GetLastSeenSetupWizardVersion()
+        public string GetLastSeenSetupWizardVersion()
         {
             return GetSettings().lastSeenSetupWizardVersion ?? string.Empty;
         }
 
-        public static void SetLastSeenSetupWizardVersion(string version)
+        public void SetLastSeenSetupWizardVersion(string version)
         {
             string normalizedVersion = version ?? string.Empty;
             UnityCliLoopEditorSettingsData settings = GetSettings();
@@ -186,12 +175,12 @@ namespace io.github.hatayama.UnityCliLoop
             SaveSettings(updatedSettings);
         }
 
-        public static bool GetSuppressSetupWizardAutoShow()
+        public bool GetSuppressSetupWizardAutoShow()
         {
             return GetSettings().suppressSetupWizardAutoShow;
         }
 
-        public static void SetSuppressSetupWizardAutoShow(bool suppressAutoShow)
+        public void SetSuppressSetupWizardAutoShow(bool suppressAutoShow)
         {
             UnityCliLoopEditorSettingsData settings = GetSettings();
             UnityCliLoopEditorSettingsData updatedSettings = settings with { suppressSetupWizardAutoShow = suppressAutoShow };
@@ -201,7 +190,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Gets the show security settings flag.
         /// </summary>
-        public static bool GetShowUnityCliLoopSecuritySetting()
+        public bool GetShowUnityCliLoopSecuritySetting()
         {
             return GetSettings().showUnityCliLoopSecuritySetting;
         }
@@ -209,31 +198,31 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Sets the show security settings flag.
         /// </summary>
-        public static void SetShowUnityCliLoopSecuritySetting(bool showUnityCliLoopSecuritySetting)
+        public void SetShowUnityCliLoopSecuritySetting(bool showUnityCliLoopSecuritySetting)
         {
             UnityCliLoopEditorSettingsData settings = GetSettings();
             UnityCliLoopEditorSettingsData newSettings = settings with { showUnityCliLoopSecuritySetting = showUnityCliLoopSecuritySetting };
             SaveSettings(newSettings);
         }
 
-        public static bool GetShowToolSettings()
+        public bool GetShowToolSettings()
         {
             return GetSettings().showToolSettings;
         }
 
-        public static void SetShowToolSettings(bool showToolSettings)
+        public void SetShowToolSettings(bool showToolSettings)
         {
             UnityCliLoopEditorSettingsData settings = GetSettings();
             UnityCliLoopEditorSettingsData newSettings = settings with { showToolSettings = showToolSettings };
             SaveSettings(newSettings);
         }
 
-        public static bool GetInstallSkillsFlat()
+        public bool GetInstallSkillsFlat()
         {
             return GetSettings().installSkillsFlat;
         }
 
-        public static void SetInstallSkillsFlat(bool installSkillsFlat)
+        public void SetInstallSkillsFlat(bool installSkillsFlat)
         {
             UnityCliLoopEditorSettingsData settings = GetSettings();
             UnityCliLoopEditorSettingsData newSettings = settings with { installSkillsFlat = installSkillsFlat };
@@ -243,7 +232,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Gets the server running state.
         /// </summary>
-        public static bool GetIsServerRunning()
+        public bool GetIsServerRunning()
         {
             return GetSettings().isServerRunning;
         }
@@ -251,7 +240,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Sets the server running state.
         /// </summary>
-        public static void SetIsServerRunning(bool isServerRunning)
+        public void SetIsServerRunning(bool isServerRunning)
         {
             UnityCliLoopEditorSettingsData settings = GetSettings();
             UnityCliLoopEditorSettingsData newSettings = settings with { isServerRunning = isServerRunning };
@@ -261,7 +250,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Gets the after compile flag.
         /// </summary>
-        public static bool GetIsAfterCompile()
+        public bool GetIsAfterCompile()
         {
             return GetSettings().isAfterCompile;
         }
@@ -269,7 +258,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Sets the after compile flag.
         /// </summary>
-        public static void SetIsAfterCompile(bool isAfterCompile)
+        public void SetIsAfterCompile(bool isAfterCompile)
         {
             UnityCliLoopEditorSettingsData settings = GetSettings();
             UnityCliLoopEditorSettingsData newSettings = settings with { isAfterCompile = isAfterCompile };
@@ -279,7 +268,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Gets the domain reload in progress flag.
         /// </summary>
-        public static bool GetIsDomainReloadInProgress()
+        public bool GetIsDomainReloadInProgress()
         {
             return GetSettings().isDomainReloadInProgress;
         }
@@ -287,7 +276,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Sets the domain reload in progress flag.
         /// </summary>
-        public static void SetIsDomainReloadInProgress(bool isDomainReloadInProgress)
+        public void SetIsDomainReloadInProgress(bool isDomainReloadInProgress)
         {
             UnityCliLoopEditorSettingsData settings = GetSettings();
             UnityCliLoopEditorSettingsData newSettings = settings with { isDomainReloadInProgress = isDomainReloadInProgress };
@@ -297,7 +286,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Gets the reconnecting flag.
         /// </summary>
-        public static bool GetIsReconnecting()
+        public bool GetIsReconnecting()
         {
             return GetSettings().isReconnecting;
         }
@@ -305,7 +294,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Sets the reconnecting flag.
         /// </summary>
-        public static void SetIsReconnecting(bool isReconnecting)
+        public void SetIsReconnecting(bool isReconnecting)
         {
             UnityCliLoopEditorSettingsData settings = GetSettings();
             UnityCliLoopEditorSettingsData newSettings = settings with { isReconnecting = isReconnecting };
@@ -315,7 +304,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Gets the show reconnecting UI flag.
         /// </summary>
-        public static bool GetShowReconnectingUI()
+        public bool GetShowReconnectingUI()
         {
             return GetSettings().showReconnectingUI;
         }
@@ -323,7 +312,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Sets the show reconnecting UI flag.
         /// </summary>
-        public static void SetShowReconnectingUI(bool showReconnectingUI)
+        public void SetShowReconnectingUI(bool showReconnectingUI)
         {
             UnityCliLoopEditorSettingsData settings = GetSettings();
             UnityCliLoopEditorSettingsData newSettings = settings with { showReconnectingUI = showReconnectingUI };
@@ -333,7 +322,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Gets the show post compile reconnecting UI flag.
         /// </summary>
-        public static bool GetShowPostCompileReconnectingUI()
+        public bool GetShowPostCompileReconnectingUI()
         {
             return GetSettings().showPostCompileReconnectingUI;
         }
@@ -341,7 +330,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Sets the show post compile reconnecting UI flag.
         /// </summary>
-        public static void SetShowPostCompileReconnectingUI(bool showPostCompileReconnectingUI)
+        public void SetShowPostCompileReconnectingUI(bool showPostCompileReconnectingUI)
         {
             UnityCliLoopEditorSettingsData settings = GetSettings();
             UnityCliLoopEditorSettingsData newSettings = settings with { showPostCompileReconnectingUI = showPostCompileReconnectingUI };
@@ -351,7 +340,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Gets the compile window has data flag.
         /// </summary>
-        public static bool GetCompileWindowHasData()
+        public bool GetCompileWindowHasData()
         {
             return GetSettings().compileWindowHasData;
         }
@@ -359,7 +348,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Sets the compile window has data flag.
         /// </summary>
-        public static void SetCompileWindowHasData(bool compileWindowHasData)
+        public void SetCompileWindowHasData(bool compileWindowHasData)
         {
             UnityCliLoopEditorSettingsData settings = GetSettings();
             UnityCliLoopEditorSettingsData newSettings = settings with { compileWindowHasData = compileWindowHasData };
@@ -369,7 +358,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Clear server session.
         /// </summary>
-        public static void ClearServerSession()
+        public void ClearServerSession()
         {
             UpdateSettings(settings => settings with
             {
@@ -380,7 +369,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Clear after compile flag.
         /// </summary>
-        public static void ClearAfterCompileFlag()
+        public void ClearAfterCompileFlag()
         {
             SetIsAfterCompile(false);
         }
@@ -388,7 +377,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Clear reconnecting flags.
         /// </summary>
-        public static void ClearReconnectingFlags()
+        public void ClearReconnectingFlags()
         {
             UpdateSettings(s => s with
             {
@@ -400,7 +389,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Clear post compile reconnecting UI.
         /// </summary>
-        public static void ClearPostCompileReconnectingUI()
+        public void ClearPostCompileReconnectingUI()
         {
             SetShowPostCompileReconnectingUI(false);
         }
@@ -408,7 +397,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Clear domain reload flag.
         /// </summary>
-        public static void ClearDomainReloadFlag()
+        public void ClearDomainReloadFlag()
         {
             SetIsDomainReloadInProgress(false);
         }
@@ -416,7 +405,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Clear compile window data.
         /// </summary>
-        public static void ClearCompileWindowData()
+        public void ClearCompileWindowData()
         {
             SetCompileWindowHasData(false);
         }
@@ -426,7 +415,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Gets the pending compile request IDs.
         /// </summary>
-        public static string[] GetPendingCompileRequestIds()
+        public string[] GetPendingCompileRequestIds()
         {
             return GetSettings().pendingCompileRequestIds;
         }
@@ -434,7 +423,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Sets the pending compile request IDs.
         /// </summary>
-        public static void SetPendingCompileRequestIds(string[] pendingCompileRequestIds)
+        public void SetPendingCompileRequestIds(string[] pendingCompileRequestIds)
         {
             UnityCliLoopEditorSettingsData settings = GetSettings();
             UnityCliLoopEditorSettingsData newSettings = settings with { pendingCompileRequestIds = pendingCompileRequestIds };
@@ -444,7 +433,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Gets the compile requests.
         /// </summary>
-        public static CompileRequestData[] GetCompileRequests()
+        public CompileRequestData[] GetCompileRequests()
         {
             return GetSettings().compileRequests;
         }
@@ -452,7 +441,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Sets the compile requests.
         /// </summary>
-        public static void SetCompileRequests(CompileRequestData[] compileRequests)
+        public void SetCompileRequests(CompileRequestData[] compileRequests)
         {
             UnityCliLoopEditorSettingsData settings = GetSettings();
             UnityCliLoopEditorSettingsData newSettings = settings with { compileRequests = compileRequests };
@@ -462,7 +451,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Gets the compile request JSON by request ID.
         /// </summary>
-        public static string GetCompileRequestJson(string requestId)
+        public string GetCompileRequestJson(string requestId)
         {
             CompileRequestData[] requests = GetCompileRequests();
             CompileRequestData request = System.Array.Find(requests, r => r.requestId == requestId);
@@ -472,7 +461,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Sets the compile request JSON for a specific request ID.
         /// </summary>
-        public static void SetCompileRequestJson(string requestId, string json)
+        public void SetCompileRequestJson(string requestId, string json)
         {
             CompileRequestData[] requests = GetCompileRequests();
             CompileRequestData existingRequest = System.Array.Find(requests, r => r.requestId == requestId);
@@ -495,7 +484,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Clears all compile requests.
         /// </summary>
-        public static void ClearAllCompileRequests()
+        public void ClearAllCompileRequests()
         {
             SetCompileRequests(new CompileRequestData[0]);
             SetPendingCompileRequestIds(new string[0]);
@@ -504,7 +493,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Adds a pending compile request.
         /// </summary>
-        public static void AddPendingCompileRequest(string requestId)
+        public void AddPendingCompileRequest(string requestId)
         {
             string[] pendingIds = GetPendingCompileRequestIds();
             if (System.Array.IndexOf(pendingIds, requestId) == -1)
@@ -519,7 +508,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Removes a pending compile request.
         /// </summary>
-        public static void RemovePendingCompileRequest(string requestId)
+        public void RemovePendingCompileRequest(string requestId)
         {
             string[] pendingIds = GetPendingCompileRequestIds();
             int index = System.Array.IndexOf(pendingIds, requestId);
@@ -535,7 +524,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Loads the settings file.
         /// </summary>
-        private static void LoadSettings()
+        private void LoadSettings()
         {
             try
             {
@@ -584,7 +573,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        private static void RemoveLegacyTransientFieldsIfNeeded(string settingsPath)
+        private void RemoveLegacyTransientFieldsIfNeeded(string settingsPath)
         {
             if (!File.Exists(settingsPath))
             {
@@ -666,6 +655,260 @@ namespace io.github.hatayama.UnityCliLoop
                 return false;
             }
         }
+    }
 
+    /// <summary>
+    /// Compatibility entrypoint for callers that have not received UnityCliLoopEditorSettingsRepository through DI yet.
+    /// </summary>
+    public static class UnityCliLoopEditorSettings
+    {
+        private static readonly UnityCliLoopEditorSettingsRepository RepositoryValue =
+            new UnityCliLoopEditorSettingsRepository();
+
+        public static UnityCliLoopEditorSettingsRepository Repository
+        {
+            get { return RepositoryValue; }
+        }
+
+        internal static void InvalidateCache()
+        {
+            Repository.InvalidateCache();
+        }
+
+        [InitializeOnLoadMethod]
+        private static void RecoverSettingsFileOnEditorLoad()
+        {
+            if (AssetDatabase.IsAssetImportWorkerProcess())
+            {
+                return;
+            }
+
+            Repository.RecoverSettingsFileIfNeeded();
+        }
+
+        internal static void RecoverSettingsFileIfNeeded()
+        {
+            Repository.RecoverSettingsFileIfNeeded();
+        }
+
+        public static UnityCliLoopEditorSettingsData GetSettings()
+        {
+            return Repository.GetSettings();
+        }
+
+        public static void SaveSettings(UnityCliLoopEditorSettingsData settings)
+        {
+            Repository.SaveSettings(settings);
+        }
+
+        public static void UpdateSettings(Func<UnityCliLoopEditorSettingsData, UnityCliLoopEditorSettingsData> transform)
+        {
+            Repository.UpdateSettings(transform);
+        }
+
+        public static bool GetShowDeveloperTools()
+        {
+            return Repository.GetShowDeveloperTools();
+        }
+
+        public static void SetShowDeveloperTools(bool show)
+        {
+            Repository.SetShowDeveloperTools(show);
+        }
+
+        public static string GetLastSeenSetupWizardVersion()
+        {
+            return Repository.GetLastSeenSetupWizardVersion();
+        }
+
+        public static void SetLastSeenSetupWizardVersion(string version)
+        {
+            Repository.SetLastSeenSetupWizardVersion(version);
+        }
+
+        public static bool GetSuppressSetupWizardAutoShow()
+        {
+            return Repository.GetSuppressSetupWizardAutoShow();
+        }
+
+        public static void SetSuppressSetupWizardAutoShow(bool suppressAutoShow)
+        {
+            Repository.SetSuppressSetupWizardAutoShow(suppressAutoShow);
+        }
+
+        public static bool GetShowUnityCliLoopSecuritySetting()
+        {
+            return Repository.GetShowUnityCliLoopSecuritySetting();
+        }
+
+        public static void SetShowUnityCliLoopSecuritySetting(bool showUnityCliLoopSecuritySetting)
+        {
+            Repository.SetShowUnityCliLoopSecuritySetting(showUnityCliLoopSecuritySetting);
+        }
+
+        public static bool GetShowToolSettings()
+        {
+            return Repository.GetShowToolSettings();
+        }
+
+        public static void SetShowToolSettings(bool showToolSettings)
+        {
+            Repository.SetShowToolSettings(showToolSettings);
+        }
+
+        public static bool GetInstallSkillsFlat()
+        {
+            return Repository.GetInstallSkillsFlat();
+        }
+
+        public static void SetInstallSkillsFlat(bool installSkillsFlat)
+        {
+            Repository.SetInstallSkillsFlat(installSkillsFlat);
+        }
+
+        public static bool GetIsServerRunning()
+        {
+            return Repository.GetIsServerRunning();
+        }
+
+        public static void SetIsServerRunning(bool isServerRunning)
+        {
+            Repository.SetIsServerRunning(isServerRunning);
+        }
+
+        public static bool GetIsAfterCompile()
+        {
+            return Repository.GetIsAfterCompile();
+        }
+
+        public static void SetIsAfterCompile(bool isAfterCompile)
+        {
+            Repository.SetIsAfterCompile(isAfterCompile);
+        }
+
+        public static bool GetIsDomainReloadInProgress()
+        {
+            return Repository.GetIsDomainReloadInProgress();
+        }
+
+        public static void SetIsDomainReloadInProgress(bool isDomainReloadInProgress)
+        {
+            Repository.SetIsDomainReloadInProgress(isDomainReloadInProgress);
+        }
+
+        public static bool GetIsReconnecting()
+        {
+            return Repository.GetIsReconnecting();
+        }
+
+        public static void SetIsReconnecting(bool isReconnecting)
+        {
+            Repository.SetIsReconnecting(isReconnecting);
+        }
+
+        public static bool GetShowReconnectingUI()
+        {
+            return Repository.GetShowReconnectingUI();
+        }
+
+        public static void SetShowReconnectingUI(bool showReconnectingUI)
+        {
+            Repository.SetShowReconnectingUI(showReconnectingUI);
+        }
+
+        public static bool GetShowPostCompileReconnectingUI()
+        {
+            return Repository.GetShowPostCompileReconnectingUI();
+        }
+
+        public static void SetShowPostCompileReconnectingUI(bool showPostCompileReconnectingUI)
+        {
+            Repository.SetShowPostCompileReconnectingUI(showPostCompileReconnectingUI);
+        }
+
+        public static bool GetCompileWindowHasData()
+        {
+            return Repository.GetCompileWindowHasData();
+        }
+
+        public static void SetCompileWindowHasData(bool compileWindowHasData)
+        {
+            Repository.SetCompileWindowHasData(compileWindowHasData);
+        }
+
+        public static void ClearServerSession()
+        {
+            Repository.ClearServerSession();
+        }
+
+        public static void ClearAfterCompileFlag()
+        {
+            Repository.ClearAfterCompileFlag();
+        }
+
+        public static void ClearReconnectingFlags()
+        {
+            Repository.ClearReconnectingFlags();
+        }
+
+        public static void ClearPostCompileReconnectingUI()
+        {
+            Repository.ClearPostCompileReconnectingUI();
+        }
+
+        public static void ClearDomainReloadFlag()
+        {
+            Repository.ClearDomainReloadFlag();
+        }
+
+        public static void ClearCompileWindowData()
+        {
+            Repository.ClearCompileWindowData();
+        }
+
+        public static string[] GetPendingCompileRequestIds()
+        {
+            return Repository.GetPendingCompileRequestIds();
+        }
+
+        public static void SetPendingCompileRequestIds(string[] pendingCompileRequestIds)
+        {
+            Repository.SetPendingCompileRequestIds(pendingCompileRequestIds);
+        }
+
+        public static CompileRequestData[] GetCompileRequests()
+        {
+            return Repository.GetCompileRequests();
+        }
+
+        public static void SetCompileRequests(CompileRequestData[] compileRequests)
+        {
+            Repository.SetCompileRequests(compileRequests);
+        }
+
+        public static string GetCompileRequestJson(string requestId)
+        {
+            return Repository.GetCompileRequestJson(requestId);
+        }
+
+        public static void SetCompileRequestJson(string requestId, string json)
+        {
+            Repository.SetCompileRequestJson(requestId, json);
+        }
+
+        public static void ClearAllCompileRequests()
+        {
+            Repository.ClearAllCompileRequests();
+        }
+
+        public static void AddPendingCompileRequest(string requestId)
+        {
+            Repository.AddPendingCompileRequest(requestId);
+        }
+
+        public static void RemovePendingCompileRequest(string requestId)
+        {
+            Repository.RemovePendingCompileRequest(requestId);
+        }
     }
 }
