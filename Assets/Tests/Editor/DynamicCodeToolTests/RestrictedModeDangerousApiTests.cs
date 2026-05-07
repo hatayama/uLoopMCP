@@ -29,7 +29,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
         {
             // v4.0 stateless design - Remove changes to global settings
             // Directly specify level in Executor (keep existing)
-            executor = Factory.DynamicCodeExecutorFactory.Create(
+            executor = DynamicCodeServices.ExecutorFactory.Create(
                 DynamicCodeSecurityLevel.Restricted
             );
             

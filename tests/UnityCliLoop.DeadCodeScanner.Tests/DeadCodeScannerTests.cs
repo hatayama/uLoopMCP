@@ -77,6 +77,10 @@ namespace UnityCliLoop.DeadCodeScanner.Tests
             Assert.That(issues.Any(issue =>
                 issue.Category == DeadCodeCategory.PublicCandidate
                 && issue.FullName.Contains("UnreferencedPublicApi", StringComparison.Ordinal)), Is.True);
+            Assert.That(issues.Any(issue =>
+                issue.Category == DeadCodeCategory.PublicCandidate
+                && issue.SymbolKind == "type"
+                && issue.FullName.Contains("UsedProductionApi", StringComparison.Ordinal)), Is.False);
         }
 
         // Verifies that symbols referenced only from Assets are separated from production references.
@@ -128,6 +132,10 @@ namespace UnityCliLoop.DeadCodeScanner.Tests
             Assert.That(issues.Any(issue =>
                 issue.Category == DeadCodeCategory.KeptByUnityOrReflection
                 && issue.FullName.Contains("RuntimeReset", StringComparison.Ordinal)), Is.True);
+            Assert.That(issues.Any(issue =>
+                issue.Category == DeadCodeCategory.KeptByUnityOrReflection
+                && issue.SymbolKind == "type"
+                && issue.FullName.Contains("UsedProductionApi", StringComparison.Ordinal)), Is.True);
         }
 
         private static void CreateSampleRepository(string rootPath)

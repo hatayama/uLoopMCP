@@ -72,6 +72,15 @@ namespace UnityCliLoop.DeadCodeScanner
                 return KeeperDecision.Keep("Type derives from a Unity entry-point base class.");
             }
 
+            if (symbol is INamedTypeSymbol namedTypeWithKeptMember)
+            {
+                string memberReason = FindKeptMemberReason(namedTypeWithKeptMember);
+                if (!string.IsNullOrEmpty(memberReason))
+                {
+                    return KeeperDecision.Keep(memberReason);
+                }
+            }
+
             if (symbol is IMethodSymbol methodSymbol && UnityCallbackMethodNames.Contains(methodSymbol.Name))
             {
                 return KeeperDecision.Keep("Method name matches a Unity lifecycle callback.");
@@ -101,6 +110,45 @@ namespace UnityCliLoop.DeadCodeScanner
             }
 
             return string.Empty;
+        }
+
+        private static string FindKeptMemberReason(INamedTypeSymbol typeSymbol)
+        {
+            foreach (ISymbol member in typeSymbol.GetMembers())
+            {
+                KeeperDecision memberDecision = ClassifyMember(member);
+                if (memberDecision.IsKept)
+                {
+                    return $"Type contains a Unity or reflection entry-point member: {member.Name}.";
+                }
+            }
+
+            return string.Empty;
+        }
+
+        private static KeeperDecision ClassifyMember(ISymbol member)
+        {
+            string attributeReason = FindKeptAttributeReason(member);
+            if (!string.IsNullOrEmpty(attributeReason))
+            {
+                return KeeperDecision.Keep(attributeReason);
+            }
+
+            if (member is IMethodSymbol methodSymbol && UnityCallbackMethodNames.Contains(methodSymbol.Name))
+            {
+                return KeeperDecision.Keep("Method name matches a Unity lifecycle callback.");
+            }
+
+            if (member is IFieldSymbol fieldSymbol && fieldSymbol.DeclaredAccessibility == Accessibility.Private)
+            {
+                string fieldAttributeReason = FindKeptAttributeReason(fieldSymbol);
+                if (!string.IsNullOrEmpty(fieldAttributeReason))
+                {
+                    return KeeperDecision.Keep(fieldAttributeReason);
+                }
+            }
+
+            return KeeperDecision.Scan();
         }
 
         private static bool HasKeptBaseType(INamedTypeSymbol typeSymbol)
