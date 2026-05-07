@@ -1,4 +1,3 @@
-using System.ComponentModel;
 
 using io.github.hatayama.UnityCliLoop.ToolContracts;
 
@@ -17,7 +16,6 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         /// <summary>
         /// Whether to add a confirmation log message after clearing
         /// </summary>
-        [Description("Whether to add a confirmation log message after clearing")]
         public bool AddConfirmationMessage { get; set; } = false;
     }
 } 

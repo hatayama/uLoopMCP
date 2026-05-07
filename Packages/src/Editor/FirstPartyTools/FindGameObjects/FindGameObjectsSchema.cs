@@ -1,4 +1,3 @@
-using System.ComponentModel;
 
 using io.github.hatayama.UnityCliLoop.ToolContracts;
 
@@ -11,7 +10,6 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
     {
         // Search criteria
         public string NamePattern { get; set; } = "";
-        [Description("Search mode. Use Selected(4) to inspect the GameObject(s) currently selected in the Unity Hierarchy. Other modes are Exact(0), Path(1), Regex(2), Contains(3).")]
         public SearchMode SearchMode { get; set; } = SearchMode.Exact;
         public string[] RequiredComponents { get; set; } = new string[0];
         public string Tag { get; set; } = "";
