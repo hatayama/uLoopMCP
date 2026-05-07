@@ -78,12 +78,12 @@ namespace io.github.hatayama.UnityCliLoop
         /// Get internal registry for the Unity CLI bridge.
         /// </summary>
         /// <returns>UnityCliLoopToolRegistry instance</returns>
-        internal UnityCliLoopToolRegistry GetRegistry()
+        public UnityCliLoopToolRegistry GetRegistry()
         {
             return SharedRegistry;
         }
 
-        internal UnityCliLoopToolRegistry TryGetRegistry()
+        public UnityCliLoopToolRegistry TryGetRegistry()
         {
             return _sharedRegistry;
         }
@@ -171,12 +171,12 @@ namespace io.github.hatayama.UnityCliLoop
             return Service.IsCustomToolRegistered(toolName);
         }
 
-        internal static UnityCliLoopToolRegistry GetRegistry()
+        public static UnityCliLoopToolRegistry GetRegistry()
         {
             return Service.GetRegistry();
         }
 
-        internal static UnityCliLoopToolRegistry TryGetRegistry()
+        public static UnityCliLoopToolRegistry TryGetRegistry()
         {
             return Service.TryGetRegistry();
         }
