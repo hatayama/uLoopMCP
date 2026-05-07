@@ -45,11 +45,24 @@ namespace io.github.hatayama.UnityCliLoop
             @"\b(private|internal|public|protected)\s+static\s+readonly\s+([^;=]+)",
             RegexOptions.Compiled);
 
+        private static readonly Regex DirectStaticEventPattern = new Regex(
+            @"\b(private|internal|public|protected)\s+static\s+event\s+[^;]+;",
+            RegexOptions.Compiled);
+
         [Test]
         public void MigratedFacadeFiles_WhenScanned_DoNotOwnMutableStaticState()
         {
             // Tests that migrated facades keep state inside instance services instead of direct static fields.
             List<string> violations = FindMutableStaticFieldViolations();
+
+            Assert.That(violations, Is.Empty, string.Join("\n", violations));
+        }
+
+        [Test]
+        public void ProductionSources_WhenScanned_DoNotDeclareDirectStaticEvents()
+        {
+            // Tests that static entrypoints cannot own event handler lists directly.
+            List<string> violations = FindDirectStaticEventViolations();
 
             Assert.That(violations, Is.Empty, string.Join("\n", violations));
         }
@@ -75,6 +88,32 @@ namespace io.github.hatayama.UnityCliLoop
 
                     if (DirectMutableStaticFieldPattern.IsMatch(line)
                         || ReadonlyMutableStaticFieldPattern.IsMatch(line))
+                    {
+                        violations.Add($"{relativePath}:{lineIndex + 1}: {line.Trim()}");
+                    }
+                }
+            }
+
+            return violations;
+        }
+
+        private static List<string> FindDirectStaticEventViolations()
+        {
+            List<string> violations = new List<string>();
+            string projectRoot = UnityCliLoopPathResolver.GetProjectRoot();
+            string packagesSrcRoot = Path.Combine(projectRoot, "Packages/src");
+            string[] sourcePaths = Directory.GetFiles(packagesSrcRoot, "*.cs", SearchOption.AllDirectories);
+
+            for (int pathIndex = 0; pathIndex < sourcePaths.Length; pathIndex++)
+            {
+                string absolutePath = sourcePaths[pathIndex];
+                string relativePath = Path.GetRelativePath(projectRoot, absolutePath);
+                string[] lines = File.ReadAllLines(absolutePath);
+
+                for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
+                {
+                    string line = lines[lineIndex];
+                    if (DirectStaticEventPattern.IsMatch(line))
                     {
                         violations.Add($"{relativePath}:{lineIndex + 1}: {line.Trim()}");
                     }

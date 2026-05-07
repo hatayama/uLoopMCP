@@ -10,32 +10,37 @@ using UnityEngine;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    public sealed class UnityCliLoopBridgeServerInstanceFactory : IUnityCliLoopServerInstanceFactory
+    public sealed class UnityCliLoopBridgeServerInstanceFactory :
+        IUnityCliLoopServerInstanceFactory,
+        IUnityCliLoopServerLifecycleSource
     {
+        public event Action ServerStarted;
+        public event Action ServerStopping;
+        public event Action ServerLoopExited;
+
         public IUnityCliLoopServerInstance Create()
         {
-            return new UnityCliLoopBridgeServer();
-        }
-    }
+            UnityCliLoopBridgeServer server = new UnityCliLoopBridgeServer();
+            server.ServerStarted += NotifyServerStarted;
+            server.ServerStopping += NotifyServerStopping;
+            server.ServerLoopExited += NotifyServerLoopExited;
 
-    public sealed class UnityCliLoopBridgeServerLifecycleSource : IUnityCliLoopServerLifecycleSource
-    {
-        public event Action ServerStarted
-        {
-            add => UnityCliLoopBridgeServer.OnServerStarted += value;
-            remove => UnityCliLoopBridgeServer.OnServerStarted -= value;
+            return server;
         }
 
-        public event Action ServerStopping
+        private void NotifyServerStarted()
         {
-            add => UnityCliLoopBridgeServer.OnServerStopping += value;
-            remove => UnityCliLoopBridgeServer.OnServerStopping -= value;
+            ServerStarted?.Invoke();
         }
 
-        public event Action ServerLoopExited
+        private void NotifyServerStopping()
         {
-            add => UnityCliLoopBridgeServer.OnServerLoopExited += value;
-            remove => UnityCliLoopBridgeServer.OnServerLoopExited -= value;
+            ServerStopping?.Invoke();
+        }
+
+        private void NotifyServerLoopExited()
+        {
+            ServerLoopExited?.Invoke();
         }
     }
 
@@ -45,13 +50,12 @@ namespace io.github.hatayama.UnityCliLoop
     /// </summary>
     public class UnityCliLoopBridgeServer : IUnityCliLoopServerInstance
     {
-        // Events for server lifecycle notifications
-        public static event System.Action OnServerStopping;
-        public static event System.Action OnServerStarted;
+        public event Action ServerStopping;
+        public event Action ServerStarted;
 
         // Fired from thread pool when ServerLoopAsync exits while _isRunning is still true.
         // Subscribers must marshal to main thread before accessing Unity APIs.
-        public static event System.Action OnServerLoopExited;
+        public event Action ServerLoopExited;
         
         // HResult error codes for normal disconnection detection
         private static readonly HashSet<int> NormalDisconnectionHResults = new()
@@ -131,8 +135,7 @@ namespace io.github.hatayama.UnityCliLoop
                     ServerStartingLockService.DeleteLockFile();
                 }
 
-                // Notify that server has started
-                OnServerStarted?.Invoke();
+                ServerStarted?.Invoke();
                 
             }
             catch (SocketException ex) when (ex.SocketErrorCode == SocketError.AddressAlreadyInUse)
@@ -162,7 +165,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
 
             // Notify that server is stopping
-            OnServerStopping?.Invoke();
+            ServerStopping?.Invoke();
 
             _isRunning = false;
 
@@ -344,7 +347,7 @@ namespace io.github.hatayama.UnityCliLoop
                     );
 
                     CleanupAfterUnexpectedLoopExit();
-                    OnServerLoopExited?.Invoke();
+                    ServerLoopExited?.Invoke();
                 }
             }
         }
