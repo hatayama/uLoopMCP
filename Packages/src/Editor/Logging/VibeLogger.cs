@@ -18,17 +18,17 @@ namespace io.github.hatayama.UnityCliLoop
     /// - Automatic file rotation and memory management
     /// - Correlation ID tracking for related operations
     /// </summary>
-    public static class VibeLogger
+    public sealed class VibeLoggerService
     {
-        private static readonly string LOG_DIRECTORY = Path.Combine(Application.dataPath, "..", UnityCliLoopConstants.OUTPUT_ROOT_DIR, UnityCliLoopConstants.VIBE_LOGS_DIR);
-        private static readonly string LOG_FILE_PREFIX = "unity_vibe";
-        private static readonly int MAX_FILE_SIZE_MB = 10;
-        private static readonly int MAX_MEMORY_LOGS = 1000;
-        private static readonly int MAX_LOG_FILES = 3;
+        private readonly string _logDirectory = Path.Combine(Application.dataPath, "..", UnityCliLoopConstants.OUTPUT_ROOT_DIR, UnityCliLoopConstants.VIBE_LOGS_DIR);
+        private const string LOG_FILE_PREFIX = "unity_vibe";
+        private const int MAX_FILE_SIZE_MB = 10;
+        private const int MAX_MEMORY_LOGS = 1000;
+        private const int MAX_LOG_FILES = 3;
         
-        private static readonly List<VibeLogEntry> memoryLogs = new();
-        private static readonly object lockObject = new();
-        private static bool hasCleanedUpOnStartup = false;
+        private readonly List<VibeLogEntry> _memoryLogs = new List<VibeLogEntry>();
+        private readonly object _lockObject = new object();
+        private bool _hasCleanedUpOnStartup = false;
         
         [Serializable]
         public class VibeLogEntry
@@ -57,7 +57,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// Only logs when ULOOP_DEBUG symbol is defined
         /// </summary>
         [Conditional(UnityCliLoopConstants.ENV_KEY_ULOOP_DEBUG)]
-        public static void LogInfo(string operation, string message, object context = null, 
+        public void LogInfo(string operation, string message, object context = null, 
                                   string correlationId = null, string humanNote = null, string aiTodo = null, bool includeStackTrace = false)
         {
             Log("INFO", operation, message, context, correlationId, humanNote, aiTodo, includeStackTrace);
@@ -68,7 +68,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// Only logs when ULOOP_DEBUG symbol is defined
         /// </summary>
         [Conditional(UnityCliLoopConstants.ENV_KEY_ULOOP_DEBUG)]
-        public static void LogWarning(string operation, string message, object context = null, 
+        public void LogWarning(string operation, string message, object context = null, 
                                      string correlationId = null, string humanNote = null, string aiTodo = null, bool includeStackTrace = true)
         {
             Log("WARNING", operation, message, context, correlationId, humanNote, aiTodo, includeStackTrace);
@@ -79,7 +79,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// Only logs when ULOOP_DEBUG symbol is defined
         /// </summary>
         [Conditional(UnityCliLoopConstants.ENV_KEY_ULOOP_DEBUG)]
-        public static void LogError(string operation, string message, object context = null, 
+        public void LogError(string operation, string message, object context = null, 
                                    string correlationId = null, string humanNote = null, string aiTodo = null, bool includeStackTrace = true)
         {
             Log("ERROR", operation, message, context, correlationId, humanNote, aiTodo, includeStackTrace);
@@ -90,7 +90,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// Only logs when ULOOP_DEBUG symbol is defined
         /// </summary>
         [Conditional(UnityCliLoopConstants.ENV_KEY_ULOOP_DEBUG)]
-        public static void LogDebug(string operation, string message, object context = null, 
+        public void LogDebug(string operation, string message, object context = null, 
                                    string correlationId = null, string humanNote = null, string aiTodo = null, bool includeStackTrace = false)
         {
             Log("DEBUG", operation, message, context, correlationId, humanNote, aiTodo, includeStackTrace);
@@ -101,10 +101,10 @@ namespace io.github.hatayama.UnityCliLoop
         /// Only logs when ULOOP_DEBUG symbol is defined
         /// </summary>
         [Conditional(UnityCliLoopConstants.ENV_KEY_ULOOP_DEBUG)]
-        public static void LogException(string operation, Exception exception, object context = null, 
+        public void LogException(string operation, Exception exception, object context = null, 
                                        string correlationId = null, string humanNote = null, string aiTodo = null, bool includeStackTrace = true)
         {
-            var exceptionContext = new Dictionary<string, object>();
+            Dictionary<string, object> exceptionContext = new Dictionary<string, object>();
             if (context != null)
             {
                 exceptionContext["original_context"] = context;
@@ -125,7 +125,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Generate a new correlation ID for tracking related operations
         /// </summary>
-        public static string GenerateCorrelationId()
+        public string GenerateCorrelationId()
         {
             return $"unity_{Guid.NewGuid().ToString("N")[..8]}_{DateTime.Now:HHmmss}";
         }
@@ -134,11 +134,11 @@ namespace io.github.hatayama.UnityCliLoop
         /// Get logs for AI analysis (formatted for Claude Code)
         /// Output directory: {project_root}/.uloop/outputs/VibeLogs/
         /// </summary>
-        public static string GetLogsForAi(string operation = null, string correlationId = null, int maxCount = 100)
+        public string GetLogsForAi(string operation = null, string correlationId = null, int maxCount = 100)
         {
-            lock (lockObject)
+            lock (_lockObject)
             {
-                var filteredLogs = new List<VibeLogEntry>(memoryLogs);
+                List<VibeLogEntry> filteredLogs = new List<VibeLogEntry>(_memoryLogs);
                 
                 if (!string.IsNullOrEmpty(operation))
                 {
@@ -162,21 +162,21 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Clear all memory logs
         /// </summary>
-        public static void ClearMemoryLogs()
+        public void ClearMemoryLogs()
         {
-            lock (lockObject)
+            lock (_lockObject)
             {
-                memoryLogs.Clear();
+                _memoryLogs.Clear();
             }
         }
         
         /// <summary>
         /// Core logging method
         /// </summary>
-        private static void Log(string level, string operation, string message, object context,
+        private void Log(string level, string operation, string message, object context,
                                string correlationId, string humanNote, string aiTodo, bool includeStackTrace = true)
         {
-            var logEntry = new VibeLogEntry
+            VibeLogEntry logEntry = new VibeLogEntry
             {
                 timestamp = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss.fffzzz"),
                 level = level,
@@ -192,14 +192,14 @@ namespace io.github.hatayama.UnityCliLoop
             };
             
             // Add to memory logs
-            lock (lockObject)
+            lock (_lockObject)
             {
-                memoryLogs.Add(logEntry);
+                _memoryLogs.Add(logEntry);
                 
                 // Rotate memory logs if too many
-                if (memoryLogs.Count > MAX_MEMORY_LOGS)
+                if (_memoryLogs.Count > MAX_MEMORY_LOGS)
                 {
-                    memoryLogs.RemoveAt(0);
+                    _memoryLogs.RemoveAt(0);
                 }
             }
             
@@ -219,34 +219,34 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Save log entry to file with file locking for concurrent access
         /// </summary>
-        private static void SaveLogToFile(VibeLogEntry logEntry)
+        private void SaveLogToFile(VibeLogEntry logEntry)
         {
-            if (!Directory.Exists(LOG_DIRECTORY))
+            if (!Directory.Exists(_logDirectory))
             {
-                Directory.CreateDirectory(LOG_DIRECTORY);
+                Directory.CreateDirectory(_logDirectory);
             }
             
             // Clean up old log files on first access only
-            lock (lockObject)
+            lock (_lockObject)
             {
-                if (!hasCleanedUpOnStartup)
+                if (!_hasCleanedUpOnStartup)
                 {
                     CleanupOldLogFiles();
-                    hasCleanedUpOnStartup = true;
+                    _hasCleanedUpOnStartup = true;
                 }
             }
             
             string fileName = $"{LOG_FILE_PREFIX}_{DateTime.UtcNow:yyyyMMdd}.json";
-            string filePath = Path.Combine(LOG_DIRECTORY, fileName);
+            string filePath = Path.Combine(_logDirectory, fileName);
             
             // Check file size and rotate if necessary
             if (File.Exists(filePath))
             {
-                var fileInfo = new FileInfo(filePath);
+                FileInfo fileInfo = new FileInfo(filePath);
                 if (fileInfo.Length > MAX_FILE_SIZE_MB * 1024 * 1024)
                 {
                     string rotatedFileName = $"{LOG_FILE_PREFIX}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.json";
-                    string rotatedFilePath = Path.Combine(LOG_DIRECTORY, rotatedFileName);
+                    string rotatedFilePath = Path.Combine(_logDirectory, rotatedFileName);
                     File.Move(filePath, rotatedFilePath);
                     
                     // Clean up old files after rotation
@@ -264,8 +264,8 @@ namespace io.github.hatayama.UnityCliLoop
             {
                 try
                 {
-                    using (var fileStream = new FileStream(filePath, FileMode.Append, FileAccess.Write, FileShare.Read))
-                    using (var writer = new StreamWriter(fileStream))
+                    using (FileStream fileStream = new FileStream(filePath, FileMode.Append, FileAccess.Write, FileShare.Read))
+                    using (StreamWriter writer = new StreamWriter(fileStream))
                     {
                         writer.Write(jsonLog);
                         writer.Flush();
@@ -301,15 +301,15 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Clean up old log files, keeping only the most recent MAX_LOG_FILES
         /// </summary>
-        private static void CleanupOldLogFiles()
+        private void CleanupOldLogFiles()
         {
             try
             {
-                if (!Directory.Exists(LOG_DIRECTORY))
+                if (!Directory.Exists(_logDirectory))
                     return;
                     
                 // Get all vibe log files, sorted by creation time (newest first)
-                var logFiles = Directory.GetFiles(LOG_DIRECTORY, $"{LOG_FILE_PREFIX}_*.json")
+                FileInfo[] logFiles = Directory.GetFiles(_logDirectory, $"{LOG_FILE_PREFIX}_*.json")
                     .Select(file => new FileInfo(file))
                     .OrderByDescending(file => file.CreationTime)
                     .ToArray();
@@ -345,6 +345,61 @@ namespace io.github.hatayama.UnityCliLoop
             {
                 domain_reload_state = isDomainReloadInProgress ? "InProgress" : "Idle"
             };
+        }
+    }
+
+    public static class VibeLogger
+    {
+        private static readonly VibeLoggerService ServiceValue = new VibeLoggerService();
+
+        [Conditional(UnityCliLoopConstants.ENV_KEY_ULOOP_DEBUG)]
+        public static void LogInfo(string operation, string message, object context = null,
+                                   string correlationId = null, string humanNote = null, string aiTodo = null, bool includeStackTrace = false)
+        {
+            ServiceValue.LogInfo(operation, message, context, correlationId, humanNote, aiTodo, includeStackTrace);
+        }
+
+        [Conditional(UnityCliLoopConstants.ENV_KEY_ULOOP_DEBUG)]
+        public static void LogWarning(string operation, string message, object context = null,
+                                      string correlationId = null, string humanNote = null, string aiTodo = null, bool includeStackTrace = true)
+        {
+            ServiceValue.LogWarning(operation, message, context, correlationId, humanNote, aiTodo, includeStackTrace);
+        }
+
+        [Conditional(UnityCliLoopConstants.ENV_KEY_ULOOP_DEBUG)]
+        public static void LogError(string operation, string message, object context = null,
+                                    string correlationId = null, string humanNote = null, string aiTodo = null, bool includeStackTrace = true)
+        {
+            ServiceValue.LogError(operation, message, context, correlationId, humanNote, aiTodo, includeStackTrace);
+        }
+
+        [Conditional(UnityCliLoopConstants.ENV_KEY_ULOOP_DEBUG)]
+        public static void LogDebug(string operation, string message, object context = null,
+                                    string correlationId = null, string humanNote = null, string aiTodo = null, bool includeStackTrace = false)
+        {
+            ServiceValue.LogDebug(operation, message, context, correlationId, humanNote, aiTodo, includeStackTrace);
+        }
+
+        [Conditional(UnityCliLoopConstants.ENV_KEY_ULOOP_DEBUG)]
+        public static void LogException(string operation, Exception exception, object context = null,
+                                        string correlationId = null, string humanNote = null, string aiTodo = null, bool includeStackTrace = true)
+        {
+            ServiceValue.LogException(operation, exception, context, correlationId, humanNote, aiTodo, includeStackTrace);
+        }
+
+        public static string GenerateCorrelationId()
+        {
+            return ServiceValue.GenerateCorrelationId();
+        }
+
+        public static string GetLogsForAi(string operation = null, string correlationId = null, int maxCount = 100)
+        {
+            return ServiceValue.GetLogsForAi(operation, correlationId, maxCount);
+        }
+
+        public static void ClearMemoryLogs()
+        {
+            ServiceValue.ClearMemoryLogs();
         }
     }
 }
