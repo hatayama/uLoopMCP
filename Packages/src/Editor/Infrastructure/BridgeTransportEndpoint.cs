@@ -2,7 +2,11 @@ using System.Security.Cryptography;
 using System.Text;
 using UnityEngine;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.Application;
+using io.github.hatayama.UnityCliLoop.Domain;
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.Infrastructure
 {
     internal enum BridgeTransportKind
     {
@@ -29,7 +33,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             string canonicalProjectRoot = CanonicalizeProjectRoot(projectRoot);
             string endpointName = "UnityCliLoop-" + CreateEndpointHash(canonicalProjectRoot);
-            if (Application.platform == RuntimePlatform.WindowsEditor)
+            if (UnityEngine.Application.platform == RuntimePlatform.WindowsEditor)
             {
                 string pipeName = "uloop-" + endpointName;
                 return new BridgeTransportEndpoint(

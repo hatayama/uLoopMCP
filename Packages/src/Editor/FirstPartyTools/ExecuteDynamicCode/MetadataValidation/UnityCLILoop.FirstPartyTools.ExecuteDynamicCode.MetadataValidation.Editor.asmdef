@@ -1,6 +1,6 @@
 {
     "name": "UnityCLILoop.FirstPartyTools.ExecuteDynamicCode.MetadataValidation.Editor",
-    "rootNamespace": "",
+    "rootNamespace": "io.github.hatayama.UnityCliLoop.FirstPartyTools",
     "references": [
         "UnityCLILoop.ToolContracts"
     ],

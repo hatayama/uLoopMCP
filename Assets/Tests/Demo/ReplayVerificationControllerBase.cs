@@ -5,7 +5,9 @@ using System.IO;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.Runtime;
+
+namespace io.github.hatayama.UnityCliLoop.Tests.Demo
 {
     // Base class for replay verification controllers.
     // Provides event logging, log persistence, and frame-normalized comparison.
@@ -36,7 +38,7 @@ namespace io.github.hatayama.UnityCliLoop
             Debug.Assert(_verifyPanel != null, "_verifyPanel must be assigned in scene");
             Debug.Assert(_verifyResultText != null, "_verifyResultText must be assigned in scene");
 
-            Application.targetFrameRate = TARGET_FRAME_RATE;
+            UnityEngine.Application.targetFrameRate = TARGET_FRAME_RATE;
             _startFrame = Time.frameCount;
             HidePanel(_verifyPanel);
         }

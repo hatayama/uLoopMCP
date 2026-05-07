@@ -1,6 +1,6 @@
 using System;
 
-namespace io.github.hatayama.UnityCliLoop
+namespace io.github.hatayama.UnityCliLoop.ToolContracts
 {
     /// <summary>
     /// Exception thrown when tool parameter JSON fails type validation.

@@ -1,6 +1,6 @@
 {
     "name": "UnityCLILoop.ToolContracts",
-    "rootNamespace": "",
+    "rootNamespace": "io.github.hatayama.UnityCliLoop.ToolContracts",
     "references": [],
     "includePlatforms": [
         "Editor"

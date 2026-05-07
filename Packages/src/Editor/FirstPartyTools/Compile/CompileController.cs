@@ -6,7 +6,9 @@ using System;
 using System.Threading.Tasks;
 using System.Threading;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     /// <summary>
     /// A class that asynchronously executes Unity's compilation process and monitors the results.

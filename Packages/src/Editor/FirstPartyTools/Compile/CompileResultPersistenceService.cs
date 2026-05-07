@@ -4,7 +4,9 @@ using System.Text;
 using Newtonsoft.Json;
 using UnityEngine;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     /// <summary>
     /// Persist compile responses for delayed retrieval after domain reload.
@@ -16,7 +18,7 @@ namespace io.github.hatayama.UnityCliLoop
         // to avoid destroying results that active waiters need.
         private static readonly TimeSpan StaleResultThreshold = TimeSpan.FromMinutes(2);
 
-        private static string ProjectRootPath => Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+        private static string ProjectRootPath => Path.GetFullPath(Path.Combine(UnityEngine.Application.dataPath, ".."));
         private static string CompileResultDirectoryPath => Path.Combine(
             ProjectRootPath,
             UnityCliLoopConstants.TEMP_DIR,

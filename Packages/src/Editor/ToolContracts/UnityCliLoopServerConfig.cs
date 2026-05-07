@@ -1,4 +1,4 @@
-namespace io.github.hatayama.UnityCliLoop
+namespace io.github.hatayama.UnityCliLoop.ToolContracts
 {
     /// <summary>
     /// Shared settings for project IPC and JSON-RPC bridge responses.

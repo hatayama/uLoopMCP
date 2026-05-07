@@ -10,21 +10,25 @@ using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Controls;
 using UnityEngine.InputSystem.LowLevel;
 
-namespace io.github.hatayama.UnityCliLoop
+using RuntimeMouseButton = io.github.hatayama.UnityCliLoop.Runtime.MouseButton;
+using io.github.hatayama.UnityCliLoop.Runtime;
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     internal sealed class InputReplayerService
     {
         private readonly Dictionary<string, Key> _keyLookup = BuildKeyLookup();
         private readonly Key[] _allKeys = BuildAllKeys();
-        private readonly Dictionary<string, MouseButton> _buttonLookup =
-            new Dictionary<string, MouseButton>(StringComparer.OrdinalIgnoreCase)
+        private readonly Dictionary<string, RuntimeMouseButton> _buttonLookup =
+            new Dictionary<string, RuntimeMouseButton>(StringComparer.OrdinalIgnoreCase)
         {
-            { "Left", MouseButton.Left },
-            { "Right", MouseButton.Right },
-            { "Middle", MouseButton.Middle }
+            { "Left", RuntimeMouseButton.Left },
+            { "Right", RuntimeMouseButton.Right },
+            { "Middle", RuntimeMouseButton.Middle }
         };
         private readonly Key[] _emptyKeys = Array.Empty<Key>();
-        private readonly MouseButton[] _emptyButtons = Array.Empty<MouseButton>();
+        private readonly RuntimeMouseButton[] _emptyButtons = Array.Empty<RuntimeMouseButton>();
 
         private bool _isReplaying;
         private InputRecordingData? _data;
@@ -33,7 +37,7 @@ namespace io.github.hatayama.UnityCliLoop
         private bool _loop;
         private bool _showOverlay;
         private readonly HashSet<Key> _replayHeldKeys = new HashSet<Key>();
-        private readonly HashSet<MouseButton> _replayHeldButtons = new HashSet<MouseButton>();
+        private readonly HashSet<RuntimeMouseButton> _replayHeldButtons = new HashSet<RuntimeMouseButton>();
         private readonly List<BaseInputModule> _disabledInputModules = new List<BaseInputModule>();
         private Vector2? _replayMousePosition;
 
@@ -263,7 +267,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private void ProcessMouseClick(string buttonName)
         {
-            if (!_buttonLookup.TryGetValue(buttonName, out MouseButton button))
+            if (!_buttonLookup.TryGetValue(buttonName, out RuntimeMouseButton button))
             {
                 return;
             }
@@ -277,7 +281,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private void ProcessMouseRelease(string buttonName)
         {
-            if (!_buttonLookup.TryGetValue(buttonName, out MouseButton button))
+            if (!_buttonLookup.TryGetValue(buttonName, out RuntimeMouseButton button))
             {
                 return;
             }
@@ -349,7 +353,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private void ApplyMouseSnapshot(
             Mouse mouse,
-            IReadOnlyCollection<MouseButton> heldButtons,
+            IReadOnlyCollection<RuntimeMouseButton> heldButtons,
             Vector2 delta,
             Vector2 scroll,
             Vector2? position)
@@ -368,7 +372,7 @@ namespace io.github.hatayama.UnityCliLoop
                     mouse.position.WriteValueIntoEvent(position.Value, eventPtr);
                 }
 
-                foreach (MouseButton button in heldButtons)
+                foreach (RuntimeMouseButton button in heldButtons)
                 {
                     MouseButtonControlResolver.GetButtonControl(mouse, button).WriteValueIntoEvent(1f, eventPtr);
                 }
@@ -396,7 +400,7 @@ namespace io.github.hatayama.UnityCliLoop
                 SimulateKeyboardOverlayState.RemoveHeldKey(key.ToString());
             }
 
-            foreach (MouseButton button in _replayHeldButtons)
+            foreach (RuntimeMouseButton button in _replayHeldButtons)
             {
                 SimulateMouseInputOverlayState.SetButtonHeld(button, false);
             }
@@ -463,7 +467,7 @@ namespace io.github.hatayama.UnityCliLoop
                               || _previousReplayMousePosition.Value != screenPos;
             _previousReplayMousePosition = screenPos;
 
-            bool leftHeld = _replayHeldButtons.Contains(MouseButton.Left);
+            bool leftHeld = _replayHeldButtons.Contains(RuntimeMouseButton.Left);
             bool justPressed = leftHeld && !_prevLeftButtonHeld;
             bool justReleased = !leftHeld && _prevLeftButtonHeld;
             _prevLeftButtonHeld = leftHeld;

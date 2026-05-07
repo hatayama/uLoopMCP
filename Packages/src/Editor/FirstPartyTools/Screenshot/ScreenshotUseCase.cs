@@ -6,7 +6,10 @@ using System.Threading.Tasks;
 using UnityEngine;
 using UnityEditor;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.InternalAPIBridge;
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     /// <summary>
     /// Captures Unity Editor windows or GameView rendering for the bundled screenshot tool.

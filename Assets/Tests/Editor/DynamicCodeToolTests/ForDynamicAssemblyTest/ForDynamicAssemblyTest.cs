@@ -2,7 +2,7 @@ using UnityEngine;
 using System.IO;
 using System.Diagnostics;
 
-namespace io.github.hatayama.UnityCliLoop
+namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
 {
     public class ForDynamicAssemblyTest
     {

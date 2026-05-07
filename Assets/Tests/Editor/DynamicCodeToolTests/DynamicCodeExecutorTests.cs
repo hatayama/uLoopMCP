@@ -4,7 +4,15 @@ using System.Threading;
 using System.Threading.Tasks;
 using NUnit.Framework;
 
-namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
+using io.github.hatayama.UnityCliLoop.Application;
+using io.github.hatayama.UnityCliLoop.CompositionRoot;
+using io.github.hatayama.UnityCliLoop.Domain;
+using io.github.hatayama.UnityCliLoop.FirstPartyTools;
+using io.github.hatayama.UnityCliLoop.Infrastructure;
+using io.github.hatayama.UnityCliLoop.Presentation;
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
 {
     [TestFixture]
     public class DynamicCodeExecutorTests
@@ -108,7 +116,7 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
         {
             public int ExecuteAsyncCallCount { get; private set; }
 
-            public Task<ExecutionResult> ExecuteAsync(ExecutionContext context)
+            public Task<ExecutionResult> ExecuteAsync(io.github.hatayama.UnityCliLoop.FirstPartyTools.ExecutionContext context)
             {
                 ExecuteAsyncCallCount++;
                 return Task.FromResult(new ExecutionResult { Success = true });

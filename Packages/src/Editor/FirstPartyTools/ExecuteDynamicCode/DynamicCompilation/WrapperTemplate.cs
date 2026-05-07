@@ -1,7 +1,9 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     /// <summary>
     /// Builds the namespace/class/method wrapper for top-level user code.

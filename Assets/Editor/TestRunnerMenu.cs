@@ -3,7 +3,12 @@ using UnityEditor;
 using UnityEditor.TestTools.TestRunner.Api;
 using UnityEngine;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.Application;
+using io.github.hatayama.UnityCliLoop.FirstPartyTools;
+using io.github.hatayama.UnityCliLoop.Runtime;
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.Dev
 {
     /// <summary>
     /// Class that provides menu items related to the Test Runner.
@@ -108,7 +113,7 @@ namespace io.github.hatayama.UnityCliLoop
                 
                 // Select the file in the Project view if it exists
                 Object xmlAsset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(
-                    result.xmlPath.Replace(Application.dataPath, "Assets"));
+                    result.xmlPath.Replace(UnityEngine.Application.dataPath, "Assets"));
                 if (xmlAsset != null)
                 {
                     EditorGUIUtility.PingObject(xmlAsset);

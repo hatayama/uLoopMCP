@@ -2,10 +2,17 @@
 using NUnit.Framework;
 using System.Threading;
 using System.Threading.Tasks;
-using io.github.hatayama.UnityCliLoop;
-using io.github.hatayama.UnityCliLoop.Factory;
+using io.github.hatayama.UnityCliLoop.FirstPartyTools.Factory;
 
-namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
+using io.github.hatayama.UnityCliLoop.Application;
+using io.github.hatayama.UnityCliLoop.CompositionRoot;
+using io.github.hatayama.UnityCliLoop.Domain;
+using io.github.hatayama.UnityCliLoop.FirstPartyTools;
+using io.github.hatayama.UnityCliLoop.Infrastructure;
+using io.github.hatayama.UnityCliLoop.Presentation;
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
 {
     /// <summary>
     /// Reproduce Dictionary Error in DynamicCodeExecutor

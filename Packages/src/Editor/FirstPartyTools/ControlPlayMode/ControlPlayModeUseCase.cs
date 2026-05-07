@@ -2,7 +2,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using UnityEditor;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     /// <summary>
     /// Executes Unity Editor play mode state changes for the bundled control-play-mode tool.

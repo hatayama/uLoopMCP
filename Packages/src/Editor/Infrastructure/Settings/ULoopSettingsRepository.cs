@@ -2,7 +2,11 @@ using System;
 using System.IO;
 using UnityEngine;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.Application;
+using io.github.hatayama.UnityCliLoop.Domain;
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.Infrastructure
 {
     /// <summary>
     /// Security settings management for .uloop/settings.permissions.json.

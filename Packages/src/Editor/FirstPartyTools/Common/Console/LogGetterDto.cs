@@ -1,6 +1,6 @@
 using System;
 
-namespace io.github.hatayama.UnityCliLoop
+namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     [Serializable]
     public record LogEntryDto

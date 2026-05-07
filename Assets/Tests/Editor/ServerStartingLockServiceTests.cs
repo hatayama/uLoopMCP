@@ -2,7 +2,15 @@ using System.IO;
 using NUnit.Framework;
 using UnityEngine;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.Application;
+using io.github.hatayama.UnityCliLoop.CompositionRoot;
+using io.github.hatayama.UnityCliLoop.Domain;
+using io.github.hatayama.UnityCliLoop.FirstPartyTools;
+using io.github.hatayama.UnityCliLoop.Infrastructure;
+using io.github.hatayama.UnityCliLoop.Presentation;
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.Tests.Editor
 {
     [TestFixture]
     public class ServerStartingLockServiceTests
@@ -78,7 +86,7 @@ namespace io.github.hatayama.UnityCliLoop
         private static string GetLockFilePath()
         {
             return Path.GetFullPath(
-                Path.Combine(Application.dataPath, "..", "Temp", "serverstarting.lock"));
+                Path.Combine(UnityEngine.Application.dataPath, "..", "Temp", "serverstarting.lock"));
         }
 
         private static void RestoreLockFile(

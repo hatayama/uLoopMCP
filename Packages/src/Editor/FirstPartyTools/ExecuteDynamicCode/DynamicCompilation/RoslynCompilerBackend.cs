@@ -8,7 +8,9 @@ using UnityEditor;
 using UnityEditor.Compilation;
 using UnityEngine;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     internal static class RoslynCompilerBackend
     {
@@ -81,7 +83,7 @@ namespace io.github.hatayama.UnityCliLoop
                     "worker_unavailable",
                     new
                     {
-                        platform = Application.platform.ToString(),
+                        platform = UnityEngine.Application.platform.ToString(),
                         dotnet_host_path = externalCompilerPaths.DotnetHostPath,
                         compiler_dll_path = externalCompilerPaths.CompilerDllPath
                     });

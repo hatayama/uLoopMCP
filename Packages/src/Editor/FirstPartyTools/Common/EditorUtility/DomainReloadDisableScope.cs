@@ -1,7 +1,7 @@
 using System;
 using UnityEditor;
 
-namespace io.github.hatayama.UnityCliLoop
+namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     public class DomainReloadDisableScope : IDisposable
     {

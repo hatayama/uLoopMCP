@@ -1,6 +1,8 @@
 using NUnit.Framework;
 
-namespace io.github.hatayama.UnityCliLoop._Test
+using io.github.hatayama.UnityCliLoop.Application;
+
+namespace io.github.hatayama.UnityCliLoop.Tests.TestForTest
 {
     public class Test_For_Test
     {

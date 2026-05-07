@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-namespace io.github.hatayama.UnityCliLoop
+namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     // Shared UI raycast logic used by SimulateMouseUiTool and InputReplayer.
     internal static class UiRaycastHelper

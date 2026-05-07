@@ -3,7 +3,15 @@ using System.Reflection;
 using System.Threading;
 using NUnit.Framework;
 
-namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
+using io.github.hatayama.UnityCliLoop.Application;
+using io.github.hatayama.UnityCliLoop.CompositionRoot;
+using io.github.hatayama.UnityCliLoop.Domain;
+using io.github.hatayama.UnityCliLoop.FirstPartyTools;
+using io.github.hatayama.UnityCliLoop.Infrastructure;
+using io.github.hatayama.UnityCliLoop.Presentation;
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
 {
     [TestFixture]
     public class CompiledCommandEntryPointResolverTests
@@ -14,9 +22,9 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
             CompiledCommandEntryPointResolver resolver = new();
 
             (System.Type targetType, MethodInfo executeMethod) = resolver.TryFindExecuteMethod(
-                typeof(global::UnityCliLoop.Dynamic.DynamicCommand).Assembly);
+                typeof(global::io.github.hatayama.UnityCliLoop.Tests.Editor.Dynamic.DynamicCommand).Assembly);
 
-            Assert.That(targetType, Is.EqualTo(typeof(global::UnityCliLoop.Dynamic.DynamicCommand)));
+            Assert.That(targetType, Is.EqualTo(typeof(global::io.github.hatayama.UnityCliLoop.Tests.Editor.Dynamic.DynamicCommand)));
             Assert.That(executeMethod, Is.Not.Null);
             Assert.That(executeMethod.GetParameters(), Has.Length.EqualTo(2));
             Assert.That(
@@ -29,7 +37,7 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
     }
 }
 
-namespace UnityCliLoop.Dynamic
+namespace io.github.hatayama.UnityCliLoop.Tests.Editor.Dynamic
 {
     public class DynamicCommand
     {

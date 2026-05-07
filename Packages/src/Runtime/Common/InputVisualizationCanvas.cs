@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace io.github.hatayama.UnityCliLoop
+namespace io.github.hatayama.UnityCliLoop.Runtime
 {
     // Orchestrator that owns the shared Canvas and holds references to all input visualization overlays.
     public class InputVisualizationCanvas : MonoBehaviour

@@ -1,6 +1,6 @@
 {
     "name": "UnityCLILoop.Infrastructure",
-    "rootNamespace": "",
+    "rootNamespace": "io.github.hatayama.UnityCliLoop.Infrastructure",
     "references": [
         "UnityCLILoop.Application",
         "UnityCLILoop.Domain",

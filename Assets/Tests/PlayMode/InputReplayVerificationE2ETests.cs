@@ -1,14 +1,17 @@
 #if ULOOP_HAS_INPUT_SYSTEM
 using System.Collections;
 using System.IO;
-using io.github.hatayama.UnityCliLoop;
+using io.github.hatayama.UnityCliLoop.FirstPartyTools;
+using io.github.hatayama.UnityCliLoop.Runtime;
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+using io.github.hatayama.UnityCliLoop.Tests.Demo;
 using NUnit.Framework;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 
-namespace Tests.PlayMode
+namespace io.github.hatayama.UnityCliLoop.Tests.PlayMode
 {
     public class InputReplayVerificationE2ETests
     {

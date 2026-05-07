@@ -5,7 +5,9 @@ using UnityEngine.SceneManagement;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     /// <summary>
     /// Service for retrieving Unity Hierarchy information
@@ -93,7 +95,7 @@ namespace io.github.hatayama.UnityCliLoop
                 sceneType = "prefab";
                 sceneName = prefabStage.assetPath;
             }
-            else if (Application.isPlaying)
+            else if (UnityEngine.Application.isPlaying)
             {
                 sceneType = "runtime";
                 sceneName = BuildSceneNameSummary();
@@ -279,7 +281,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static GameObject[] GetDontDestroyOnLoadRootObjects()
         {
-            if (!Application.isPlaying)
+            if (!UnityEngine.Application.isPlaying)
             {
                 return System.Array.Empty<GameObject>();
             }
@@ -321,7 +323,7 @@ namespace io.github.hatayama.UnityCliLoop
 #if UNITY_EDITOR
                 if (probe != null)
                 {
-                    if (Application.isPlaying)
+                    if (UnityEngine.Application.isPlaying)
                     {
                         UnityEngine.Object.Destroy(probe);
                     }

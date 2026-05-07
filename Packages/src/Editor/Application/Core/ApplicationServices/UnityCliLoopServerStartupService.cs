@@ -1,4 +1,9 @@
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.Domain;
+using io.github.hatayama.UnityCliLoop.InternalAPIBridge;
+using io.github.hatayama.UnityCliLoop.Runtime;
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.Application
 {
     /// <summary>
     /// Starts and stops server instances behind the application-owned server handle.

@@ -1,9 +1,11 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using io.github.hatayama.UnityCliLoop.Factory;
+using io.github.hatayama.UnityCliLoop.FirstPartyTools.Factory;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     internal sealed class DynamicCodeServicesRegistry
     {

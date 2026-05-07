@@ -4,7 +4,9 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using Cinemachine;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.Runtime;
+
+namespace io.github.hatayama.UnityCliLoop.Tests.Demo
 {
     // Orbits the Cinemachine camera around the character without rotating the character.
     // Mouse delta.x rotates the camera's FollowOffset around Y axis,

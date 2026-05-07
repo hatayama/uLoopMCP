@@ -6,7 +6,10 @@ using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.InternalAPIBridge;
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     /// <summary>
     /// Utility class for capturing any EditorWindow to a Texture2D.

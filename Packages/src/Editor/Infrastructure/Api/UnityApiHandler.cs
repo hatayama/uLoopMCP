@@ -2,7 +2,11 @@ using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Stopwatch = System.Diagnostics.Stopwatch;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.Application;
+using io.github.hatayama.UnityCliLoop.Domain;
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.Infrastructure
 {
 
     /// <summary>

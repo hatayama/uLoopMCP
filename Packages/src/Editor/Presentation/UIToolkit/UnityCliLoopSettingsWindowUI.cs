@@ -3,7 +3,11 @@ using UnityEngine;
 using UnityEngine.UIElements;
 using UnityEditor;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.Application;
+using io.github.hatayama.UnityCliLoop.Domain;
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.Presentation
 {
     /// <summary>
     /// View layer for UnityCliLoopSettingsWindow in MVP architecture.
@@ -130,7 +134,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static void HandleOpenGitHub()
         {
-            Application.OpenURL(UnityCliLoopUIConstants.PROJECT_REPOSITORY_URL);
+            UnityEngine.Application.OpenURL(UnityCliLoopUIConstants.PROJECT_REPOSITORY_URL);
         }
 
         private void HandleGitHubHoverChanged(bool isHovered)

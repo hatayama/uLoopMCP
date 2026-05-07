@@ -3,7 +3,15 @@ using System.Threading;
 using System.Threading.Tasks;
 using NUnit.Framework;
 
-namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
+using io.github.hatayama.UnityCliLoop.Application;
+using io.github.hatayama.UnityCliLoop.CompositionRoot;
+using io.github.hatayama.UnityCliLoop.Domain;
+using io.github.hatayama.UnityCliLoop.FirstPartyTools;
+using io.github.hatayama.UnityCliLoop.Infrastructure;
+using io.github.hatayama.UnityCliLoop.Presentation;
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
 {
     [TestFixture]
     public class CommandRunnerTests
@@ -15,8 +23,8 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
             using CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
             cancellationTokenSource.Cancel();
 
-            io.github.hatayama.UnityCliLoop.ExecutionContext context = new()            {
-                CompiledAssembly = typeof(global::UnityCliLoop.Dynamic.DynamicCommand).Assembly,
+            io.github.hatayama.UnityCliLoop.FirstPartyTools.ExecutionContext context = new()            {
+                CompiledAssembly = typeof(global::io.github.hatayama.UnityCliLoop.Tests.Editor.Dynamic.DynamicCommand).Assembly,
                 Parameters = new Dictionary<string, object>(),
                 CancellationToken = cancellationTokenSource.Token
             };
@@ -34,8 +42,8 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
         {
             CommandRunner runner = new();
 
-            io.github.hatayama.UnityCliLoop.ExecutionContext context = new()            {
-                CompiledAssembly = typeof(global::UnityCliLoop.Dynamic.DynamicCommand).Assembly,
+            io.github.hatayama.UnityCliLoop.FirstPartyTools.ExecutionContext context = new()            {
+                CompiledAssembly = typeof(global::io.github.hatayama.UnityCliLoop.Tests.Editor.Dynamic.DynamicCommand).Assembly,
                 Parameters = new Dictionary<string, object>(),
                 CancellationToken = CancellationToken.None
             };

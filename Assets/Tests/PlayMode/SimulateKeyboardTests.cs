@@ -3,7 +3,10 @@
 using System.Collections;
 using System.Threading;
 using System.Threading.Tasks;
-using io.github.hatayama.UnityCliLoop;
+using io.github.hatayama.UnityCliLoop.FirstPartyTools;
+using io.github.hatayama.UnityCliLoop.Runtime;
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+using io.github.hatayama.UnityCliLoop.Tests.Demo;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using UnityEngine;
@@ -13,7 +16,7 @@ using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.UI;
 using UnityEngine.TestTools;
 
-namespace Tests.PlayMode
+namespace io.github.hatayama.UnityCliLoop.Tests.PlayMode
 {
     public class SimulateKeyboardTests : InputTestFixture
     {

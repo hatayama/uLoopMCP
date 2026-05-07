@@ -8,7 +8,9 @@ using UnityEditor.Compilation;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     internal sealed class CompiledAssemblyBuilder : ICompiledAssemblyBuilder
     {
@@ -58,7 +60,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         public bool SupportsAutoPrewarm()
         {
-            return SupportsAutoPrewarm(_externalCompilerPathResolver.Resolve(), Application.platform);
+            return SupportsAutoPrewarm(_externalCompilerPathResolver.Resolve(), UnityEngine.Application.platform);
         }
 
         internal static bool SupportsAutoPrewarm(

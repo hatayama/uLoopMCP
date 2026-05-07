@@ -1,6 +1,6 @@
 {
     "name": "UnityCLILoop.Domain",
-    "rootNamespace": "",
+    "rootNamespace": "io.github.hatayama.UnityCliLoop.Domain",
     "references": [],
     "includePlatforms": [
         "Editor"

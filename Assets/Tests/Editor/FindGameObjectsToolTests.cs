@@ -5,7 +5,15 @@ using UnityEditor;
 using UnityEngine;
 using Newtonsoft.Json.Linq;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.Application;
+using io.github.hatayama.UnityCliLoop.CompositionRoot;
+using io.github.hatayama.UnityCliLoop.Domain;
+using io.github.hatayama.UnityCliLoop.FirstPartyTools;
+using io.github.hatayama.UnityCliLoop.Infrastructure;
+using io.github.hatayama.UnityCliLoop.Presentation;
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.Tests.Editor
 {
     public class FindGameObjectsToolTests
     {
@@ -553,7 +561,7 @@ namespace io.github.hatayama.UnityCliLoop
                 Assert.That(response.message, Does.Contain("Multiple objects selected"));
 
                 // Verify file exists
-                string fullPath = Path.Combine(Application.dataPath, "..", response.resultsFilePath);
+                string fullPath = Path.Combine(UnityEngine.Application.dataPath, "..", response.resultsFilePath);
                 Assert.That(File.Exists(fullPath), Is.True, $"Export file should exist at {fullPath}");
 
                 // Cleanup exported file
@@ -704,7 +712,7 @@ namespace io.github.hatayama.UnityCliLoop
                 Assert.That(response.resultsFilePath, Is.Not.Null); // Multiple selection exports to file
 
                 // Cleanup exported file
-                string fullPath = Path.Combine(Application.dataPath, "..", response.resultsFilePath);
+                string fullPath = Path.Combine(UnityEngine.Application.dataPath, "..", response.resultsFilePath);
                 if (File.Exists(fullPath))
                 {
                     File.Delete(fullPath);

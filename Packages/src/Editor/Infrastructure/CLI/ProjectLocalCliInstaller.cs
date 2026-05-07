@@ -5,7 +5,11 @@ using System.Security.Cryptography;
 
 using UnityEngine;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.Application;
+using io.github.hatayama.UnityCliLoop.Domain;
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.Infrastructure
 {
     /// <summary>
     /// Places the package-owned native CLI binary into each Unity project so the global command can stay a dispatcher.
@@ -91,7 +95,7 @@ namespace io.github.hatayama.UnityCliLoop
             {
                 return new CliInstallResult(
                     false,
-                    $"Project-local CLI binary was not found for {Application.platform}/{RuntimeInformation.ProcessArchitecture}: {sourceBinaryPath}");
+                    $"Project-local CLI binary was not found for {UnityEngine.Application.platform}/{RuntimeInformation.ProcessArchitecture}: {sourceBinaryPath}");
             }
 
             string projectLocalBinDir = GetProjectLocalBinDir(projectRoot);
@@ -209,21 +213,21 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static string GetProjectLocalCliFileName()
         {
-            return Application.platform == RuntimePlatform.WindowsEditor
+            return UnityEngine.Application.platform == RuntimePlatform.WindowsEditor
                 ? CliConstants.PROJECT_LOCAL_WINDOWS_COMMAND_NAME
                 : CliConstants.PROJECT_LOCAL_UNIX_COMMAND_NAME;
         }
 
         private static string GetNativeCliFileName()
         {
-            return Application.platform == RuntimePlatform.WindowsEditor
+            return UnityEngine.Application.platform == RuntimePlatform.WindowsEditor
                 ? CliConstants.PROJECT_LOCAL_WINDOWS_COMMAND_NAME
                 : CliConstants.PROJECT_LOCAL_UNIX_COMMAND_NAME;
         }
 
         private static string GetNativeCliPlatformDir()
         {
-            RuntimePlatform platform = Application.platform;
+            RuntimePlatform platform = UnityEngine.Application.platform;
             Architecture architecture = RuntimeInformation.ProcessArchitecture;
 
             if (platform == RuntimePlatform.OSXEditor)
@@ -241,7 +245,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static CliInstallResult MakeProjectLocalCliExecutable(string projectLocalCliPath)
         {
-            if (Application.platform == RuntimePlatform.WindowsEditor)
+            if (UnityEngine.Application.platform == RuntimePlatform.WindowsEditor)
             {
                 return new CliInstallResult(true, "");
             }

@@ -7,7 +7,7 @@ using Newtonsoft.Json;
 using UnityEditor;
 using UnityEngine;
 
-namespace io.github.hatayama.UnityCliLoop
+namespace io.github.hatayama.UnityCliLoop.ToolContracts
 {
     /// <summary>
     /// AI-friendly structured logger for Unity CLI Loop.
@@ -20,7 +20,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// </summary>
     public sealed class VibeLoggerService
     {
-        private readonly string _logDirectory = Path.Combine(Application.dataPath, "..", UnityCliLoopConstants.OUTPUT_ROOT_DIR, UnityCliLoopConstants.VIBE_LOGS_DIR);
+        private readonly string _logDirectory = Path.Combine(UnityEngine.Application.dataPath, "..", UnityCliLoopConstants.OUTPUT_ROOT_DIR, UnityCliLoopConstants.VIBE_LOGS_DIR);
         private const string LOG_FILE_PREFIX = "unity_vibe";
         private const int MAX_FILE_SIZE_MB = 10;
         private const int MAX_MEMORY_LOGS = 1000;

@@ -3,7 +3,9 @@ using System.Diagnostics;
 using Assembly = System.Reflection.Assembly;
 using Debug = UnityEngine.Debug;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     internal static class CompiledAssemblyLoader
     {

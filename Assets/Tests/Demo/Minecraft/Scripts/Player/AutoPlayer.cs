@@ -1,6 +1,8 @@
 using UnityEngine;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.Runtime;
+
+namespace io.github.hatayama.UnityCliLoop.Tests.Demo
 {
     // simulate-keyboard cannot reproduce mouse-driven actions (look, click),
     // so this script uses random automation to exercise them during PlayMode

@@ -5,7 +5,15 @@ using System.Linq;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.Application;
+using io.github.hatayama.UnityCliLoop.CompositionRoot;
+using io.github.hatayama.UnityCliLoop.Domain;
+using io.github.hatayama.UnityCliLoop.FirstPartyTools;
+using io.github.hatayama.UnityCliLoop.Infrastructure;
+using io.github.hatayama.UnityCliLoop.Presentation;
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.Tests.Editor
 {
     [TestFixture]
     public sealed class OnionAssemblyDependencyTests
@@ -608,9 +616,9 @@ namespace io.github.hatayama.UnityCliLoop
         {
             // Tests that project IPC transport implementation is owned by infrastructure.
             Type endpointType = Type.GetType(
-                "io.github.hatayama.UnityCliLoop.BridgeTransportEndpoint, " + InfrastructureAssemblyName);
+                "io.github.hatayama.UnityCliLoop.Infrastructure.BridgeTransportEndpoint, " + InfrastructureAssemblyName);
             Type listenerFactoryType = Type.GetType(
-                "io.github.hatayama.UnityCliLoop.BridgeTransportListenerFactory, " + InfrastructureAssemblyName);
+                "io.github.hatayama.UnityCliLoop.Infrastructure.BridgeTransportListenerFactory, " + InfrastructureAssemblyName);
             string bridgeAssemblyName = typeof(UnityCliLoopBridgeServer).Assembly.GetName().Name;
             string reassemblerAssemblyName = typeof(MessageReassembler).Assembly.GetName().Name;
             string bufferAssemblyName = typeof(DynamicBufferManager).Assembly.GetName().Name;
@@ -697,7 +705,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             // Tests that bundled tools no longer require composition-root host service wiring.
             Type hostServicesType = Type.GetType(
-                "io.github.hatayama.UnityCliLoop.UnityCliLoopToolHostServices, " + CompositionRootAssemblyName);
+                "io.github.hatayama.UnityCliLoop.CompositionRoot.UnityCliLoopToolHostServices, " + CompositionRootAssemblyName);
 
             Assert.That(hostServicesType, Is.Null);
         }

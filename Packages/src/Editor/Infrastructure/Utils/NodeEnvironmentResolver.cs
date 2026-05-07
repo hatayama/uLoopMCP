@@ -3,7 +3,11 @@ using System.Diagnostics;
 using System.IO;
 using UnityEngine;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.Application;
+using io.github.hatayama.UnityCliLoop.Domain;
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.Infrastructure
 {
     /// <summary>
     /// Utility class for detecting executable paths through the user's shell environment.
@@ -20,7 +24,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// </summary>
         public static string FindExecutablePath(string executableName)
         {
-            return FindExecutablePathAtPlatform(executableName, Application.platform);
+            return FindExecutablePathAtPlatform(executableName, UnityEngine.Application.platform);
         }
 
         internal static string FindExecutablePathAtPlatform(string executableName, RuntimePlatform platform)

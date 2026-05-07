@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEditor;
 #endif
 
-namespace io.github.hatayama.UnityCliLoop
+namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     /// <summary>
     /// Universal Console Utility wrapper
@@ -44,9 +44,9 @@ namespace io.github.hatayama.UnityCliLoop
         public static string GetVersionInfo()
         {
 #if UNITY_6000_0_OR_NEWER
-            return $"Unity {Application.unityVersion} - Using Unity 6+ Standard ConsoleWindowUtility API";
+            return $"Unity {UnityEngine.Application.unityVersion} - Using Unity 6+ Standard ConsoleWindowUtility API";
 #else
-            return $"Unity {Application.unityVersion} - Using Custom LogByReflection ConsoleWindowUtility API";
+            return $"Unity {UnityEngine.Application.unityVersion} - Using Custom LogByReflection ConsoleWindowUtility API";
 #endif
         }
 

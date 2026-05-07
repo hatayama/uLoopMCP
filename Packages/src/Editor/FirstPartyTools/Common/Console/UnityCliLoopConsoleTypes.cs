@@ -1,4 +1,4 @@
-namespace io.github.hatayama.UnityCliLoop
+namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     /// <summary>
     /// Host capability used by tools that need a read-only snapshot of Unity Console entries.

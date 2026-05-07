@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using UnityEditor;
 
-namespace io.github.hatayama.UnityCliLoop
+namespace io.github.hatayama.UnityCliLoop.ToolContracts
 {
     /// <summary>
     /// Delay processing management class for Unity Editor

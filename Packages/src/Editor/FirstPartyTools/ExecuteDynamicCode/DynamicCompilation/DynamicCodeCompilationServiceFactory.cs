@@ -1,8 +1,9 @@
 using System.Runtime.CompilerServices;
+using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 [assembly: InternalsVisibleTo("uLoopMCP.Tests.Editor")]
 
-namespace io.github.hatayama.UnityCliLoop
+namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     public sealed class DynamicCompilationRuntimeServicesFactory : IDynamicCompilationRuntimeServicesFactory
     {

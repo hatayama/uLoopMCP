@@ -6,7 +6,11 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.Application;
+using io.github.hatayama.UnityCliLoop.Domain;
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.Presentation
 {
     public class UnityCliLoopSettingsWindow : EditorWindow
     {
@@ -549,7 +553,7 @@ namespace io.github.hatayama.UnityCliLoop
             bool isCliInstalled = cliVersion != null;
             bool canUninstallCli = CliSetupApplicationFacade.IsPackageOwnedCurrentUserInstallPath(
                 cliExecutablePath,
-                Application.platform);
+                UnityEngine.Application.platform);
             bool isChecking = !CliSetupApplicationFacade.IsCliCheckCompleted()
                 || _isRefreshingVersion
                 || !includeSkillDirectoryChecks;
@@ -680,14 +684,14 @@ namespace io.github.hatayama.UnityCliLoop
             try
             {
                 CliInstallResult result = await CliSetupApplicationFacade.InstallGlobalCliAsync(
-                    Application.platform,
+                    UnityEngine.Application.platform,
                     UnityCliLoopConstants.PackageInfo.version,
                     CancellationToken.None);
 
                 if (!result.Success)
                 {
                     NativeCliInstallCommand command = CliSetupApplicationFacade.GetGlobalCliInstallCommand(
-                        Application.platform,
+                        UnityEngine.Application.platform,
                         UnityCliLoopConstants.PackageInfo.version,
                         true);
                     EditorUtility.DisplayDialog(
@@ -712,7 +716,7 @@ namespace io.github.hatayama.UnityCliLoop
             string cliExecutablePath = CliSetupApplicationFacade.GetCachedCliExecutablePath();
             bool canUninstallCli = CliSetupApplicationFacade.IsPackageOwnedCurrentUserInstallPath(
                 cliExecutablePath,
-                Application.platform);
+                UnityEngine.Application.platform);
             return ShouldUninstallCliFromPrimaryButton(
                 cliVersion,
                 GetRequiredDispatcherVersion(),
@@ -748,7 +752,7 @@ namespace io.github.hatayama.UnityCliLoop
             try
             {
                 CliInstallResult result = await CliSetupApplicationFacade.UninstallGlobalCliAsync(
-                    Application.platform,
+                    UnityEngine.Application.platform,
                     CancellationToken.None);
                 if (!result.Success)
                 {

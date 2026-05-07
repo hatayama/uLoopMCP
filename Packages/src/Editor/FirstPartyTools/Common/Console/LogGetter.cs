@@ -4,7 +4,7 @@ using UnityEngine;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
 
-namespace io.github.hatayama.UnityCliLoop
+namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     /// <summary>
     /// A class that provides a general-purpose static API for retrieving console logs.

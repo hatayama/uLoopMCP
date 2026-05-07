@@ -5,7 +5,9 @@ using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     /// <summary>
     /// Manages the caching of compilation results.

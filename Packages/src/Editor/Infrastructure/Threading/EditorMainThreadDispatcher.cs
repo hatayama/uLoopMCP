@@ -3,7 +3,11 @@ using System.Collections.Concurrent;
 using System.Threading;
 using UnityEditor;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.Application;
+using io.github.hatayama.UnityCliLoop.Domain;
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.Infrastructure
 {
     // Infrastructure dispatcher backed by Unity Editor's update loop.
     public sealed class EditorMainThreadDispatcher : IMainThreadDispatcher

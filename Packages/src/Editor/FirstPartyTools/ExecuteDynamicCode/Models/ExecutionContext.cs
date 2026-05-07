@@ -2,7 +2,9 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Threading;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     /// <summary>
     /// Execution Context

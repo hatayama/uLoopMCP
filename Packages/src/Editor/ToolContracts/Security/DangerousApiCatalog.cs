@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace io.github.hatayama.UnityCliLoop
+namespace io.github.hatayama.UnityCliLoop.ToolContracts
 {
     /// <summary>
     /// Roslyn-independent catalog of dangerous API types and members.

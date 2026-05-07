@@ -8,18 +8,22 @@ using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Controls;
 using UnityEngine.InputSystem.LowLevel;
 
-namespace io.github.hatayama.UnityCliLoop
+using RuntimeMouseButton = io.github.hatayama.UnityCliLoop.Runtime.MouseButton;
+using io.github.hatayama.UnityCliLoop.Runtime;
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     internal sealed class MouseInputStateService
     {
-        private readonly HashSet<MouseButton> _heldButtons = new HashSet<MouseButton>();
+        private readonly HashSet<RuntimeMouseButton> _heldButtons = new HashSet<RuntimeMouseButton>();
 
         // Pending reset callbacks for per-frame values (delta, scroll).
         // Tracked so we can unsubscribe on PlayMode exit to prevent leaks.
         private Action? _pendingDeltaReset;
         private Action? _pendingScrollReset;
 
-        public bool IsButtonHeld(MouseButton button) => _heldButtons.Contains(button);
+        public bool IsButtonHeld(RuntimeMouseButton button) => _heldButtons.Contains(button);
 
         public void RegisterPlayModeCallbacks()
         {
@@ -27,12 +31,12 @@ namespace io.github.hatayama.UnityCliLoop
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
         }
 
-        public void SetButtonDown(MouseButton button)
+        public void SetButtonDown(RuntimeMouseButton button)
         {
             _heldButtons.Add(button);
         }
 
-        public void SetButtonUp(MouseButton button)
+        public void SetButtonUp(RuntimeMouseButton button)
         {
             _heldButtons.Remove(button);
         }
@@ -40,7 +44,7 @@ namespace io.github.hatayama.UnityCliLoop
         // StateEvent.From captures the full mouse state snapshot.
         // All currently held buttons must be written into every event
         // to avoid accidentally releasing them.
-        public void SetButtonState(Mouse mouse, MouseButton button, bool pressed)
+        public void SetButtonState(Mouse mouse, RuntimeMouseButton button, bool pressed)
         {
             Debug.Assert(mouse != null, "mouse must not be null");
             ApplyStateEvent(mouse!, eventPtr =>
@@ -98,7 +102,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             using (StateEvent.From(mouse, out InputEventPtr eventPtr))
             {
-                foreach (MouseButton button in _heldButtons)
+                foreach (RuntimeMouseButton button in _heldButtons)
                 {
                     GetButtonControl(mouse, button).WriteValueIntoEvent(0f, eventPtr);
                 }
@@ -116,7 +120,7 @@ namespace io.github.hatayama.UnityCliLoop
             InputUpdateType updateType = InputUpdateTypeResolver.Resolve();
             using (StateEvent.From(mouse, out InputEventPtr eventPtr))
             {
-                foreach (MouseButton heldButton in _heldButtons)
+                foreach (RuntimeMouseButton heldButton in _heldButtons)
                 {
                     GetButtonControl(mouse, heldButton).WriteValueIntoEvent(1f, eventPtr);
                 }
@@ -204,7 +208,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        internal ButtonControl GetButtonControl(Mouse mouse, MouseButton button)
+        internal ButtonControl GetButtonControl(Mouse mouse, RuntimeMouseButton button)
         {
             return MouseButtonControlResolver.GetButtonControl(mouse, button);
         }
@@ -228,19 +232,19 @@ namespace io.github.hatayama.UnityCliLoop
             ServiceValue.RegisterPlayModeCallbacks();
         }
 
-        public static bool IsButtonHeld(MouseButton button) => ServiceValue.IsButtonHeld(button);
+        public static bool IsButtonHeld(RuntimeMouseButton button) => ServiceValue.IsButtonHeld(button);
 
-        public static void SetButtonDown(MouseButton button)
+        public static void SetButtonDown(RuntimeMouseButton button)
         {
             ServiceValue.SetButtonDown(button);
         }
 
-        public static void SetButtonUp(MouseButton button)
+        public static void SetButtonUp(RuntimeMouseButton button)
         {
             ServiceValue.SetButtonUp(button);
         }
 
-        public static void SetButtonState(Mouse mouse, MouseButton button, bool pressed)
+        public static void SetButtonState(Mouse mouse, RuntimeMouseButton button, bool pressed)
         {
             ServiceValue.SetButtonState(mouse, button, pressed);
         }
@@ -270,7 +274,7 @@ namespace io.github.hatayama.UnityCliLoop
             ServiceValue.ReleaseAllButtons();
         }
 
-        internal static ButtonControl GetButtonControl(Mouse mouse, MouseButton button)
+        internal static ButtonControl GetButtonControl(Mouse mouse, RuntimeMouseButton button)
         {
             return ServiceValue.GetButtonControl(mouse, button);
         }

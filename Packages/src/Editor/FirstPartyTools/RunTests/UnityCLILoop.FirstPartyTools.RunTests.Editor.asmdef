@@ -1,6 +1,6 @@
 {
     "name": "UnityCLILoop.FirstPartyTools.RunTests.Editor",
-    "rootNamespace": "",
+    "rootNamespace": "io.github.hatayama.UnityCliLoop.FirstPartyTools",
     "references": [
         "UnityCLILoop.FirstPartyTools.Common.EditorUtility.Editor",
         "UnityCLILoop.ToolContracts",

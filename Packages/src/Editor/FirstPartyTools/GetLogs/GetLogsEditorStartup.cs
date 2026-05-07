@@ -1,4 +1,6 @@
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     // Keeps Console log capture initialization inside the get-logs tool module.
     internal static class GetLogsEditorStartup

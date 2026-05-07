@@ -5,7 +5,7 @@ using System.Reflection;
 using Newtonsoft.Json;
 using System.ComponentModel;
 
-namespace io.github.hatayama.UnityCliLoop
+namespace io.github.hatayama.UnityCliLoop.ToolContracts
 {
     /// <summary>
     /// Utility class to generate ToolParameterSchema from DTO classes

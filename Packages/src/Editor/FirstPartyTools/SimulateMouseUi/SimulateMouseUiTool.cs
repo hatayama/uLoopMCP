@@ -1,7 +1,10 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.Runtime;
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     /// <summary>
     /// Bundled tool entry point for EventSystem mouse simulation.

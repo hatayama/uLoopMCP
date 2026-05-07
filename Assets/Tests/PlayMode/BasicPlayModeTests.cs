@@ -3,7 +3,7 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 
-namespace Tests.PlayMode
+namespace io.github.hatayama.UnityCliLoop.Tests.PlayMode
 {
     /// <summary>
     /// Basic PlayMode tests to verify test framework functionality
@@ -61,8 +61,8 @@ namespace Tests.PlayMode
         public void ApplicationTest_ShouldPass()
         {
             // Test Application properties that are available in PlayMode
-            Assert.IsTrue(Application.isPlaying, "Application should be in play mode during PlayMode tests");
-            Assert.IsNotNull(Application.unityVersion, "Unity version should be available");
+            Assert.IsTrue(UnityEngine.Application.isPlaying, "Application should be in play mode during PlayMode tests");
+            Assert.IsNotNull(UnityEngine.Application.unityVersion, "Unity version should be available");
         }
     }
 }

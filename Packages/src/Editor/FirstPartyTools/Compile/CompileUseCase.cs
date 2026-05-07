@@ -6,7 +6,9 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     /// <summary>
     /// Handles temporal cohesion for compilation processing
@@ -200,7 +202,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return response;
             }
 
-            response.ProjectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+            response.ProjectRoot = Path.GetFullPath(Path.Combine(UnityEngine.Application.dataPath, ".."));
 
             if (string.IsNullOrWhiteSpace(request.RequestId))
             {

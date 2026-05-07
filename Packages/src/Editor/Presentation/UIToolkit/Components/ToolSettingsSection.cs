@@ -4,7 +4,11 @@ using System.Text;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.Application;
+using io.github.hatayama.UnityCliLoop.Domain;
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.Presentation
 {
     /// <summary>
     /// UI section for tool permissions and a virtualized per-tool enable list.
@@ -53,7 +57,7 @@ namespace io.github.hatayama.UnityCliLoop
             Label cliReferenceLink = root.Q<Label>("cli-reference-link");
             if (cliReferenceLink != null)
             {
-                cliReferenceLink.RegisterCallback<ClickEvent>(_ => Application.OpenURL(UnityCliLoopUIConstants.CLI_COMMAND_REFERENCE_URL));
+                cliReferenceLink.RegisterCallback<ClickEvent>(_ => UnityEngine.Application.OpenURL(UnityCliLoopUIConstants.CLI_COMMAND_REFERENCE_URL));
             }
 
             SetupBindings();

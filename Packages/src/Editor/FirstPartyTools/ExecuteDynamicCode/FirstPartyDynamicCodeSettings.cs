@@ -2,7 +2,9 @@ using System;
 using System.IO;
 using UnityEngine;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     // Reads the shared dynamic-code permission setting without depending on the platform settings layer.
     internal static class FirstPartyDynamicCodeSettings

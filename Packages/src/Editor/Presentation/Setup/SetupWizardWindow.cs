@@ -9,7 +9,11 @@ using UnityEngine;
 using UnityEngine.UIElements;
 using RuntimePlatform = UnityEngine.RuntimePlatform;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.Application;
+using io.github.hatayama.UnityCliLoop.Domain;
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.Presentation
 {
     public class SetupWizardWindow : EditorWindow
     {
@@ -24,7 +28,7 @@ namespace io.github.hatayama.UnityCliLoop
         internal static void InitializeForEditorStartup()
         {
             if (AssetDatabase.IsAssetImportWorkerProcess()) return;
-            if (Application.isBatchMode) return;
+            if (UnityEngine.Application.isBatchMode) return;
 
             EditorApplication.delayCall += TryShowOnVersionChange;
         }
@@ -873,14 +877,14 @@ namespace io.github.hatayama.UnityCliLoop
             try
             {
                 CliInstallResult result = await CliSetupApplicationFacade.InstallGlobalCliAsync(
-                    Application.platform,
+                    UnityEngine.Application.platform,
                     UnityCliLoopConstants.PackageInfo.version,
                     CancellationToken.None);
 
                 if (!result.Success)
                 {
                     NativeCliInstallCommand command = CliSetupApplicationFacade.GetGlobalCliInstallCommand(
-                        Application.platform,
+                        UnityEngine.Application.platform,
                         UnityCliLoopConstants.PackageInfo.version,
                         true);
                     EditorUtility.DisplayDialog(
@@ -946,7 +950,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private void HandleOpenGitHub()
         {
-            Application.OpenURL(GetGitHubRepositoryUrl());
+            UnityEngine.Application.OpenURL(GetGitHubRepositoryUrl());
         }
 
         private void HandleGitHubHoverChanged(bool isHovered)

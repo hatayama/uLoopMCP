@@ -1,4 +1,4 @@
-namespace io.github.hatayama.UnityCliLoop
+namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     // Keeps bundled tool initialization inside the bundled-tool assembly.
     internal static class FirstPartyToolsEditorStartup

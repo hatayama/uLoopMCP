@@ -1,7 +1,9 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.Runtime;
+
+namespace io.github.hatayama.UnityCliLoop.Tests.Demo
 {
     [RequireComponent(typeof(CharacterController))]
     public class MinecraftPlayerController : MonoBehaviour
@@ -21,7 +23,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private void Start()
         {
-            Application.targetFrameRate = PlayerConstants.TargetFrameRate;
+            UnityEngine.Application.targetFrameRate = PlayerConstants.TargetFrameRate;
         }
 
         private void OnEnable()

@@ -9,7 +9,11 @@ using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Controls;
 using UnityEngine.InputSystem.LowLevel;
 
-namespace io.github.hatayama.UnityCliLoop
+using RuntimeMouseButton = io.github.hatayama.UnityCliLoop.Runtime.MouseButton;
+using io.github.hatayama.UnityCliLoop.Runtime;
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     internal sealed class InputRecorderService
     {
@@ -27,9 +31,9 @@ namespace io.github.hatayama.UnityCliLoop
             Key.UpArrow, Key.DownArrow, Key.LeftArrow, Key.RightArrow
         };
 
-        private readonly MouseButton[] _mouseButtons =
+        private readonly RuntimeMouseButton[] _mouseButtons =
         {
-            MouseButton.Left, MouseButton.Right, MouseButton.Middle
+            RuntimeMouseButton.Left, RuntimeMouseButton.Right, RuntimeMouseButton.Middle
         };
 
         private bool _isRecording;
@@ -38,12 +42,12 @@ namespace io.github.hatayama.UnityCliLoop
         private List<InputFrameEvents> _recordedFrames = new();
         private Key[]? _cachedKeysToScan;
         private readonly HashSet<Key> _previousKeyStates = new();
-        private readonly HashSet<MouseButton> _previousButtonStates = new();
+        private readonly HashSet<RuntimeMouseButton> _previousButtonStates = new();
 
         // Reused per-frame to avoid GC allocations in OnAfterUpdate
         private readonly List<RecordedInputEvent> _frameEvents = new();
         private readonly HashSet<Key> _currentKeyStates = new();
-        private readonly HashSet<MouseButton> _currentButtonStates = new();
+        private readonly HashSet<RuntimeMouseButton> _currentButtonStates = new();
 
         public event Action? RecordingStarted;
         public event Action? RecordingStopped;
@@ -249,14 +253,14 @@ namespace io.github.hatayama.UnityCliLoop
 
             for (int i = 0; i < _mouseButtons.Length; i++)
             {
-                MouseButton button = _mouseButtons[i];
+                RuntimeMouseButton button = _mouseButtons[i];
                 if (MouseButtonControlResolver.GetButtonControl(mouse, button).isPressed)
                 {
                     _currentButtonStates.Add(button);
                 }
             }
 
-            foreach (MouseButton button in _currentButtonStates)
+            foreach (RuntimeMouseButton button in _currentButtonStates)
             {
                 if (!_previousButtonStates.Contains(button))
                 {
@@ -268,7 +272,7 @@ namespace io.github.hatayama.UnityCliLoop
                 }
             }
 
-            foreach (MouseButton button in _previousButtonStates)
+            foreach (RuntimeMouseButton button in _previousButtonStates)
             {
                 if (!_currentButtonStates.Contains(button))
                 {
@@ -281,7 +285,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
 
             _previousButtonStates.Clear();
-            foreach (MouseButton button in _currentButtonStates)
+            foreach (RuntimeMouseButton button in _currentButtonStates)
             {
                 _previousButtonStates.Add(button);
             }
@@ -372,7 +376,7 @@ namespace io.github.hatayama.UnityCliLoop
                 });
             }
 
-            foreach (MouseButton button in _previousButtonStates)
+            foreach (RuntimeMouseButton button in _previousButtonStates)
             {
                 events.Add(new RecordedInputEvent
                 {

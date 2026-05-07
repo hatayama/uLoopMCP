@@ -1,7 +1,7 @@
 using System.ComponentModel;
-using io.github.hatayama.UnityCliLoop;
+using io.github.hatayama.UnityCliLoop.ToolContracts;
 
-namespace Samples
+namespace io.github.hatayama.UnityCliLoop.Samples
 {
     /// <summary>
     /// Supported languages for greeting

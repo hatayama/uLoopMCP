@@ -5,7 +5,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using UnityEditor;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     /// <summary>
     /// Runs the prepared wrapper entry point while keeping Undo and cancellation handling consistent.
@@ -297,7 +299,7 @@ namespace io.github.hatayama.UnityCliLoop
                         cancellationToken);
                     object invoked = executeAsyncMethod.Invoke(instance, callArgs);
 
-                    object awaitedResult = await io.github.hatayama.UnityCliLoop.AwaitableHelper.AwaitIfNeeded(invoked);
+                    object awaitedResult = await AwaitableHelper.AwaitIfNeeded(invoked);
                     string resultString = awaitedResult?.ToString() ?? "";
 
                     return CreateSuccessResult(resultString);

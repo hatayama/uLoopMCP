@@ -4,7 +4,9 @@ using System.IO;
 using UnityEngine;
 using Newtonsoft.Json;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     /// <summary>
     /// Tool for exporting hierarchy results to external files
@@ -32,7 +34,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
             
             // Create export directory if it doesn't exist
-            string exportDir = Path.Combine(Application.dataPath, "..", EXPORT_DIR);
+            string exportDir = Path.Combine(UnityEngine.Application.dataPath, "..", EXPORT_DIR);
             Directory.CreateDirectory(exportDir);
             
             // Generate filename with timestamp

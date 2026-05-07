@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace io.github.hatayama.UnityCliLoop
+namespace io.github.hatayama.UnityCliLoop.Tests
 {
 
 public class GameState : MonoBehaviour

@@ -1,6 +1,6 @@
 {
     "name": "UnityCLILoop.FirstPartyTools.RecordInput.Editor",
-    "rootNamespace": "",
+    "rootNamespace": "io.github.hatayama.UnityCliLoop.FirstPartyTools",
     "references": [
         "UnityCLILoop.ToolContracts",
         "UnityCLILoop.FirstPartyTools.Common.InputRecording.Editor",

@@ -1,6 +1,6 @@
 {
     "name": "UnityCLILoop.FirstPartyTools.Common.InputSimulation.Editor",
-    "rootNamespace": "",
+    "rootNamespace": "io.github.hatayama.UnityCliLoop.FirstPartyTools",
     "references": [],
     "includePlatforms": [
         "Editor"

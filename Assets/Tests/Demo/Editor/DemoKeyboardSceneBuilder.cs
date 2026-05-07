@@ -9,7 +9,14 @@ using UnityEngine.InputSystem.UI;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.Application;
+using io.github.hatayama.UnityCliLoop.Dev;
+using io.github.hatayama.UnityCliLoop.FirstPartyTools;
+using io.github.hatayama.UnityCliLoop.Runtime;
+using io.github.hatayama.UnityCliLoop.Tests.Demo;
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.Tests.Demo.Editor
 {
     public static class DemoKeyboardSceneBuilder
     {
@@ -21,8 +28,8 @@ namespace io.github.hatayama.UnityCliLoop
         private const string CUBE_NAME = "KeyboardInputCube";
 
         private static bool IsMac =>
-            Application.platform == RuntimePlatform.OSXEditor ||
-            Application.platform == RuntimePlatform.OSXPlayer;
+            UnityEngine.Application.platform == RuntimePlatform.OSXEditor ||
+            UnityEngine.Application.platform == RuntimePlatform.OSXPlayer;
 
         private struct KeyDef
         {

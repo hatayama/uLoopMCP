@@ -1,6 +1,6 @@
 {
     "name": "UnityCLILoop.CompositionRoot.Editor",
-    "rootNamespace": "",
+    "rootNamespace": "io.github.hatayama.UnityCliLoop.CompositionRoot",
     "references": [
         "UnityCLILoop.Application",
         "UnityCLILoop.Domain",

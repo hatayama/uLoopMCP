@@ -9,7 +9,9 @@ using UnityEditor;
 using UnityEditor.Compilation;
 using Debug = UnityEngine.Debug;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     internal static class SharedRoslynCompilerWorkerHost
     {

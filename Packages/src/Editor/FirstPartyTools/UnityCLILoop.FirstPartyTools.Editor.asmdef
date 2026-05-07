@@ -1,6 +1,6 @@
 {
     "name": "UnityCLILoop.FirstPartyTools.Editor",
-    "rootNamespace": "",
+    "rootNamespace": "io.github.hatayama.UnityCliLoop.FirstPartyTools",
     "references": [
         "UnityCLILoop.FirstPartyTools.ClearConsole.Editor",
         "UnityCLILoop.FirstPartyTools.Compile.Editor",

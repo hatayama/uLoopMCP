@@ -1,6 +1,10 @@
 using UnityEngine;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.Application;
+using io.github.hatayama.UnityCliLoop.Domain;
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.Infrastructure
 {
     /// <summary>
     /// Provides the CLI readiness version payload without registering an extension-facing tool.
@@ -10,14 +14,14 @@ namespace io.github.hatayama.UnityCliLoop
         public static GetVersionResponse Execute()
         {
             GetVersionResponse response = new()            {
-                UnityVersion = Application.unityVersion,
-                Platform = Application.platform.ToString(),
-                DataPath = Application.dataPath,
-                PersistentDataPath = Application.persistentDataPath,
-                TemporaryCachePath = Application.temporaryCachePath,
-                IsEditor = Application.isEditor,
-                ProductName = Application.productName,
-                CompanyName = Application.companyName
+                UnityVersion = UnityEngine.Application.unityVersion,
+                Platform = UnityEngine.Application.platform.ToString(),
+                DataPath = UnityEngine.Application.dataPath,
+                PersistentDataPath = UnityEngine.Application.persistentDataPath,
+                TemporaryCachePath = UnityEngine.Application.temporaryCachePath,
+                IsEditor = UnityEngine.Application.isEditor,
+                ProductName = UnityEngine.Application.productName,
+                CompanyName = UnityEngine.Application.companyName
             };
 
             Debug.Assert(!string.IsNullOrWhiteSpace(response.UnityVersion), "Unity version must be available.");

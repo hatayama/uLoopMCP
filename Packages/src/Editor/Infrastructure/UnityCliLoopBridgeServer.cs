@@ -8,7 +8,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.Application;
+using io.github.hatayama.UnityCliLoop.Domain;
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.Infrastructure
 {
     public sealed class UnityCliLoopBridgeServerInstanceFactory :
         IUnityCliLoopServerInstanceFactory,
@@ -101,7 +105,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return;
             }
 
-            BridgeTransportEndpoint endpoint = BridgeTransportEndpoint.CreateProjectIpc(Application.dataPath + "/..");
+            BridgeTransportEndpoint endpoint = BridgeTransportEndpoint.CreateProjectIpc(UnityEngine.Application.dataPath + "/..");
             _cancellationTokenSource = new CancellationTokenSource();
             _unexpectedExitCleanupStarted = 0;
             

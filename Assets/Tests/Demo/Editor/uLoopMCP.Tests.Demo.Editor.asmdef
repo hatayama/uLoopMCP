@@ -1,6 +1,6 @@
 {
     "name": "uLoopMCP.Tests.Demo.Editor",
-    "rootNamespace": "",
+    "rootNamespace": "io.github.hatayama.UnityCliLoop.Tests.Demo.Editor",
     "references": [
         "uLoopMCP.Tests.Demo",
         "UnityCLILoop.Application",

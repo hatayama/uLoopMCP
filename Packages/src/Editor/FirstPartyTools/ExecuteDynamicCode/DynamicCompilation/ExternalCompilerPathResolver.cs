@@ -4,7 +4,9 @@ using System.IO;
 using System.Linq;
 using UnityEditor;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     internal static class ExternalCompilerPathResolver
     {

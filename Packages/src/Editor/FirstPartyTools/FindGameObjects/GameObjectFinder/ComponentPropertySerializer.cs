@@ -4,7 +4,9 @@ using System.Reflection;
 using UnityEngine;
 using UnityEditor;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     /// <summary>
     /// Serializes component properties to ComponentPropertyInfo format

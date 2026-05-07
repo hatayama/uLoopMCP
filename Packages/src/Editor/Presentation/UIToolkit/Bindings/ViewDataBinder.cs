@@ -2,7 +2,11 @@ using System;
 using UnityEngine.UIElements;
 using UnityEditor.UIElements;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.Application;
+using io.github.hatayama.UnityCliLoop.Domain;
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.Presentation
 {
     /// <summary>
     /// Utility for binding UI Toolkit elements to data without triggering change events.

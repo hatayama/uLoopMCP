@@ -1,4 +1,7 @@
-namespace io.github.hatayama.UnityCliLoop.Factory
+using io.github.hatayama.UnityCliLoop.FirstPartyTools;
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.FirstPartyTools.Factory
 {
     /// <summary>
     /// Exposes the default executor factory through a single composition entry point.

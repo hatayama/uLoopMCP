@@ -2,7 +2,11 @@ using System;
 using UnityEditor.UIElements;
 using UnityEngine.UIElements;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.Application;
+using io.github.hatayama.UnityCliLoop.Domain;
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.Presentation
 {
     public class CliSetupSection
     {

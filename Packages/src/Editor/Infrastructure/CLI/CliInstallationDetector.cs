@@ -6,7 +6,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.Application;
+using io.github.hatayama.UnityCliLoop.Domain;
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.Infrastructure
 {
     internal readonly struct CliInstallationDetection
     {
@@ -91,7 +95,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static Task<CliInstallationDetection> DetectCliInstallationAsync(CancellationToken ct)
         {
-            RuntimePlatform platform = Application.platform;
+            RuntimePlatform platform = UnityEngine.Application.platform;
             return Task.Run(() => DetectCliInstallationBlocking(platform, ct), ct);
         }
 

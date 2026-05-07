@@ -1,7 +1,7 @@
 #nullable enable
 using System.Collections.Generic;
 
-namespace io.github.hatayama.UnityCliLoop
+namespace io.github.hatayama.UnityCliLoop.Runtime
 {
     public sealed class SimulateKeyboardOverlayStateService
     {

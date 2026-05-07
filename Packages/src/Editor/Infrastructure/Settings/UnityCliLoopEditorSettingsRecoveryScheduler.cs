@@ -1,6 +1,10 @@
 using UnityEditor;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.Application;
+using io.github.hatayama.UnityCliLoop.Domain;
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.Infrastructure
 {
     // Infrastructure scheduler for delayed settings file recovery during Editor startup.
     internal static class UnityCliLoopEditorSettingsRecoveryScheduler

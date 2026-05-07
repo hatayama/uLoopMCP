@@ -1,6 +1,6 @@
 using System.Threading.Tasks;
 
-namespace io.github.hatayama.UnityCliLoop
+namespace io.github.hatayama.UnityCliLoop.ToolContracts
 {
     /// <summary>
     /// Task related extension methods

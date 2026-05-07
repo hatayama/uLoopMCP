@@ -2,7 +2,9 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using UnityEngine;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     /// <summary>
     /// Filters for GameObject search operations

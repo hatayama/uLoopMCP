@@ -1,7 +1,7 @@
 using System.IO;
 using System.Diagnostics;
 
-namespace io.github.hatayama.UnityCliLoop
+namespace io.github.hatayama.UnityCliLoop.Tests
 {
     public class ForAssemblyCSharpTest
     {

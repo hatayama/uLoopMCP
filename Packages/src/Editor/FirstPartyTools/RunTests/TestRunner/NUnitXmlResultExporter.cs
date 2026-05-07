@@ -6,7 +6,9 @@ using UnityEditor;
 using UnityEditor.TestTools.TestRunner.Api;
 using UnityEngine;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     /// <summary>
     /// Class to export test results as NUnit XML.
@@ -31,7 +33,7 @@ namespace io.github.hatayama.UnityCliLoop
             string fileName = $"{timestamp}.xml";
 
             // Save to .uloop/outputs/TestResults folder at project root (same level as Assets)
-            DirectoryInfo parentDir = Directory.GetParent(Application.dataPath);
+            DirectoryInfo parentDir = Directory.GetParent(UnityEngine.Application.dataPath);
             if (parentDir == null)
             {
                 throw new System.InvalidOperationException("Unable to determine project root directory");

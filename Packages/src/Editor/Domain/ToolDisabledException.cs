@@ -1,6 +1,6 @@
 using System;
 
-namespace io.github.hatayama.UnityCliLoop
+namespace io.github.hatayama.UnityCliLoop.Domain
 {
     /// <summary>
     /// Thrown when a disabled tool is invoked.

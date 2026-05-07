@@ -1,4 +1,4 @@
-namespace io.github.hatayama.UnityCliLoop
+namespace io.github.hatayama.UnityCliLoop.Domain
 {
     /// <summary>
     /// Domain value for platform operation results.

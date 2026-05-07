@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEditor;
 using UnityEditorInternal;
 
-namespace io.github.hatayama.UnityCliLoop
+namespace io.github.hatayama.UnityCliLoop.InternalAPIBridge
 {
     /// <summary>
     /// Bridge class for accessing Unity internal APIs.

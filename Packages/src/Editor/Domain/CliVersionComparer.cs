@@ -1,6 +1,6 @@
 using System;
 
-namespace io.github.hatayama.UnityCliLoop
+namespace io.github.hatayama.UnityCliLoop.Domain
 {
     // Compares npm-style CLI versions for platform compatibility checks.
     public static class CliVersionComparer

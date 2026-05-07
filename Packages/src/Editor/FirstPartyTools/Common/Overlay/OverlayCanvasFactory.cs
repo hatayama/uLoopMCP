@@ -1,7 +1,9 @@
 using UnityEngine;
 using UnityEditor;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.Runtime;
+
+namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     // Instantiates the InputVisualizationCanvas prefab and manages its lifecycle.
     internal sealed class OverlayCanvasFactoryService

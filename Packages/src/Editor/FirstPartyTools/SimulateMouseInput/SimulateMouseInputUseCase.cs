@@ -8,7 +8,11 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 #endif
 
-namespace io.github.hatayama.UnityCliLoop
+using RuntimeMouseButton = io.github.hatayama.UnityCliLoop.Runtime.MouseButton;
+using io.github.hatayama.UnityCliLoop.Runtime;
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     /// <summary>
     /// Coordinates Input System mouse simulation for the bundled simulate-mouse-input tool.
@@ -165,7 +169,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             Vector2 inputPos = new(request.X, request.Y);
             Vector2 screenPos = InputToScreen(inputPos);
-            MouseButton button = ToRuntimeMouseButton(request.Button);
+            RuntimeMouseButton button = ToRuntimeMouseButton(request.Button);
             string buttonName = button.ToString();
 
             // Set mouse position before clicking
@@ -225,7 +229,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             Vector2 inputPos = new(request.X, request.Y);
             Vector2 screenPos = InputToScreen(inputPos);
-            MouseButton button = ToRuntimeMouseButton(request.Button);
+            RuntimeMouseButton button = ToRuntimeMouseButton(request.Button);
             string buttonName = button.ToString();
 
             // Set mouse position before pressing
@@ -368,7 +372,7 @@ namespace io.github.hatayama.UnityCliLoop
             };
         }
 
-        private static async Task ReleaseButtonIfPossible(Mouse mouse, MouseButton button)
+        private static async Task ReleaseButtonIfPossible(Mouse mouse, RuntimeMouseButton button)
         {
             if (!CanInjectMouseState(mouse))
             {
@@ -384,17 +388,17 @@ namespace io.github.hatayama.UnityCliLoop
             return EditorApplication.isPlaying && !EditorApplication.isPaused && Mouse.current == mouse;
         }
 
-        private static MouseButton ToRuntimeMouseButton(UnityCliLoopMouseButton button)
+        private static RuntimeMouseButton ToRuntimeMouseButton(UnityCliLoopMouseButton button)
         {
             switch (button)
             {
                 case UnityCliLoopMouseButton.Right:
-                    return MouseButton.Right;
+                    return RuntimeMouseButton.Right;
                 case UnityCliLoopMouseButton.Middle:
-                    return MouseButton.Middle;
+                    return RuntimeMouseButton.Middle;
                 default:
                     Debug.Assert(button == UnityCliLoopMouseButton.Left, $"Unexpected mouse button value: {button}");
-                    return MouseButton.Left;
+                    return RuntimeMouseButton.Left;
             }
         }
 #endif

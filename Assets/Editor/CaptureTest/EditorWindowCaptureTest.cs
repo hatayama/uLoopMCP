@@ -3,7 +3,12 @@ using UnityEngine;
 using System.IO;
 using System.Threading;
 
-namespace io.github.hatayama.UnityCliLoop
+using io.github.hatayama.UnityCliLoop.Application;
+using io.github.hatayama.UnityCliLoop.FirstPartyTools;
+using io.github.hatayama.UnityCliLoop.Runtime;
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+namespace io.github.hatayama.UnityCliLoop.Dev
 {
     public class EditorWindowCaptureTest : EditorWindow
     {
@@ -117,7 +122,7 @@ namespace io.github.hatayama.UnityCliLoop
                 DestroyImmediate(_previewTexture);
             }
 
-            string outputDir = Path.Combine(Application.dataPath.Replace("/Assets", ""), UnityCliLoopConstants.OUTPUT_ROOT_DIR, UnityCliLoopConstants.SCREENSHOTS_DIR);
+            string outputDir = Path.Combine(UnityEngine.Application.dataPath.Replace("/Assets", ""), UnityCliLoopConstants.OUTPUT_ROOT_DIR, UnityCliLoopConstants.SCREENSHOTS_DIR);
             if (!Directory.Exists(outputDir))
             {
                 Directory.CreateDirectory(outputDir);
@@ -176,14 +181,14 @@ namespace io.github.hatayama.UnityCliLoop
         /// </summary>
         private void OpenOutputFolder()
         {
-            string outputDir = Path.Combine(Application.dataPath.Replace("/Assets", ""), UnityCliLoopConstants.OUTPUT_ROOT_DIR, UnityCliLoopConstants.SCREENSHOTS_DIR);
+            string outputDir = Path.Combine(UnityEngine.Application.dataPath.Replace("/Assets", ""), UnityCliLoopConstants.OUTPUT_ROOT_DIR, UnityCliLoopConstants.SCREENSHOTS_DIR);
             if (!Directory.Exists(outputDir))
             {
                 Directory.CreateDirectory(outputDir);
             }
 
             string fileUri = "file:///" + outputDir.Replace("\\", "/");
-            Application.OpenURL(fileUri);
+            UnityEngine.Application.OpenURL(fileUri);
         }
     }
 }
