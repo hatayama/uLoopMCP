@@ -14,6 +14,12 @@ namespace io.github.hatayama.UnityCliLoop
                     return;
                 }
 
+                ToolSettingsRepository toolSettingsRepository = new();
+                UnityCliLoopEditorSettingsRepository editorSettingsRepository = new();
+                ULoopSettingsRepository uLoopSettingsRepository = new();
+                ToolSettings.RegisterService(toolSettingsRepository);
+                UnityCliLoopEditorSettings.RegisterService(editorSettingsRepository);
+                ULoopSettings.RegisterService(uLoopSettingsRepository);
                 UnityCliLoopToolRegistrar.RegisterService(new UnityCliLoopToolRegistrarService(
                     new SkillInstallLayoutInternalToolNameProvider()));
                 SkillSetupApplicationFacade.RegisterService(new SkillSetupApplicationService(

@@ -747,15 +747,15 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
-        public void ApplicationEditorStartup_WhenLoaded_SchedulesSettingsRecoveryInsteadOfRecoveringSynchronously()
+        public void InfrastructureEditorStartup_WhenLoaded_SchedulesSettingsRecoveryInsteadOfRecoveringSynchronously()
         {
             // Tests that settings file recovery does not block the synchronous Editor startup hook.
             string startupSource = ReadProductionSource(
-                "Packages/src/Editor/Application/ApplicationEditorStartup.cs");
+                "Packages/src/Editor/Infrastructure/InfrastructureEditorStartup.cs");
 
             Assert.That(
                 startupSource,
-                Does.Contain("UnityCliLoopEditorSettings.ScheduleSettingsFileRecoveryForEditorStartup();"));
+                Does.Contain("UnityCliLoopEditorSettingsRecoveryScheduler.ScheduleForEditorStartup();"));
             Assert.That(startupSource, Does.Not.Contain("RecoverSettingsFileForEditorStartup"));
         }
 

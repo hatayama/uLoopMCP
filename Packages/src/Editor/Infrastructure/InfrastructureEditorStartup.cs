@@ -5,6 +5,7 @@ namespace io.github.hatayama.UnityCliLoop
     {
         internal static void Initialize()
         {
+            UnityCliLoopEditorSettingsRecoveryScheduler.ScheduleForEditorStartup();
             ProjectLocalCliAutoInstaller.ScheduleForEditorStartup();
         }
     }

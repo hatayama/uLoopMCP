@@ -5,7 +5,6 @@ namespace io.github.hatayama.UnityCliLoop
     {
         internal static void Initialize()
         {
-            UnityCliLoopEditorSettings.ScheduleSettingsFileRecoveryForEditorStartup();
             UnityCliLoopEditorDomainReloadStateRegistration.RegisterForEditorStartup();
             MainThreadSwitcher.InitializeForEditorStartup();
             EditorDelayManager.InitializeForEditorStartup();
