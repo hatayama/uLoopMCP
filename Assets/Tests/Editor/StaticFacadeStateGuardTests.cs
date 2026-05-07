@@ -10,25 +10,25 @@ namespace io.github.hatayama.UnityCliLoop
     {
         private static readonly string[] MigratedFacadePaths = new string[]
         {
-            "Packages/src/Editor/CLI/CliInstallationDetector.cs",
-            "Packages/src/Editor/Config/ToolSettings.cs",
-            "Packages/src/Editor/Config/ULoopSettings.cs",
-            "Packages/src/Editor/Config/UnityCliLoopEditorSettings.cs",
-            "Packages/src/Editor/Api/Tools/Core/UnityCliLoopToolRegistrar.cs",
-            "Packages/src/Editor/Composition/DynamicCodeServices.cs",
-            "Packages/src/Editor/Execution/DynamicCodeForegroundWarmupState.cs",
-            "Packages/src/Editor/Execution/DynamicCodeStartupTelemetry.cs",
-            "Packages/src/Editor/Utils/EditorDelayManager.cs",
-            "Packages/src/Editor/Api/Tools/RecordInput/InputRecorder.cs",
-            "Packages/src/Editor/Api/Tools/RecordInput/RecordingsApplicationFacade.cs",
-            "Packages/src/Editor/Api/Tools/ReplayInput/InputReplayer.cs",
-            "Packages/src/Editor/Api/Tools/SimulateKeyboard/KeyboardKeyState.cs",
-            "Packages/src/Editor/Api/Tools/SimulateMouseInput/MouseInputState.cs",
-            "Packages/src/Editor/Api/Tools/SimulateMouseUi/MouseDragState.cs",
-            "Packages/src/Editor/Api/Tools/Core/OverlayCanvasFactory.cs",
-            "Packages/src/Editor/Core/CoreTools/Util/MainThreadSwitcher.cs",
-            "Packages/src/Editor/Logging/VibeLogger.cs",
-            "Packages/src/Editor/Server/UnityCliLoopServerController.cs",
+            "Packages/src/Editor/Application/CLI/CliInstallationDetector.cs",
+            "Packages/src/Editor/Application/Config/ToolSettings.cs",
+            "Packages/src/Editor/Application/Config/ULoopSettings.cs",
+            "Packages/src/Editor/Application/Config/UnityCliLoopEditorSettings.cs",
+            "Packages/src/Editor/Application/Api/Tools/Core/UnityCliLoopToolRegistrar.cs",
+            "Packages/src/Editor/Application/Composition/DynamicCodeServices.cs",
+            "Packages/src/Editor/Application/Execution/DynamicCodeForegroundWarmupState.cs",
+            "Packages/src/Editor/Application/Execution/DynamicCodeStartupTelemetry.cs",
+            "Packages/src/Editor/Application/Utils/EditorDelayManager.cs",
+            "Packages/src/Editor/Application/Api/Tools/RecordInput/InputRecorder.cs",
+            "Packages/src/Editor/Application/Api/Tools/RecordInput/RecordingsApplicationFacade.cs",
+            "Packages/src/Editor/Application/Api/Tools/ReplayInput/InputReplayer.cs",
+            "Packages/src/Editor/Application/Api/Tools/SimulateKeyboard/KeyboardKeyState.cs",
+            "Packages/src/Editor/Application/Api/Tools/SimulateMouseInput/MouseInputState.cs",
+            "Packages/src/Editor/Application/Api/Tools/SimulateMouseUi/MouseDragState.cs",
+            "Packages/src/Editor/Application/Api/Tools/Core/OverlayCanvasFactory.cs",
+            "Packages/src/Editor/Application/Core/CoreTools/Util/MainThreadSwitcher.cs",
+            "Packages/src/Editor/Application/Logging/VibeLogger.cs",
+            "Packages/src/Editor/Application/Server/UnityCliLoopServerController.cs",
             "Packages/src/Runtime/RecordInput/RecordInputOverlayState.cs",
             "Packages/src/Runtime/ReplayInput/ReplayInputOverlayState.cs",
             "Packages/src/Runtime/SimulateKeyboard/SimulateKeyboardOverlayState.cs",
@@ -43,7 +43,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static readonly string[] InstanceServicePaths = new string[]
         {
-            "Packages/src/Editor/Core/ApplicationServices/SessionRecoveryService.cs"
+            "Packages/src/Editor/Application/Core/ApplicationServices/SessionRecoveryService.cs"
         };
 
         private static readonly Regex DirectMutableStaticFieldPattern = new Regex(

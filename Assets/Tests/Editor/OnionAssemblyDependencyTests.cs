@@ -136,7 +136,7 @@ namespace io.github.hatayama.UnityCliLoop
         public void ApplicationAsmdef_WhenLoaded_ReferencesInnerContractsButNotOuterLayers()
         {
             // Tests that application code can depend inward without depending on presentation or infrastructure.
-            string[] references = ReadResolvedReferences("Packages/src/Editor/UnityCLILoop.Application.asmdef");
+            string[] references = ReadResolvedReferences("Packages/src/Editor/Application/UnityCLILoop.Application.asmdef");
 
             Assert.That(references, Does.Contain(DomainAssemblyName));
             Assert.That(references, Does.Contain(ToolContractsAssemblyName));
@@ -435,7 +435,7 @@ namespace io.github.hatayama.UnityCliLoop
         public void ApplicationToolSources_WhenLoaded_DoNotDeclarePublicToolEntryPoints()
         {
             // Tests that bundled tool entry points stay outside the application layer.
-            string[] sourcePaths = Directory.GetFiles("Packages/src/Editor/Api/Tools", "*.cs", SearchOption.AllDirectories);
+            string[] sourcePaths = Directory.GetFiles("Packages/src/Editor/Application/Api/Tools", "*.cs", SearchOption.AllDirectories);
             string[] offendingFiles = sourcePaths
                 .Where(path =>
                 {
@@ -674,7 +674,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             // Tests that the application registry depends on a registered host-services factory instead of wiring concrete services itself.
             string registrySource = File.ReadAllText(
-                "Packages/src/Editor/Api/Tools/Core/UnityCliLoopToolRegistry.cs");
+                "Packages/src/Editor/Application/Api/Tools/Core/UnityCliLoopToolRegistry.cs");
 
             Assert.That(registrySource, Does.Not.Contain("new UnityCliLoopToolHostServices"));
         }
@@ -795,9 +795,9 @@ namespace io.github.hatayama.UnityCliLoop
         public void ToolSourceFolders_WhenLoaded_DoNotUseLegacyMcpToolsFolder()
         {
             // Tests that public tool implementations are not grouped under the legacy MCP folder name.
-            string editorApiRoot = Path.Combine(UnityCliLoopPathResolver.GetProjectRoot(), "Packages", "src", "Editor", "Api");
-            string legacyToolFolder = Path.Combine(editorApiRoot, "Mcp" + "Tools");
-            string currentToolFolder = Path.Combine(editorApiRoot, "Tools");
+            string editorRoot = Path.Combine(UnityCliLoopPathResolver.GetProjectRoot(), "Packages", "src", "Editor");
+            string legacyToolFolder = Path.Combine(editorRoot, "Api", "Mcp" + "Tools");
+            string currentToolFolder = Path.Combine(editorRoot, "FirstPartyTools");
 
             Assert.That(Directory.Exists(legacyToolFolder), Is.False);
             Assert.That(Directory.Exists(currentToolFolder), Is.True);
