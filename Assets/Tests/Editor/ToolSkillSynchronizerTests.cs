@@ -1169,7 +1169,7 @@ namespace io.github.hatayama.UnityCliLoop
                 "internal-reference",
                 isInternal: true);
 
-            UnityCliLoopToolRegistry registry = new();
+            UnityCliLoopToolRegistry registry = ToolRegistryTestFactory.Create();
             registry.RegisterTool(new FakeUnityTool("internal-tool"));
             registry.RegisterTool(new FakeUnityTool("public-tool"));
 

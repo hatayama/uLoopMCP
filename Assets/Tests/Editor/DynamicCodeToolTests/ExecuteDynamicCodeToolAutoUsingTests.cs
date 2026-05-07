@@ -11,7 +11,7 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
         public async Task ExecuteAsync_CompileOnly_WhenTypeRequiresMissingUsing_ShouldSucceed()
         {
             DynamicCodeSecurityLevel previous = ULoopSettings.GetDynamicCodeSecurityLevel();
-            UnityCliLoopToolRegistry registry = new UnityCliLoopToolRegistry();
+            UnityCliLoopToolRegistry registry = ToolRegistryTestFactory.Create();
 
             try
             {

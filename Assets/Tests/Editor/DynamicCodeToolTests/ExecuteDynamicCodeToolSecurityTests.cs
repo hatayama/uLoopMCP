@@ -11,7 +11,7 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
         public async Task ExecuteAsync_Restricted_FileExists_ShouldUseCompilerSecurityRulesInsteadOfToolLocalBlock()
         {
             DynamicCodeSecurityLevel previous = ULoopSettings.GetDynamicCodeSecurityLevel();
-            UnityCliLoopToolRegistry registry = new UnityCliLoopToolRegistry();
+            UnityCliLoopToolRegistry registry = ToolRegistryTestFactory.Create();
 
             try
             {

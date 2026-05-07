@@ -7,9 +7,15 @@ namespace io.github.hatayama.UnityCliLoop
     /// </summary>
     public sealed class UnityCliLoopToolRegistrarService
     {
+        private readonly Func<IUnityCliLoopToolHostServices> _hostServicesFactory;
         private UnityCliLoopToolRegistry _sharedRegistry;
 
         internal event Action OnToolsChanged;
+
+        public UnityCliLoopToolRegistrarService(Func<IUnityCliLoopToolHostServices> hostServicesFactory)
+        {
+            _hostServicesFactory = hostServicesFactory ?? throw new ArgumentNullException(nameof(hostServicesFactory));
+        }
 
         /// <summary>
         /// Get shared registry (lazy initialization)
@@ -20,7 +26,7 @@ namespace io.github.hatayama.UnityCliLoop
             {
                 if (_sharedRegistry == null)
                 {
-                    _sharedRegistry = new UnityCliLoopToolRegistry();
+                    _sharedRegistry = new UnityCliLoopToolRegistry(_hostServicesFactory());
                     // Standard tools are automatically registered in UnityCliLoopToolRegistry constructor
                 }
                 return _sharedRegistry;
@@ -115,8 +121,14 @@ namespace io.github.hatayama.UnityCliLoop
     /// </summary>
     public static class UnityCliLoopToolRegistrar
     {
-        private static readonly UnityCliLoopToolRegistrarService ServiceValue =
-            new UnityCliLoopToolRegistrarService();
+        private static UnityCliLoopToolRegistrarService ServiceValue;
+
+        internal static void RegisterService(UnityCliLoopToolRegistrarService service)
+        {
+            UnityEngine.Debug.Assert(service != null, "service must not be null");
+
+            ServiceValue = service ?? throw new ArgumentNullException(nameof(service));
+        }
 
         internal static void AddToolsChangedHandler(Action handler)
         {
@@ -130,7 +142,15 @@ namespace io.github.hatayama.UnityCliLoop
 
         public static UnityCliLoopToolRegistrarService Service
         {
-            get { return ServiceValue; }
+            get
+            {
+                if (ServiceValue == null)
+                {
+                    throw new InvalidOperationException("Unity CLI Loop tool registrar service is not registered.");
+                }
+
+                return ServiceValue;
+            }
         }
 
         public static void RegisterCustomTool(IUnityCliLoopTool tool)

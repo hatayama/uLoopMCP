@@ -26,15 +26,6 @@ namespace io.github.hatayama.UnityCliLoop
         private readonly IUnityCliLoopToolHostServices _hostServices;
         private readonly Dictionary<string, IUnityCliLoopTool> _tools = new();
 
-        /// <summary>
-        /// Default constructor
-        /// Auto-registers standard _tools
-        /// </summary>
-        public UnityCliLoopToolRegistry()
-            : this(UnityCliLoopToolHostServicesProvider.Create())
-        {
-        }
-
         internal UnityCliLoopToolRegistry(IUnityCliLoopToolHostServices hostServices)
         {
             _hostServices = hostServices ?? throw new ArgumentNullException(nameof(hostServices));

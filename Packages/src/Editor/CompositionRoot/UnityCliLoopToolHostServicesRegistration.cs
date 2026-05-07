@@ -22,7 +22,7 @@ namespace io.github.hatayama.UnityCliLoop
                     return;
                 }
 
-                UnityCliLoopToolHostServicesProvider.RegisterFactory(CreateHostServices);
+                UnityCliLoopToolRegistrar.RegisterService(CreateToolRegistrarService());
                 CliSetupApplicationFacade.RegisterService(CreateCliSetupApplicationService());
                 UnityCliLoopBridgeServerInstanceFactory serverFactory =
                     new UnityCliLoopBridgeServerInstanceFactory();
@@ -42,6 +42,11 @@ namespace io.github.hatayama.UnityCliLoop
         private static IUnityCliLoopToolHostServices CreateHostServices()
         {
             return new UnityCliLoopToolHostServices();
+        }
+
+        private static UnityCliLoopToolRegistrarService CreateToolRegistrarService()
+        {
+            return new UnityCliLoopToolRegistrarService(CreateHostServices);
         }
 
         private static CliSetupApplicationService CreateCliSetupApplicationService()

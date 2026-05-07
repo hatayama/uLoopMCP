@@ -15,7 +15,6 @@ namespace io.github.hatayama.UnityCliLoop
             "Packages/src/Editor/Config/ULoopSettings.cs",
             "Packages/src/Editor/Config/UnityCliLoopEditorSettings.cs",
             "Packages/src/Editor/Api/Tools/Core/UnityCliLoopToolRegistrar.cs",
-            "Packages/src/Editor/Api/Tools/Core/UnityCliLoopToolHostServicesProvider.cs",
             "Packages/src/Editor/Composition/DynamicCodeServices.cs",
             "Packages/src/Editor/Execution/DynamicCodeForegroundWarmupState.cs",
             "Packages/src/Editor/Execution/DynamicCodeStartupTelemetry.cs",
