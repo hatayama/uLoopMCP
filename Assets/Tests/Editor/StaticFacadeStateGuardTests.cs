@@ -37,6 +37,11 @@ namespace io.github.hatayama.UnityCliLoop
             "Packages/src/Runtime/SimulateMouseUi/SimulateMouseUiOverlayState.cs"
         };
 
+        private static readonly string[] PublicContractPaths = new string[]
+        {
+            "Packages/src/Editor/ToolContracts/UnityCliLoopToolResponse.cs"
+        };
+
         private static readonly Regex DirectMutableStaticFieldPattern = new Regex(
             @"\b(private|internal|public|protected)\s+static\s+(?!readonly\b)(?!event\b)(?!extern\b)[^(\r\n;=]*[;=]",
             RegexOptions.Compiled);
@@ -67,14 +72,28 @@ namespace io.github.hatayama.UnityCliLoop
             Assert.That(violations, Is.Empty, string.Join("\n", violations));
         }
 
+        [Test]
+        public void PublicContracts_WhenScanned_DoNotOwnMutableStaticState()
+        {
+            // Tests that extension-facing contracts do not share mutable state across tool responses.
+            List<string> violations = FindMutableStaticFieldViolations(PublicContractPaths);
+
+            Assert.That(violations, Is.Empty, string.Join("\n", violations));
+        }
+
         private static List<string> FindMutableStaticFieldViolations()
+        {
+            return FindMutableStaticFieldViolations(MigratedFacadePaths);
+        }
+
+        private static List<string> FindMutableStaticFieldViolations(string[] relativePaths)
         {
             List<string> violations = new List<string>();
             string projectRoot = UnityCliLoopPathResolver.GetProjectRoot();
 
-            for (int pathIndex = 0; pathIndex < MigratedFacadePaths.Length; pathIndex++)
+            for (int pathIndex = 0; pathIndex < relativePaths.Length; pathIndex++)
             {
-                string relativePath = MigratedFacadePaths[pathIndex];
+                string relativePath = relativePaths[pathIndex];
                 string absolutePath = Path.Combine(projectRoot, relativePath);
                 string[] lines = File.ReadAllLines(absolutePath);
 

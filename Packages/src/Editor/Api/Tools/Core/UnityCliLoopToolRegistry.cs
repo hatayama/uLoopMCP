@@ -38,7 +38,6 @@ namespace io.github.hatayama.UnityCliLoop
         internal UnityCliLoopToolRegistry(IUnityCliLoopToolHostServices hostServices)
         {
             _hostServices = hostServices ?? throw new ArgumentNullException(nameof(hostServices));
-            UnityCliLoopToolContractVersion.SetCurrent(UnityCliLoopVersion.VERSION);
             RegisterDefaultTools();
         }
 
@@ -167,6 +166,12 @@ namespace io.github.hatayama.UnityCliLoop
             Stopwatch toolBodyStopwatch = Stopwatch.StartNew();
             UnityCliLoopToolResponse response = await tool.ExecuteAsync(paramsToken);
             toolBodyStopwatch.Stop();
+            if (response == null)
+            {
+                throw new InvalidOperationException($"Tool returned null response: {toolName}");
+            }
+
+            response.SetVersion(UnityCliLoopVersion.VERSION);
 
             AppendExecuteDynamicCodeTimingsIfSupported(
                 response,

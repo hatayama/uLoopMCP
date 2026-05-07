@@ -316,6 +316,23 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
+        public async Task ExecuteToolAsync_WhenToolReturnsResponse_AssignsVersionToResponseInstance()
+        {
+            // Tests that response versioning is assigned per response instead of using global contract state.
+            UnityCliLoopToolRegistry registry = new UnityCliLoopToolRegistry();
+            JObject parameters = JObject.FromObject(new
+            {
+                name = "Masamichi",
+                language = "english",
+                includeTimestamp = false
+            });
+
+            UnityCliLoopToolResponse response = await registry.ExecuteToolAsync("hello-world", parameters);
+
+            Assert.That(response.Ver, Is.EqualTo(UnityCliLoopVersion.VERSION));
+        }
+
+        [Test]
         public void CustomCommandSamplesAsmdef_ReferencesOnlyToolContracts()
         {
             // Tests that third-party sample tools depend only on the public tool contract assembly.
