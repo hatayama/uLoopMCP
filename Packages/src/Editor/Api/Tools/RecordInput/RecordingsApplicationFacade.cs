@@ -84,25 +84,25 @@ namespace io.github.hatayama.UnityCliLoop
     }
 
     // Bridges the recordings window to input record/replay services without exposing service internals to Presentation.
-    public static class RecordingsApplicationFacade
+    public sealed class RecordingsApplicationService
     {
         private const string JsonFilePattern = "*.json";
 
-        private static int _countdownGeneration;
+        private int _countdownGeneration;
 
-        public static event Action ReplayCompleted
+        public event Action ReplayCompleted
         {
             add => InputReplayer.ReplayCompleted += value;
             remove => InputReplayer.ReplayCompleted -= value;
         }
 
-        public static event Action RecordingStopped
+        public event Action RecordingStopped
         {
             add => InputRecorder.RecordingStopped += value;
             remove => InputRecorder.RecordingStopped -= value;
         }
 
-        public static RecordingApplicationResult ToggleRecording(int requestedDelaySeconds)
+        public RecordingApplicationResult ToggleRecording(int requestedDelaySeconds)
         {
             if (!EditorApplication.isPlaying)
             {
@@ -131,7 +131,7 @@ namespace io.github.hatayama.UnityCliLoop
             return RecordingApplicationResult.NoDialog();
         }
 
-        public static RecordingApplicationResult ToggleReplay(string selectedFilePath)
+        public RecordingApplicationResult ToggleReplay(string selectedFilePath)
         {
             if (!EditorApplication.isPlaying)
             {
@@ -171,7 +171,7 @@ namespace io.github.hatayama.UnityCliLoop
             return RecordingApplicationResult.NoDialog();
         }
 
-        public static RecordingApplicationState GetCurrentState()
+        public RecordingApplicationState GetCurrentState()
         {
             return new RecordingApplicationState(
                 InputRecorder.IsRecording,
@@ -183,7 +183,7 @@ namespace io.github.hatayama.UnityCliLoop
                 InputReplayer.TotalFrames);
         }
 
-        public static RecordingFileList GetRecordingFiles()
+        public RecordingFileList GetRecordingFiles()
         {
             string outputDirectory = RecordInputConstants.DEFAULT_OUTPUT_DIR;
             if (!Directory.Exists(outputDirectory))
@@ -204,7 +204,7 @@ namespace io.github.hatayama.UnityCliLoop
             return new RecordingFileList(filePaths, displayNames);
         }
 
-        public static string EnsureRecordingFolderExists()
+        public string EnsureRecordingFolderExists()
         {
             string outputDirectory = RecordInputConstants.DEFAULT_OUTPUT_DIR;
             if (!Directory.Exists(outputDirectory))
@@ -215,7 +215,7 @@ namespace io.github.hatayama.UnityCliLoop
             return outputDirectory;
         }
 
-        private static void StartRecording(int requestedDelaySeconds)
+        private void StartRecording(int requestedDelaySeconds)
         {
             int delaySeconds = Mathf.Clamp(
                 requestedDelaySeconds,
@@ -238,7 +238,7 @@ namespace io.github.hatayama.UnityCliLoop
             _ = TimerDelay.WaitThenExecuteOnMainThread(delayMilliseconds, () => StartRecordingAfterCountdown(generation));
         }
 
-        private static void StartRecordingAfterCountdown(int generation)
+        private void StartRecordingAfterCountdown(int generation)
         {
             if (!EditorApplication.isPlaying
                 || generation != _countdownGeneration
@@ -271,6 +271,48 @@ namespace io.github.hatayama.UnityCliLoop
                 default:
                     return RecordingApplicationPhase.None;
             }
+        }
+    }
+
+    public static class RecordingsApplicationFacade
+    {
+        private static readonly RecordingsApplicationService ServiceValue = new RecordingsApplicationService();
+
+        public static event Action ReplayCompleted
+        {
+            add => ServiceValue.ReplayCompleted += value;
+            remove => ServiceValue.ReplayCompleted -= value;
+        }
+
+        public static event Action RecordingStopped
+        {
+            add => ServiceValue.RecordingStopped += value;
+            remove => ServiceValue.RecordingStopped -= value;
+        }
+
+        public static RecordingApplicationResult ToggleRecording(int requestedDelaySeconds)
+        {
+            return ServiceValue.ToggleRecording(requestedDelaySeconds);
+        }
+
+        public static RecordingApplicationResult ToggleReplay(string selectedFilePath)
+        {
+            return ServiceValue.ToggleReplay(selectedFilePath);
+        }
+
+        public static RecordingApplicationState GetCurrentState()
+        {
+            return ServiceValue.GetCurrentState();
+        }
+
+        public static RecordingFileList GetRecordingFiles()
+        {
+            return ServiceValue.GetRecordingFiles();
+        }
+
+        public static string EnsureRecordingFolderExists()
+        {
+            return ServiceValue.EnsureRecordingFolderExists();
         }
     }
 }

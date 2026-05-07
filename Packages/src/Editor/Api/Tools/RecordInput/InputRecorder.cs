@@ -11,8 +11,7 @@ using UnityEngine.InputSystem.LowLevel;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    [InitializeOnLoad]
-    internal static class InputRecorder
+    internal sealed class InputRecorderService
     {
         private static readonly Key[] DEFAULT_SCAN_KEYS =
         {
@@ -33,32 +32,32 @@ namespace io.github.hatayama.UnityCliLoop
             MouseButton.Left, MouseButton.Right, MouseButton.Middle
         };
 
-        private static bool _isRecording;
-        private static int _startFrameCount;
-        private static float _startTime;
-        private static List<InputFrameEvents> _recordedFrames = new();
-        private static Key[]? _cachedKeysToScan;
-        private static readonly HashSet<Key> _previousKeyStates = new();
-        private static readonly HashSet<MouseButton> _previousButtonStates = new();
+        private bool _isRecording;
+        private int _startFrameCount;
+        private float _startTime;
+        private List<InputFrameEvents> _recordedFrames = new();
+        private Key[]? _cachedKeysToScan;
+        private readonly HashSet<Key> _previousKeyStates = new();
+        private readonly HashSet<MouseButton> _previousButtonStates = new();
 
         // Reused per-frame to avoid GC allocations in OnAfterUpdate
-        private static readonly List<RecordedInputEvent> _frameEvents = new();
-        private static readonly HashSet<Key> _currentKeyStates = new();
-        private static readonly HashSet<MouseButton> _currentButtonStates = new();
+        private readonly List<RecordedInputEvent> _frameEvents = new();
+        private readonly HashSet<Key> _currentKeyStates = new();
+        private readonly HashSet<MouseButton> _currentButtonStates = new();
 
-        public static event Action? RecordingStarted;
-        public static event Action? RecordingStopped;
+        public event Action? RecordingStarted;
+        public event Action? RecordingStopped;
 
-        public static bool IsRecording => _isRecording;
-        public static string? LastAutoSavePath { get; internal set; }
+        public bool IsRecording => _isRecording;
+        public string? LastAutoSavePath { get; internal set; }
 
-        static InputRecorder()
+        public void Initialize()
         {
             EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
         }
 
-        public static void StartRecording(HashSet<Key>? keyFilter)
+        public void StartRecording(HashSet<Key>? keyFilter)
         {
             Debug.Assert(!_isRecording, "Cannot start recording while already recording");
             Debug.Assert(EditorApplication.isPlaying, "PlayMode must be active to start recording");
@@ -86,7 +85,7 @@ namespace io.github.hatayama.UnityCliLoop
             RecordingStarted?.Invoke();
         }
 
-        public static InputRecordingData StopRecording()
+        public InputRecordingData StopRecording()
         {
             Debug.Assert(_isRecording, "Cannot stop recording when not recording");
 
@@ -114,12 +113,12 @@ namespace io.github.hatayama.UnityCliLoop
 
         // Call after the recording data has been saved to disk,
         // so subscribers (e.g. RecordingsEditorWindow) see the new file
-        public static void NotifyRecordingStopped()
+        public void NotifyRecordingStopped()
         {
             RecordingStopped?.Invoke();
         }
 
-        public static void ForceStop()
+        public void ForceStop()
         {
             if (!_isRecording)
             {
@@ -133,7 +132,7 @@ namespace io.github.hatayama.UnityCliLoop
             RecordingStopped?.Invoke();
         }
 
-        private static void Reset()
+        private void Reset()
         {
             _recordedFrames = new List<InputFrameEvents>();
             _previousKeyStates.Clear();
@@ -141,7 +140,7 @@ namespace io.github.hatayama.UnityCliLoop
             _cachedKeysToScan = null;
         }
 
-        private static void OnAfterUpdate()
+        private void OnAfterUpdate()
         {
             if (!_isRecording)
             {
@@ -187,7 +186,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        private static void RecordKeyboardEvents(List<RecordedInputEvent> events)
+        private void RecordKeyboardEvents(List<RecordedInputEvent> events)
         {
             Keyboard? keyboard = Keyboard.current;
             if (keyboard == null)
@@ -239,7 +238,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        private static void RecordMouseButtonEvents(List<RecordedInputEvent> events)
+        private void RecordMouseButtonEvents(List<RecordedInputEvent> events)
         {
             Mouse? mouse = Mouse.current;
             if (mouse == null)
@@ -361,7 +360,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         // Keys/buttons already held when recording starts need explicit DOWN events,
         // otherwise replay starts with those controls released until a state change occurs.
-        private static void EmitInitialHeldEvents()
+        private void EmitInitialHeldEvents()
         {
             List<RecordedInputEvent> events = new List<RecordedInputEvent>();
 
@@ -403,7 +402,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        private static void CaptureInitialKeyStates()
+        private void CaptureInitialKeyStates()
         {
             Keyboard? keyboard = Keyboard.current;
             if (keyboard == null)
@@ -422,7 +421,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        private static void CaptureInitialButtonStates()
+        private void CaptureInitialButtonStates()
         {
             Mouse? mouse = Mouse.current;
             if (mouse == null)
@@ -468,12 +467,73 @@ namespace io.github.hatayama.UnityCliLoop
             return new Vector2(x, y);
         }
 
-        private static void OnPlayModeStateChanged(PlayModeStateChange state)
+        private void OnPlayModeStateChanged(PlayModeStateChange state)
         {
             if (state == PlayModeStateChange.ExitingPlayMode)
             {
                 ForceStop();
             }
+        }
+    }
+
+    [InitializeOnLoad]
+    internal static class InputRecorder
+    {
+        private static readonly InputRecorderService ServiceValue = new InputRecorderService();
+
+        static InputRecorder()
+        {
+            ServiceValue.Initialize();
+        }
+
+        public static event Action? RecordingStarted
+        {
+            add => ServiceValue.RecordingStarted += value;
+            remove => ServiceValue.RecordingStarted -= value;
+        }
+
+        public static event Action? RecordingStopped
+        {
+            add => ServiceValue.RecordingStopped += value;
+            remove => ServiceValue.RecordingStopped -= value;
+        }
+
+        public static bool IsRecording => ServiceValue.IsRecording;
+
+        public static string? LastAutoSavePath
+        {
+            get { return ServiceValue.LastAutoSavePath; }
+            internal set { ServiceValue.LastAutoSavePath = value; }
+        }
+
+        public static void StartRecording(HashSet<Key>? keyFilter)
+        {
+            ServiceValue.StartRecording(keyFilter);
+        }
+
+        public static InputRecordingData StopRecording()
+        {
+            return ServiceValue.StopRecording();
+        }
+
+        public static void NotifyRecordingStopped()
+        {
+            ServiceValue.NotifyRecordingStopped();
+        }
+
+        public static void ForceStop()
+        {
+            ServiceValue.ForceStop();
+        }
+
+        internal static string FormatVector2(Vector2 v)
+        {
+            return InputRecorderService.FormatVector2(v);
+        }
+
+        internal static Vector2 ParseVector2(string data)
+        {
+            return InputRecorderService.ParseVector2(data);
         }
     }
 }
