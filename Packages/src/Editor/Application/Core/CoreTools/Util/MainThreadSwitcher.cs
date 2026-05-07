@@ -1,8 +1,7 @@
 using System;
-using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
-using UnityEditor;
 
 namespace io.github.hatayama.UnityCliLoop
 {
@@ -20,70 +19,44 @@ namespace io.github.hatayama.UnityCliLoop
         PostLateUpdate = 6
     }
 
-    public sealed class MainThreadSwitcherService
+    // Port for dispatching continuations onto Unity's main thread.
+    public interface IMainThreadDispatcher
     {
-        private readonly ConcurrentQueue<Action> _continuationQueue = new ConcurrentQueue<Action>();
-        private int _mainThreadId;
-
-        public int MainThreadId => _mainThreadId;
-        public bool IsMainThread => Thread.CurrentThread.ManagedThreadId == _mainThreadId;
-
-        public void Initialize()
-        {
-            _mainThreadId = Thread.CurrentThread.ManagedThreadId;
-
-            EditorApplication.update -= ProcessContinuationQueue;
-            EditorApplication.update += ProcessContinuationQueue;
-        }
-
-        private void ProcessContinuationQueue()
-        {
-            while (_continuationQueue.TryDequeue(out Action continuation))
-            {
-                try
-                {
-                    continuation?.Invoke();
-                }
-                catch (Exception ex)
-                {
-                    // Continuations are external code; catch exceptions to prevent queue disruption
-                    UnityEngine.Debug.LogException(ex);
-                }
-            }
-        }
-
-        public void AddContinuation(Action continuation)
-        {
-            if (continuation == null)
-            {
-                return;
-            }
-            _continuationQueue.Enqueue(continuation);
-        }
+        int MainThreadId { get; }
+        bool IsMainThread { get; }
+        void Initialize();
+        void AddContinuation(Action continuation);
     }
 
     /// <summary>
     /// A class that provides functionality equivalent to UniTask's SwitchToMainThread.
-    /// Handles switching to the main thread using EditorApplication.update.
+    /// Handles switching to the main thread through the registered dispatcher.
     /// Reference: https://github.com/Cysharp/UniTask - PlayerLoopHelper implementation
     /// </summary>
     public static class MainThreadSwitcher
     {
-        private static readonly MainThreadSwitcherService ServiceValue = new MainThreadSwitcherService();
+        private static IMainThreadDispatcher ServiceValue;
 
         /// <summary>
         /// Gets the ID of the main thread.
         /// </summary>
-        public static int MainThreadId => ServiceValue.MainThreadId;
+        public static int MainThreadId => Service.MainThreadId;
 
         /// <summary>
         /// Determines whether the current thread is the main thread.
         /// </summary>
-        public static bool IsMainThread => ServiceValue.IsMainThread;
+        public static bool IsMainThread => Service.IsMainThread;
+
+        internal static void RegisterService(IMainThreadDispatcher service)
+        {
+            Debug.Assert(service != null, "service must not be null");
+
+            ServiceValue = service ?? throw new ArgumentNullException(nameof(service));
+        }
 
         internal static void InitializeForEditorStartup()
         {
-            ServiceValue.Initialize();
+            Service.Initialize();
         }
 
         /// <summary>
@@ -91,7 +64,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// </summary>
         internal static void AddContinuation(Action continuation)
         {
-            ServiceValue.AddContinuation(continuation);
+            Service.AddContinuation(continuation);
         }
 
         public static SwitchToMainThreadAwaitable SwitchToMainThread()
@@ -125,10 +98,22 @@ namespace io.github.hatayama.UnityCliLoop
             return new SwitchToMainThreadAwaitable(cancellationToken);
         }
 
+        private static IMainThreadDispatcher Service
+        {
+            get
+            {
+                if (ServiceValue == null)
+                {
+                    throw new InvalidOperationException("Unity CLI Loop main-thread dispatcher is not registered.");
+                }
+
+                return ServiceValue;
+            }
+        }
     }
 
     /// <summary>
-    /// An awaitable for switching to the main thread using EditorApplication.update queue.
+    /// An awaitable for switching to the main thread through MainThreadSwitcher.
     /// </summary>
     public struct SwitchToMainThreadAwaitable
     {
