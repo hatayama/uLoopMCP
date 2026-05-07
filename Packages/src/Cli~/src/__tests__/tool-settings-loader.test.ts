@@ -125,6 +125,25 @@ describe('tool-settings-loader', () => {
     it('should return true when no settings file exists', () => {
       expect(isToolEnabled('compile')).toBe(true);
     });
+
+    it('should keep run-tests callable when test framework package is missing', () => {
+      writeFileSync(
+        join(testDir, '.uloop', 'settings.tools.json'),
+        JSON.stringify({ disabledTools: ['run-tests'] }),
+      );
+
+      expect(isToolEnabled('run-tests')).toBe(true);
+    });
+
+    it('should disable run-tests when test framework package is installed', () => {
+      writePackageManifest(testDir, { 'com.unity.test-framework': '1.3.9' });
+      writeFileSync(
+        join(testDir, '.uloop', 'settings.tools.json'),
+        JSON.stringify({ disabledTools: ['run-tests'] }),
+      );
+
+      expect(isToolEnabled('run-tests')).toBe(false);
+    });
   });
 
   // ── filterEnabledTools ─────────────────────────────────────────
@@ -146,6 +165,11 @@ describe('tool-settings-loader', () => {
         description: 'Clear',
         inputSchema: { type: 'object', properties: {} },
       },
+      {
+        name: 'run-tests',
+        description: 'Run tests',
+        inputSchema: { type: 'object', properties: {} },
+      },
     ];
 
     it('should filter out disabled tools', () => {
@@ -156,8 +180,9 @@ describe('tool-settings-loader', () => {
 
       const result: ToolDefinition[] = filterEnabledTools(mockTools);
 
-      expect(result).toHaveLength(1);
+      expect(result).toHaveLength(2);
       expect(result[0].name).toBe('get-logs');
+      expect(result[1].name).toBe('run-tests');
     });
 
     it('should return all tools when none are disabled', () => {
@@ -168,13 +193,36 @@ describe('tool-settings-loader', () => {
 
       const result: ToolDefinition[] = filterEnabledTools(mockTools);
 
-      expect(result).toHaveLength(3);
+      expect(result).toHaveLength(4);
     });
 
     it('should return all tools when settings file does not exist', () => {
       const result: ToolDefinition[] = filterEnabledTools(mockTools);
 
-      expect(result).toHaveLength(3);
+      expect(result).toHaveLength(4);
+    });
+
+    it('should keep run-tests when test framework package is missing', () => {
+      writeFileSync(
+        join(testDir, '.uloop', 'settings.tools.json'),
+        JSON.stringify({ disabledTools: ['run-tests'] }),
+      );
+
+      const result: ToolDefinition[] = filterEnabledTools(mockTools);
+
+      expect(result.map((tool) => tool.name)).toContain('run-tests');
+    });
+
+    it('should filter run-tests when test framework package is installed', () => {
+      writePackageManifest(testDir, { 'com.unity.test-framework': '1.3.9' });
+      writeFileSync(
+        join(testDir, '.uloop', 'settings.tools.json'),
+        JSON.stringify({ disabledTools: ['run-tests'] }),
+      );
+
+      const result: ToolDefinition[] = filterEnabledTools(mockTools);
+
+      expect(result.map((tool) => tool.name)).not.toContain('run-tests');
     });
   });
 
@@ -258,3 +306,8 @@ describe('tool-settings-loader', () => {
     });
   });
 });
+
+function writePackageManifest(projectRoot: string, dependencies: Record<string, string>): void {
+  mkdirSync(join(projectRoot, 'Packages'), { recursive: true });
+  writeFileSync(join(projectRoot, 'Packages', 'manifest.json'), JSON.stringify({ dependencies }));
+}

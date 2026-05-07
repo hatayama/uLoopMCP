@@ -213,7 +213,8 @@ namespace io.github.hatayama.uLoopMCP
                 throw new ArgumentException($"Unknown tool: {toolName}");
             }
 
-            if (!ToolSettings.IsToolEnabled(toolName))
+            if (!ToolSettings.IsToolEnabled(toolName)
+                && !ToolExecutionAvailability.ShouldReportDependencyUnavailableBeforeDisabled(toolName))
             {
                 throw new ToolDisabledException(toolName);
             }
