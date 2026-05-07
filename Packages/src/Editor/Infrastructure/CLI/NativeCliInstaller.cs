@@ -4,29 +4,12 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Security;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    public readonly struct NativeCliInstallCommand
-    {
-        public NativeCliInstallCommand(string fileName, string arguments, string manualCommand)
-        {
-            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(fileName), "fileName must not be null or empty");
-            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(arguments), "arguments must not be null or empty");
-            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(manualCommand), "manualCommand must not be null or empty");
-
-            FileName = fileName;
-            Arguments = arguments;
-            ManualCommand = manualCommand;
-        }
-
-        public string FileName { get; }
-        public string Arguments { get; }
-        public string ManualCommand { get; }
-    }
-
     /// <summary>
     /// Installs the package-owned global dispatcher while keeping release-script commands available for CLI-only users.
     /// </summary>
@@ -88,7 +71,6 @@ namespace io.github.hatayama.UnityCliLoop
                 sourceBinaryPath,
                 installDirectory,
                 platform));
-            CliSetupApplicationFacade.InvalidateCliCache();
 
             if (result.Success)
             {
@@ -119,7 +101,6 @@ namespace io.github.hatayama.UnityCliLoop
             }
 
             CliInstallResult result = await Task.Run(() => UninstallGlobalCli(installDirectory, platform));
-            CliSetupApplicationFacade.InvalidateCliCache();
             if (!result.Success)
             {
                 return result;
@@ -1141,6 +1122,37 @@ namespace io.github.hatayama.UnityCliLoop
             UnityEngine.Debug.Assert(!string.IsNullOrWhiteSpace(assetName), "assetName must not be null or empty");
 
             return $"{CliConstants.RELEASE_DOWNLOAD_BASE_URL}/{releaseTag}/{assetName}";
+        }
+    }
+
+    public sealed class NativeCliInstallerService : INativeCliInstaller
+    {
+        public bool IsPackageOwnedCurrentUserInstallPath(string cliExecutablePath, RuntimePlatform platform)
+        {
+            return NativeCliInstaller.IsPackageOwnedCurrentUserInstallPath(cliExecutablePath, platform);
+        }
+
+        public Task<CliInstallResult> InstallGlobalCliAsync(
+            RuntimePlatform platform,
+            string packageVersion,
+            CancellationToken ct)
+        {
+            ct.ThrowIfCancellationRequested();
+            return NativeCliInstaller.InstallAsync(platform, packageVersion);
+        }
+
+        public Task<CliInstallResult> UninstallGlobalCliAsync(RuntimePlatform platform, CancellationToken ct)
+        {
+            ct.ThrowIfCancellationRequested();
+            return NativeCliInstaller.UninstallAsync(platform);
+        }
+
+        public NativeCliInstallCommand GetGlobalCliInstallCommand(
+            RuntimePlatform platform,
+            string packageVersion,
+            bool removeLegacyLaunchers)
+        {
+            return NativeCliInstaller.GetInstallCommand(platform, packageVersion, removeLegacyLaunchers);
         }
     }
 }

@@ -10,7 +10,7 @@ namespace io.github.hatayama.UnityCliLoop
     {
         private static readonly string[] MigratedFacadePaths = new string[]
         {
-            "Packages/src/Editor/Application/CLI/CliInstallationDetector.cs",
+            "Packages/src/Editor/Application/CLI/CliSetupApplicationService.cs",
             "Packages/src/Editor/Application/Config/ToolSettings.cs",
             "Packages/src/Editor/Application/Config/ULoopSettings.cs",
             "Packages/src/Editor/Application/Config/UnityCliLoopEditorSettings.cs",

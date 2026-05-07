@@ -11,7 +11,6 @@ namespace io.github.hatayama.UnityCliLoop
             EditorDelayManager.InitializeForEditorStartup();
             DomainReloadDetectionService.RegisterForEditorStartup();
             CompilationLockService.RegisterForEditorStartup();
-            ProjectLocalCliAutoInstaller.ScheduleForEditorStartup();
         }
     }
 }

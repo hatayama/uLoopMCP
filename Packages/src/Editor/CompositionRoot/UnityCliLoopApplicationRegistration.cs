@@ -15,7 +15,10 @@ namespace io.github.hatayama.UnityCliLoop
                 }
 
                 UnityCliLoopToolRegistrar.RegisterService(new UnityCliLoopToolRegistrarService());
-                CliSetupApplicationFacade.RegisterService(new CliSetupApplicationService(new CliInstallationDetector()));
+                CliSetupApplicationFacade.RegisterService(new CliSetupApplicationService(
+                    new CliInstallationDetector(),
+                    new ProjectLocalCliInstallerService(),
+                    new NativeCliInstallerService()));
                 UnityCliLoopBridgeServerInstanceFactory serverFactory = new();
                 UnityCliLoopServerLifecycleRegistryService lifecycleRegistry = new();
                 lifecycleRegistry.RegisterSource(serverFactory);

@@ -313,4 +313,17 @@ namespace io.github.hatayama.UnityCliLoop
             return sha256.ComputeHash(stream);
         }
     }
+
+    public sealed class ProjectLocalCliInstallerService : IProjectLocalCliInstaller
+    {
+        public string DetectBundledRequiredDispatcherVersion()
+        {
+            return ProjectLocalCliInstaller.DetectBundledRequiredDispatcherVersion();
+        }
+
+        public CliInstallResult EnsureProjectLocalCliCurrent(string projectRoot, string packageVersion)
+        {
+            return ProjectLocalCliAutoInstaller.EnsureProjectLocalCliCurrent(projectRoot, packageVersion);
+        }
+    }
 }
