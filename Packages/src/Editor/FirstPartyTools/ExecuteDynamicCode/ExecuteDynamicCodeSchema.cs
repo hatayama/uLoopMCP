@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.ComponentModel;
 
 using io.github.hatayama.UnityCliLoop.ToolContracts;
 
@@ -15,13 +14,11 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         public string Code { get; set; } = "";
         
         /// <summary>Runtime parameters (advanced; usually unnecessary)</summary>
-        [EditorBrowsable(EditorBrowsableState.Advanced)]
         public Dictionary<string, object> Parameters { get; set; } = new();
         
         /// <summary>Compile only (do not execute)</summary>
         public bool CompileOnly { get; set; } = false;
 
-        [EditorBrowsable(EditorBrowsableState.Advanced)]
         public bool YieldToForegroundRequests { get; set; } = false;
     }
 }
