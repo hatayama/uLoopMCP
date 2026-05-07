@@ -80,7 +80,8 @@ namespace io.github.hatayama.UnityCliLoop
                     currentServer.Dispose();
                 }
 
-                IUnityCliLoopServerInstance newServer = UnityCliLoopServerInstanceFactoryRegistry.Create();
+                IUnityCliLoopServerInstance newServer =
+                    UnityCliLoopServerController.CreateServerInstanceForRecovery();
                 newServer.StartServer();
                 UnityCliLoopServerController.RegisterRecoveredServer(newServer);
 

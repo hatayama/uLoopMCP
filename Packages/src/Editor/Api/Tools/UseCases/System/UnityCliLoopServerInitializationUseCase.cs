@@ -14,12 +14,6 @@ namespace io.github.hatayama.UnityCliLoop
         private readonly SecurityValidationService _securityService;
         private readonly UnityCliLoopServerStartupService _startupService;
 
-        public UnityCliLoopServerInitializationUseCase()
-        {
-            _securityService = new SecurityValidationService();
-            _startupService = new UnityCliLoopServerStartupService();
-        }
-
         public UnityCliLoopServerInitializationUseCase(
             SecurityValidationService securityService,
             UnityCliLoopServerStartupService startupService)

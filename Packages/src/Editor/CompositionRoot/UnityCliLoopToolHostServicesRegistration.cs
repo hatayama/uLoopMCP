@@ -5,6 +5,7 @@ namespace io.github.hatayama.UnityCliLoop
     public static class UnityCliLoopToolHostServicesRegistration
     {
         private static readonly object SyncRoot = new object();
+        private static bool IsRegistered;
 
         [InitializeOnLoadMethod]
         private static void Register()
@@ -16,11 +17,21 @@ namespace io.github.hatayama.UnityCliLoop
         {
             lock (SyncRoot)
             {
+                if (IsRegistered)
+                {
+                    return;
+                }
+
                 UnityCliLoopToolHostServicesProvider.RegisterFactory(CreateHostServices);
                 UnityCliLoopBridgeServerInstanceFactory serverFactory =
                     new UnityCliLoopBridgeServerInstanceFactory();
-                UnityCliLoopServerInstanceFactoryRegistry.RegisterFactory(serverFactory);
-                UnityCliLoopServerLifecycleRegistry.RegisterSource(serverFactory);
+                UnityCliLoopServerLifecycleRegistryService lifecycleRegistry =
+                    new UnityCliLoopServerLifecycleRegistryService();
+                lifecycleRegistry.RegisterSource(serverFactory);
+                UnityCliLoopServerControllerService controllerService =
+                    new UnityCliLoopServerControllerService(serverFactory, lifecycleRegistry);
+                UnityCliLoopServerController.RegisterService(controllerService);
+                IsRegistered = true;
             }
         }
 

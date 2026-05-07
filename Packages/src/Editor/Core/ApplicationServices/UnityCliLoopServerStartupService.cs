@@ -5,12 +5,21 @@ namespace io.github.hatayama.UnityCliLoop
     /// </summary>
     public class UnityCliLoopServerStartupService
     {
+        private readonly IUnityCliLoopServerInstanceFactory _serverInstanceFactory;
+
+        public UnityCliLoopServerStartupService(IUnityCliLoopServerInstanceFactory serverInstanceFactory)
+        {
+            System.Diagnostics.Debug.Assert(serverInstanceFactory != null, "serverInstanceFactory must not be null");
+
+            _serverInstanceFactory = serverInstanceFactory ?? throw new System.ArgumentNullException(nameof(serverInstanceFactory));
+        }
+
         public ServiceResult<IUnityCliLoopServerInstance> StartServer(
             bool clearServerStartingLockWhenReady = true)
         {
             try
             {
-                IUnityCliLoopServerInstance server = UnityCliLoopServerInstanceFactoryRegistry.Create();
+                IUnityCliLoopServerInstance server = _serverInstanceFactory.Create();
                 server.StartServer(clearServerStartingLockWhenReady);
                 return ServiceResult<IUnityCliLoopServerInstance>.SuccessResult(server);
             }

@@ -8,7 +8,7 @@ namespace io.github.hatayama.UnityCliLoop
         public void ClearStartupProtection_ResetsProtectionWindow()
         {
             // Tests that the startup protection window can be cleared by recovery code.
-            UnityCliLoopServerControllerService service = new UnityCliLoopServerControllerService();
+            UnityCliLoopServerControllerService service = CreateControllerService();
 
             service.ActivateStartupProtection(60000);
 
@@ -23,13 +23,13 @@ namespace io.github.hatayama.UnityCliLoop
         public void OnBeforeAssemblyReload_ShouldClearStartupProtectionBeforeRecovery()
         {
             // Tests that assembly-reload recovery clears the startup protection window before shutdown.
-            UnityCliLoopServerControllerService service = new UnityCliLoopServerControllerService();
+            UnityCliLoopServerControllerService service = CreateControllerService();
 
             UnityCliLoopEditorSettingsData originalSettings = CloneSettings(UnityCliLoopEditorSettings.GetSettings());
 
             try
             {
-                service.RegisterRecoveredServer(new UnityCliLoopBridgeServer());
+                service.RegisterRecoveredServer(new TestServerInstance());
                 service.ActivateStartupProtection(60000);
 
                 Assert.IsTrue(service.IsStartupProtectionActive(), "Startup protection should be active before reload");
@@ -53,7 +53,7 @@ namespace io.github.hatayama.UnityCliLoop
         public void PrepareForServerShutdown_ShouldClearStartupProtectionBeforeShutdown()
         {
             // Tests that explicit shutdown clears the startup protection window before stopping.
-            UnityCliLoopServerControllerService service = new UnityCliLoopServerControllerService();
+            UnityCliLoopServerControllerService service = CreateControllerService();
 
             service.ActivateStartupProtection(60000);
 
@@ -71,6 +71,41 @@ namespace io.github.hatayama.UnityCliLoop
         {
             string json = UnityEngine.JsonUtility.ToJson(settings);
             return UnityEngine.JsonUtility.FromJson<UnityCliLoopEditorSettingsData>(json);
+        }
+
+        private static UnityCliLoopServerControllerService CreateControllerService()
+        {
+            TestServerInstanceFactory serverInstanceFactory = new TestServerInstanceFactory();
+            UnityCliLoopServerLifecycleRegistryService lifecycleRegistry =
+                new UnityCliLoopServerLifecycleRegistryService();
+            return new UnityCliLoopServerControllerService(serverInstanceFactory, lifecycleRegistry);
+        }
+
+        private sealed class TestServerInstanceFactory : IUnityCliLoopServerInstanceFactory
+        {
+            public IUnityCliLoopServerInstance Create()
+            {
+                return new TestServerInstance();
+            }
+        }
+
+        private sealed class TestServerInstance : IUnityCliLoopServerInstance
+        {
+            public bool IsRunning => false;
+
+            public string Endpoint => "test";
+
+            public void StartServer(bool clearServerStartingLockWhenReady = true)
+            {
+            }
+
+            public void StopServer()
+            {
+            }
+
+            public void Dispose()
+            {
+            }
         }
     }
 }

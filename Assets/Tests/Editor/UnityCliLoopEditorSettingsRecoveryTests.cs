@@ -165,7 +165,8 @@ namespace io.github.hatayama.UnityCliLoop
         [Test]
         public void UpdateSessionState_WhenStartingServer_ShouldNotPersistRuntimeIdentity()
         {
-            UnityCliLoopServerStartupService service = new();
+            UnityCliLoopServerStartupService service =
+                new UnityCliLoopServerStartupService(new TestServerInstanceFactory());
 
             ServiceResult<bool> result = service.UpdateSessionState(true);
 
@@ -192,6 +193,33 @@ namespace io.github.hatayama.UnityCliLoop
             if (File.Exists(path))
             {
                 File.Delete(path);
+            }
+        }
+
+        private sealed class TestServerInstanceFactory : IUnityCliLoopServerInstanceFactory
+        {
+            public IUnityCliLoopServerInstance Create()
+            {
+                return new TestServerInstance();
+            }
+        }
+
+        private sealed class TestServerInstance : IUnityCliLoopServerInstance
+        {
+            public bool IsRunning => false;
+
+            public string Endpoint => "test";
+
+            public void StartServer(bool clearServerStartingLockWhenReady = true)
+            {
+            }
+
+            public void StopServer()
+            {
+            }
+
+            public void Dispose()
+            {
             }
         }
     }

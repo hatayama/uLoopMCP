@@ -612,21 +612,19 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
-        public void ServerInstanceFactoryRegistry_WhenLoaded_CompilesUnderApplicationAssembly()
+        public void ServerInstanceFactoryPort_WhenLoaded_CompilesUnderApplicationAssembly()
         {
-            // Tests that application code depends on a replaceable server factory boundary.
-            string registryAssemblyName = typeof(UnityCliLoopServerInstanceFactoryRegistry).Assembly.GetName().Name;
+            // Tests that application code depends on a replaceable server factory port.
             string factoryAssemblyName = typeof(IUnityCliLoopServerInstanceFactory).Assembly.GetName().Name;
 
-            Assert.That(registryAssemblyName, Is.EqualTo(ApplicationAssemblyName));
             Assert.That(factoryAssemblyName, Is.EqualTo(ApplicationAssemblyName));
         }
 
         [Test]
-        public void ServerLifecycleRegistry_WhenLoaded_CompilesUnderApplicationAssembly()
+        public void ServerLifecycleRegistryService_WhenLoaded_CompilesUnderApplicationAssembly()
         {
-            // Tests that application code depends on replaceable server lifecycle events.
-            string registryAssemblyName = typeof(UnityCliLoopServerLifecycleRegistry).Assembly.GetName().Name;
+            // Tests that lifecycle handler wiring stays in an instance application service.
+            string registryAssemblyName = typeof(UnityCliLoopServerLifecycleRegistryService).Assembly.GetName().Name;
             string sourceAssemblyName = typeof(IUnityCliLoopServerLifecycleSource).Assembly.GetName().Name;
 
             Assert.That(registryAssemblyName, Is.EqualTo(ApplicationAssemblyName));
