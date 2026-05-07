@@ -14,19 +14,19 @@ namespace io.github.hatayama.UnityCliLoop
     /// This file is stored in the project root so it can be git-tracked
     /// and shared across team members as a security policy.
     /// </summary>
-    public static class ULoopSettings
+    public sealed class ULoopSettingsRepository
     {
         private const string LEGACY_ALLOW_THIRD_PARTY_TOOLS_FIELD = "allowThirdPartyTools";
 
-        private static string SettingsFilePath =>
+        private string SettingsFilePath =>
             Path.Combine(UnityCliLoopConstants.ULOOP_DIR, UnityCliLoopConstants.ULOOP_SETTINGS_FILE_NAME);
 
-        private static string LegacySettingsFilePath =>
+        private string LegacySettingsFilePath =>
             Path.Combine(UnityCliLoopConstants.USER_SETTINGS_FOLDER, UnityCliLoopConstants.SETTINGS_FILE_NAME);
 
-        private static ULoopSettingsData _cachedSettings;
+        private ULoopSettingsData _cachedSettings;
 
-        public static ULoopSettingsData GetSettings()
+        public ULoopSettingsData GetSettings()
         {
             if (_cachedSettings == null)
             {
@@ -35,7 +35,7 @@ namespace io.github.hatayama.UnityCliLoop
             return _cachedSettings;
         }
 
-        public static void SaveSettings(ULoopSettingsData settings)
+        public void SaveSettings(ULoopSettingsData settings)
         {
             Debug.Assert(settings != null, "settings must not be null");
 
@@ -56,7 +56,7 @@ namespace io.github.hatayama.UnityCliLoop
             AtomicFileWriter.CleanupBackup(SettingsFilePath + ".bak");
         }
 
-        public static void UpdateSettings(Func<ULoopSettingsData, ULoopSettingsData> transform)
+        public void UpdateSettings(Func<ULoopSettingsData, ULoopSettingsData> transform)
         {
             Debug.Assert(transform != null, "transform must not be null");
 
@@ -65,7 +65,7 @@ namespace io.github.hatayama.UnityCliLoop
             SaveSettings(updated);
         }
 
-        public static DynamicCodeSecurityLevel GetDynamicCodeSecurityLevel()
+        public DynamicCodeSecurityLevel GetDynamicCodeSecurityLevel()
         {
             ULoopSettingsData settings = GetSettings();
             int persistedValue = settings.dynamicCodeSecurityLevel;
@@ -81,7 +81,7 @@ namespace io.github.hatayama.UnityCliLoop
             return (DynamicCodeSecurityLevel)persistedValue;
         }
 
-        public static void SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel level)
+        public void SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel level)
         {
             ULoopSettingsData settings = GetSettings();
             ULoopSettingsData updated = settings with { dynamicCodeSecurityLevel = (int)level };
@@ -99,7 +99,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         // Loading & Migration
 
-        private static void LoadSettings()
+        private void LoadSettings()
         {
             string oldSettingsPath = Path.Combine(UnityCliLoopConstants.ULOOP_DIR, "settings.security.json");
             string oldBackupPath = oldSettingsPath + ".bak";
@@ -161,7 +161,7 @@ namespace io.github.hatayama.UnityCliLoop
             MigrateFromLegacySettings();
         }
 
-        private static bool LegacyFileHasSecurityFields()
+        private bool LegacyFileHasSecurityFields()
         {
             if (!File.Exists(LegacySettingsFilePath))
             {
@@ -200,7 +200,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// to guarantee this runs exactly once — after migration the file exists and
         /// this path is never taken again.
         /// </summary>
-        private static void MigrateFromLegacySettings()
+        private void MigrateFromLegacySettings()
         {
             if (!File.Exists(LegacySettingsFilePath))
             {
@@ -232,7 +232,7 @@ namespace io.github.hatayama.UnityCliLoop
             UnityCliLoopEditorSettings.SaveSettings(UnityCliLoopEditorSettings.GetSettings());
         }
 
-        private static bool NormalizeLegacyDisabledDynamicCode()
+        private bool NormalizeLegacyDisabledDynamicCode()
         {
             Debug.Assert(_cachedSettings != null, "_cachedSettings must not be null");
 
@@ -249,7 +249,7 @@ namespace io.github.hatayama.UnityCliLoop
             return true;
         }
 
-        private static bool ApplyLegacyToolToggleMigrations(string json)
+        private bool ApplyLegacyToolToggleMigrations(string json)
         {
             if (string.IsNullOrWhiteSpace(json))
             {
@@ -274,12 +274,55 @@ namespace io.github.hatayama.UnityCliLoop
             return migrated;
         }
 
-        internal static void InvalidateCache()
+        public void InvalidateCache()
         {
             _cachedSettings = null;
         }
 
         // Roslyn Define Symbol Management
 
+    }
+
+    /// <summary>
+    /// Compatibility entrypoint for callers that have not received ULoopSettingsRepository through DI yet.
+    /// </summary>
+    public static class ULoopSettings
+    {
+        private static readonly ULoopSettingsRepository RepositoryValue = new ULoopSettingsRepository();
+
+        public static ULoopSettingsRepository Repository
+        {
+            get { return RepositoryValue; }
+        }
+
+        public static ULoopSettingsData GetSettings()
+        {
+            return Repository.GetSettings();
+        }
+
+        public static void SaveSettings(ULoopSettingsData settings)
+        {
+            Repository.SaveSettings(settings);
+        }
+
+        public static void UpdateSettings(Func<ULoopSettingsData, ULoopSettingsData> transform)
+        {
+            Repository.UpdateSettings(transform);
+        }
+
+        public static DynamicCodeSecurityLevel GetDynamicCodeSecurityLevel()
+        {
+            return Repository.GetDynamicCodeSecurityLevel();
+        }
+
+        public static void SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel level)
+        {
+            Repository.SetDynamicCodeSecurityLevel(level);
+        }
+
+        internal static void InvalidateCache()
+        {
+            Repository.InvalidateCache();
+        }
     }
 }

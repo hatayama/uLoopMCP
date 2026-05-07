@@ -10,14 +10,14 @@ namespace io.github.hatayama.UnityCliLoop
     /// Tool toggle settings management for .uloop/settings.tools.json.
     /// Controls which tools are enabled or disabled in the CLI tool list.
     /// </summary>
-    public static class ToolSettings
+    public sealed class ToolSettingsRepository
     {
-        private static string SettingsFilePath =>
+        private string SettingsFilePath =>
             Path.Combine(UnityCliLoopConstants.ULOOP_DIR, UnityCliLoopConstants.ULOOP_TOOL_SETTINGS_FILE_NAME);
 
-        private static ToolSettingsData _cachedSettings;
+        private ToolSettingsData _cachedSettings;
 
-        public static ToolSettingsData GetSettings()
+        public ToolSettingsData GetSettings()
         {
             if (_cachedSettings == null)
             {
@@ -26,7 +26,7 @@ namespace io.github.hatayama.UnityCliLoop
             return _cachedSettings;
         }
 
-        public static void SaveSettings(ToolSettingsData settings)
+        public void SaveSettings(ToolSettingsData settings)
         {
             Debug.Assert(settings != null, "settings must not be null");
 
@@ -47,7 +47,7 @@ namespace io.github.hatayama.UnityCliLoop
             AtomicFileWriter.CleanupBackup(SettingsFilePath + ".bak");
         }
 
-        public static bool IsToolEnabled(string toolName)
+        public bool IsToolEnabled(string toolName)
         {
             Debug.Assert(!string.IsNullOrEmpty(toolName), "toolName must not be null or empty");
 
@@ -55,7 +55,7 @@ namespace io.github.hatayama.UnityCliLoop
             return !disabledTools.Contains(toolName);
         }
 
-        public static void SetToolEnabled(string toolName, bool enabled)
+        public void SetToolEnabled(string toolName, bool enabled)
         {
             Debug.Assert(!string.IsNullOrEmpty(toolName), "toolName must not be null or empty");
 
@@ -80,17 +80,17 @@ namespace io.github.hatayama.UnityCliLoop
             SaveSettings(updated);
         }
 
-        public static string[] GetDisabledTools()
+        public string[] GetDisabledTools()
         {
             return GetSettings().disabledTools;
         }
 
-        public static void InvalidateCache()
+        public void InvalidateCache()
         {
             _cachedSettings = null;
         }
 
-        private static void LoadSettings()
+        private void LoadSettings()
         {
             AtomicFileWriter.RecoverSidecarFiles(SettingsFilePath);
 
@@ -120,6 +120,49 @@ namespace io.github.hatayama.UnityCliLoop
             }
 
             _cachedSettings = new ToolSettingsData();
+        }
+    }
+
+    /// <summary>
+    /// Compatibility entrypoint for callers that have not received ToolSettingsRepository through DI yet.
+    /// </summary>
+    public static class ToolSettings
+    {
+        private static readonly ToolSettingsRepository RepositoryValue = new ToolSettingsRepository();
+
+        public static ToolSettingsRepository Repository
+        {
+            get { return RepositoryValue; }
+        }
+
+        public static ToolSettingsData GetSettings()
+        {
+            return Repository.GetSettings();
+        }
+
+        public static void SaveSettings(ToolSettingsData settings)
+        {
+            Repository.SaveSettings(settings);
+        }
+
+        public static bool IsToolEnabled(string toolName)
+        {
+            return Repository.IsToolEnabled(toolName);
+        }
+
+        public static void SetToolEnabled(string toolName, bool enabled)
+        {
+            Repository.SetToolEnabled(toolName, enabled);
+        }
+
+        public static string[] GetDisabledTools()
+        {
+            return Repository.GetDisabledTools();
+        }
+
+        public static void InvalidateCache()
+        {
+            Repository.InvalidateCache();
         }
     }
 
