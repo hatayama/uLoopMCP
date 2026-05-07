@@ -714,6 +714,40 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
+        public void ApplicationEditorStartup_WhenLoaded_SchedulesSettingsRecoveryInsteadOfRecoveringSynchronously()
+        {
+            // Tests that settings file recovery does not block the synchronous Editor startup hook.
+            string startupSource = ReadProductionSource(
+                "Packages/src/Editor/Application/ApplicationEditorStartup.cs");
+
+            Assert.That(
+                startupSource,
+                Does.Contain("UnityCliLoopEditorSettings.ScheduleSettingsFileRecoveryForEditorStartup();"));
+            Assert.That(startupSource, Does.Not.Contain("RecoverSettingsFileForEditorStartup"));
+        }
+
+        [Test]
+        public void DomainReloadStateRegistration_WhenLoaded_DoesNotReadSettingsSynchronously()
+        {
+            // Tests that provider registration does not force settings JSON load during Editor startup.
+            string registrationSource = ReadProductionSource(
+                "Packages/src/Editor/Application/Config/UnityCliLoopEditorDomainReloadStateProvider.cs");
+
+            Assert.That(registrationSource, Does.Not.Contain("GetIsDomainReloadInProgress"));
+        }
+
+        [Test]
+        public void SetupWizardStartup_WhenLoaded_SchedulesVersionCheckInsteadOfReadingSettingsSynchronously()
+        {
+            // Tests that Setup Wizard settings reads run after the synchronous Editor startup hook.
+            string setupWizardSource = ReadProductionSource(
+                "Packages/src/Editor/Presentation/Setup/SetupWizardWindow.cs");
+
+            Assert.That(setupWizardSource, Does.Contain("EditorApplication.delayCall += TryShowOnVersionChange;"));
+            Assert.That(setupWizardSource, Does.Not.Contain("\n            TryShowOnVersionChange();"));
+        }
+
+        [Test]
         public void ProjectAsmdefs_WhenLoaded_DoNotReferenceRemovedSharedAssemblyGuid()
         {
             // Tests that removed module asmdefs do not leave stale GUID references in dependent asmdefs.
@@ -1066,6 +1100,12 @@ namespace io.github.hatayama.UnityCliLoop
         {
             string editorRoot = Path.Combine(UnityCliLoopPathResolver.GetProjectRoot(), "Packages", "src", "Editor");
             return Directory.GetFiles(editorRoot, "*.cs", SearchOption.AllDirectories);
+        }
+
+        private static string ReadProductionSource(string relativePath)
+        {
+            string sourcePath = Path.Combine(UnityCliLoopPathResolver.GetProjectRoot(), relativePath);
+            return File.ReadAllText(sourcePath);
         }
 
         private static string[] ReadApplicationSourcePaths()

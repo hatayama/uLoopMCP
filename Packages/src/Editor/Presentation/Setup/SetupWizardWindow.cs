@@ -26,7 +26,7 @@ namespace io.github.hatayama.UnityCliLoop
             if (AssetDatabase.IsAssetImportWorkerProcess()) return;
             if (Application.isBatchMode) return;
 
-            TryShowOnVersionChange();
+            EditorApplication.delayCall += TryShowOnVersionChange;
         }
 
         [MenuItem("Window/Unity CLI Loop/Setup Wizard", priority = 3)]

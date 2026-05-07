@@ -675,14 +675,14 @@ namespace io.github.hatayama.UnityCliLoop
             Repository.InvalidateCache();
         }
 
-        internal static void RecoverSettingsFileForEditorStartup()
+        internal static void ScheduleSettingsFileRecoveryForEditorStartup()
         {
             if (AssetDatabase.IsAssetImportWorkerProcess())
             {
                 return;
             }
 
-            Repository.RecoverSettingsFileIfNeeded();
+            EditorApplication.delayCall += RecoverSettingsFileIfNeeded;
         }
 
         internal static void RecoverSettingsFileIfNeeded()

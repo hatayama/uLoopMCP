@@ -19,8 +19,6 @@ namespace io.github.hatayama.UnityCliLoop
     {
         internal static void RegisterForEditorStartup()
         {
-            UnityCliLoopEditorDomainReloadStateProvider.SetDomainReloadInProgressFromMainThread(
-                UnityCliLoopEditorSettings.GetIsDomainReloadInProgress());
             DomainReloadStateRegistry.RegisterProvider(new UnityCliLoopEditorDomainReloadStateProvider());
         }
     }
