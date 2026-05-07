@@ -4,11 +4,17 @@ using System.Threading.Tasks;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Defines the Unity CLI Loop Record Input operations required by the owning workflow.
+    /// </summary>
     public interface IUnityCliLoopRecordInputService
     {
         Task<UnityCliLoopRecordInputResult> RecordInputAsync(UnityCliLoopRecordInputRequest request, CancellationToken ct);
     }
 
+    /// <summary>
+    /// Defines the Unity CLI Loop Replay Input operations required by the owning workflow.
+    /// </summary>
     public interface IUnityCliLoopReplayInputService
     {
         Task<UnityCliLoopReplayInputResult> ReplayInputAsync(UnityCliLoopReplayInputRequest request, CancellationToken ct);

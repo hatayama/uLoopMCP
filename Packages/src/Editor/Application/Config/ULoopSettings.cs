@@ -6,6 +6,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 namespace io.github.hatayama.UnityCliLoop.Application
 {
     // Port for persisted Unity CLI Loop permission settings.
+    /// <summary>
+    /// Defines the ULoop settings boundary required by the application layer.
+    /// </summary>
     public interface IULoopSettingsPort
     {
         ULoopSettingsData GetSettings();

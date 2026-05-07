@@ -26,6 +26,9 @@ namespace io.github.hatayama.UnityCliLoop.Application
         public string ManualCommand { get; }
     }
 
+    /// <summary>
+    /// Defines how CLI installation state is detected by the owning workflow.
+    /// </summary>
     public interface ICliInstallationDetector
     {
         bool IsCliInstalled();
@@ -37,12 +40,18 @@ namespace io.github.hatayama.UnityCliLoop.Application
         void InvalidateCache();
     }
 
+    /// <summary>
+    /// Defines the project-local CLI installation operations required by CLI setup.
+    /// </summary>
     public interface IProjectLocalCliInstaller
     {
         string DetectBundledRequiredDispatcherVersion();
         CliInstallResult EnsureProjectLocalCliCurrent(string projectRoot, string packageVersion);
     }
 
+    /// <summary>
+    /// Defines the native CLI installation operations required by CLI setup.
+    /// </summary>
     public interface INativeCliInstaller
     {
         bool IsPackageOwnedCurrentUserInstallPath(string cliExecutablePath, RuntimePlatform platform);

@@ -5,6 +5,9 @@ using io.github.hatayama.UnityCliLoop.Domain;
 
 namespace io.github.hatayama.UnityCliLoop.Application
 {
+    /// <summary>
+    /// Defines read access to Unity CLI Loop Server State state for callers that should not own it.
+    /// </summary>
     public interface IUnityCliLoopServerStateReader
     {
         IUnityCliLoopServerInstance CurrentServer { get; }

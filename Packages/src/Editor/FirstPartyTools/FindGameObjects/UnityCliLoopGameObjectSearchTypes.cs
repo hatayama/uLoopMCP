@@ -4,6 +4,9 @@ using Newtonsoft.Json;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Defines the Unity CLI Loop Game Object Search operations required by the owning workflow.
+    /// </summary>
     public interface IUnityCliLoopGameObjectSearchService
     {
         Task<UnityCliLoopGameObjectSearchResult> FindGameObjectsAsync(

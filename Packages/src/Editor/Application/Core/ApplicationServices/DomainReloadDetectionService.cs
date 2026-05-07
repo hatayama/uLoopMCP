@@ -4,6 +4,9 @@ using System.Diagnostics;
 namespace io.github.hatayama.UnityCliLoop.Application
 {
     // Port for domain reload lifecycle state and external lock-file signaling.
+    /// <summary>
+    /// Defines the Domain Reload Detection operations required by the owning workflow.
+    /// </summary>
     public interface IDomainReloadDetectionService
     {
         void RegisterForEditorStartup();

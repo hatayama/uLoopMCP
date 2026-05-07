@@ -38,6 +38,9 @@ namespace io.github.hatayama.UnityCliLoop.Application
     }
 
     // Port for skill setup work that touches the project file system.
+    /// <summary>
+    /// Defines the Skill Setup boundary required by the application layer.
+    /// </summary>
     public interface ISkillSetupPort
     {
         void RemoveSkillFiles(string toolName);

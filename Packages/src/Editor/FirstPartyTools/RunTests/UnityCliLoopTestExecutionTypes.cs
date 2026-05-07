@@ -3,6 +3,9 @@ using System.Threading.Tasks;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Defines the Unity CLI Loop Test Execution operations required by the owning workflow.
+    /// </summary>
     public interface IUnityCliLoopTestExecutionService
     {
         Task<UnityCliLoopTestExecutionResult> RunTestsAsync(UnityCliLoopTestExecutionRequest request, CancellationToken ct);

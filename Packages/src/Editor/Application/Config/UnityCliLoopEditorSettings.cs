@@ -34,6 +34,9 @@ namespace io.github.hatayama.UnityCliLoop.Application
     }
 
     // Port for persisted Editor-only Unity CLI Loop settings.
+    /// <summary>
+    /// Defines the Unity CLI Loop Editor Settings boundary required by the application layer.
+    /// </summary>
     public interface IUnityCliLoopEditorSettingsPort
     {
         void InvalidateCache();

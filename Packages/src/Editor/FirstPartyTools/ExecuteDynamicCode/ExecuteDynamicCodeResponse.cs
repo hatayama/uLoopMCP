@@ -9,9 +9,6 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
     /// Related classes: ExecuteDynamicCodeTool, ExecuteDynamicCodeSchema
     /// </summary>
-    /// <summary>
-    /// Carries the response data returned by the Execute Dynamic Code tool.
-    /// </summary>
     public class ExecuteDynamicCodeResponse : UnityCliLoopToolResponse
     {
         private const bool EmitTimingsInJsonResponses = false;

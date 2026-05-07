@@ -3,6 +3,9 @@ using System.Collections.Generic;
 
 namespace io.github.hatayama.UnityCliLoop.Application
 {
+    /// <summary>
+    /// Defines access to Internal Tool Name dependencies without exposing their implementation.
+    /// </summary>
     public interface IInternalToolNameProvider
     {
         HashSet<string> GetInternalToolNames(string projectRoot);

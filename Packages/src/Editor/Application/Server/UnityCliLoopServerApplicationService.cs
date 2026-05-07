@@ -18,11 +18,17 @@ namespace io.github.hatayama.UnityCliLoop.Application
         void StopServer();
     }
 
+    /// <summary>
+    /// Defines how Unity CLI Loop server instances are created without exposing concrete construction.
+    /// </summary>
     public interface IUnityCliLoopServerInstanceFactory
     {
         IUnityCliLoopServerInstance Create();
     }
 
+    /// <summary>
+    /// Defines the event source used to observe Unity CLI Loop server lifecycle behavior.
+    /// </summary>
     public interface IUnityCliLoopServerLifecycleSource
     {
         event Action ServerStarted;
@@ -32,6 +38,9 @@ namespace io.github.hatayama.UnityCliLoop.Application
         event Action ServerLoopExited;
     }
 
+    /// <summary>
+    /// Defines the control operations needed for Unity CLI Loop Server behavior.
+    /// </summary>
     public interface IUnityCliLoopServerController
     {
         bool IsServerRunning { get; }

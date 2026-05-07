@@ -22,6 +22,9 @@ namespace io.github.hatayama.UnityCliLoop.Application
     }
 
     // Port for dispatching continuations onto Unity's main thread.
+    /// <summary>
+    /// Defines the Main Thread Dispatcher contract used by Unity CLI Loop.
+    /// </summary>
     public interface IMainThreadDispatcher
     {
         int MainThreadId { get; }

@@ -8,6 +8,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 namespace io.github.hatayama.UnityCliLoop.Application
 {
     // Port for persisted tool toggle settings.
+    /// <summary>
+    /// Defines the Tool Settings boundary required by the application layer.
+    /// </summary>
     public interface IToolSettingsPort
     {
         ToolSettingsData GetSettings();

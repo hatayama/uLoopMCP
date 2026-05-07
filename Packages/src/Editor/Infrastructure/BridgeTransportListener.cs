@@ -26,6 +26,9 @@ namespace io.github.hatayama.UnityCliLoop.Infrastructure
         }
     }
 
+    /// <summary>
+    /// Defines listener operations for bridge transport sessions.
+    /// </summary>
     internal interface IBridgeTransportListener : IDisposable
     {
         BridgeTransportEndpoint Endpoint { get; }

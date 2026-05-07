@@ -4,6 +4,9 @@ using System.Threading.Tasks;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Defines the Unity CLI Loop Screenshot operations required by the owning workflow.
+    /// </summary>
     public interface IUnityCliLoopScreenshotService
     {
         Task<UnityCliLoopScreenshotResult> CaptureAsync(UnityCliLoopScreenshotRequest request, CancellationToken ct);

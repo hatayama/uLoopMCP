@@ -4,6 +4,9 @@ using System.Threading.Tasks;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
+    /// <summary>
+    /// Defines the Unity CLI Loop Keyboard Simulation operations required by the owning workflow.
+    /// </summary>
     public interface IUnityCliLoopKeyboardSimulationService
     {
         Task<UnityCliLoopKeyboardSimulationResult> SimulateKeyboardAsync(
@@ -11,6 +14,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             CancellationToken ct);
     }
 
+    /// <summary>
+    /// Defines the Unity CLI Loop Mouse Input Simulation operations required by the owning workflow.
+    /// </summary>
     public interface IUnityCliLoopMouseInputSimulationService
     {
         Task<UnityCliLoopMouseInputSimulationResult> SimulateMouseInputAsync(
@@ -18,6 +24,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             CancellationToken ct);
     }
 
+    /// <summary>
+    /// Defines the Unity CLI Loop Mouse UI Simulation operations required by the owning workflow.
+    /// </summary>
     public interface IUnityCliLoopMouseUiSimulationService
     {
         Task<UnityCliLoopMouseUiSimulationResult> SimulateMouseUiAsync(

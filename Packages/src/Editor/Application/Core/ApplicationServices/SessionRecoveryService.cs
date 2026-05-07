@@ -5,6 +5,9 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.Application
 {
+    /// <summary>
+    /// Defines the coordination boundary for Unity CLI Loop Server Recovery behavior.
+    /// </summary>
     public interface IUnityCliLoopServerRecoveryCoordinator
     {
         IUnityCliLoopServerInstance CurrentServer { get; }

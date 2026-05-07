@@ -4,6 +4,9 @@ using System.Diagnostics;
 namespace io.github.hatayama.UnityCliLoop.Application
 {
     // Port for the compilation lock file used by external CLI processes.
+    /// <summary>
+    /// Defines the Compilation Lock operations required by the owning workflow.
+    /// </summary>
     public interface ICompilationLockService
     {
         void RegisterForEditorStartup();
