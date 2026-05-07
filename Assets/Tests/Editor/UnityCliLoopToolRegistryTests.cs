@@ -1,6 +1,5 @@
 using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
@@ -11,247 +10,7 @@ namespace io.github.hatayama.UnityCliLoop
     {
         public static UnityCliLoopToolRegistry Create()
         {
-            return new UnityCliLoopToolRegistry(new ToolHostServicesForTests());
-        }
-
-        private sealed class ToolHostServicesForTests : IUnityCliLoopToolHostServices
-        {
-            public IUnityCliLoopConsoleLogService ConsoleLogs { get; } =
-                new EmptyConsoleLogService();
-            public IUnityCliLoopConsoleClearService ConsoleClear { get; } =
-                new SuccessfulConsoleClearService();
-            public IUnityCliLoopCompilationService Compilation { get; } =
-                new SuccessfulCompilationService();
-            public IUnityCliLoopDynamicCodeExecutionService DynamicCodeExecution { get; } =
-                new SuccessfulDynamicCodeExecutionService();
-            public IUnityCliLoopHierarchyService Hierarchy { get; } =
-                new EmptyHierarchyService();
-            public IUnityCliLoopTestExecutionService TestExecution { get; } =
-                new SuccessfulTestExecutionService();
-            public IUnityCliLoopGameObjectSearchService GameObjectSearch { get; } =
-                new EmptyGameObjectSearchService();
-            public IUnityCliLoopScreenshotService Screenshot { get; } =
-                new EmptyScreenshotService();
-            public IUnityCliLoopRecordInputService RecordInput { get; } =
-                new SuccessfulRecordInputService();
-            public IUnityCliLoopReplayInputService ReplayInput { get; } =
-                new SuccessfulReplayInputService();
-            public IUnityCliLoopKeyboardSimulationService KeyboardSimulation { get; } =
-                new SuccessfulKeyboardSimulationService();
-            public IUnityCliLoopMouseInputSimulationService MouseInputSimulation { get; } =
-                new SuccessfulMouseInputSimulationService();
-            public IUnityCliLoopMouseUiSimulationService MouseUiSimulation { get; } =
-                new SuccessfulMouseUiSimulationService();
-        }
-
-        private sealed class EmptyConsoleLogService : IUnityCliLoopConsoleLogService
-        {
-            public UnityCliLoopConsoleLogResult GetLogs(string logType)
-            {
-                return new UnityCliLoopConsoleLogResult(new UnityCliLoopConsoleLogEntry[0], 0);
-            }
-
-            public UnityCliLoopConsoleLogResult GetLogsWithSearch(
-                string logType,
-                string searchText,
-                bool useRegex,
-                bool searchInStackTrace)
-            {
-                return new UnityCliLoopConsoleLogResult(new UnityCliLoopConsoleLogEntry[0], 0);
-            }
-        }
-
-        private sealed class SuccessfulConsoleClearService : IUnityCliLoopConsoleClearService
-        {
-            public UnityCliLoopConsoleClearResult Clear(bool addConfirmationMessage)
-            {
-                UnityCliLoopConsoleClearCounts counts = new UnityCliLoopConsoleClearCounts(0, 0, 0);
-                return new UnityCliLoopConsoleClearResult(true, 0, counts, string.Empty);
-            }
-        }
-
-        private sealed class SuccessfulCompilationService : IUnityCliLoopCompilationService
-        {
-            public Task<UnityCliLoopCompileResult> CompileAsync(UnityCliLoopCompileRequest request, CancellationToken ct)
-            {
-                ct.ThrowIfCancellationRequested();
-                UnityCliLoopCompileResult result = new UnityCliLoopCompileResult
-                {
-                    Success = true,
-                    ErrorCount = 0,
-                    WarningCount = 0,
-                    Errors = new UnityCliLoopCompileIssue[0],
-                    Warnings = new UnityCliLoopCompileIssue[0],
-                    Message = string.Empty,
-                    ProjectRoot = UnityCliLoopPathResolver.GetProjectRoot()
-                };
-                return Task.FromResult(result);
-            }
-        }
-
-        private sealed class SuccessfulDynamicCodeExecutionService : IUnityCliLoopDynamicCodeExecutionService
-        {
-            public Task<ExecuteDynamicCodeResponse> ExecuteAsync(ExecuteDynamicCodeSchema parameters, CancellationToken ct)
-            {
-                ct.ThrowIfCancellationRequested();
-                ExecuteDynamicCodeResponse response = new ExecuteDynamicCodeResponse
-                {
-                    Success = true,
-                    Result = "ok",
-                    ErrorMessage = string.Empty,
-                    SecurityLevel = ULoopSettings.GetDynamicCodeSecurityLevel().ToString()
-                };
-                return Task.FromResult(response);
-            }
-        }
-
-        private sealed class EmptyHierarchyService : IUnityCliLoopHierarchyService
-        {
-            public Task<UnityCliLoopHierarchyResult> GetHierarchyAsync(UnityCliLoopHierarchyRequest request, CancellationToken ct)
-            {
-                ct.ThrowIfCancellationRequested();
-                UnityCliLoopHierarchyResult result = new UnityCliLoopHierarchyResult(string.Empty, string.Empty);
-                return Task.FromResult(result);
-            }
-        }
-
-        private sealed class SuccessfulTestExecutionService : IUnityCliLoopTestExecutionService
-        {
-            public Task<UnityCliLoopTestExecutionResult> RunTestsAsync(UnityCliLoopTestExecutionRequest request, CancellationToken ct)
-            {
-                ct.ThrowIfCancellationRequested();
-                UnityCliLoopTestExecutionResult result = new UnityCliLoopTestExecutionResult
-                {
-                    Success = true,
-                    Message = string.Empty,
-                    CompletedAt = string.Empty,
-                    TestCount = 0,
-                    PassedCount = 0,
-                    FailedCount = 0,
-                    SkippedCount = 0,
-                    XmlPath = string.Empty
-                };
-                return Task.FromResult(result);
-            }
-        }
-
-        private sealed class EmptyGameObjectSearchService : IUnityCliLoopGameObjectSearchService
-        {
-            public Task<UnityCliLoopGameObjectSearchResult> FindGameObjectsAsync(
-                UnityCliLoopGameObjectSearchRequest request,
-                CancellationToken ct)
-            {
-                ct.ThrowIfCancellationRequested();
-                UnityCliLoopGameObjectSearchResult result = new UnityCliLoopGameObjectSearchResult
-                {
-                    Results = new UnityCliLoopGameObjectResult[0],
-                    TotalFound = 0,
-                    ErrorMessage = string.Empty,
-                    ResultsFilePath = string.Empty,
-                    Message = string.Empty,
-                    ProcessingErrors = new UnityCliLoopGameObjectProcessingError[0]
-                };
-                return Task.FromResult(result);
-            }
-        }
-
-        private sealed class EmptyScreenshotService : IUnityCliLoopScreenshotService
-        {
-            public Task<UnityCliLoopScreenshotResult> CaptureAsync(UnityCliLoopScreenshotRequest request, CancellationToken ct)
-            {
-                ct.ThrowIfCancellationRequested();
-                return Task.FromResult(new UnityCliLoopScreenshotResult());
-            }
-        }
-
-        private sealed class SuccessfulRecordInputService : IUnityCliLoopRecordInputService
-        {
-            public Task<UnityCliLoopRecordInputResult> RecordInputAsync(UnityCliLoopRecordInputRequest request, CancellationToken ct)
-            {
-                ct.ThrowIfCancellationRequested();
-                UnityCliLoopRecordInputResult result = new UnityCliLoopRecordInputResult
-                {
-                    Success = true,
-                    Message = string.Empty,
-                    Action = request.Action.ToString()
-                };
-                return Task.FromResult(result);
-            }
-        }
-
-        private sealed class SuccessfulReplayInputService : IUnityCliLoopReplayInputService
-        {
-            public Task<UnityCliLoopReplayInputResult> ReplayInputAsync(UnityCliLoopReplayInputRequest request, CancellationToken ct)
-            {
-                ct.ThrowIfCancellationRequested();
-                UnityCliLoopReplayInputResult result = new UnityCliLoopReplayInputResult
-                {
-                    Success = true,
-                    Message = string.Empty,
-                    Action = request.Action.ToString()
-                };
-                return Task.FromResult(result);
-            }
-        }
-
-        private sealed class SuccessfulKeyboardSimulationService : IUnityCliLoopKeyboardSimulationService
-        {
-            public Task<UnityCliLoopKeyboardSimulationResult> SimulateKeyboardAsync(
-                UnityCliLoopKeyboardSimulationRequest request,
-                CancellationToken ct)
-            {
-                ct.ThrowIfCancellationRequested();
-                UnityCliLoopKeyboardSimulationResult result = new UnityCliLoopKeyboardSimulationResult
-                {
-                    Success = true,
-                    Message = string.Empty,
-                    Action = request.Action.ToString(),
-                    KeyName = request.Key
-                };
-                return Task.FromResult(result);
-            }
-        }
-
-        private sealed class SuccessfulMouseInputSimulationService : IUnityCliLoopMouseInputSimulationService
-        {
-            public Task<UnityCliLoopMouseInputSimulationResult> SimulateMouseInputAsync(
-                UnityCliLoopMouseInputSimulationRequest request,
-                CancellationToken ct)
-            {
-                ct.ThrowIfCancellationRequested();
-                UnityCliLoopMouseInputSimulationResult result = new UnityCliLoopMouseInputSimulationResult
-                {
-                    Success = true,
-                    Message = string.Empty,
-                    Action = request.Action.ToString(),
-                    Button = request.Button.ToString(),
-                    PositionX = request.X,
-                    PositionY = request.Y
-                };
-                return Task.FromResult(result);
-            }
-        }
-
-        private sealed class SuccessfulMouseUiSimulationService : IUnityCliLoopMouseUiSimulationService
-        {
-            public Task<UnityCliLoopMouseUiSimulationResult> SimulateMouseUiAsync(
-                UnityCliLoopMouseUiSimulationRequest request,
-                CancellationToken ct)
-            {
-                ct.ThrowIfCancellationRequested();
-                UnityCliLoopMouseUiSimulationResult result = new UnityCliLoopMouseUiSimulationResult
-                {
-                    Success = true,
-                    Message = string.Empty,
-                    Action = request.Action.ToString(),
-                    HitGameObjectName = string.Empty,
-                    PositionX = request.X,
-                    PositionY = request.Y,
-                    EndPositionX = request.X,
-                    EndPositionY = request.Y
-                };
-                return Task.FromResult(result);
-            }
+            return new UnityCliLoopToolRegistry();
         }
     }
 
@@ -594,13 +353,17 @@ namespace io.github.hatayama.UnityCliLoop
             JObject asmdef = JObject.Parse(File.ReadAllText(asmdefPath));
             string[] references = asmdef["references"]?.Values<string>().ToArray() ?? new string[0];
 
-            Assert.That(references, Is.EqualTo(new[] { "UnityCLILoop.ToolContracts" }));
+            Assert.That(references, Does.Contain("UnityCLILoop.ToolContracts"));
+            Assert.That(references, Does.Not.Contain("UnityCLILoop.Application"));
+            Assert.That(references, Does.Not.Contain("UnityCLILoop.Domain"));
+            Assert.That(references, Does.Not.Contain("UnityCLILoop.Infrastructure"));
+            Assert.That(references, Does.Not.Contain("UnityCLILoop.Presentation"));
         }
 
         [Test]
-        public void FirstPartyToolsAsmdef_ReferencesOnlyToolContracts()
+        public void FirstPartyToolsAsmdef_DoesNotReferenceImplementationLayers()
         {
-            // Tests that bundled plugin tools use the same public contract surface as extension tools.
+            // Tests that bundled plugin tools do not depend on UnityCliLoop platform implementation layers.
             string asmdefPath = Path.Combine(
                 UnityCliLoopPathResolver.GetProjectRoot(),
                 "Packages",
@@ -611,7 +374,11 @@ namespace io.github.hatayama.UnityCliLoop
             JObject asmdef = JObject.Parse(File.ReadAllText(asmdefPath));
             string[] references = asmdef["references"]?.Values<string>().ToArray() ?? new string[0];
 
-            Assert.That(references, Is.EqualTo(new[] { "UnityCLILoop.ToolContracts" }));
+            Assert.That(references, Does.Contain("UnityCLILoop.ToolContracts"));
+            Assert.That(references, Does.Not.Contain("UnityCLILoop.Application"));
+            Assert.That(references, Does.Not.Contain("UnityCLILoop.Domain"));
+            Assert.That(references, Does.Not.Contain("UnityCLILoop.Infrastructure"));
+            Assert.That(references, Does.Not.Contain("UnityCLILoop.Presentation"));
         }
 
         [Test]

@@ -1,6 +1,6 @@
 namespace io.github.hatayama.UnityCliLoop
 {
-    public static class UnityCliLoopToolHostServicesRegistration
+    public static class UnityCliLoopApplicationRegistration
     {
         private static readonly object SyncRoot = new object();
         private static bool IsRegistered;
@@ -14,9 +14,7 @@ namespace io.github.hatayama.UnityCliLoop
                     return;
                 }
 
-                DynamicCodeServicesRegistry dynamicCodeServices =
-                    DynamicCodeCompilationServiceRegistration.EnsureRegistered();
-                UnityCliLoopToolRegistrar.RegisterService(CreateToolRegistrarService(dynamicCodeServices));
+                UnityCliLoopToolRegistrar.RegisterService(CreateToolRegistrarService());
                 CliSetupApplicationFacade.RegisterService(CreateCliSetupApplicationService());
                 UnityCliLoopBridgeServerInstanceFactory serverFactory =
                     new UnityCliLoopBridgeServerInstanceFactory();
@@ -24,7 +22,7 @@ namespace io.github.hatayama.UnityCliLoop
                     new UnityCliLoopServerLifecycleRegistryService();
                 lifecycleRegistry.RegisterSource(serverFactory);
                 UnityCliLoopServerControllerService controllerService =
-                    new UnityCliLoopServerControllerService(serverFactory, lifecycleRegistry, dynamicCodeServices);
+                    new UnityCliLoopServerControllerService(serverFactory, lifecycleRegistry);
                 UnityCliLoopServerApplicationService applicationService =
                     new UnityCliLoopServerApplicationService(controllerService);
                 UnityCliLoopServerApplicationFacade.RegisterService(applicationService);
@@ -33,16 +31,9 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        private static IUnityCliLoopToolHostServices CreateHostServices(
-            DynamicCodeServicesRegistry dynamicCodeServices)
+        private static UnityCliLoopToolRegistrarService CreateToolRegistrarService()
         {
-            return new UnityCliLoopToolHostServices(dynamicCodeServices);
-        }
-
-        private static UnityCliLoopToolRegistrarService CreateToolRegistrarService(
-            DynamicCodeServicesRegistry dynamicCodeServices)
-        {
-            return new UnityCliLoopToolRegistrarService(() => CreateHostServices(dynamicCodeServices));
+            return new UnityCliLoopToolRegistrarService();
         }
 
         private static CliSetupApplicationService CreateCliSetupApplicationService()

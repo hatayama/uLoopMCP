@@ -169,7 +169,7 @@ namespace io.github.hatayama.UnityCliLoop
     {
         private static readonly EditorDelayManagerService ServiceValue = new EditorDelayManagerService();
 
-        internal static void InitializeForEditorStartup()
+        public static void InitializeForEditorStartup()
         {
             ServiceValue.Initialize();
         }

@@ -23,35 +23,7 @@ namespace io.github.hatayama.UnityCliLoop
     }
 
     /// <summary>
-    /// Tool host services that are injected into tools which need platform-provided capabilities.
-    /// </summary>
-    public interface IUnityCliLoopToolHostServices
-    {
-        IUnityCliLoopConsoleLogService ConsoleLogs { get; }
-        IUnityCliLoopConsoleClearService ConsoleClear { get; }
-        IUnityCliLoopCompilationService Compilation { get; }
-        IUnityCliLoopDynamicCodeExecutionService DynamicCodeExecution { get; }
-        IUnityCliLoopHierarchyService Hierarchy { get; }
-        IUnityCliLoopTestExecutionService TestExecution { get; }
-        IUnityCliLoopGameObjectSearchService GameObjectSearch { get; }
-        IUnityCliLoopScreenshotService Screenshot { get; }
-        IUnityCliLoopRecordInputService RecordInput { get; }
-        IUnityCliLoopReplayInputService ReplayInput { get; }
-        IUnityCliLoopKeyboardSimulationService KeyboardSimulation { get; }
-        IUnityCliLoopMouseInputSimulationService MouseInputSimulation { get; }
-        IUnityCliLoopMouseUiSimulationService MouseUiSimulation { get; }
-    }
-
-    /// <summary>
-    /// Optional hook for tools that need platform-provided capabilities after normal tool construction.
-    /// </summary>
-    public interface IUnityCliLoopToolHostServicesReceiver
-    {
-        void InitializeHostServices(IUnityCliLoopToolHostServices services);
-    }
-
-    /// <summary>
-    /// Supported Unity Console log families used by log-related tools and host services.
+    /// Supported Unity Console log families used by log-related tools.
     /// </summary>
     public static class UnityCliLoopLogType
     {

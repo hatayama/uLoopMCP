@@ -5,9 +5,6 @@ namespace io.github.hatayama.UnityCliLoop
     {
         internal static void Initialize()
         {
-            AssemblyTypeIndex.InvalidateForEditorStartup();
-            DynamicReferenceSetBuilder.InvalidateReferenceCacheForEditorStartup();
-            SharedRoslynCompilerWorkerHost.RegisterLifecycleForEditorStartup();
         }
     }
 }

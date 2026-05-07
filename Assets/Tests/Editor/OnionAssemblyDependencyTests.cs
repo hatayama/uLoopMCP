@@ -32,11 +32,11 @@ namespace io.github.hatayama.UnityCliLoop
         [Test]
         public void PlatformResultTypes_WhenLoaded_CompileUnderDomainAssembly()
         {
-            // Tests that pure platform result values live in the domain layer.
+            // Tests that extension-facing result values stay outside project implementation assemblies.
             string validationResultAssemblyName = typeof(ValidationResult).Assembly.GetName().Name;
             string serviceResultAssemblyName = typeof(ServiceResult<int>).Assembly.GetName().Name;
 
-            Assert.That(validationResultAssemblyName, Is.EqualTo(DomainAssemblyName));
+            Assert.That(validationResultAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
             Assert.That(serviceResultAssemblyName, Is.EqualTo(DomainAssemblyName));
         }
 
@@ -70,57 +70,57 @@ namespace io.github.hatayama.UnityCliLoop
         [Test]
         public void CompilationDiagnosticMessageParser_WhenLoaded_CompilesUnderDomainAssembly()
         {
-            // Tests that diagnostic-message parsing lives in the domain layer.
+            // Tests that first-party dynamic-code parsing stays inside the bundled tool assembly.
             string parserAssemblyName = typeof(CompilationDiagnosticMessageParser).Assembly.GetName().Name;
 
-            Assert.That(parserAssemblyName, Is.EqualTo(DomainAssemblyName));
+            Assert.That(parserAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
         }
 
         [Test]
         public void DynamicCodeConstants_WhenLoaded_CompileUnderDomainAssembly()
         {
-            // Tests that dynamic-code platform defaults live in the domain layer.
+            // Tests that dynamic-code defaults are owned by the bundled dynamic-code tool.
             string constantsAssemblyName = typeof(DynamicCodeConstants).Assembly.GetName().Name;
 
-            Assert.That(constantsAssemblyName, Is.EqualTo(DomainAssemblyName));
+            Assert.That(constantsAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
         }
 
         [Test]
         public void ScriptChangesDuringPlayOptions_WhenLoaded_CompilesUnderDomainAssembly()
         {
-            // Tests that play-mode compilation policy values live in the domain layer.
+            // Tests that play-mode compilation policy values stay with the bundled compile tool.
             string optionsAssemblyName = typeof(ScriptChangesDuringPlayOptions).Assembly.GetName().Name;
 
-            Assert.That(optionsAssemblyName, Is.EqualTo(DomainAssemblyName));
+            Assert.That(optionsAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
         }
 
         [Test]
         public void DynamicCodeSecurityValues_WhenLoaded_CompileUnderDomainAssembly()
         {
-            // Tests that dynamic-code security result values live in the domain layer.
+            // Tests that public dynamic-code security values stay in the tool contract assembly.
             string resultAssemblyName = typeof(SecurityValidationResult).Assembly.GetName().Name;
             string violationAssemblyName = typeof(SecurityViolation).Assembly.GetName().Name;
 
-            Assert.That(resultAssemblyName, Is.EqualTo(DomainAssemblyName));
-            Assert.That(violationAssemblyName, Is.EqualTo(DomainAssemblyName));
+            Assert.That(resultAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
+            Assert.That(violationAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
         }
 
         [Test]
         public void DangerousApiCatalog_WhenLoaded_CompilesUnderDomainAssembly()
         {
-            // Tests that dynamic-code dangerous API policy lives in the domain layer.
+            // Tests that public dynamic-code dangerous API policy stays in the tool contract assembly.
             string catalogAssemblyName = typeof(DangerousApiCatalog).Assembly.GetName().Name;
 
-            Assert.That(catalogAssemblyName, Is.EqualTo(DomainAssemblyName));
+            Assert.That(catalogAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
         }
 
         [Test]
         public void SourceSecurityScanner_WhenLoaded_CompilesUnderDomainAssembly()
         {
-            // Tests that source-level dynamic-code security scanning lives in the domain layer.
+            // Tests that public source-level dynamic-code scanning stays in the tool contract assembly.
             string scannerAssemblyName = typeof(SourceSecurityScanner).Assembly.GetName().Name;
 
-            Assert.That(scannerAssemblyName, Is.EqualTo(DomainAssemblyName));
+            Assert.That(scannerAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
         }
 
         [Test]
@@ -147,9 +147,9 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
-        public void DynamicCompilationPorts_WhenLoaded_CompileUnderApplicationAssembly()
+        public void DynamicCompilationPorts_WhenLoaded_CompileUnderFirstPartyToolsAssembly()
         {
-            // Tests that dynamic-code compilation ports are owned by the application layer.
+            // Tests that dynamic-code compilation ports are owned by the bundled dynamic-code tool.
             string serviceAssemblyName = typeof(IDynamicCompilationService).Assembly.GetName().Name;
             string factoryAssemblyName = typeof(IDynamicCompilationServiceFactory).Assembly.GetName().Name;
             string registryAssemblyName = typeof(DynamicCompilationServiceRegistryService).Assembly.GetName().Name;
@@ -158,19 +158,19 @@ namespace io.github.hatayama.UnityCliLoop
             string sourcePreparationAssemblyName = typeof(IDynamicCodeSourcePreparationService).Assembly.GetName().Name;
             string assemblyBuilderAssemblyName = typeof(ICompiledAssemblyBuilder).Assembly.GetName().Name;
 
-            Assert.That(serviceAssemblyName, Is.EqualTo(ApplicationAssemblyName));
-            Assert.That(factoryAssemblyName, Is.EqualTo(ApplicationAssemblyName));
-            Assert.That(registryAssemblyName, Is.EqualTo(ApplicationAssemblyName));
-            Assert.That(runtimeFactoryAssemblyName, Is.EqualTo(ApplicationAssemblyName));
-            Assert.That(dynamicServicesAssemblyName, Is.EqualTo(ApplicationAssemblyName));
-            Assert.That(sourcePreparationAssemblyName, Is.EqualTo(ApplicationAssemblyName));
-            Assert.That(assemblyBuilderAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+            Assert.That(serviceAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(factoryAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(registryAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(runtimeFactoryAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(dynamicServicesAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(sourcePreparationAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(assemblyBuilderAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
         }
 
         [Test]
-        public void DynamicCompilationDtos_WhenLoaded_CompileUnderApplicationAssembly()
+        public void DynamicCompilationDtos_WhenLoaded_CompileUnderFirstPartyToolsAssembly()
         {
-            // Tests that dynamic-code compilation DTOs are owned by the application layer.
+            // Tests that dynamic-code compilation DTOs are owned by the bundled dynamic-code tool.
             string requestAssemblyName = typeof(CompilationRequest).Assembly.GetName().Name;
             string resultAssemblyName = typeof(CompilationResult).Assembly.GetName().Name;
             string errorAssemblyName = typeof(CompilationError).Assembly.GetName().Name;
@@ -181,113 +181,113 @@ namespace io.github.hatayama.UnityCliLoop
             string planAssemblyName = typeof(DynamicCompilationPlan).Assembly.GetName().Name;
             string preparedCodeAssemblyName = typeof(PreparedDynamicCode).Assembly.GetName().Name;
 
-            Assert.That(requestAssemblyName, Is.EqualTo(ApplicationAssemblyName));
-            Assert.That(resultAssemblyName, Is.EqualTo(ApplicationAssemblyName));
-            Assert.That(errorAssemblyName, Is.EqualTo(ApplicationAssemblyName));
-            Assert.That(backendKindAssemblyName, Is.EqualTo(ApplicationAssemblyName));
-            Assert.That(buildResultAssemblyName, Is.EqualTo(ApplicationAssemblyName));
-            Assert.That(loadResultAssemblyName, Is.EqualTo(ApplicationAssemblyName));
-            Assert.That(diagnosticsAssemblyName, Is.EqualTo(ApplicationAssemblyName));
-            Assert.That(planAssemblyName, Is.EqualTo(ApplicationAssemblyName));
-            Assert.That(preparedCodeAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+            Assert.That(requestAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(resultAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(errorAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(backendKindAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(buildResultAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(loadResultAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(diagnosticsAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(planAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(preparedCodeAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
         }
 
         [Test]
-        public void HierarchyHostServiceContract_WhenLoaded_CompilesUnderToolContractsAssembly()
+        public void HierarchyTypes_WhenLoaded_CompileUnderFirstPartyToolsAssembly()
         {
-            // Tests that bundled hierarchy tools consume platform behavior through the public host-service boundary.
+            // Tests that bundled hierarchy implementation types stay inside the first-party tool assembly.
             string serviceAssemblyName = typeof(IUnityCliLoopHierarchyService).Assembly.GetName().Name;
             string requestAssemblyName = typeof(UnityCliLoopHierarchyRequest).Assembly.GetName().Name;
             string resultAssemblyName = typeof(UnityCliLoopHierarchyResult).Assembly.GetName().Name;
 
-            Assert.That(serviceAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
-            Assert.That(requestAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
-            Assert.That(resultAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
+            Assert.That(serviceAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(requestAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(resultAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
         }
 
         [Test]
         public void GetHierarchyUseCase_WhenLoaded_CompilesUnderApplicationAssembly()
         {
-            // Tests that the application layer owns the hierarchy host-service implementation.
+            // Tests that the bundled tool owns the hierarchy implementation.
             string useCaseAssemblyName = typeof(GetHierarchyUseCase).Assembly.GetName().Name;
 
-            Assert.That(useCaseAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+            Assert.That(useCaseAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
         }
 
         [Test]
-        public void TestExecutionHostServiceContract_WhenLoaded_CompilesUnderToolContractsAssembly()
+        public void TestExecutionTypes_WhenLoaded_CompileUnderFirstPartyToolsAssembly()
         {
-            // Tests that bundled test-runner tools consume platform behavior through the public host-service boundary.
+            // Tests that bundled test-runner implementation types stay inside the first-party tool assembly.
             string serviceAssemblyName = typeof(IUnityCliLoopTestExecutionService).Assembly.GetName().Name;
             string requestAssemblyName = typeof(UnityCliLoopTestExecutionRequest).Assembly.GetName().Name;
             string resultAssemblyName = typeof(UnityCliLoopTestExecutionResult).Assembly.GetName().Name;
 
-            Assert.That(serviceAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
-            Assert.That(requestAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
-            Assert.That(resultAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
+            Assert.That(serviceAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(requestAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(resultAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
         }
 
         [Test]
         public void RunTestsUseCase_WhenLoaded_CompilesUnderApplicationAssembly()
         {
-            // Tests that the application layer owns the test execution host-service implementation.
+            // Tests that the bundled tool owns the test execution implementation.
             string useCaseAssemblyName = typeof(RunTestsUseCase).Assembly.GetName().Name;
 
-            Assert.That(useCaseAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+            Assert.That(useCaseAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
         }
 
         [Test]
-        public void GameObjectSearchHostServiceContract_WhenLoaded_CompilesUnderToolContractsAssembly()
+        public void GameObjectSearchTypes_WhenLoaded_CompileUnderFirstPartyToolsAssembly()
         {
-            // Tests that bundled GameObject search tools consume platform behavior through the public host-service boundary.
+            // Tests that bundled GameObject search implementation types stay inside the first-party tool assembly.
             string serviceAssemblyName = typeof(IUnityCliLoopGameObjectSearchService).Assembly.GetName().Name;
             string requestAssemblyName = typeof(UnityCliLoopGameObjectSearchRequest).Assembly.GetName().Name;
             string resultAssemblyName = typeof(UnityCliLoopGameObjectSearchResult).Assembly.GetName().Name;
             string componentAssemblyName = typeof(ComponentInfo).Assembly.GetName().Name;
 
-            Assert.That(serviceAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
-            Assert.That(requestAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
-            Assert.That(resultAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
-            Assert.That(componentAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
+            Assert.That(serviceAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(requestAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(resultAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(componentAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
         }
 
         [Test]
         public void FindGameObjectsUseCase_WhenLoaded_CompilesUnderApplicationAssembly()
         {
-            // Tests that the application layer owns the GameObject search host-service implementation.
+            // Tests that the bundled tool owns the GameObject search implementation.
             string useCaseAssemblyName = typeof(FindGameObjectsUseCase).Assembly.GetName().Name;
 
-            Assert.That(useCaseAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+            Assert.That(useCaseAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
         }
 
         [Test]
-        public void ScreenshotHostServiceContract_WhenLoaded_CompilesUnderToolContractsAssembly()
+        public void ScreenshotTypes_WhenLoaded_CompileUnderFirstPartyToolsAssembly()
         {
-            // Tests that bundled screenshot tools consume platform behavior through the public host-service boundary.
+            // Tests that bundled screenshot implementation types stay inside the first-party tool assembly.
             string serviceAssemblyName = typeof(IUnityCliLoopScreenshotService).Assembly.GetName().Name;
             string requestAssemblyName = typeof(UnityCliLoopScreenshotRequest).Assembly.GetName().Name;
             string resultAssemblyName = typeof(UnityCliLoopScreenshotResult).Assembly.GetName().Name;
             string elementAssemblyName = typeof(UIElementInfo).Assembly.GetName().Name;
 
-            Assert.That(serviceAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
-            Assert.That(requestAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
-            Assert.That(resultAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
-            Assert.That(elementAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
+            Assert.That(serviceAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(requestAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(resultAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(elementAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
         }
 
         [Test]
         public void ScreenshotUseCase_WhenLoaded_CompilesUnderApplicationAssembly()
         {
-            // Tests that the application layer owns the screenshot host-service implementation.
+            // Tests that the bundled tool owns the screenshot implementation.
             string useCaseAssemblyName = typeof(ScreenshotUseCase).Assembly.GetName().Name;
 
-            Assert.That(useCaseAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+            Assert.That(useCaseAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
         }
 
         [Test]
-        public void InputRecordingHostServiceContract_WhenLoaded_CompilesUnderToolContractsAssembly()
+        public void InputRecordingTypes_WhenLoaded_CompileUnderFirstPartyToolsAssembly()
         {
-            // Tests that bundled input recording tools consume platform behavior through the public host-service boundary.
+            // Tests that bundled input recording implementation types stay inside the first-party tool assembly.
             string recordServiceAssemblyName = typeof(IUnityCliLoopRecordInputService).Assembly.GetName().Name;
             string recordRequestAssemblyName = typeof(UnityCliLoopRecordInputRequest).Assembly.GetName().Name;
             string recordResultAssemblyName = typeof(UnityCliLoopRecordInputResult).Assembly.GetName().Name;
@@ -297,31 +297,31 @@ namespace io.github.hatayama.UnityCliLoop
             string recordActionAssemblyName = typeof(RecordInputAction).Assembly.GetName().Name;
             string replayActionAssemblyName = typeof(ReplayInputAction).Assembly.GetName().Name;
 
-            Assert.That(recordServiceAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
-            Assert.That(recordRequestAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
-            Assert.That(recordResultAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
-            Assert.That(replayServiceAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
-            Assert.That(replayRequestAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
-            Assert.That(replayResultAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
-            Assert.That(recordActionAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
-            Assert.That(replayActionAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
+            Assert.That(recordServiceAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(recordRequestAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(recordResultAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(replayServiceAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(replayRequestAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(replayResultAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(recordActionAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(replayActionAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
         }
 
         [Test]
         public void InputRecordingUseCases_WhenLoaded_CompileUnderApplicationAssembly()
         {
-            // Tests that the application layer owns the record/replay host-service implementations.
+            // Tests that the bundled tools own the record/replay implementations.
             string recordUseCaseAssemblyName = typeof(RecordInputUseCase).Assembly.GetName().Name;
             string replayUseCaseAssemblyName = typeof(ReplayInputUseCase).Assembly.GetName().Name;
 
-            Assert.That(recordUseCaseAssemblyName, Is.EqualTo(ApplicationAssemblyName));
-            Assert.That(replayUseCaseAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+            Assert.That(recordUseCaseAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(replayUseCaseAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
         }
 
         [Test]
-        public void InputSimulationHostServiceContract_WhenLoaded_CompilesUnderToolContractsAssembly()
+        public void InputSimulationTypes_WhenLoaded_CompileUnderFirstPartyToolsAssembly()
         {
-            // Tests that bundled input simulation tools consume platform behavior through the public host-service boundary.
+            // Tests that bundled input simulation implementation types stay inside the first-party tool assembly.
             string keyboardServiceAssemblyName = typeof(IUnityCliLoopKeyboardSimulationService).Assembly.GetName().Name;
             string keyboardRequestAssemblyName = typeof(UnityCliLoopKeyboardSimulationRequest).Assembly.GetName().Name;
             string keyboardResultAssemblyName = typeof(UnityCliLoopKeyboardSimulationResult).Assembly.GetName().Name;
@@ -332,28 +332,28 @@ namespace io.github.hatayama.UnityCliLoop
             string mouseUiRequestAssemblyName = typeof(UnityCliLoopMouseUiSimulationRequest).Assembly.GetName().Name;
             string mouseUiResultAssemblyName = typeof(UnityCliLoopMouseUiSimulationResult).Assembly.GetName().Name;
 
-            Assert.That(keyboardServiceAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
-            Assert.That(keyboardRequestAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
-            Assert.That(keyboardResultAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
-            Assert.That(mouseServiceAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
-            Assert.That(mouseRequestAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
-            Assert.That(mouseResultAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
-            Assert.That(mouseUiServiceAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
-            Assert.That(mouseUiRequestAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
-            Assert.That(mouseUiResultAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
+            Assert.That(keyboardServiceAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(keyboardRequestAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(keyboardResultAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(mouseServiceAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(mouseRequestAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(mouseResultAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(mouseUiServiceAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(mouseUiRequestAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(mouseUiResultAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
         }
 
         [Test]
         public void InputSimulationUseCases_WhenLoaded_CompileUnderApplicationAssembly()
         {
-            // Tests that the application layer owns the keyboard and mouse input simulation host-service implementations.
+            // Tests that the bundled tools own the keyboard and mouse input simulation implementations.
             string keyboardUseCaseAssemblyName = typeof(SimulateKeyboardUseCase).Assembly.GetName().Name;
             string mouseUseCaseAssemblyName = typeof(SimulateMouseInputUseCase).Assembly.GetName().Name;
             string mouseUiUseCaseAssemblyName = typeof(SimulateMouseUiUseCase).Assembly.GetName().Name;
 
-            Assert.That(keyboardUseCaseAssemblyName, Is.EqualTo(ApplicationAssemblyName));
-            Assert.That(mouseUseCaseAssemblyName, Is.EqualTo(ApplicationAssemblyName));
-            Assert.That(mouseUiUseCaseAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+            Assert.That(keyboardUseCaseAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(mouseUseCaseAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(mouseUiUseCaseAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
         }
 
         [Test]
@@ -370,25 +370,25 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
-        public void MetadataValidationAsmdef_WhenLoaded_DependsOnlyOnDomain()
+        public void MetadataValidationAsmdef_WhenLoaded_DependsOnlyOnToolContracts()
         {
-            // Tests that metadata validation exposes its own contracts without using Shared as a bucket.
+            // Tests that metadata validation depends on public contracts without reaching into implementation layers.
             string[] references = ReadResolvedReferences("Packages/src/Editor/MetadataValidation/uLoopMCP.Editor.MetadataValidation.asmdef");
 
-            Assert.That(references, Is.EquivalentTo(new[] { DomainAssemblyName }));
+            Assert.That(references, Is.EquivalentTo(new[] { ToolContractsAssemblyName }));
         }
 
         [Test]
-        public void SharedSupportTypes_WhenLoaded_CompileUnderApplicationAssembly()
+        public void SharedSupportTypes_WhenLoaded_CompileUnderOwningAssemblies()
         {
-            // Tests that support constants and logging are owned by the application layer instead of a shared bucket.
+            // Tests that support constants and logging are extension-facing while domain reload state stays in application.
             string constantsAssemblyName = typeof(UnityCliLoopConstants).Assembly.GetName().Name;
             string loggerAssemblyName = typeof(VibeLogger).Assembly.GetName().Name;
             string registryAssemblyName = typeof(DomainReloadStateRegistry).Assembly.GetName().Name;
             string providerAssemblyName = typeof(IDomainReloadStateProvider).Assembly.GetName().Name;
 
-            Assert.That(constantsAssemblyName, Is.EqualTo(ApplicationAssemblyName));
-            Assert.That(loggerAssemblyName, Is.EqualTo(ApplicationAssemblyName));
+            Assert.That(constantsAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
+            Assert.That(loggerAssemblyName, Is.EqualTo(ToolContractsAssemblyName));
             Assert.That(registryAssemblyName, Is.EqualTo(ApplicationAssemblyName));
             Assert.That(providerAssemblyName, Is.EqualTo(ApplicationAssemblyName));
         }
@@ -423,12 +423,16 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
-        public void FirstPartyToolsAsmdef_WhenLoaded_ReferencesOnlyToolContracts()
+        public void FirstPartyToolsAsmdef_WhenLoaded_DoesNotReferenceImplementationLayers()
         {
             // Tests that first-party tools use the same public contract boundary as extension tools.
             string[] references = ReadResolvedReferences("Packages/src/Editor/FirstPartyTools/UnityCLILoop.FirstPartyTools.Editor.asmdef");
 
-            Assert.That(references, Is.EquivalentTo(new[] { ToolContractsAssemblyName }));
+            Assert.That(references, Does.Contain(ToolContractsAssemblyName));
+            Assert.That(references, Does.Not.Contain(ApplicationAssemblyName));
+            Assert.That(references, Does.Not.Contain(DomainAssemblyName));
+            Assert.That(references, Does.Not.Contain(InfrastructureAssemblyName));
+            Assert.That(references, Does.Not.Contain(PresentationAssemblyName));
         }
 
         [Test]
@@ -489,29 +493,29 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
-        public void DynamicCodeCompilerRegistration_WhenLoaded_CompilesUnderCompositionRootAssembly()
+        public void DynamicCodeServices_WhenLoaded_CompileUnderFirstPartyToolsAssembly()
         {
-            // Tests that dynamic-code service registration is owned by the composition root.
-            string registrationAssemblyName = typeof(DynamicCodeCompilationServiceRegistration).Assembly.GetName().Name;
+            // Tests that bundled dynamic-code services are initialized by the first-party tool itself.
+            string servicesAssemblyName = typeof(DynamicCodeServicesRegistry).Assembly.GetName().Name;
 
-            Assert.That(registrationAssemblyName, Is.EqualTo(CompositionRootAssemblyName));
+            Assert.That(servicesAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
         }
 
         [Test]
-        public void DynamicCodeCompilationServiceFactory_WhenLoaded_CompilesUnderInfrastructureAssembly()
+        public void DynamicCodeCompilationServiceFactory_WhenLoaded_CompilesUnderFirstPartyToolsAssembly()
         {
-            // Tests that concrete dynamic-code compiler construction is owned by infrastructure.
+            // Tests that concrete dynamic-code compiler construction is owned by the bundled dynamic-code tool.
             string factoryAssemblyName = typeof(DynamicCodeCompilationServiceFactory).Assembly.GetName().Name;
             string runtimeFactoryAssemblyName = typeof(DynamicCompilationRuntimeServicesFactory).Assembly.GetName().Name;
 
-            Assert.That(factoryAssemblyName, Is.EqualTo(InfrastructureAssemblyName));
-            Assert.That(runtimeFactoryAssemblyName, Is.EqualTo(InfrastructureAssemblyName));
+            Assert.That(factoryAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(runtimeFactoryAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
         }
 
         [Test]
-        public void DynamicCodeCompilationImplementation_WhenLoaded_CompilesUnderInfrastructureAssembly()
+        public void DynamicCodeCompilationImplementation_WhenLoaded_CompilesUnderFirstPartyToolsAssembly()
         {
-            // Tests that concrete dynamic-code compilation implementation stays in infrastructure.
+            // Tests that concrete dynamic-code compilation implementation stays inside the bundled dynamic-code tool.
             string compilerAssemblyName = typeof(DynamicCodeCompiler).Assembly.GetName().Name;
             string plannerAssemblyName = typeof(DynamicCompilationPlanner).Assembly.GetName().Name;
             string sourcePreparationAssemblyName = typeof(DynamicCodeSourcePreparationService).Assembly.GetName().Name;
@@ -520,13 +524,13 @@ namespace io.github.hatayama.UnityCliLoop
             string cacheManagerAssemblyName = typeof(CompilationCacheManager).Assembly.GetName().Name;
             string sharedWorkerAssemblyName = typeof(SharedRoslynCompilerWorkerHost).Assembly.GetName().Name;
 
-            Assert.That(compilerAssemblyName, Is.EqualTo(InfrastructureAssemblyName));
-            Assert.That(plannerAssemblyName, Is.EqualTo(InfrastructureAssemblyName));
-            Assert.That(sourcePreparationAssemblyName, Is.EqualTo(InfrastructureAssemblyName));
-            Assert.That(assemblyBuilderAssemblyName, Is.EqualTo(InfrastructureAssemblyName));
-            Assert.That(assemblyLoadServiceAssemblyName, Is.EqualTo(InfrastructureAssemblyName));
-            Assert.That(cacheManagerAssemblyName, Is.EqualTo(InfrastructureAssemblyName));
-            Assert.That(sharedWorkerAssemblyName, Is.EqualTo(InfrastructureAssemblyName));
+            Assert.That(compilerAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(plannerAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(sourcePreparationAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(assemblyBuilderAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(assemblyLoadServiceAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(cacheManagerAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(sharedWorkerAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
         }
 
         [Test]
@@ -652,32 +656,33 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
-        public void ConsoleClearService_WhenLoaded_CompilesUnderInfrastructureAssembly()
+        public void ConsoleClearService_WhenLoaded_CompilesUnderFirstPartyToolsAssembly()
         {
-            // Tests that Unity Console mutation is owned by infrastructure.
+            // Tests that Unity Console mutation is owned by the bundled clear-console tool.
             string serviceAssemblyName = typeof(ConsoleClearService).Assembly.GetName().Name;
 
-            Assert.That(serviceAssemblyName, Is.EqualTo(InfrastructureAssemblyName));
+            Assert.That(serviceAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
         }
 
         [Test]
-        public void ToolHostServices_WhenLoaded_CompileUnderCompositionRootAssembly()
+        public void ToolHostServices_WhenLoaded_AreRemoved()
         {
-            // Tests that concrete tool host wiring is owned by the composition root.
+            // Tests that bundled tools no longer require composition-root host service wiring.
             Type hostServicesType = Type.GetType(
                 "io.github.hatayama.UnityCliLoop.UnityCliLoopToolHostServices, " + CompositionRootAssemblyName);
 
-            Assert.That(hostServicesType, Is.Not.Null);
+            Assert.That(hostServicesType, Is.Null);
         }
 
         [Test]
-        public void ToolRegistry_WhenLoaded_DoesNotCreateConcreteHostServices()
+        public void ToolRegistry_WhenLoaded_DoesNotCreateOrReceiveConcreteHostServices()
         {
-            // Tests that the application registry depends on a registered host-services factory instead of wiring concrete services itself.
+            // Tests that the application registry creates tools through their public parameterless contract.
             string registrySource = File.ReadAllText(
                 "Packages/src/Editor/Application/Api/Tools/Core/UnityCliLoopToolRegistry.cs");
 
             Assert.That(registrySource, Does.Not.Contain("new UnityCliLoopToolHostServices"));
+            Assert.That(registrySource, Does.Not.Contain("IUnityCliLoopToolHostServices"));
         }
 
         [Test]

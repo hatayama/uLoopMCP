@@ -6,28 +6,51 @@ using Microsoft.Win32.SafeHandles;
 
 namespace io.github.hatayama.UnityCliLoop
 {
+    public sealed class ProjectRootIdentityValidationResult
+    {
+        public bool IsValid { get; }
+
+        public string ErrorMessage { get; }
+
+        private ProjectRootIdentityValidationResult(bool isValid, string errorMessage)
+        {
+            IsValid = isValid;
+            ErrorMessage = errorMessage;
+        }
+
+        public static ProjectRootIdentityValidationResult Success()
+        {
+            return new ProjectRootIdentityValidationResult(true, null);
+        }
+
+        public static ProjectRootIdentityValidationResult Failure(string errorMessage)
+        {
+            return new ProjectRootIdentityValidationResult(false, errorMessage);
+        }
+    }
+
     public static class ProjectRootIdentityValidator
     {
-        public static ValidationResult Validate(
+        public static ProjectRootIdentityValidationResult Validate(
             string expectedProjectRoot,
             string actualProjectRoot)
         {
             if (string.IsNullOrWhiteSpace(expectedProjectRoot))
             {
-                return ValidationResult.Failure("Invalid x-uloop metadata: expectedProjectRoot is required.");
+                return ProjectRootIdentityValidationResult.Failure("Invalid x-uloop metadata: expectedProjectRoot is required.");
             }
 
             if (string.IsNullOrWhiteSpace(actualProjectRoot))
             {
-                return ValidationResult.Failure("Fast project validation is unavailable. Restart Unity CLI Loop and retry.");
+                return ProjectRootIdentityValidationResult.Failure("Fast project validation is unavailable. Restart Unity CLI Loop and retry.");
             }
 
             if (!string.Equals(expectedProjectRoot, actualProjectRoot, StringComparison.Ordinal))
             {
-                return ValidationResult.Failure("Connected Unity instance belongs to a different project.");
+                return ProjectRootIdentityValidationResult.Failure("Connected Unity instance belongs to a different project.");
             }
 
-            return ValidationResult.Success();
+            return ProjectRootIdentityValidationResult.Success();
         }
     }
 

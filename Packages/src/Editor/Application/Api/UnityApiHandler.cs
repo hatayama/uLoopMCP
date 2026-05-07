@@ -55,29 +55,7 @@ namespace io.github.hatayama.UnityCliLoop
             Stopwatch registryExecuteStopwatch = Stopwatch.StartNew();
             UnityCliLoopToolResponse response = await registry.ExecuteToolAsync(commandName, paramsToken);
             registryExecuteStopwatch.Stop();
-
-            AppendExecuteDynamicCodeTimingsIfSupported(
-                response,
-                $"[Perf] RegistryAcquire: {registryAcquireStopwatch.Elapsed.TotalMilliseconds:F1}ms",
-                $"[Perf] RegistryExecute: {registryExecuteStopwatch.Elapsed.TotalMilliseconds:F1}ms");
             return response;
-        }
-
-        private static void AppendExecuteDynamicCodeTimingsIfSupported(
-            UnityCliLoopToolResponse response,
-            params string[] timingEntries)
-        {
-            if (response is not ExecuteDynamicCodeResponse executeDynamicCodeResponse)
-            {
-                return;
-            }
-
-            if (executeDynamicCodeResponse.Timings == null)
-            {
-                executeDynamicCodeResponse.Timings = new System.Collections.Generic.List<string>();
-            }
-
-            executeDynamicCodeResponse.Timings.AddRange(timingEntries);
         }
     }
 }

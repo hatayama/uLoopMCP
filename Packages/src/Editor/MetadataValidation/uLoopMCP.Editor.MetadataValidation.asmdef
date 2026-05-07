@@ -2,7 +2,7 @@
     "name": "uLoopMCP.Editor.MetadataValidation",
     "rootNamespace": "",
     "references": [
-        "UnityCLILoop.Domain"
+        "UnityCLILoop.ToolContracts"
     ],
     "includePlatforms": [
         "Editor"

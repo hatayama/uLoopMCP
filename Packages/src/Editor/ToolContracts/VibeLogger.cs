@@ -339,7 +339,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// </summary>
         private static EnvironmentInfo GetEnvironmentInfo()
         {
-            bool isDomainReloadInProgress = EditorApplication.isCompiling || DomainReloadStateRegistry.IsDomainReloadInProgress();
+            bool isDomainReloadInProgress = EditorApplication.isCompiling;
 
             return new EnvironmentInfo
             {

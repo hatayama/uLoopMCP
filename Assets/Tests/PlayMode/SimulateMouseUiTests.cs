@@ -32,7 +32,6 @@ namespace Tests.PlayMode
             eventSystemGo.AddComponent<StandaloneInputModule>();
 
             tool = new SimulateMouseUiTool();
-            tool.InitializeHostServices(new PlayModeToolHostServices());
 
             yield return null;
         }

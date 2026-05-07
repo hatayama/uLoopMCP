@@ -18,8 +18,6 @@ namespace io.github.hatayama.UnityCliLoop
         public void SetUp()
         {
             tool = new FindGameObjectsTool();
-            tool.InitializeHostServices(new ToolHostServicesForTests(
-                new FindGameObjectsUseCase(new GameObjectFinderService(), new ComponentSerializer())));
             
             // Create test GameObjects
             testObject1 = new GameObject("TestObject1");
@@ -737,28 +735,6 @@ namespace io.github.hatayama.UnityCliLoop
                 testObject1.SetActive(true);
                 testObject2.SetActive(true);
                 Selection.objects = new Object[0];
-            }
-        }
-
-        private sealed class ToolHostServicesForTests : IUnityCliLoopToolHostServices
-        {
-            public IUnityCliLoopConsoleLogService ConsoleLogs => throw new System.NotSupportedException();
-            public IUnityCliLoopConsoleClearService ConsoleClear => throw new System.NotSupportedException();
-            public IUnityCliLoopCompilationService Compilation => throw new System.NotSupportedException();
-            public IUnityCliLoopDynamicCodeExecutionService DynamicCodeExecution => throw new System.NotSupportedException();
-            public IUnityCliLoopHierarchyService Hierarchy => throw new System.NotSupportedException();
-            public IUnityCliLoopTestExecutionService TestExecution => throw new System.NotSupportedException();
-            public IUnityCliLoopGameObjectSearchService GameObjectSearch { get; }
-            public IUnityCliLoopScreenshotService Screenshot => throw new System.NotSupportedException();
-            public IUnityCliLoopRecordInputService RecordInput => throw new System.NotSupportedException();
-            public IUnityCliLoopReplayInputService ReplayInput => throw new System.NotSupportedException();
-            public IUnityCliLoopKeyboardSimulationService KeyboardSimulation => throw new System.NotSupportedException();
-            public IUnityCliLoopMouseInputSimulationService MouseInputSimulation => throw new System.NotSupportedException();
-            public IUnityCliLoopMouseUiSimulationService MouseUiSimulation => throw new System.NotSupportedException();
-
-            public ToolHostServicesForTests(IUnityCliLoopGameObjectSearchService gameObjectSearch)
-            {
-                GameObjectSearch = gameObjectSearch ?? throw new System.ArgumentNullException(nameof(gameObjectSearch));
             }
         }
     }

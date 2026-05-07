@@ -178,11 +178,6 @@ namespace io.github.hatayama.UnityCliLoop
                 UnityCliLoopToolResponse result = await ExecuteMethod(request.Method, request.Params);
                 toolStopwatch.Stop();
 
-                AppendExecuteDynamicCodeTimingsIfSupported(
-                    result,
-                    mainThreadWaitStopwatch.Elapsed.TotalMilliseconds,
-                    toolStopwatch.Elapsed.TotalMilliseconds,
-                    requestStopwatch.Elapsed.TotalMilliseconds);
                 string response = CreateSuccessResponse(request.Id, result);
                 return response;
             }
@@ -220,24 +215,6 @@ namespace io.github.hatayama.UnityCliLoop
         {
             UnityEngine.Debug.LogError(
                 $"[JsonRpcProcessor] Parameter validation error: {exception.Message}\nStack trace: {exception.StackTrace}");
-        }
-
-        private static void AppendExecuteDynamicCodeTimingsIfSupported(
-            UnityCliLoopToolResponse result,
-            double mainThreadWaitMilliseconds,
-            double toolTotalMilliseconds,
-            double requestTotalMilliseconds)
-        {
-            if (result is not ExecuteDynamicCodeResponse executeDynamicCodeResponse)
-            {
-                return;
-            }
-
-            ExecuteDynamicCodeResponseTimingAugmenter.AppendTimingEntries(
-                executeDynamicCodeResponse,
-                mainThreadWaitMilliseconds,
-                toolTotalMilliseconds,
-                requestTotalMilliseconds);
         }
 
         /// <summary>

@@ -5,33 +5,17 @@ using System.Threading.Tasks;
 namespace io.github.hatayama.UnityCliLoop
 {
     /// <summary>
-    /// Bundled tool entry point for Unity Editor screenshots. The platform supplies capture work through host services.
+    /// Bundled tool entry point for Unity Editor screenshots.
     /// </summary>
     [UnityCliLoopTool]
-    public class ScreenshotTool : UnityCliLoopTool<ScreenshotSchema, ScreenshotResponse>, IUnityCliLoopToolHostServicesReceiver
+    public class ScreenshotTool : UnityCliLoopTool<ScreenshotSchema, ScreenshotResponse>
     {
-        private IUnityCliLoopScreenshotService _screenshot;
-
         public override string ToolName => "screenshot";
-
-        public void InitializeHostServices(IUnityCliLoopToolHostServices services)
-        {
-            if (services == null)
-            {
-                throw new System.ArgumentNullException(nameof(services));
-            }
-
-            _screenshot = services.Screenshot ?? throw new System.ArgumentNullException(nameof(services.Screenshot));
-        }
 
         protected override async Task<ScreenshotResponse> ExecuteAsync(ScreenshotSchema parameters, CancellationToken ct)
         {
-            if (_screenshot == null)
-            {
-                throw new System.InvalidOperationException("Host services were not initialized.");
-            }
-
-            UnityCliLoopScreenshotResult result = await _screenshot.CaptureAsync(ToRequest(parameters), ct);
+            ScreenshotUseCase useCase = new ScreenshotUseCase();
+            UnityCliLoopScreenshotResult result = await useCase.CaptureAsync(ToRequest(parameters), ct);
             return ToResponse(result);
         }
 

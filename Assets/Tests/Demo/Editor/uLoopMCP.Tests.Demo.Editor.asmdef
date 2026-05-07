@@ -4,6 +4,7 @@
     "references": [
         "uLoopMCP.Tests.Demo",
         "UnityCLILoop.Application",
+        "UnityCLILoop.FirstPartyTools.Editor",
         "UnityCLILoop.ToolContracts",
         "uLoopMCP.Runtime",
         "GUID:75469ad4d38634e559750d17036d5f7c",

@@ -1,5 +1,4 @@
-using System;
-using System.Threading;
+using System.IO;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
@@ -9,14 +8,11 @@ namespace io.github.hatayama.UnityCliLoop
     public class GetHierarchyToolTests
     {
         private GetHierarchyTool _tool;
-        private FakeHierarchyService _hierarchyService;
         
         [SetUp]
         public void SetUp()
         {
-            _hierarchyService = new FakeHierarchyService();
             _tool = new GetHierarchyTool();
-            _tool.InitializeHostServices(new FakeToolHostServices(_hierarchyService));
         }
         
         [Test]
@@ -27,46 +23,50 @@ namespace io.github.hatayama.UnityCliLoop
         }
         
         [Test]
-        public async Task ExecuteAsync_WithDefaultParameters_ReturnsHostServiceResponse()
+        public async Task ExecuteAsync_WithDefaultParameters_ReturnsHierarchyExport()
         {
-            // Tests that the tool delegates execution to the injected hierarchy host service.
+            // Tests that the bundled hierarchy tool executes without host-service injection.
             JObject parameters = new JObject();
             
             UnityCliLoopToolResponse baseResponse = await _tool.ExecuteAsync(parameters);
             GetHierarchyResponse response = baseResponse as GetHierarchyResponse;
             
             Assert.That(response, Is.Not.Null);
-            Assert.That(response.hierarchyFilePath, Is.EqualTo("HierarchyResults/fake.json"));
-            Assert.That(response.message, Is.EqualTo("fake hierarchy message"));
-            Assert.That(_hierarchyService.LastRequest, Is.Not.Null);
+            Assert.That(response.hierarchyFilePath, Is.Not.Empty);
+            Assert.That(response.message, Does.Contain("Hierarchy data saved"));
+            DeleteExportedFile(response.hierarchyFilePath);
         }
         
         [Test]
         public async Task ExecuteAsync_WithMaxDepthParameter_MapsRequest()
         {
-            // Tests that MaxDepth crosses the first-party tool boundary through the host request DTO.
+            // Tests that MaxDepth is accepted by the self-contained first-party tool.
             JObject parameters = new JObject
             {
                 ["MaxDepth"] = 1
             };
             
-            await _tool.ExecuteAsync(parameters);
+            UnityCliLoopToolResponse baseResponse = await _tool.ExecuteAsync(parameters);
+            GetHierarchyResponse response = baseResponse as GetHierarchyResponse;
             
-            Assert.That(_hierarchyService.LastRequest.MaxDepth, Is.EqualTo(1));
+            Assert.That(response, Is.Not.Null);
+            DeleteExportedFile(response.hierarchyFilePath);
         }
         
         [Test]
         public async Task ExecuteAsync_WithIncludeComponentsFalse_MapsRequest()
         {
-            // Tests that component inclusion crosses the first-party tool boundary through the host request DTO.
+            // Tests that component inclusion is accepted by the self-contained first-party tool.
             JObject parameters = new JObject
             {
                 ["IncludeComponents"] = false
             };
             
-            await _tool.ExecuteAsync(parameters);
+            UnityCliLoopToolResponse baseResponse = await _tool.ExecuteAsync(parameters);
+            GetHierarchyResponse response = baseResponse as GetHierarchyResponse;
             
-            Assert.That(_hierarchyService.LastRequest.IncludeComponents, Is.False);
+            Assert.That(response, Is.Not.Null);
+            DeleteExportedFile(response.hierarchyFilePath);
         }
         
         [Test]
@@ -85,39 +85,17 @@ namespace io.github.hatayama.UnityCliLoop
             Assert.That(schema.Properties.ContainsKey("UseComponentsLut"), Is.True);
         }
 
-        private sealed class FakeHierarchyService : IUnityCliLoopHierarchyService
+        private static void DeleteExportedFile(string relativePath)
         {
-            public UnityCliLoopHierarchyRequest LastRequest { get; private set; }
-
-            public Task<UnityCliLoopHierarchyResult> GetHierarchyAsync(UnityCliLoopHierarchyRequest request, CancellationToken ct)
+            if (string.IsNullOrEmpty(relativePath))
             {
-                LastRequest = request;
-                UnityCliLoopHierarchyResult result = new UnityCliLoopHierarchyResult(
-                    "HierarchyResults/fake.json",
-                    "fake hierarchy message");
-                return Task.FromResult(result);
+                return;
             }
-        }
 
-        private sealed class FakeToolHostServices : IUnityCliLoopToolHostServices
-        {
-            public IUnityCliLoopConsoleLogService ConsoleLogs => throw new NotSupportedException();
-            public IUnityCliLoopConsoleClearService ConsoleClear => throw new NotSupportedException();
-            public IUnityCliLoopCompilationService Compilation => throw new NotSupportedException();
-            public IUnityCliLoopDynamicCodeExecutionService DynamicCodeExecution => throw new NotSupportedException();
-            public IUnityCliLoopHierarchyService Hierarchy { get; }
-            public IUnityCliLoopTestExecutionService TestExecution => throw new NotSupportedException();
-            public IUnityCliLoopGameObjectSearchService GameObjectSearch => throw new NotSupportedException();
-            public IUnityCliLoopScreenshotService Screenshot => throw new NotSupportedException();
-            public IUnityCliLoopRecordInputService RecordInput => throw new NotSupportedException();
-            public IUnityCliLoopReplayInputService ReplayInput => throw new NotSupportedException();
-            public IUnityCliLoopKeyboardSimulationService KeyboardSimulation => throw new NotSupportedException();
-            public IUnityCliLoopMouseInputSimulationService MouseInputSimulation => throw new NotSupportedException();
-            public IUnityCliLoopMouseUiSimulationService MouseUiSimulation => throw new NotSupportedException();
-
-            public FakeToolHostServices(IUnityCliLoopHierarchyService hierarchy)
+            string absolutePath = Path.Combine(UnityCliLoopPathResolver.GetProjectRoot(), relativePath);
+            if (File.Exists(absolutePath))
             {
-                Hierarchy = hierarchy ?? throw new ArgumentNullException(nameof(hierarchy));
+                File.Delete(absolutePath);
             }
         }
     }

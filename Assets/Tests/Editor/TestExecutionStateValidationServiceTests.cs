@@ -52,19 +52,6 @@ namespace io.github.hatayama.UnityCliLoop
         }
 
         [Test]
-        public void Validate_WhenDomainReloadIsInProgress_ShouldReturnFailure()
-        {
-            TestExecutionStateValidationService service = new StubTestExecutionStateValidationService(
-                isPlaying: false,
-                isDomainReloadInProgress: true);
-
-            ValidationResult result = service.Validate(TestMode.EditMode, saveBeforeRun: false);
-
-            Assert.That(result.IsValid, Is.False);
-            Assert.That(result.ErrorMessage, Is.EqualTo("Tests cannot run while domain reload is in progress"));
-        }
-
-        [Test]
         public void Validate_WhenEditorIsUpdating_ShouldReturnFailure()
         {
             TestExecutionStateValidationService service = new StubTestExecutionStateValidationService(
@@ -140,7 +127,6 @@ namespace io.github.hatayama.UnityCliLoop
         {
             private readonly bool _isPlaying;
             private readonly bool _isCompiling;
-            private readonly bool _isDomainReloadInProgress;
             private readonly bool _isUpdating;
             private readonly ValidationResult _saveResult;
             private readonly bool _clearUnsavedChangesAfterSave;
@@ -151,7 +137,6 @@ namespace io.github.hatayama.UnityCliLoop
             public StubTestExecutionStateValidationService(
                 bool isPlaying,
                 bool isCompiling = false,
-                bool isDomainReloadInProgress = false,
                 bool isUpdating = false,
                 string[] unsavedEditorChanges = null,
                 ValidationResult saveResult = null,
@@ -159,7 +144,6 @@ namespace io.github.hatayama.UnityCliLoop
             {
                 _isPlaying = isPlaying;
                 _isCompiling = isCompiling;
-                _isDomainReloadInProgress = isDomainReloadInProgress;
                 _isUpdating = isUpdating;
                 _unsavedEditorChanges = unsavedEditorChanges ?? new string[0];
                 _saveResult = saveResult ?? ValidationResult.Success();
@@ -168,7 +152,6 @@ namespace io.github.hatayama.UnityCliLoop
 
             protected override bool IsPlaying => _isPlaying;
             protected override bool IsCompiling => _isCompiling;
-            protected override bool IsDomainReloadInProgress => _isDomainReloadInProgress;
             protected override bool IsUpdating => _isUpdating;
             protected override string[] DetectUnsavedEditorChanges()
             {

@@ -16,7 +16,6 @@ namespace io.github.hatayama.UnityCliLoop
 
         protected virtual bool IsPlaying => EditorApplication.isPlaying;
         protected virtual bool IsCompiling => EditorApplication.isCompiling;
-        protected virtual bool IsDomainReloadInProgress => DomainReloadDetectionService.IsDomainReloadInProgress();
         protected virtual bool IsUpdating => EditorApplication.isUpdating;
         protected virtual string[] DetectUnsavedEditorChanges()
         {
@@ -32,11 +31,6 @@ namespace io.github.hatayama.UnityCliLoop
             if (IsCompiling)
             {
                 return ValidationResult.Failure("Tests cannot run while compilation is in progress");
-            }
-
-            if (IsDomainReloadInProgress)
-            {
-                return ValidationResult.Failure("Tests cannot run while domain reload is in progress");
             }
 
             if (IsUpdating)

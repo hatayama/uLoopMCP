@@ -4,34 +4,18 @@ using System.Threading.Tasks;
 namespace io.github.hatayama.UnityCliLoop
 {
     /// <summary>
-    /// Bundled tool entry point for mouse input simulation. The platform supplies simulation work through host services.
+    /// Bundled tool entry point for mouse input simulation.
     /// </summary>
     [UnityCliLoopTool]
-    public class SimulateMouseInputTool : UnityCliLoopTool<SimulateMouseInputSchema, SimulateMouseInputResponse>, IUnityCliLoopToolHostServicesReceiver
+    public class SimulateMouseInputTool : UnityCliLoopTool<SimulateMouseInputSchema, SimulateMouseInputResponse>
     {
-        private IUnityCliLoopMouseInputSimulationService _mouseInputSimulation;
-
         public override string ToolName => "simulate-mouse-input";
-
-        public void InitializeHostServices(IUnityCliLoopToolHostServices services)
-        {
-            if (services == null)
-            {
-                throw new System.ArgumentNullException(nameof(services));
-            }
-
-            _mouseInputSimulation = services.MouseInputSimulation ?? throw new System.ArgumentNullException(nameof(services.MouseInputSimulation));
-        }
 
         protected override async Task<SimulateMouseInputResponse> ExecuteAsync(SimulateMouseInputSchema parameters, CancellationToken ct)
         {
-            if (_mouseInputSimulation == null)
-            {
-                throw new System.InvalidOperationException("Host services were not initialized.");
-            }
-
+            SimulateMouseInputUseCase useCase = new SimulateMouseInputUseCase();
             UnityCliLoopMouseInputSimulationResult result =
-                await _mouseInputSimulation.SimulateMouseInputAsync(ToRequest(parameters), ct);
+                await useCase.SimulateMouseInputAsync(ToRequest(parameters), ct);
             return ToResponse(result);
         }
 

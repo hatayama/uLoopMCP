@@ -21,7 +21,6 @@ namespace Tests.PlayMode
         {
             base.Setup();
             tool = new SimulateMouseInputTool();
-            tool.InitializeHostServices(new PlayModeToolHostServices());
             mouse = InputSystem.AddDevice<Mouse>();
         }
 

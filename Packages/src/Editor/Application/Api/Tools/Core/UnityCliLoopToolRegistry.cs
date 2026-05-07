@@ -23,12 +23,10 @@ namespace io.github.hatayama.UnityCliLoop
         private const string ApplicationAssemblyName = "UnityCLILoop.Application";
         private const string FirstPartyToolsAssemblyName = "UnityCLILoop.FirstPartyTools.Editor";
 
-        private readonly IUnityCliLoopToolHostServices _hostServices;
         private readonly Dictionary<string, IUnityCliLoopTool> _tools = new();
 
-        internal UnityCliLoopToolRegistry(IUnityCliLoopToolHostServices hostServices)
+        internal UnityCliLoopToolRegistry()
         {
-            _hostServices = hostServices ?? throw new ArgumentNullException(nameof(hostServices));
             RegisterDefaultTools();
         }
 
@@ -69,11 +67,6 @@ namespace io.github.hatayama.UnityCliLoop
         private IUnityCliLoopTool CreateTool(Type type)
         {
             IUnityCliLoopTool tool = (IUnityCliLoopTool)Activator.CreateInstance(type);
-            if (tool is IUnityCliLoopToolHostServicesReceiver receiver)
-            {
-                receiver.InitializeHostServices(_hostServices);
-            }
-
             return tool;
         }
 
@@ -164,28 +157,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             response.SetVersion(UnityCliLoopVersion.VERSION);
 
-            AppendExecuteDynamicCodeTimingsIfSupported(
-                response,
-                $"[Perf] RegistryMainThreadHop: {mainThreadHopStopwatch.Elapsed.TotalMilliseconds:F1}ms",
-                $"[Perf] ToolBody: {toolBodyStopwatch.Elapsed.TotalMilliseconds:F1}ms");
             return response;
-        }
-
-        private static void AppendExecuteDynamicCodeTimingsIfSupported(
-            UnityCliLoopToolResponse response,
-            params string[] timingEntries)
-        {
-            if (response is not ExecuteDynamicCodeResponse executeDynamicCodeResponse)
-            {
-                return;
-            }
-
-            if (executeDynamicCodeResponse.Timings == null)
-            {
-                executeDynamicCodeResponse.Timings = new List<string>();
-            }
-
-            executeDynamicCodeResponse.Timings.AddRange(timingEntries);
         }
 
         /// <summary>

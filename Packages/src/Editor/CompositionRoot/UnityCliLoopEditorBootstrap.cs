@@ -10,9 +10,9 @@ namespace io.github.hatayama.UnityCliLoop
         {
             MetadataValidationEditorStartup.Initialize();
             ApplicationEditorStartup.Initialize();
+            FirstPartyToolsEditorStartup.Initialize();
             InfrastructureEditorStartup.Initialize();
-            DynamicCodeCompilationServiceRegistration.EnsureRegistered();
-            UnityCliLoopToolHostServicesRegistration.EnsureRegistered();
+            UnityCliLoopApplicationRegistration.EnsureRegistered();
             PresentationEditorStartup.Initialize();
         }
     }

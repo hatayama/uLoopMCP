@@ -4,34 +4,17 @@ using System.Threading.Tasks;
 namespace io.github.hatayama.UnityCliLoop
 {
     /// <summary>
-    /// Bundled tool entry point for GameObject search. The platform supplies scene access through host services.
+    /// Bundled tool entry point for GameObject search.
     /// </summary>
     [UnityCliLoopTool]
-    public class FindGameObjectsTool : UnityCliLoopTool<FindGameObjectsSchema, FindGameObjectsResponse>,
-        IUnityCliLoopToolHostServicesReceiver
+    public class FindGameObjectsTool : UnityCliLoopTool<FindGameObjectsSchema, FindGameObjectsResponse>
     {
-        private IUnityCliLoopGameObjectSearchService _gameObjectSearch;
-
         public override string ToolName => "find-game-objects";
 
-        public void InitializeHostServices(IUnityCliLoopToolHostServices services)
-        {
-            if (services == null)
-            {
-                throw new System.ArgumentNullException(nameof(services));
-            }
-
-            _gameObjectSearch = services.GameObjectSearch ?? throw new System.ArgumentNullException(nameof(services.GameObjectSearch));
-        }
-        
         protected override async Task<FindGameObjectsResponse> ExecuteAsync(FindGameObjectsSchema parameters, CancellationToken ct)
         {
-            if (_gameObjectSearch == null)
-            {
-                throw new System.InvalidOperationException("Host services were not initialized.");
-            }
-
-            UnityCliLoopGameObjectSearchResult result = await _gameObjectSearch.FindGameObjectsAsync(ToRequest(parameters), ct);
+            FindGameObjectsUseCase useCase = new FindGameObjectsUseCase(new GameObjectFinderService(), new ComponentSerializer());
+            UnityCliLoopGameObjectSearchResult result = await useCase.FindGameObjectsAsync(ToRequest(parameters), ct);
             return ToResponse(result);
         }
 

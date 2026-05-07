@@ -22,14 +22,6 @@ namespace io.github.hatayama.UnityCliLoop
                     "Compilation is already in progress. Please wait for the current compilation to finish."
                 );
             }
-            
-            if (UnityCliLoopEditorSettings.GetIsDomainReloadInProgress())
-            {
-                return ValidationResult.Failure(
-                    "Cannot compile while domain reload is in progress. Please wait for the domain reload to complete."
-                );
-            }
-            
             if (EditorApplication.isUpdating)
             {
                 return ValidationResult.Failure(

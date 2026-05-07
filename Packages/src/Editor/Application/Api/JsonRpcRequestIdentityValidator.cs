@@ -11,7 +11,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return;
             }
 
-            ValidationResult validation = ProjectRootIdentityValidator.Validate(
+            ProjectRootIdentityValidationResult validation = ProjectRootIdentityValidator.Validate(
                 metadata.ExpectedProjectRoot,
                 actualProjectRoot);
             if (!validation.IsValid)

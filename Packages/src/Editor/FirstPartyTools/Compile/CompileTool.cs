@@ -10,30 +10,14 @@ namespace io.github.hatayama.UnityCliLoop
     /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - UseCase + Tool Pattern (DDD Integration)
     /// </summary>
     [UnityCliLoopTool]
-    public class CompileTool : UnityCliLoopTool<CompileSchema, CompileResponse>, IUnityCliLoopToolHostServicesReceiver
+    public class CompileTool : UnityCliLoopTool<CompileSchema, CompileResponse>
     {
-        private IUnityCliLoopCompilationService _compilation;
-
         public override string ToolName => "compile";
-
-        public void InitializeHostServices(IUnityCliLoopToolHostServices services)
-        {
-            if (services == null)
-            {
-                throw new System.ArgumentNullException(nameof(services));
-            }
-
-            _compilation = services.Compilation ?? throw new System.ArgumentNullException(nameof(services.Compilation));
-        }
 
         protected override async Task<CompileResponse> ExecuteAsync(CompileSchema parameters, CancellationToken ct)
         {
-            if (_compilation == null)
-            {
-                throw new System.InvalidOperationException("Host services were not initialized.");
-            }
-
-            UnityCliLoopCompileResult result = await _compilation.CompileAsync(ToRequest(parameters), ct);
+            CompileUseCase useCase = new CompileUseCase();
+            UnityCliLoopCompileResult result = await useCase.CompileAsync(ToRequest(parameters), ct);
             return ToResponse(result);
         }
 

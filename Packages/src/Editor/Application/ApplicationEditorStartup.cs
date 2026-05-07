@@ -11,14 +11,6 @@ namespace io.github.hatayama.UnityCliLoop
             EditorDelayManager.InitializeForEditorStartup();
             DomainReloadDetectionService.RegisterForEditorStartup();
             CompilationLockService.RegisterForEditorStartup();
-            LogGetter.InitializeForEditorStartup();
-#if ULOOP_HAS_INPUT_SYSTEM
-            InputRecorder.InitializeForEditorStartup();
-            InputReplayer.InitializeForEditorStartup();
-            KeyboardKeyState.InitializeForEditorStartup();
-            MouseInputState.InitializeForEditorStartup();
-            MouseDragState.InitializeForEditorStartup();
-#endif
             ProjectLocalCliAutoInstaller.ScheduleForEditorStartup();
         }
     }

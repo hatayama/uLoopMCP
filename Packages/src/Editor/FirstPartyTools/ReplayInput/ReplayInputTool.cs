@@ -4,33 +4,17 @@ using System.Threading.Tasks;
 namespace io.github.hatayama.UnityCliLoop
 {
     /// <summary>
-    /// Bundled tool entry point for input replay. The platform supplies replay work through host services.
+    /// Bundled tool entry point for input replay.
     /// </summary>
     [UnityCliLoopTool]
-    public class ReplayInputTool : UnityCliLoopTool<ReplayInputSchema, ReplayInputResponse>, IUnityCliLoopToolHostServicesReceiver
+    public class ReplayInputTool : UnityCliLoopTool<ReplayInputSchema, ReplayInputResponse>
     {
-        private IUnityCliLoopReplayInputService _replayInput;
-
         public override string ToolName => "replay-input";
-
-        public void InitializeHostServices(IUnityCliLoopToolHostServices services)
-        {
-            if (services == null)
-            {
-                throw new System.ArgumentNullException(nameof(services));
-            }
-
-            _replayInput = services.ReplayInput ?? throw new System.ArgumentNullException(nameof(services.ReplayInput));
-        }
 
         protected override async Task<ReplayInputResponse> ExecuteAsync(ReplayInputSchema parameters, CancellationToken ct)
         {
-            if (_replayInput == null)
-            {
-                throw new System.InvalidOperationException("Host services were not initialized.");
-            }
-
-            UnityCliLoopReplayInputResult result = await _replayInput.ReplayInputAsync(ToRequest(parameters), ct);
+            ReplayInputUseCase useCase = new ReplayInputUseCase();
+            UnityCliLoopReplayInputResult result = await useCase.ReplayInputAsync(ToRequest(parameters), ct);
             return ToResponse(result);
         }
 

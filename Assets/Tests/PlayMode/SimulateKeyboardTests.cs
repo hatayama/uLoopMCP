@@ -43,7 +43,6 @@ namespace Tests.PlayMode
             manualModeFramePressObserver = framePressObserverGo.AddComponent<ManualModeFramePressObserver>();
 
             tool = new TestableSimulateKeyboardTool();
-            tool.InitializeHostServices(new PlayModeToolHostServices());
             keyboard = InputSystem.AddDevice<Keyboard>();
         }
 

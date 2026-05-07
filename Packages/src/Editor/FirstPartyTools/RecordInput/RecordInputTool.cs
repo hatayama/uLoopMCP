@@ -4,33 +4,17 @@ using System.Threading.Tasks;
 namespace io.github.hatayama.UnityCliLoop
 {
     /// <summary>
-    /// Bundled tool entry point for input recording. The platform supplies recording work through host services.
+    /// Bundled tool entry point for input recording.
     /// </summary>
     [UnityCliLoopTool]
-    public class RecordInputTool : UnityCliLoopTool<RecordInputSchema, RecordInputResponse>, IUnityCliLoopToolHostServicesReceiver
+    public class RecordInputTool : UnityCliLoopTool<RecordInputSchema, RecordInputResponse>
     {
-        private IUnityCliLoopRecordInputService _recordInput;
-
         public override string ToolName => "record-input";
-
-        public void InitializeHostServices(IUnityCliLoopToolHostServices services)
-        {
-            if (services == null)
-            {
-                throw new System.ArgumentNullException(nameof(services));
-            }
-
-            _recordInput = services.RecordInput ?? throw new System.ArgumentNullException(nameof(services.RecordInput));
-        }
 
         protected override async Task<RecordInputResponse> ExecuteAsync(RecordInputSchema parameters, CancellationToken ct)
         {
-            if (_recordInput == null)
-            {
-                throw new System.InvalidOperationException("Host services were not initialized.");
-            }
-
-            UnityCliLoopRecordInputResult result = await _recordInput.RecordInputAsync(ToRequest(parameters), ct);
+            RecordInputUseCase useCase = new RecordInputUseCase();
+            UnityCliLoopRecordInputResult result = await useCase.RecordInputAsync(ToRequest(parameters), ct);
             return ToResponse(result);
         }
 

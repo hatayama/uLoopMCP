@@ -7,14 +7,12 @@ namespace io.github.hatayama.UnityCliLoop
     /// </summary>
     public sealed class UnityCliLoopToolRegistrarService
     {
-        private readonly Func<IUnityCliLoopToolHostServices> _hostServicesFactory;
         private UnityCliLoopToolRegistry _sharedRegistry;
 
         internal event Action OnToolsChanged;
 
-        public UnityCliLoopToolRegistrarService(Func<IUnityCliLoopToolHostServices> hostServicesFactory)
+        public UnityCliLoopToolRegistrarService()
         {
-            _hostServicesFactory = hostServicesFactory ?? throw new ArgumentNullException(nameof(hostServicesFactory));
         }
 
         /// <summary>
@@ -26,7 +24,7 @@ namespace io.github.hatayama.UnityCliLoop
             {
                 if (_sharedRegistry == null)
                 {
-                    _sharedRegistry = new UnityCliLoopToolRegistry(_hostServicesFactory());
+                    _sharedRegistry = new UnityCliLoopToolRegistry();
                     // Standard tools are automatically registered in UnityCliLoopToolRegistry constructor
                 }
                 return _sharedRegistry;

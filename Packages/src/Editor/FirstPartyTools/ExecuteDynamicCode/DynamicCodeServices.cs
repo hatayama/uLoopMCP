@@ -58,10 +58,9 @@ namespace io.github.hatayama.UnityCliLoop
             return new ExecuteDynamicCodeUseCase(runtimeFacade);
         }
 
-        public async Task<IPrewarmDynamicCodeUseCase> GetPrewarmDynamicCodeUseCaseAsync(
-            string serverStartingLockToken = null)
+        public async Task<IPrewarmDynamicCodeUseCase> GetPrewarmDynamicCodeUseCaseAsync()
         {
-            await EnsureServerScopedServicesInitializedAsync(serverStartingLockToken);
+            await EnsureServerScopedServicesInitializedAsync();
 
             lock (_serverScopedServicesLock)
             {
@@ -100,8 +99,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        private async Task EnsureServerScopedServicesInitializedAsync(
-            string serverStartingLockToken = null)
+        private async Task EnsureServerScopedServicesInitializedAsync()
         {
             Task drainTask;
 
@@ -109,7 +107,6 @@ namespace io.github.hatayama.UnityCliLoop
             {
                 if (_runtimeFacade != null)
                 {
-                    AttachServerStartingLockTokenIfNeeded(serverStartingLockToken);
                     return;
                 }
 
@@ -122,7 +119,6 @@ namespace io.github.hatayama.UnityCliLoop
             {
                 if (_runtimeFacade != null)
                 {
-                    AttachServerStartingLockTokenIfNeeded(serverStartingLockToken);
                     return;
                 }
 
@@ -133,22 +129,7 @@ namespace io.github.hatayama.UnityCliLoop
                     _executorPool);
                 _prewarmDynamicCodeUseCase = new PrewarmDynamicCodeUseCase(
                     _runtimeFacade,
-                    _serverScopedLifetimeCancellationTokenSource.Token,
-                    null,
-                    serverStartingLockToken);
-            }
-        }
-
-        private void AttachServerStartingLockTokenIfNeeded(string serverStartingLockToken)
-        {
-            if (string.IsNullOrEmpty(serverStartingLockToken))
-            {
-                return;
-            }
-
-            if (_prewarmDynamicCodeUseCase is PrewarmDynamicCodeUseCase prewarmDynamicCodeUseCase)
-            {
-                prewarmDynamicCodeUseCase.AttachServerStartingLockToken(serverStartingLockToken);
+                    _serverScopedLifetimeCancellationTokenSource.Token);
             }
         }
 
@@ -329,23 +310,37 @@ namespace io.github.hatayama.UnityCliLoop
 
     internal static class DynamicCodeServices
     {
+        private static readonly object SyncRoot = new object();
         private static DynamicCodeServicesRegistry RegistryValue;
 
         internal static void RegisterRegistry(DynamicCodeServicesRegistry registry)
         {
             UnityEngine.Debug.Assert(registry != null, "registry must not be null");
 
-            RegistryValue = registry ?? throw new ArgumentNullException(nameof(registry));
+            lock (SyncRoot)
+            {
+                RegistryValue = registry ?? throw new ArgumentNullException(nameof(registry));
+            }
         }
 
         internal static DynamicCodeServicesRegistry GetRegistry()
         {
-            if (RegistryValue == null)
+            lock (SyncRoot)
             {
-                throw new InvalidOperationException("Dynamic code services registry is not registered.");
-            }
+                if (RegistryValue == null)
+                {
+                    RegistryValue = CreateDefaultRegistry();
+                }
 
-            return RegistryValue;
+                return RegistryValue;
+            }
+        }
+
+        private static DynamicCodeServicesRegistry CreateDefaultRegistry()
+        {
+            return new DynamicCodeServicesRegistry(
+                new DynamicCompilationRuntimeServicesFactory(),
+                new DynamicCompilationServiceRegistryService(new DynamicCodeCompilationServiceFactory()));
         }
 
         public static IDynamicCodeSourcePreparationService SourcePreparationService
@@ -373,10 +368,9 @@ namespace io.github.hatayama.UnityCliLoop
             return GetRegistry().GetExecuteDynamicCodeUseCaseAsync();
         }
 
-        public static Task<IPrewarmDynamicCodeUseCase> GetPrewarmDynamicCodeUseCaseAsync(
-            string serverStartingLockToken = null)
+        public static Task<IPrewarmDynamicCodeUseCase> GetPrewarmDynamicCodeUseCaseAsync()
         {
-            return GetRegistry().GetPrewarmDynamicCodeUseCaseAsync(serverStartingLockToken);
+            return GetRegistry().GetPrewarmDynamicCodeUseCaseAsync();
         }
 
         public static void ResetServerScopedServices()

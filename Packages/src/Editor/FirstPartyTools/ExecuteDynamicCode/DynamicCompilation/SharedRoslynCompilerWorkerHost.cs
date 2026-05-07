@@ -22,7 +22,7 @@ namespace io.github.hatayama.UnityCliLoop
         private const string RoslynWorkerAssemblyFileName = "RoslynCompilerWorker.dll";
         private const string RoslynWorkerCompileResponseFileName = "RoslynCompilerWorker.rsp";
         private const string RoslynWorkerProgramTemplateRelativePath =
-            "Editor/Infrastructure/DynamicCompilation/Templates/SharedRoslynCompilerWorkerProgram.cs.template";
+            "Editor/FirstPartyTools/ExecuteDynamicCode/DynamicCompilation/Templates/SharedRoslynCompilerWorkerProgram.cs.template";
         private const string SharedCompilerWorkerResultPrefixToken = "{{SHARED_COMPILER_WORKER_RESULT_PREFIX}}";
         private const string SharedCompilerWorkerEndMarkerToken = "{{SHARED_COMPILER_WORKER_END_MARKER}}";
         private const string SharedCompilerWorkerQuitCommandToken = "{{SHARED_COMPILER_WORKER_QUIT_COMMAND}}";

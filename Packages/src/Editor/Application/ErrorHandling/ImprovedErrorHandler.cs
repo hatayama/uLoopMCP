@@ -264,21 +264,21 @@ namespace io.github.hatayama.UnityCliLoop
         /// Convert execution result errors into a more understandable format
         /// </summary>
         public UserFriendlyErrorDto ProcessError(
-            ExecutionResult originalResult, 
-            string originalCode)
+            string errorMessage,
+            IReadOnlyList<string> logs)
         {
-            string errorMessage = originalResult.ErrorMessage ?? string.Empty;
-            if (originalResult.Logs?.Any() == true)
+            string combinedMessage = errorMessage ?? string.Empty;
+            if (logs?.Any() == true)
             {
-                string combinedErrors = string.Join(" ", originalResult.Logs);
+                string combinedErrors = string.Join(" ", logs);
                 if (!string.IsNullOrEmpty(combinedErrors))
                 {
-                    errorMessage += " " + combinedErrors;
+                    combinedMessage += " " + combinedErrors;
                 }
             }
 
-            TranslationOutput translation = _translator.TranslateFromMessage(errorMessage);
-            return _formatter.Format(translation, errorMessage);
+            TranslationOutput translation = _translator.TranslateFromMessage(combinedMessage);
+            return _formatter.Format(translation, combinedMessage);
         }
     }
 

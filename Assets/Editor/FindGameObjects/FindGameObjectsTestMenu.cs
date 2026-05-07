@@ -98,27 +98,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static FindGameObjectsTool CreateTool()
         {
-            FindGameObjectsTool tool = new FindGameObjectsTool();
-            tool.InitializeHostServices(new FindGameObjectsDebugHostServices());
-            return tool;
-        }
-
-        private sealed class FindGameObjectsDebugHostServices : IUnityCliLoopToolHostServices
-        {
-            public IUnityCliLoopConsoleLogService ConsoleLogs => throw new System.NotSupportedException();
-            public IUnityCliLoopConsoleClearService ConsoleClear => throw new System.NotSupportedException();
-            public IUnityCliLoopCompilationService Compilation => throw new System.NotSupportedException();
-            public IUnityCliLoopDynamicCodeExecutionService DynamicCodeExecution => throw new System.NotSupportedException();
-            public IUnityCliLoopHierarchyService Hierarchy => throw new System.NotSupportedException();
-            public IUnityCliLoopTestExecutionService TestExecution => throw new System.NotSupportedException();
-            public IUnityCliLoopGameObjectSearchService GameObjectSearch { get; } =
-                new FindGameObjectsUseCase(new GameObjectFinderService(), new ComponentSerializer());
-            public IUnityCliLoopScreenshotService Screenshot => throw new System.NotSupportedException();
-            public IUnityCliLoopRecordInputService RecordInput => throw new System.NotSupportedException();
-            public IUnityCliLoopReplayInputService ReplayInput => throw new System.NotSupportedException();
-            public IUnityCliLoopKeyboardSimulationService KeyboardSimulation => throw new System.NotSupportedException();
-            public IUnityCliLoopMouseInputSimulationService MouseInputSimulation => throw new System.NotSupportedException();
-            public IUnityCliLoopMouseUiSimulationService MouseUiSimulation => throw new System.NotSupportedException();
+            return new FindGameObjectsTool();
         }
     }
 }

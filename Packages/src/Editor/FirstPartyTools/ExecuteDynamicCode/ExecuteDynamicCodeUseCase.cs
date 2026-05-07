@@ -16,12 +16,10 @@ namespace io.github.hatayama.UnityCliLoop
         private const string ForegroundWarmupCode =
             "using UnityEngine; LogType previous = Debug.unityLogger.filterLogType; Debug.unityLogger.filterLogType = LogType.Warning; try { Debug.Log(\"Unity CLI Loop dynamic code prewarm\"); return \"Unity CLI Loop dynamic code prewarm\"; } finally { Debug.unityLogger.filterLogType = previous; }";
         private readonly IDynamicCodeExecutionRuntime _runtime;
-        private readonly UserFriendlyErrorConverter _errorHandler;
 
         public ExecuteDynamicCodeUseCase(IDynamicCodeExecutionRuntime runtime)
         {
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
-            _errorHandler = new UserFriendlyErrorConverter();
         }
 
         public async Task<ExecuteDynamicCodeResponse> ExecuteAsync(
@@ -33,7 +31,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             try
             {
-                editorLevel = ULoopSettings.GetDynamicCodeSecurityLevel();
+                editorLevel = FirstPartyDynamicCodeSettings.GetDynamicCodeSecurityLevel();
                 object[] parametersArray = ConvertParameters(parameters.Parameters);
                 string originalCode = parameters.Code ?? string.Empty;
                 bool shouldWarmForegroundExecutionPath = ShouldWarmForegroundExecutionPath(parameters);
@@ -318,35 +316,35 @@ namespace io.github.hatayama.UnityCliLoop
             Exception ex,
             DynamicCodeSecurityLevel securityLevel)
         {
-            UserFriendlyErrorDto exceptionResponse = _errorHandler.ProcessException(ex);
-            if (exceptionResponse != null)
-            {
-                return new ExecuteDynamicCodeResponse
-                {
-                    Success = false,
-                    Result = string.Empty,
-                    Logs = new List<string>
-                    {
-                        $"Original Error: {ex.Message}",
-                        string.IsNullOrEmpty(exceptionResponse.Explanation)
-                            ? null
-                            : $"Explanation: {exceptionResponse.Explanation}"
-                    }.Where(message => !string.IsNullOrEmpty(message)).ToList(),
-                    CompilationErrors = new List<CompilationErrorDto>(),
-                    ErrorMessage = exceptionResponse.FriendlyMessage,
-                    SecurityLevel = securityLevel.ToString()
-                };
-            }
-
             return new ExecuteDynamicCodeResponse
             {
                 Success = false,
                 Result = string.Empty,
-                Logs = new List<string>(),
+                Logs = new List<string> { $"Original Error: {ex.Message}" },
                 CompilationErrors = new List<CompilationErrorDto>(),
-                ErrorMessage = ex.Message ?? "Unknown error occurred",
+                ErrorMessage = CreateFriendlyExceptionMessage(ex),
                 SecurityLevel = securityLevel.ToString()
             };
+        }
+
+        private static string CreateFriendlyExceptionMessage(Exception ex)
+        {
+            if (ex == null)
+            {
+                return "Unknown error occurred";
+            }
+
+            if (ex is TimeoutException)
+            {
+                return "Request timeout";
+            }
+
+            if (ex is ArgumentException)
+            {
+                return "Invalid request parameters";
+            }
+
+            return ex.Message ?? "Unknown error occurred";
         }
 
         private static ExecuteDynamicCodeResponse CreateCancelledResponse(
@@ -395,37 +393,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             if (!result.Success)
             {
-                UserFriendlyErrorDto enhancedError = _errorHandler.ProcessError(result, originalCode);
-                response.ErrorMessage = enhancedError.FriendlyMessage;
                 response.Logs = result.Logs != null ? new List<string>(result.Logs) : new List<string>();
-
-                if (!string.IsNullOrEmpty(enhancedError.Explanation))
-                {
-                    response.Logs.Add($"Explanation: {enhancedError.Explanation}");
-                }
-
-                if (!string.IsNullOrEmpty(enhancedError.Example))
-                {
-                    response.Logs.Add($"Example: {enhancedError.Example}");
-                }
-
-                if (enhancedError.SuggestedSolutions?.Any() == true)
-                {
-                    response.Logs.Add("Solutions:");
-                    foreach (string solution in enhancedError.SuggestedSolutions)
-                    {
-                        response.Logs.Add($"- {solution}");
-                    }
-                }
-
-                if (enhancedError.LearningTips?.Any() == true)
-                {
-                    response.Logs.Add("Tips:");
-                    foreach (string tip in enhancedError.LearningTips)
-                    {
-                        response.Logs.Add($"- {tip}");
-                    }
-                }
 
                 if (result.CompilationErrors?.Any() == true)
                 {

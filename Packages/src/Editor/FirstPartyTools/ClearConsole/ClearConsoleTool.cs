@@ -7,22 +7,9 @@ namespace io.github.hatayama.UnityCliLoop
     /// Bundled tool entry point that clears Unity Console entries through the public tool contract.
     /// </summary>
     [UnityCliLoopTool]
-    public class ClearConsoleTool : UnityCliLoopTool<ClearConsoleSchema, ClearConsoleResponse>,
-        IUnityCliLoopToolHostServicesReceiver
+    public class ClearConsoleTool : UnityCliLoopTool<ClearConsoleSchema, ClearConsoleResponse>
     {
-        private IUnityCliLoopConsoleClearService _consoleClear;
-
         public override string ToolName => "clear-console";
-
-        public void InitializeHostServices(IUnityCliLoopToolHostServices services)
-        {
-            if (services == null)
-            {
-                throw new System.ArgumentNullException(nameof(services));
-            }
-
-            _consoleClear = services.ConsoleClear ?? throw new System.ArgumentNullException(nameof(services.ConsoleClear));
-        }
 
         protected override Task<ClearConsoleResponse> ExecuteAsync(ClearConsoleSchema parameters, CancellationToken ct)
         {
@@ -31,13 +18,9 @@ namespace io.github.hatayama.UnityCliLoop
                 throw new System.ArgumentNullException(nameof(parameters));
             }
 
-            if (_consoleClear == null)
-            {
-                throw new System.InvalidOperationException("Host services were not initialized.");
-            }
-
             ct.ThrowIfCancellationRequested();
-            UnityCliLoopConsoleClearResult result = _consoleClear.Clear(parameters.AddConfirmationMessage);
+            ConsoleClearService consoleClear = new ConsoleClearService();
+            UnityCliLoopConsoleClearResult result = consoleClear.Clear(parameters.AddConfirmationMessage);
             ClearConsoleResponse response = new ClearConsoleResponse(
                 success: result.Success,
                 clearedLogCount: result.ClearedLogCount,

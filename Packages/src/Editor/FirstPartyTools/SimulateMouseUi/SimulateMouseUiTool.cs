@@ -4,34 +4,18 @@ using System.Threading.Tasks;
 namespace io.github.hatayama.UnityCliLoop
 {
     /// <summary>
-    /// Bundled tool entry point for EventSystem mouse simulation. The platform supplies simulation work through host services.
+    /// Bundled tool entry point for EventSystem mouse simulation.
     /// </summary>
     [UnityCliLoopTool]
-    public class SimulateMouseUiTool : UnityCliLoopTool<SimulateMouseUiSchema, SimulateMouseUiResponse>, IUnityCliLoopToolHostServicesReceiver
+    public class SimulateMouseUiTool : UnityCliLoopTool<SimulateMouseUiSchema, SimulateMouseUiResponse>
     {
-        private IUnityCliLoopMouseUiSimulationService _mouseUiSimulation;
-
         public override string ToolName => "simulate-mouse-ui";
-
-        public void InitializeHostServices(IUnityCliLoopToolHostServices services)
-        {
-            if (services == null)
-            {
-                throw new System.ArgumentNullException(nameof(services));
-            }
-
-            _mouseUiSimulation = services.MouseUiSimulation ?? throw new System.ArgumentNullException(nameof(services.MouseUiSimulation));
-        }
 
         protected override async Task<SimulateMouseUiResponse> ExecuteAsync(SimulateMouseUiSchema parameters, CancellationToken ct)
         {
-            if (_mouseUiSimulation == null)
-            {
-                throw new System.InvalidOperationException("Host services were not initialized.");
-            }
-
+            SimulateMouseUiUseCase useCase = new SimulateMouseUiUseCase();
             UnityCliLoopMouseUiSimulationResult result =
-                await _mouseUiSimulation.SimulateMouseUiAsync(ToRequest(parameters), ct);
+                await useCase.SimulateMouseUiAsync(ToRequest(parameters), ct);
             return ToResponse(result);
         }
 

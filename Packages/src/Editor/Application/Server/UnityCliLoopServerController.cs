@@ -202,7 +202,6 @@ namespace io.github.hatayama.UnityCliLoop
         private readonly IUnityCliLoopServerInstanceFactory _serverInstanceFactory;
         private readonly UnityCliLoopServerLifecycleRegistryService _serverLifecycleRegistry;
         private readonly SessionRecoveryService _sessionRecoveryService;
-        private readonly DynamicCodeServicesRegistry _dynamicCodeServices;
         private IUnityCliLoopServerInstance _bridgeServer;
         private readonly SemaphoreSlim _startupSemaphore = new SemaphoreSlim(1, 1);
         private long _startupProtectionUntilTicks = 0;
@@ -210,16 +209,13 @@ namespace io.github.hatayama.UnityCliLoop
 
         internal UnityCliLoopServerControllerService(
             IUnityCliLoopServerInstanceFactory serverInstanceFactory,
-            UnityCliLoopServerLifecycleRegistryService serverLifecycleRegistry,
-            DynamicCodeServicesRegistry dynamicCodeServices)
+            UnityCliLoopServerLifecycleRegistryService serverLifecycleRegistry)
         {
             System.Diagnostics.Debug.Assert(serverInstanceFactory != null, "serverInstanceFactory must not be null");
             System.Diagnostics.Debug.Assert(serverLifecycleRegistry != null, "serverLifecycleRegistry must not be null");
-            System.Diagnostics.Debug.Assert(dynamicCodeServices != null, "dynamicCodeServices must not be null");
 
             _serverInstanceFactory = serverInstanceFactory ?? throw new ArgumentNullException(nameof(serverInstanceFactory));
             _serverLifecycleRegistry = serverLifecycleRegistry ?? throw new ArgumentNullException(nameof(serverLifecycleRegistry));
-            _dynamicCodeServices = dynamicCodeServices ?? throw new ArgumentNullException(nameof(dynamicCodeServices));
             _sessionRecoveryService = new SessionRecoveryService(this);
         }
 
@@ -360,61 +356,38 @@ namespace io.github.hatayama.UnityCliLoop
                 return;
             }
 
-            // Signal server is starting for CLI detection
-            string serverStartingLockToken = CreateOptionalServerStartingLock();
-
-            bool startupLockReleasedByPrewarm = false;
-            try
+            // Always stop the existing server first so the project IPC endpoint is released.
+            if (_bridgeServer != null)
             {
-                // Always stop the existing server first so the project IPC endpoint is released.
-                if (_bridgeServer != null)
-                {
-                    await StopServerWithUseCaseAsync();
-                }
-
-                DynamicCodeStartupTelemetry.Reset();
-                DynamicCodeForegroundWarmupState.Reset();
-
-                UnityCliLoopServerStartupService startupService =
-                    new UnityCliLoopServerStartupService(_serverInstanceFactory);
-                UnityCliLoopServerInitializationUseCase useCase =
-                    new UnityCliLoopServerInitializationUseCase(
-                        new SecurityValidationService(),
-                        startupService);
-                ServerInitializationSchema schema = new()
-                {
-                    PreserveStartupLockUntilExplicitRelease = true
-                };
-                System.Threading.CancellationToken cancellationToken = System.Threading.CancellationToken.None;
-
-                ServerInitializationResponse result = await useCase.ExecuteAsync(schema, cancellationToken);
-
-                if (!result.Success)
-                {
-                    // Error message already handled by UseCase
-                    UnityEngine.Debug.LogError($"Server startup failed: {result.Message}");
-                    return;
-                }
-
-                // UseCase creates a new server instance, so we keep a reference here
-                // for compatibility with existing code
-                _bridgeServer = result.ServerInstance;
-
-                DynamicCodeStartupTelemetry.MarkServerReady();
-                UnityCliLoopToolRegistrar.WarmupRegistry();
-                _dynamicCodeServices.ResetServerScopedServices();
-                IPrewarmDynamicCodeUseCase prewarmDynamicCodeUseCase =
-                    await _dynamicCodeServices.GetPrewarmDynamicCodeUseCaseAsync(serverStartingLockToken);
-                prewarmDynamicCodeUseCase.Request();
-                startupLockReleasedByPrewarm = true;
+                await StopServerWithUseCaseAsync();
             }
-            finally
+
+            UnityCliLoopServerStartupService startupService =
+                new UnityCliLoopServerStartupService(_serverInstanceFactory);
+            UnityCliLoopServerInitializationUseCase useCase =
+                new UnityCliLoopServerInitializationUseCase(
+                    new SecurityValidationService(),
+                    startupService);
+            ServerInitializationSchema schema = new()
             {
-                if (!startupLockReleasedByPrewarm)
-                {
-                    ServerStartingLockService.DeleteOwnedLockFile(serverStartingLockToken);
-                }
+                PreserveStartupLockUntilExplicitRelease = false
+            };
+            System.Threading.CancellationToken cancellationToken = System.Threading.CancellationToken.None;
+
+            ServerInitializationResponse result = await useCase.ExecuteAsync(schema, cancellationToken);
+
+            if (!result.Success)
+            {
+                // Error message already handled by UseCase
+                UnityEngine.Debug.LogError($"Server startup failed: {result.Message}");
+                return;
             }
+
+            // UseCase creates a new server instance, so we keep a reference here
+            // for compatibility with existing code
+            _bridgeServer = result.ServerInstance;
+
+            UnityCliLoopToolRegistrar.WarmupRegistry();
         }
 
         /// <summary>
@@ -454,9 +427,6 @@ namespace io.github.hatayama.UnityCliLoop
 
                 // Clear session state to reflect server stopped
                 UnityCliLoopEditorSettings.ClearServerSession();
-                DynamicCodeStartupTelemetry.Reset();
-                DynamicCodeForegroundWarmupState.Reset();
-                _dynamicCodeServices.ResetServerScopedServices();
             }
             else
             {
@@ -482,9 +452,6 @@ namespace io.github.hatayama.UnityCliLoop
                 _bridgeServer = null;
             }
 
-            DynamicCodeStartupTelemetry.Reset();
-            DynamicCodeForegroundWarmupState.Reset();
-            _dynamicCodeServices.ResetServerScopedServices();
         }
 
         /// <summary>
@@ -601,8 +568,6 @@ namespace io.github.hatayama.UnityCliLoop
                     _bridgeServer = null;
                 }
             }
-            DynamicCodeForegroundWarmupState.Reset();
-            _dynamicCodeServices.ResetServerScopedServices();
             UnityCliLoopEditorSettings.ClearServerSession();
         }
 
@@ -778,7 +743,7 @@ namespace io.github.hatayama.UnityCliLoop
                     5000,
                     250,
                     cancellationToken,
-                    clearServerStartingLockWhenReady: false);
+                    clearServerStartingLockWhenReady: true);
 
                 if (!started)
                 {
@@ -795,12 +760,7 @@ namespace io.github.hatayama.UnityCliLoop
                 // Clear reconnection-related flags on successful recovery
                 UnityCliLoopEditorSettings.ClearReconnectingFlags();
                 UnityCliLoopEditorSettings.ClearPostCompileReconnectingUI();
-                DynamicCodeStartupTelemetry.MarkServerReady();
                 UnityCliLoopToolRegistrar.WarmupRegistry();
-                _dynamicCodeServices.ResetServerScopedServices();
-                IPrewarmDynamicCodeUseCase prewarmDynamicCodeUseCase =
-                    await _dynamicCodeServices.GetPrewarmDynamicCodeUseCaseAsync(serverStartingLockToken);
-                prewarmDynamicCodeUseCase.Request();
 
                 ActivateStartupProtection(5000);
             }
