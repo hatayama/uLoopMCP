@@ -156,7 +156,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             }
 
             bool looksLikeMissingReturn = LooksLikeMissingReturn(executionResult);
-            if (!looksLikeMissingReturn)
+            if (!looksLikeMissingReturn || !CanRetryMissingReturn(originalCode))
             {
                 return executionResult;
             }
@@ -225,6 +225,14 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             }
 
             return false;
+        }
+
+        private static bool CanRetryMissingReturn(string originalCode)
+        {
+            SourceShapeResult shape = SourceShaper.Analyze(originalCode ?? string.Empty);
+            return shape.HasTopLevelStatements
+                   && !shape.HasNamespaceDeclaration
+                   && !shape.HasTypeDeclaration;
         }
 
         private async Task<ExecutionResult> ExecuteRequestAsync(

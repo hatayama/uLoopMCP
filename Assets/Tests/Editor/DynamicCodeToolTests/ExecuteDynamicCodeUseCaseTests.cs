@@ -120,6 +120,49 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
         }
 
         [Test]
+        public async Task ExecuteAsync_WhenRawTypeDeclarationHasMissingReturnFailure_ShouldNotRetry()
+        {
+            // Tests that missing-return recovery stays limited to script-style top-level snippets.
+            MarkForegroundWarmupCompleted();
+            FakeDynamicCodeExecutionRuntime runtime = new(
+                new ExecutionResult
+                {
+                    Success = false,
+                    UpdatedCode = "public class Sample { public string Run(bool condition) { if (condition) return \"x\"; } }",
+                    CompilationErrors = new List<CompilationError>
+                    {
+                        new CompilationError
+                        {
+                            ErrorCode = "CS0161",
+                            Message = "Not all code paths return a value"
+                        }
+                    }
+                });
+            ExecuteDynamicCodeUseCase useCase = new(runtime);
+
+            DynamicCodeSecurityLevel previous = ULoopSettings.GetDynamicCodeSecurityLevel();
+            ULoopSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
+
+            try
+            {
+                ExecuteDynamicCodeResponse response = await useCase.ExecuteAsync(
+                    new ExecuteDynamicCodeSchema
+                    {
+                        Code = "public class Sample { public string Run(bool condition) { if (condition) return \"x\"; } }",
+                        CompileOnly = false
+                    },
+                    CancellationToken.None);
+
+                Assert.That(response.Success, Is.False);
+                Assert.That(runtime.Requests, Has.Count.EqualTo(1));
+            }
+            finally
+            {
+                ULoopSettings.SetDynamicCodeSecurityLevel(previous);
+            }
+        }
+
+        [Test]
         public async Task ExecuteAsync_WhenYieldingRequestNeedsMissingReturnRetry_ShouldPreserveYieldingOnRetry()
         {
             MarkForegroundWarmupCompleted();
