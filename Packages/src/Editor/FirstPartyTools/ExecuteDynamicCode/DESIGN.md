@@ -8,13 +8,8 @@ The public contract must stay stable even when the internal compiler strategy ch
 - The preferred compilation path is Unity-bundled Roslyn.
 - `SharedRoslynCompilerWorkerHost` keeps a warm compiler process so structural cache misses stay fast.
 - The shared worker is an optimization only. It must not own response shaping, security validation, or tool-specific policy.
-
-## Prewarm intent
-
-- Auto prewarm exists to hide first-use compiler startup cost after server startup or recovery.
-- Prewarm must go through the same runtime facade used by normal requests.
-- Prewarm must be single-flight. It should never create a parallel execution lane or bypass runtime idleness checks.
-- Prewarm is allowed to improve latency only. It must not change observable tool behavior.
+- `DynamicCodeStartupPrewarmer` requests one delayed idle execution at editor startup so the first visible user request does not pay the compiler startup cost.
+- Startup prewarm is best-effort. A foreground request may preempt it, and the foreground warmup fallback must remain correct.
 
 ## Fallback intent
 

@@ -20,9 +20,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
         {
             FakeDynamicCodeExecutorProvider provider = new();
             using DynamicCodeExecutorPool pool = new DynamicCodeExecutorPool(provider);
-            using DynamicCodeExecutionFacade facade = new DynamicCodeExecutionFacade(
-                new FakeCompiledAssemblyBuilder(true),
-                pool);
+            using DynamicCodeExecutionFacade facade = new DynamicCodeExecutionFacade(pool);
 
             await facade.ExecuteAsync(
                 CreateRequest(DynamicCodeSecurityLevel.Restricted, "return 1;"),
@@ -39,9 +37,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
         {
             FakeDynamicCodeExecutorProvider provider = new();
             using DynamicCodeExecutorPool pool = new DynamicCodeExecutorPool(provider);
-            using DynamicCodeExecutionFacade facade = new DynamicCodeExecutionFacade(
-                new FakeCompiledAssemblyBuilder(true),
-                pool);
+            using DynamicCodeExecutionFacade facade = new DynamicCodeExecutionFacade(pool);
 
             await facade.ExecuteAsync(
                 CreateRequest(DynamicCodeSecurityLevel.Restricted, "return 1;"),
@@ -59,9 +55,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
         {
             FakeDynamicCodeExecutorProvider provider = new();
             using DynamicCodeExecutorPool pool = new DynamicCodeExecutorPool(provider);
-            DynamicCodeExecutionFacade facade = new(
-                new FakeCompiledAssemblyBuilder(true),
-                pool);
+            DynamicCodeExecutionFacade facade = new(pool);
 
             Assert.DoesNotThrowAsync(async () =>
             {
@@ -73,22 +67,6 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
             facade.Dispose();
 
             Assert.That(provider.CreatedExecutors[0].DisposeCallCount, Is.EqualTo(1));
-        }
-
-        [Test]
-        public void SupportsAutoPrewarm_ShouldDelegateToAssemblyBuilderCapability()
-        {
-            FakeDynamicCodeExecutorProvider provider = new();
-            using DynamicCodeExecutorPool pool = new DynamicCodeExecutorPool(provider);
-            using DynamicCodeExecutionFacade supported = new DynamicCodeExecutionFacade(
-                new FakeCompiledAssemblyBuilder(true),
-                pool);
-            using DynamicCodeExecutionFacade unsupported = new DynamicCodeExecutionFacade(
-                new FakeCompiledAssemblyBuilder(false),
-                new DynamicCodeExecutorPool(provider));
-
-            Assert.That(supported.SupportsAutoPrewarm(), Is.True);
-            Assert.That(unsupported.SupportsAutoPrewarm(), Is.False);
         }
 
         private static DynamicCodeExecutionRequest CreateRequest(
@@ -159,29 +137,5 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
             }
         }
 
-        /// <summary>
-        /// Test support type used by editor and play mode fixtures.
-        /// </summary>
-        private sealed class FakeCompiledAssemblyBuilder : ICompiledAssemblyBuilder
-        {
-            private readonly bool _supportsAutoPrewarm;
-
-            public FakeCompiledAssemblyBuilder(bool supportsAutoPrewarm)
-            {
-                _supportsAutoPrewarm = supportsAutoPrewarm;
-            }
-
-            public bool SupportsAutoPrewarm()
-            {
-                return _supportsAutoPrewarm;
-            }
-
-            public Task<CompiledAssemblyBuildResult> BuildAsync(
-                DynamicCompilationPlan plan,
-                CancellationToken ct = default)
-            {
-                throw new System.NotSupportedException();
-            }
-        }
     }
 }

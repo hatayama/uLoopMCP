@@ -62,18 +62,6 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             _compilationBackend = compilationBackend;
         }
 
-        public bool SupportsAutoPrewarm()
-        {
-            return SupportsAutoPrewarm(_externalCompilerPathResolver.Resolve(), UnityEngine.Application.platform);
-        }
-
-        internal static bool SupportsAutoPrewarm(
-            ExternalCompilerPaths externalCompilerPaths,
-            RuntimePlatform platform)
-        {
-            return externalCompilerPaths != null;
-        }
-
         public async Task<CompiledAssemblyBuildResult> BuildAsync(
             DynamicCompilationPlan plan,
             CancellationToken ct = default)

@@ -8,16 +8,20 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools.Factory
     /// </summary>
     internal sealed class RegistryDynamicCodeExecutorFactory : IDynamicCodeExecutorProvider
     {
-        private readonly DynamicCompilationServiceRegistryService _compilationServiceRegistry;
+        private readonly IDynamicCompilationServiceFactory _compilationServiceFactory;
         private readonly IDynamicCodeSourcePreparationService _sourcePreparationService;
         private readonly CompiledCommandEntryPointResolver _entryPointResolver;
 
         public RegistryDynamicCodeExecutorFactory(
-            DynamicCompilationServiceRegistryService compilationServiceRegistry,
+            IDynamicCompilationServiceFactory compilationServiceFactory,
             IDynamicCodeSourcePreparationService sourcePreparationService,
             CompiledCommandEntryPointResolver entryPointResolver)
         {
-            _compilationServiceRegistry = compilationServiceRegistry;
+            UnityEngine.Debug.Assert(compilationServiceFactory != null, "compilationServiceFactory must not be null");
+            UnityEngine.Debug.Assert(sourcePreparationService != null, "sourcePreparationService must not be null");
+            UnityEngine.Debug.Assert(entryPointResolver != null, "entryPointResolver must not be null");
+
+            _compilationServiceFactory = compilationServiceFactory;
             _sourcePreparationService = sourcePreparationService;
             _entryPointResolver = entryPointResolver;
         }
@@ -25,8 +29,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools.Factory
         public IDynamicCodeExecutor Create(DynamicCodeSecurityLevel securityLevel)
         {
             string correlationId = UnityCliLoopConstants.GenerateCorrelationId();
-            IDynamicCompilationService compiler;
-            if (!_compilationServiceRegistry.TryCreate(securityLevel, out compiler))
+            IDynamicCompilationService compiler = _compilationServiceFactory.Create(securityLevel);
+            if (compiler == null)
             {
                 VibeLogger.LogWarning(
                     "dynamic_executor_stub_created",

@@ -18,7 +18,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             ExecuteDynamicCodeSchema parameters,
             CancellationToken ct)
         {
-            IExecuteDynamicCodeUseCase useCase = await DynamicCodeServices.GetExecuteDynamicCodeUseCaseAsync();
+            IExecuteDynamicCodeUseCase useCase = DynamicCodeServices.GetExecuteDynamicCodeUseCase();
             return await useCase.ExecuteAsync(parameters, ct);
         }
     }

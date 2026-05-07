@@ -14,23 +14,13 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
     /// </summary>
     internal sealed class DynamicCodeExecutionFacade : IShutdownAwareDynamicCodeExecutionRuntime, IDisposable
     {
-        private readonly ICompiledAssemblyBuilder _assemblyBuilder;
         private readonly IDynamicCodeExecutorPool _executorPool;
         private readonly DynamicCodeExecutionScheduler _executionScheduler;
 
-        public DynamicCodeExecutionFacade(
-            ICompiledAssemblyBuilder assemblyBuilder,
-            IDynamicCodeExecutorPool executorPool)
+        public DynamicCodeExecutionFacade(IDynamicCodeExecutorPool executorPool)
         {
-            _assemblyBuilder = assemblyBuilder ?? throw new ArgumentNullException(nameof(assemblyBuilder));
             _executorPool = executorPool ?? throw new ArgumentNullException(nameof(executorPool));
             _executionScheduler = new DynamicCodeExecutionScheduler(_executorPool.Dispose);
-        }
-
-        public bool SupportsAutoPrewarm()
-        {
-            _executionScheduler.ThrowIfDisposed();
-            return _assemblyBuilder.SupportsAutoPrewarm();
         }
 
         public async Task<ExecutionResult> ExecuteAsync(

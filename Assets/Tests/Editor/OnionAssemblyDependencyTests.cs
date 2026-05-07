@@ -177,16 +177,12 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             // Tests that dynamic-code compilation ports are owned by the bundled dynamic-code tool.
             string serviceAssemblyName = typeof(IDynamicCompilationService).Assembly.GetName().Name;
             string factoryAssemblyName = typeof(IDynamicCompilationServiceFactory).Assembly.GetName().Name;
-            string registryAssemblyName = typeof(DynamicCompilationServiceRegistryService).Assembly.GetName().Name;
-            string runtimeFactoryAssemblyName = typeof(IDynamicCompilationRuntimeServicesFactory).Assembly.GetName().Name;
             string dynamicServicesAssemblyName = typeof(DynamicCodeServicesRegistry).Assembly.GetName().Name;
             string sourcePreparationAssemblyName = typeof(IDynamicCodeSourcePreparationService).Assembly.GetName().Name;
             string assemblyBuilderAssemblyName = typeof(ICompiledAssemblyBuilder).Assembly.GetName().Name;
 
             Assert.That(serviceAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
             Assert.That(factoryAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
-            Assert.That(registryAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
-            Assert.That(runtimeFactoryAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
             Assert.That(dynamicServicesAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
             Assert.That(sourcePreparationAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
             Assert.That(assemblyBuilderAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
@@ -543,10 +539,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
         {
             // Tests that concrete dynamic-code compiler construction is owned by the bundled dynamic-code tool.
             string factoryAssemblyName = typeof(DynamicCodeCompilationServiceFactory).Assembly.GetName().Name;
-            string runtimeFactoryAssemblyName = typeof(DynamicCompilationRuntimeServicesFactory).Assembly.GetName().Name;
 
             Assert.That(factoryAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
-            Assert.That(runtimeFactoryAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
         }
 
         [Test]

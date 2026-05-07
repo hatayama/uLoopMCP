@@ -562,11 +562,6 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
             public List<DynamicCodeExecutionRequest> Requests { get; } = new List<DynamicCodeExecutionRequest>();
             public List<DynamicCodeExecutionRequest> TryExecuteRequests { get; } = new List<DynamicCodeExecutionRequest>();
 
-            public bool SupportsAutoPrewarm()
-            {
-                return true;
-            }
-
             public Task<ExecutionResult> ExecuteAsync(
                 DynamicCodeExecutionRequest request,
                 CancellationToken cancellationToken = default)
@@ -616,11 +611,6 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
         /// </summary>
         private sealed class CancellingDynamicCodeExecutionRuntime : IDynamicCodeExecutionRuntime
         {
-            public bool SupportsAutoPrewarm()
-            {
-                return true;
-            }
-
             public Task<ExecutionResult> ExecuteAsync(
                 DynamicCodeExecutionRequest request,
                 CancellationToken cancellationToken = default)

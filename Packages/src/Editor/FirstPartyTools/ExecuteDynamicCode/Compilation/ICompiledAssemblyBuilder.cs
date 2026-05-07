@@ -8,8 +8,6 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
     /// </summary>
     public interface ICompiledAssemblyBuilder
     {
-        bool SupportsAutoPrewarm();
-
         Task<CompiledAssemblyBuildResult> BuildAsync(
             DynamicCompilationPlan plan,
             CancellationToken ct = default);

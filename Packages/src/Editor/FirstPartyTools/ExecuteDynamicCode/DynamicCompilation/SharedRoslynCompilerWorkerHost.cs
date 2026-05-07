@@ -751,11 +751,6 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             Shutdown();
         }
 
-        internal static void ShutdownForServerReset()
-        {
-            Shutdown();
-        }
-
         internal static void ShutdownForTests()
         {
             Shutdown();

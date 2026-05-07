@@ -299,8 +299,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             // Why: this fallback only exists to protect the first real foreground execution that
             // users see after startup or reload.
             // Why not run it for compile-only or yield-to-foreground requests: compile validation
-            // does not need the runtime hot path, and the yield-based startup prewarm already uses
-            // those requests as background work that must stay cancellable.
+            // does not need the runtime hot path, and yield-based requests are background work
+            // that must stay cancellable.
             return !parameters.CompileOnly && !parameters.YieldToForegroundRequests;
         }
 

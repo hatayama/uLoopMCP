@@ -8,8 +8,6 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
     /// </summary>
     internal interface IDynamicCodeExecutionRuntime
     {
-        bool SupportsAutoPrewarm();
-
         Task<ExecutionResult> ExecuteAsync(
             DynamicCodeExecutionRequest request,
             CancellationToken cancellationToken = default);

@@ -39,20 +39,6 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             }
         }
 
-        internal void MarkCompletedByBackgroundWarmup()
-        {
-            lock (_syncRoot)
-            {
-                // Why: startup and recovery already run their own hidden prewarm before users see the
-                // first foreground request, so that successful background path should satisfy the
-                // one-shot fallback as well.
-                // Why not force the foreground fallback to run anyway: that makes warmed startups pay
-                // a second hidden execute-dynamic-code request and pushes the first user-visible call
-                // back into the hundreds of milliseconds we already worked to remove.
-                _status = ForegroundWarmupStatus.Completed;
-            }
-        }
-
         internal void MarkCompletedByForegroundExecution()
         {
             lock (_syncRoot)
@@ -114,11 +100,6 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         internal static void MarkCompleted()
         {
             ServiceValue.MarkCompleted();
-        }
-
-        internal static void MarkCompletedByBackgroundWarmup()
-        {
-            ServiceValue.MarkCompletedByBackgroundWarmup();
         }
 
         internal static void MarkCompletedByForegroundExecution()
