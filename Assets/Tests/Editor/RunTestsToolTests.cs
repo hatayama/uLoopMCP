@@ -67,6 +67,17 @@ namespace io.github.hatayama.uLoopMCP
             Assert.That(schema.SaveBeforeRun, Is.False);
         }
 
+        [Test]
+        public void RunTestMode_NumericValues_ShouldMatchUnityTestRunnerApi()
+        {
+            Assert.That(
+                (int)RunTestMode.EditMode,
+                Is.EqualTo((int)UnityEditor.TestTools.TestRunner.Api.TestMode.EditMode));
+            Assert.That(
+                (int)RunTestMode.PlayMode,
+                Is.EqualTo((int)UnityEditor.TestTools.TestRunner.Api.TestMode.PlayMode));
+        }
+
         /// <summary>
         /// Test for filter creation via service.
         /// </summary>

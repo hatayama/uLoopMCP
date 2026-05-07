@@ -5,8 +5,8 @@ namespace io.github.hatayama.uLoopMCP
     // Mirrors Unity Test Runner mode names without making the command schema depend on Test Framework types.
     public enum RunTestMode
     {
-        EditMode = 0,
-        PlayMode = 1
+        EditMode = 1,
+        PlayMode = 2
     }
 
     /// <summary>
@@ -27,9 +27,9 @@ namespace io.github.hatayama.uLoopMCP
     public class RunTestsSchema : BaseToolSchema
     {
         /// <summary>
-        /// Test mode - EditMode(0), PlayMode(1)
+        /// Test mode - EditMode(1), PlayMode(2)
         /// </summary>
-        [Description("Test mode - EditMode(0), PlayMode(1)")]
+        [Description("Test mode - EditMode(1), PlayMode(2)")]
         public RunTestMode TestMode { get; set; } = RunTestMode.EditMode;
 
         /// <summary>

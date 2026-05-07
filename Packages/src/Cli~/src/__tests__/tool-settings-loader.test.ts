@@ -144,6 +144,16 @@ describe('tool-settings-loader', () => {
 
       expect(isToolEnabled('run-tests')).toBe(false);
     });
+
+    it('should disable run-tests when test framework package is resolved', () => {
+      writePackagesLock(testDir, { 'com.unity.test-framework': { version: '1.3.9' } });
+      writeFileSync(
+        join(testDir, '.uloop', 'settings.tools.json'),
+        JSON.stringify({ disabledTools: ['run-tests'] }),
+      );
+
+      expect(isToolEnabled('run-tests')).toBe(false);
+    });
   });
 
   // ── filterEnabledTools ─────────────────────────────────────────
@@ -215,6 +225,18 @@ describe('tool-settings-loader', () => {
 
     it('should filter run-tests when test framework package is installed', () => {
       writePackageManifest(testDir, { 'com.unity.test-framework': '1.3.9' });
+      writeFileSync(
+        join(testDir, '.uloop', 'settings.tools.json'),
+        JSON.stringify({ disabledTools: ['run-tests'] }),
+      );
+
+      const result: ToolDefinition[] = filterEnabledTools(mockTools);
+
+      expect(result.map((tool) => tool.name)).not.toContain('run-tests');
+    });
+
+    it('should filter run-tests when test framework package is resolved', () => {
+      writePackagesLock(testDir, { 'com.unity.test-framework': { version: '1.3.9' } });
       writeFileSync(
         join(testDir, '.uloop', 'settings.tools.json'),
         JSON.stringify({ disabledTools: ['run-tests'] }),
@@ -310,4 +332,12 @@ describe('tool-settings-loader', () => {
 function writePackageManifest(projectRoot: string, dependencies: Record<string, string>): void {
   mkdirSync(join(projectRoot, 'Packages'), { recursive: true });
   writeFileSync(join(projectRoot, 'Packages', 'manifest.json'), JSON.stringify({ dependencies }));
+}
+
+function writePackagesLock(projectRoot: string, dependencies: Record<string, unknown>): void {
+  mkdirSync(join(projectRoot, 'Packages'), { recursive: true });
+  writeFileSync(
+    join(projectRoot, 'Packages', 'packages-lock.json'),
+    JSON.stringify({ dependencies }),
+  );
 }

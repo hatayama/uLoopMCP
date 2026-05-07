@@ -15,6 +15,7 @@ const ULOOP_DIR = '.uloop';
 const TOOL_SETTINGS_FILE = 'settings.tools.json';
 const PACKAGES_DIR = 'Packages';
 const MANIFEST_FILE = 'manifest.json';
+const PACKAGES_LOCK_FILE = 'packages-lock.json';
 const RUN_TESTS_TOOL_NAME = 'run-tests';
 const UNITY_TEST_FRAMEWORK_DEPENDENCY_PATTERN = /"com\.unity\.test-framework"\s*:/;
 
@@ -114,10 +115,18 @@ function shouldBypassDisabledSettingForDependencyError(
 
 function isUnityTestFrameworkInstalled(projectRoot: string): boolean {
   const manifestPath: string = join(projectRoot, PACKAGES_DIR, MANIFEST_FILE);
-  if (!existsSync(manifestPath)) {
+  const packagesLockPath: string = join(projectRoot, PACKAGES_DIR, PACKAGES_LOCK_FILE);
+
+  return (
+    fileContainsUnityTestFramework(manifestPath) || fileContainsUnityTestFramework(packagesLockPath)
+  );
+}
+
+function fileContainsUnityTestFramework(filePath: string): boolean {
+  if (!existsSync(filePath)) {
     return false;
   }
 
-  const content: string = readFileSync(manifestPath, 'utf-8');
+  const content: string = readFileSync(filePath, 'utf-8');
   return UNITY_TEST_FRAMEWORK_DEPENDENCY_PATTERN.test(content);
 }

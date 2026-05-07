@@ -39,7 +39,7 @@ namespace io.github.hatayama.uLoopMCP
                 ShouldReportDependencyUnavailableBeforeDisabled(toolName, isTestFrameworkAvailable);
         }
 
-        private static bool IsTestFrameworkAvailable
+        internal static bool IsTestFrameworkAvailable
         {
             get
             {
