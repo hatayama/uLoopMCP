@@ -13,7 +13,7 @@ namespace io.github.hatayama.UnityCliLoop
 {
     internal sealed class InputRecorderService
     {
-        private static readonly Key[] DEFAULT_SCAN_KEYS =
+        private readonly Key[] _defaultScanKeys =
         {
             Key.A, Key.B, Key.C, Key.D, Key.E, Key.F, Key.G, Key.H,
             Key.I, Key.J, Key.K, Key.L, Key.M, Key.N, Key.O, Key.P,
@@ -27,7 +27,7 @@ namespace io.github.hatayama.UnityCliLoop
             Key.UpArrow, Key.DownArrow, Key.LeftArrow, Key.RightArrow
         };
 
-        private static readonly MouseButton[] MOUSE_BUTTONS =
+        private readonly MouseButton[] _mouseButtons =
         {
             MouseButton.Left, MouseButton.Right, MouseButton.Middle
         };
@@ -194,7 +194,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return;
             }
 
-            Key[] keysToScan = _cachedKeysToScan ?? DEFAULT_SCAN_KEYS;
+            Key[] keysToScan = _cachedKeysToScan ?? _defaultScanKeys;
             _currentKeyStates.Clear();
 
             for (int i = 0; i < keysToScan.Length; i++)
@@ -248,9 +248,9 @@ namespace io.github.hatayama.UnityCliLoop
 
             _currentButtonStates.Clear();
 
-            for (int i = 0; i < MOUSE_BUTTONS.Length; i++)
+            for (int i = 0; i < _mouseButtons.Length; i++)
             {
-                MouseButton button = MOUSE_BUTTONS[i];
+                MouseButton button = _mouseButtons[i];
                 if (MouseInputState.GetButtonControl(mouse, button).isPressed)
                 {
                     _currentButtonStates.Add(button);
@@ -346,11 +346,11 @@ namespace io.github.hatayama.UnityCliLoop
             });
         }
 
-        private static Key[] BuildKeysToScan(HashSet<Key>? keyFilter)
+        private Key[] BuildKeysToScan(HashSet<Key>? keyFilter)
         {
             if (keyFilter == null || keyFilter.Count == 0)
             {
-                return DEFAULT_SCAN_KEYS;
+                return _defaultScanKeys;
             }
 
             Key[] filtered = new Key[keyFilter.Count];
@@ -410,7 +410,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return;
             }
 
-            Key[] keysToScan = _cachedKeysToScan ?? DEFAULT_SCAN_KEYS;
+            Key[] keysToScan = _cachedKeysToScan ?? _defaultScanKeys;
             for (int i = 0; i < keysToScan.Length; i++)
             {
                 KeyControl? control = keyboard[keysToScan[i]];
@@ -429,11 +429,11 @@ namespace io.github.hatayama.UnityCliLoop
                 return;
             }
 
-            for (int i = 0; i < MOUSE_BUTTONS.Length; i++)
+            for (int i = 0; i < _mouseButtons.Length; i++)
             {
-                if (MouseInputState.GetButtonControl(mouse, MOUSE_BUTTONS[i]).isPressed)
+                if (MouseInputState.GetButtonControl(mouse, _mouseButtons[i]).isPressed)
                 {
-                    _previousButtonStates.Add(MOUSE_BUTTONS[i]);
+                    _previousButtonStates.Add(_mouseButtons[i]);
                 }
             }
         }

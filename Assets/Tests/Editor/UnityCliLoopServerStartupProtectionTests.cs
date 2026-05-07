@@ -1,5 +1,3 @@
-using System;
-using System.Reflection;
 using NUnit.Framework;
 
 namespace io.github.hatayama.UnityCliLoop
@@ -9,106 +7,64 @@ namespace io.github.hatayama.UnityCliLoop
         [Test]
         public void ClearStartupProtection_ResetsProtectionWindow()
         {
-            Type controllerType = typeof(UnityCliLoopServerController);
-            FieldInfo field = controllerType.GetField("startupProtectionUntilTicks", BindingFlags.NonPublic | BindingFlags.Static);
-            MethodInfo method = controllerType.GetMethod("ClearStartupProtection", BindingFlags.NonPublic | BindingFlags.Static);
+            // Tests that the startup protection window can be cleared by recovery code.
+            UnityCliLoopServerControllerService service = new UnityCliLoopServerControllerService();
 
-            Assert.IsNotNull(field, "startupProtectionUntilTicks field should exist");
-            Assert.IsNotNull(method, "ClearStartupProtection method should exist");
+            service.ActivateStartupProtection(60000);
 
-            try
-            {
-                long futureTicks = DateTime.UtcNow.AddMinutes(1).Ticks;
-                field.SetValue(null, futureTicks);
+            Assert.IsTrue(service.IsStartupProtectionActive(), "Startup protection should be active after activation");
 
-                Assert.IsTrue(UnityCliLoopServerController.IsStartupProtectionActive(), "Startup protection should be active after setting future ticks");
+            service.ClearStartupProtection();
 
-                method.Invoke(null, null);
-
-                Assert.IsFalse(UnityCliLoopServerController.IsStartupProtectionActive(), "Startup protection should be cleared by recovery path");
-            }
-            finally
-            {
-                field.SetValue(null, 0L);
-            }
+            Assert.IsFalse(service.IsStartupProtectionActive(), "Startup protection should be cleared by recovery path");
         }
 
         [Test]
         public void OnBeforeAssemblyReload_ShouldClearStartupProtectionBeforeRecovery()
         {
-            Type controllerType = typeof(UnityCliLoopServerController);
-            FieldInfo field = controllerType.GetField("startupProtectionUntilTicks", BindingFlags.NonPublic | BindingFlags.Static);
-            FieldInfo serverField = controllerType.GetField("bridgeServer", BindingFlags.NonPublic | BindingFlags.Static);
-            MethodInfo method = controllerType.GetMethod("OnBeforeAssemblyReload", BindingFlags.NonPublic | BindingFlags.Static);
+            // Tests that assembly-reload recovery clears the startup protection window before shutdown.
+            UnityCliLoopServerControllerService service = new UnityCliLoopServerControllerService();
 
-            Assert.IsNotNull(field, "startupProtectionUntilTicks field should exist");
-            Assert.IsNotNull(serverField, "bridgeServer field should exist");
-            Assert.IsNotNull(method, "OnBeforeAssemblyReload method should exist");
-
-            object originalServer = serverField.GetValue(null);
             UnityCliLoopEditorSettingsData originalSettings = CloneSettings(UnityCliLoopEditorSettings.GetSettings());
 
             try
             {
-                serverField.SetValue(null, new UnityCliLoopBridgeServer());
-                long futureTicks = DateTime.UtcNow.AddMinutes(1).Ticks;
-                field.SetValue(null, futureTicks);
+                service.RegisterRecoveredServer(new UnityCliLoopBridgeServer());
+                service.ActivateStartupProtection(60000);
 
-                Assert.IsTrue(UnityCliLoopServerController.IsStartupProtectionActive(), "Startup protection should be active before reload");
+                Assert.IsTrue(service.IsStartupProtectionActive(), "Startup protection should be active before reload");
 
-                method.Invoke(null, null);
+                service.OnBeforeAssemblyReload();
 
                 Assert.IsFalse(
-                    UnityCliLoopServerController.IsStartupProtectionActive(),
+                    service.IsStartupProtectionActive(),
                     "Assembly reload recovery should clear startup protection so the server can restart"
                 );
             }
             finally
             {
-                serverField.SetValue(null, originalServer);
                 UnityCliLoopEditorSettings.SaveSettings(originalSettings);
                 DomainReloadDetectionService.DeleteLockFile();
-                field.SetValue(null, 0L);
+                service.ClearStartupProtection();
             }
         }
 
         [Test]
-        public async System.Threading.Tasks.Task StopServerWithUseCaseAsync_ShouldClearStartupProtectionBeforeShutdown()
+        public void PrepareForServerShutdown_ShouldClearStartupProtectionBeforeShutdown()
         {
-            Type controllerType = typeof(UnityCliLoopServerController);
-            FieldInfo field = controllerType.GetField("startupProtectionUntilTicks", BindingFlags.NonPublic | BindingFlags.Static);
-            FieldInfo serverField = controllerType.GetField("bridgeServer", BindingFlags.NonPublic | BindingFlags.Static);
-            MethodInfo method = controllerType.GetMethod("StopServerWithUseCaseAsync", BindingFlags.NonPublic | BindingFlags.Static);
+            // Tests that explicit shutdown clears the startup protection window before stopping.
+            UnityCliLoopServerControllerService service = new UnityCliLoopServerControllerService();
 
-            Assert.IsNotNull(field, "startupProtectionUntilTicks field should exist");
-            Assert.IsNotNull(serverField, "bridgeServer field should exist");
-            Assert.IsNotNull(method, "StopServerWithUseCaseAsync method should exist");
+            service.ActivateStartupProtection(60000);
 
-            object originalServer = serverField.GetValue(null);
-            UnityCliLoopEditorSettingsData originalSettings = CloneSettings(UnityCliLoopEditorSettings.GetSettings());
+            Assert.IsTrue(service.IsStartupProtectionActive(), "Startup protection should be active before shutdown");
 
-            try
-            {
-                serverField.SetValue(null, new UnityCliLoopBridgeServer());
-                long futureTicks = DateTime.UtcNow.AddMinutes(1).Ticks;
-                field.SetValue(null, futureTicks);
+            service.PrepareForServerShutdown();
 
-                Assert.IsTrue(UnityCliLoopServerController.IsStartupProtectionActive(), "Startup protection should be active before shutdown");
-
-                System.Threading.Tasks.Task task = (System.Threading.Tasks.Task)method.Invoke(null, null);
-                await task;
-
-                Assert.IsFalse(
-                    UnityCliLoopServerController.IsStartupProtectionActive(),
-                    "Shutdown path should clear startup protection so recovery can restart the server"
-                );
-            }
-            finally
-            {
-                serverField.SetValue(null, originalServer);
-                UnityCliLoopEditorSettings.SaveSettings(originalSettings);
-                field.SetValue(null, 0L);
-            }
+            Assert.IsFalse(
+                service.IsStartupProtectionActive(),
+                "Shutdown path should clear startup protection so recovery can restart the server"
+            );
         }
 
         private static UnityCliLoopEditorSettingsData CloneSettings(UnityCliLoopEditorSettingsData settings)

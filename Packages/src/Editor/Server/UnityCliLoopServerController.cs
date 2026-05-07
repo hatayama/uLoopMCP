@@ -483,7 +483,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Stops the server using new UseCase implementation.
         /// </summary>
-        private async Task StopServerWithUseCaseAsync()
+        internal async Task StopServerWithUseCaseAsync()
         {
             if (IsBackgroundUnityProcess())
             {
@@ -491,7 +491,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return;
             }
 
-            ClearStartupProtection();
+            PrepareForServerShutdown();
 
             // Execute shutdown UseCase
             UnityCliLoopServerShutdownUseCase useCase = new(new UnityCliLoopServerStartupService());
@@ -521,7 +521,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <summary>
         /// Processing before assembly reload.
         /// </summary>
-        private void OnBeforeAssemblyReload()
+        internal void OnBeforeAssemblyReload()
         {
             ClearStartupProtection();
 
@@ -750,17 +750,22 @@ namespace io.github.hatayama.UnityCliLoop
             return nowTicks < System.Threading.Volatile.Read(ref _startupProtectionUntilTicks);
         }
 
-        private void ActivateStartupProtection(int milliseconds)
+        internal void ActivateStartupProtection(int milliseconds)
         {
             long untilTicks = DateTime.UtcNow.AddMilliseconds(milliseconds).Ticks;
             System.Threading.Volatile.Write(ref _startupProtectionUntilTicks, untilTicks);
             VibeLogger.LogInfo("startup_protection_active", $"window={milliseconds}ms");
         }
 
+        internal void PrepareForServerShutdown()
+        {
+            ClearStartupProtection();
+        }
+
         /// <summary>
         /// Clears startup protection so recovery paths can restart the server immediately.
         /// </summary>
-        private void ClearStartupProtection()
+        internal void ClearStartupProtection()
         {
             System.Threading.Volatile.Write(ref _startupProtectionUntilTicks, 0L);
         }

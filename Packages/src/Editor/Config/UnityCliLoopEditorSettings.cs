@@ -55,7 +55,7 @@ namespace io.github.hatayama.UnityCliLoop
     public sealed class UnityCliLoopEditorSettingsRepository
     {
         private string SettingsFilePath => Path.Combine(UnityCliLoopConstants.USER_SETTINGS_FOLDER, UnityCliLoopConstants.SETTINGS_FILE_NAME);
-        private static readonly string[] LegacyTransientSettingKeys =
+        private readonly string[] _legacyTransientSettingKeys =
         {
             "customPort",
             "serverPort",
@@ -601,14 +601,14 @@ namespace io.github.hatayama.UnityCliLoop
             AtomicFileWriter.Write(settingsPath, settingsToken.ToString(Formatting.Indented));
         }
 
-        private static bool RemoveLegacyTransientFields(JToken token)
+        private bool RemoveLegacyTransientFields(JToken token)
         {
             Debug.Assert(token != null, "token must not be null");
 
             bool removed = false;
             if (token is JObject jsonObject)
             {
-                foreach (string legacyKey in LegacyTransientSettingKeys)
+                foreach (string legacyKey in _legacyTransientSettingKeys)
                 {
                     removed |= jsonObject.Remove(legacyKey);
                 }
