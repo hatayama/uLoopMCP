@@ -1,5 +1,5 @@
 {
-    "name": "uLoopMCP.Editor.MetadataValidation",
+    "name": "UnityCLILoop.FirstPartyTools.ExecuteDynamicCode.MetadataValidation.Editor",
     "rootNamespace": "",
     "references": [
         "UnityCLILoop.ToolContracts"

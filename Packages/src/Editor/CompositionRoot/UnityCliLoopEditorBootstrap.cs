@@ -8,7 +8,6 @@ namespace io.github.hatayama.UnityCliLoop
         [InitializeOnLoadMethod]
         private static void Initialize()
         {
-            MetadataValidationEditorStartup.Initialize();
             ApplicationEditorStartup.Initialize();
             FirstPartyToolsEditorStartup.Initialize();
             InfrastructureEditorStartup.Initialize();

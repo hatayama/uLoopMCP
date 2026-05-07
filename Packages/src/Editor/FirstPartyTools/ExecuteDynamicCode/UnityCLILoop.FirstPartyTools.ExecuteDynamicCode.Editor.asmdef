@@ -3,7 +3,7 @@
     "rootNamespace": "",
     "references": [
         "UnityCLILoop.ToolContracts",
-        "uLoopMCP.Editor.MetadataValidation"
+        "UnityCLILoop.FirstPartyTools.ExecuteDynamicCode.MetadataValidation.Editor"
     ],
     "includePlatforms": [
         "Editor"

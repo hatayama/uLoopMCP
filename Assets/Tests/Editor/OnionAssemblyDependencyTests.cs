@@ -30,7 +30,8 @@ namespace io.github.hatayama.UnityCliLoop
         private const string SimulateMouseInputAssemblyName = "UnityCLILoop.FirstPartyTools.SimulateMouseInput.Editor";
         private const string SimulateMouseUiAssemblyName = "UnityCLILoop.FirstPartyTools.SimulateMouseUi.Editor";
         private const string InfrastructureAssemblyName = "UnityCLILoop.Infrastructure";
-        private const string MetadataValidationAssemblyName = "uLoopMCP.Editor.MetadataValidation";
+        private const string MetadataValidationAssemblyName =
+            "UnityCLILoop.FirstPartyTools.ExecuteDynamicCode.MetadataValidation.Editor";
         private const string PresentationAssemblyName = "UnityCLILoop.Presentation";
         private const string ToolContractsAssemblyName = "UnityCLILoop.ToolContracts";
         private const string RemovedSharedAssemblyGuidReference = "GUID:290394860909340b7835eb7cc215ee75";
@@ -388,7 +389,8 @@ namespace io.github.hatayama.UnityCliLoop
         public void MetadataValidationAsmdef_WhenLoaded_DependsOnlyOnToolContracts()
         {
             // Tests that metadata validation depends on public contracts without reaching into implementation layers.
-            string[] references = ReadResolvedReferences("Packages/src/Editor/MetadataValidation/uLoopMCP.Editor.MetadataValidation.asmdef");
+            string[] references = ReadResolvedReferences(
+                "Packages/src/Editor/FirstPartyTools/ExecuteDynamicCode/MetadataValidation/UnityCLILoop.FirstPartyTools.ExecuteDynamicCode.MetadataValidation.Editor.asmdef");
 
             Assert.That(references, Is.EquivalentTo(new[] { ToolContractsAssemblyName }));
         }
@@ -432,7 +434,6 @@ namespace io.github.hatayama.UnityCliLoop
             {
                 ApplicationAssemblyName,
                 DomainAssemblyName,
-                MetadataValidationAssemblyName,
                 ToolContractsAssemblyName
             }));
         }
@@ -514,7 +515,6 @@ namespace io.github.hatayama.UnityCliLoop
                 DomainAssemblyName,
                 FirstPartyToolsAssemblyName,
                 InfrastructureAssemblyName,
-                MetadataValidationAssemblyName,
                 PresentationAssemblyName,
                 ToolContractsAssemblyName
             }));
@@ -1150,7 +1150,6 @@ namespace io.github.hatayama.UnityCliLoop
                 "Packages/src/Editor/FirstPartyTools/",
                 "Packages/src/Editor/Infrastructure/",
                 "Packages/src/Editor/InternalAPIBridge/",
-                "Packages/src/Editor/MetadataValidation/",
                 "Packages/src/Editor/Presentation/",
                 "Packages/src/Editor/ToolContracts/"
             };
