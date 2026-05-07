@@ -20,42 +20,23 @@ namespace io.github.hatayama.UnityCliLoop
         PostLateUpdate = 6
     }
 
-    /// <summary>
-    /// A class that provides functionality equivalent to UniTask's SwitchToMainThread.
-    /// Handles switching to the main thread using EditorApplication.update.
-    /// Reference: https://github.com/Cysharp/UniTask - PlayerLoopHelper implementation
-    /// </summary>
-    [InitializeOnLoad]
-    public static class MainThreadSwitcher
+    public sealed class MainThreadSwitcherService
     {
-        private static int _mainThreadId;
-        private static readonly ConcurrentQueue<Action> _continuationQueue = new();
-        
-        /// <summary>
-        /// Gets the ID of the main thread.
-        /// </summary>
-        public static int MainThreadId => _mainThreadId;
-        
-        /// <summary>
-        /// Determines whether the current thread is the main thread.
-        /// </summary>
-        public static bool IsMainThread => Thread.CurrentThread.ManagedThreadId == _mainThreadId;
+        private readonly ConcurrentQueue<Action> _continuationQueue = new ConcurrentQueue<Action>();
+        private int _mainThreadId;
 
-        static MainThreadSwitcher()
-        {
-            Initialize();
-        }
+        public int MainThreadId => _mainThreadId;
+        public bool IsMainThread => Thread.CurrentThread.ManagedThreadId == _mainThreadId;
 
-        [InitializeOnLoadMethod]
-        static void Initialize()
+        public void Initialize()
         {
             _mainThreadId = Thread.CurrentThread.ManagedThreadId;
-            
+
             EditorApplication.update -= ProcessContinuationQueue;
             EditorApplication.update += ProcessContinuationQueue;
         }
 
-        private static void ProcessContinuationQueue()
+        private void ProcessContinuationQueue()
         {
             while (_continuationQueue.TryDequeue(out Action continuation))
             {
@@ -71,16 +52,53 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        /// <summary>
-        /// Add a continuation to the queue to be executed on the main thread.
-        /// </summary>
-        internal static void AddContinuation(Action continuation)
+        public void AddContinuation(Action continuation)
         {
             if (continuation == null)
             {
                 return;
             }
             _continuationQueue.Enqueue(continuation);
+        }
+    }
+
+    /// <summary>
+    /// A class that provides functionality equivalent to UniTask's SwitchToMainThread.
+    /// Handles switching to the main thread using EditorApplication.update.
+    /// Reference: https://github.com/Cysharp/UniTask - PlayerLoopHelper implementation
+    /// </summary>
+    [InitializeOnLoad]
+    public static class MainThreadSwitcher
+    {
+        private static readonly MainThreadSwitcherService ServiceValue = new MainThreadSwitcherService();
+
+        /// <summary>
+        /// Gets the ID of the main thread.
+        /// </summary>
+        public static int MainThreadId => ServiceValue.MainThreadId;
+
+        /// <summary>
+        /// Determines whether the current thread is the main thread.
+        /// </summary>
+        public static bool IsMainThread => ServiceValue.IsMainThread;
+
+        static MainThreadSwitcher()
+        {
+            Initialize();
+        }
+
+        [InitializeOnLoadMethod]
+        private static void Initialize()
+        {
+            ServiceValue.Initialize();
+        }
+
+        /// <summary>
+        /// Add a continuation to the queue to be executed on the main thread.
+        /// </summary>
+        internal static void AddContinuation(Action continuation)
+        {
+            ServiceValue.AddContinuation(continuation);
         }
 
         public static SwitchToMainThreadAwaitable SwitchToMainThread()
