@@ -6,16 +6,16 @@ namespace io.github.hatayama.UnityCliLoop
     /// <summary>
     /// UseCase responsible for temporal cohesion of server initialization processing.
     /// Processing sequence: 1. Editor state validation, 2. Server startup, 3. State update.
-    /// Related classes: UnityCliLoopServerStartupService, SecurityValidationService.
+    /// Related classes: UnityCliLoopServerStartupService, ISecurityValidationService.
     /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - UseCase + Tool Pattern (DDD Integration)
     /// </summary>
     public class UnityCliLoopServerInitializationUseCase : AbstractUseCase<ServerInitializationSchema, ServerInitializationResponse>
     {
-        private readonly SecurityValidationService _securityService;
+        private readonly ISecurityValidationService _securityService;
         private readonly UnityCliLoopServerStartupService _startupService;
 
         public UnityCliLoopServerInitializationUseCase(
-            SecurityValidationService securityService,
+            ISecurityValidationService securityService,
             UnityCliLoopServerStartupService startupService)
         {
             _securityService = securityService ?? throw new System.ArgumentNullException(nameof(securityService));

@@ -182,7 +182,7 @@ namespace io.github.hatayama.UnityCliLoop
                 new UnityCliLoopServerStartupService(_serverInstanceFactory);
             UnityCliLoopServerInitializationUseCase useCase =
                 new UnityCliLoopServerInitializationUseCase(
-                    new SecurityValidationService(),
+                    new EditorSecurityValidationService(),
                     startupService);
             ServerInitializationSchema schema = new()
             {
