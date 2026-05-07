@@ -20,6 +20,25 @@ namespace io.github.hatayama.uLoopMCP
             return toolName == McpConstants.TOOL_NAME_RUN_TESTS && !isTestFrameworkAvailable;
         }
 
+        internal static bool ShouldExposeInRegisteredTools(string toolName)
+        {
+            return ShouldExposeInRegisteredTools(
+                toolName,
+                isToolEnabled: ToolSettings.IsToolEnabled(toolName),
+                isTestFrameworkAvailable: IsTestFrameworkAvailable);
+        }
+
+        internal static bool ShouldExposeInRegisteredTools(
+            string toolName,
+            bool isToolEnabled,
+            bool isTestFrameworkAvailable)
+        {
+            Debug.Assert(!string.IsNullOrEmpty(toolName), "toolName must not be null or empty");
+
+            return isToolEnabled ||
+                ShouldReportDependencyUnavailableBeforeDisabled(toolName, isTestFrameworkAvailable);
+        }
+
         private static bool IsTestFrameworkAvailable
         {
             get

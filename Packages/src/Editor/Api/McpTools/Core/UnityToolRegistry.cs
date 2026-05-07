@@ -264,7 +264,7 @@ namespace io.github.hatayama.uLoopMCP
         public ToolInfo[] GetRegisteredTools()
         {
             return _tools.Values
-                .Where(tool => ToolSettings.IsToolEnabled(tool.ToolName))
+                .Where(tool => ToolExecutionAvailability.ShouldExposeInRegisteredTools(tool.ToolName))
                 .Select(tool =>
             {
                 // Check if tool has McpTool attribute with DisplayDevelopmentOnly
