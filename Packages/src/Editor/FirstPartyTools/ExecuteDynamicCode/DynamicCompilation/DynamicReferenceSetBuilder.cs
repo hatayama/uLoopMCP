@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using Assembly = System.Reflection.Assembly;
 
-using io.github.hatayama.UnityCliLoop.ToolContracts;
-
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     internal static class DynamicReferenceSetBuilder

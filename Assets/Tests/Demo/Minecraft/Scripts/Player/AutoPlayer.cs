@@ -1,7 +1,5 @@
 using UnityEngine;
 
-using io.github.hatayama.UnityCliLoop.Runtime;
-
 namespace io.github.hatayama.UnityCliLoop.Tests.Demo
 {
     // simulate-keyboard cannot reproduce mouse-driven actions (look, click),

@@ -2,7 +2,6 @@ using System;
 using System.Text;
 
 using io.github.hatayama.UnityCliLoop.Application;
-using io.github.hatayama.UnityCliLoop.Domain;
 using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.Infrastructure

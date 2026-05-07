@@ -3,8 +3,6 @@ using System;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
-using io.github.hatayama.UnityCliLoop.Runtime;
-
 namespace io.github.hatayama.UnityCliLoop.Tests.Demo
 {
     public class DemoVirtualPad : MonoBehaviour, IPointerDownHandler, IDragHandler, IPointerUpHandler

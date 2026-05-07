@@ -5,8 +5,6 @@ using System.IO;
 using UnityEngine;
 using UnityEngine.UI;
 
-using io.github.hatayama.UnityCliLoop.Runtime;
-
 namespace io.github.hatayama.UnityCliLoop.Tests.Demo
 {
     // Base class for replay verification controllers.

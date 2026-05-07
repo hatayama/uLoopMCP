@@ -1,7 +1,5 @@
 using UnityEngine;
 
-using io.github.hatayama.UnityCliLoop.Runtime;
-
 namespace io.github.hatayama.UnityCliLoop.Tests.Demo
 {
     [CreateAssetMenu(fileName = "BlockRegistry", menuName = "Minecraft/Block Registry")]

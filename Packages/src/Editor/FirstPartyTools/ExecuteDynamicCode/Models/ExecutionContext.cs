@@ -2,8 +2,6 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Threading;
 
-using io.github.hatayama.UnityCliLoop.ToolContracts;
-
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     /// <summary>

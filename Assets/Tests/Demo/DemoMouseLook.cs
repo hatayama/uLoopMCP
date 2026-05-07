@@ -4,8 +4,6 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using Cinemachine;
 
-using io.github.hatayama.UnityCliLoop.Runtime;
-
 namespace io.github.hatayama.UnityCliLoop.Tests.Demo
 {
     // Orbits the Cinemachine camera around the character without rotating the character.

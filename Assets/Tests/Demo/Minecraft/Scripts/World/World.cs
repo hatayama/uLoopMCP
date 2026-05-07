@@ -1,8 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-using io.github.hatayama.UnityCliLoop.Runtime;
-
 namespace io.github.hatayama.UnityCliLoop.Tests.Demo
 {
     [DefaultExecutionOrder(-10)]

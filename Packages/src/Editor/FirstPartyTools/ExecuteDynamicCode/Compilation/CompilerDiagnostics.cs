@@ -2,8 +2,6 @@ using System;
 using System.Collections.Generic;
 using UnityEditor.Compilation;
 
-using io.github.hatayama.UnityCliLoop.ToolContracts;
-
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     public sealed class CompilerDiagnostics

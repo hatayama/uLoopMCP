@@ -3,7 +3,6 @@ using Newtonsoft.Json.Linq;
 using Stopwatch = System.Diagnostics.Stopwatch;
 
 using io.github.hatayama.UnityCliLoop.Application;
-using io.github.hatayama.UnityCliLoop.Domain;
 using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 namespace io.github.hatayama.UnityCliLoop.Infrastructure

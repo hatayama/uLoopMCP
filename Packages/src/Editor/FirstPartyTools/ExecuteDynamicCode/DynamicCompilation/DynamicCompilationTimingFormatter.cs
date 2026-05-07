@@ -1,7 +1,5 @@
 using System.Collections.Generic;
 
-using io.github.hatayama.UnityCliLoop.ToolContracts;
-
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     internal static class DynamicCompilationTimingFormatter

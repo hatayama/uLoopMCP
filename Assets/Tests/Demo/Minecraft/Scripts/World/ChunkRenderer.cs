@@ -1,8 +1,6 @@
 using System;
 using UnityEngine;
 
-using io.github.hatayama.UnityCliLoop.Runtime;
-
 namespace io.github.hatayama.UnityCliLoop.Tests.Demo
 {
     [RequireComponent(typeof(MeshFilter))]

@@ -4,8 +4,6 @@ using System.Reflection;
 using System.Threading;
 using Assembly = System.Reflection.Assembly;
 
-using io.github.hatayama.UnityCliLoop.ToolContracts;
-
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     internal sealed class CompiledCommandEntryPointResolver

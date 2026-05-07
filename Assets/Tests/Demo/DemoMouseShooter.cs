@@ -3,8 +3,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-using io.github.hatayama.UnityCliLoop.Runtime;
-
 namespace io.github.hatayama.UnityCliLoop.Tests.Demo
 {
     public class DemoMouseShooter : MonoBehaviour

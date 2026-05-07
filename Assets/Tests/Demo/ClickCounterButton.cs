@@ -2,8 +2,6 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-using io.github.hatayama.UnityCliLoop.Runtime;
-
 namespace io.github.hatayama.UnityCliLoop.Tests.Demo
 {
     public class ClickCounterButton : MonoBehaviour
