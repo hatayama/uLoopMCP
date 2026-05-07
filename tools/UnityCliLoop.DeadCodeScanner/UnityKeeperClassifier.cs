@@ -18,6 +18,8 @@ namespace UnityCliLoop.DeadCodeScanner
             "InitializeOnLoadAttribute",
             "InitializeOnLoadMethod",
             "InitializeOnLoadMethodAttribute",
+            "RuntimeInitializeOnLoadMethod",
+            "RuntimeInitializeOnLoadMethodAttribute",
             "MenuItem",
             "MenuItemAttribute",
             "SerializeField",

@@ -362,15 +362,6 @@ namespace io.github.hatayama.UnityCliLoop.Infrastructure
         }
 
         /// <summary>
-        /// Prevent CLI from misdetecting a busy state when server startup is intentionally skipped.
-        /// </summary>
-        private static void DeleteAllLockFiles()
-        {
-            CompilationLockService.DeleteLockFile();
-            DomainReloadDetectionService.DeleteLockFile();
-        }
-
-        /// <summary>
         /// Cleanup on Unity exit.
         /// Disposes the bridge listener and marks the server as stopped so the CLI
         /// does not attempt to connect to a stale IPC endpoint after the editor closes.
@@ -442,38 +433,6 @@ namespace io.github.hatayama.UnityCliLoop.Infrastructure
         {
             await EditorDelay.DelayFrame(5);
             TryRestoreServerWithRetry(retryCount + 1);
-        }
-
-        /// <summary>
-        /// Start UI display timeout timer for reconnecting message
-        /// </summary>
-        private async Task StartReconnectionUITimeoutAsync()
-        {
-            // Wait for the timeout period (convert seconds to frames at ~60fps)
-            int timeoutFrames = UnityCliLoopConstants.RECONNECTION_TIMEOUT_SECONDS * 60;
-            await EditorDelay.DelayFrame(timeoutFrames);
-
-            // Check if UI flag is still set after timeout
-            bool isStillShowingUI = UnityCliLoopEditorSettings.GetShowReconnectingUI();
-            if (isStillShowingUI)
-            {
-                UnityCliLoopEditorSettings.ClearReconnectingFlags();
-            }
-        }
-
-        /// <summary>
-        /// Validates server configuration before starting
-        /// Implements fail-fast behavior for invalid configurations
-        /// </summary>
-        private static void ValidateServerConfiguration()
-        {
-            // Validate Unity Editor state
-            if (EditorApplication.isCompiling)
-            {
-                throw new System.InvalidOperationException(
-                    "Cannot start Unity CLI bridge while Unity is compiling. Please wait for compilation to complete.");
-            }
-
         }
 
         public bool IsStartupProtectionActive()

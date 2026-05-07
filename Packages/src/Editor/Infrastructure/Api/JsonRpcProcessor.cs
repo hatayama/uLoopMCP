@@ -169,7 +169,6 @@ namespace io.github.hatayama.UnityCliLoop.Infrastructure
         /// </summary>
         private static async Task<string> ProcessRpcRequest(JsonRpcRequest request, string originalJson)
         {
-            Stopwatch requestStopwatch = Stopwatch.StartNew();
             try
             {
                 ValidateClientIdentityIfNeeded(request);

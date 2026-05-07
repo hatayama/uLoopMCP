@@ -125,6 +125,9 @@ namespace UnityCliLoop.DeadCodeScanner.Tests
             Assert.That(issues.Any(issue =>
                 issue.Category == DeadCodeCategory.KeptByUnityOrReflection
                 && issue.FullName.Contains("SampleTool", StringComparison.Ordinal)), Is.True);
+            Assert.That(issues.Any(issue =>
+                issue.Category == DeadCodeCategory.KeptByUnityOrReflection
+                && issue.FullName.Contains("RuntimeReset", StringComparison.Ordinal)), Is.True);
         }
 
         private static void CreateSampleRepository(string rootPath)
@@ -161,6 +164,10 @@ namespace UnityCliLoop.DeadCodeScanner.Tests
                     {
                     }
 
+                    public sealed class RuntimeInitializeOnLoadMethodAttribute : Attribute
+                    {
+                    }
+
                     [UnityCliLoopTool]
                     public sealed class SampleTool
                     {
@@ -183,6 +190,11 @@ namespace UnityCliLoop.DeadCodeScanner.Tests
                         }
 
                         private void UnusedPrivateMethod()
+                        {
+                        }
+
+                        [RuntimeInitializeOnLoadMethod]
+                        private static void RuntimeReset()
                         {
                         }
                     }
