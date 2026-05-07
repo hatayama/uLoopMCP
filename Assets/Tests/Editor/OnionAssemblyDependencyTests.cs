@@ -14,6 +14,21 @@ namespace io.github.hatayama.UnityCliLoop
         private const string CompositionRootAssemblyName = "UnityCLILoop.CompositionRoot.Editor";
         private const string DomainAssemblyName = "UnityCLILoop.Domain";
         private const string FirstPartyToolsAssemblyName = "UnityCLILoop.FirstPartyTools.Editor";
+        private const string FirstPartyToolsAssemblyNamePrefix = "UnityCLILoop.FirstPartyTools.";
+        private const string ClearConsoleAssemblyName = "UnityCLILoop.FirstPartyTools.ClearConsole.Editor";
+        private const string CompileAssemblyName = "UnityCLILoop.FirstPartyTools.Compile.Editor";
+        private const string ControlPlayModeAssemblyName = "UnityCLILoop.FirstPartyTools.ControlPlayMode.Editor";
+        private const string ExecuteDynamicCodeAssemblyName = "UnityCLILoop.FirstPartyTools.ExecuteDynamicCode.Editor";
+        private const string FindGameObjectsAssemblyName = "UnityCLILoop.FirstPartyTools.FindGameObjects.Editor";
+        private const string GetHierarchyAssemblyName = "UnityCLILoop.FirstPartyTools.GetHierarchy.Editor";
+        private const string GetLogsAssemblyName = "UnityCLILoop.FirstPartyTools.GetLogs.Editor";
+        private const string RecordInputAssemblyName = "UnityCLILoop.FirstPartyTools.RecordInput.Editor";
+        private const string ReplayInputAssemblyName = "UnityCLILoop.FirstPartyTools.ReplayInput.Editor";
+        private const string RunTestsAssemblyName = "UnityCLILoop.FirstPartyTools.RunTests.Editor";
+        private const string ScreenshotAssemblyName = "UnityCLILoop.FirstPartyTools.Screenshot.Editor";
+        private const string SimulateKeyboardAssemblyName = "UnityCLILoop.FirstPartyTools.SimulateKeyboard.Editor";
+        private const string SimulateMouseInputAssemblyName = "UnityCLILoop.FirstPartyTools.SimulateMouseInput.Editor";
+        private const string SimulateMouseUiAssemblyName = "UnityCLILoop.FirstPartyTools.SimulateMouseUi.Editor";
         private const string InfrastructureAssemblyName = "UnityCLILoop.Infrastructure";
         private const string MetadataValidationAssemblyName = "uLoopMCP.Editor.MetadataValidation";
         private const string PresentationAssemblyName = "UnityCLILoop.Presentation";
@@ -73,7 +88,7 @@ namespace io.github.hatayama.UnityCliLoop
             // Tests that first-party dynamic-code parsing stays inside the bundled tool assembly.
             string parserAssemblyName = typeof(CompilationDiagnosticMessageParser).Assembly.GetName().Name;
 
-            Assert.That(parserAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(parserAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
         }
 
         [Test]
@@ -82,7 +97,7 @@ namespace io.github.hatayama.UnityCliLoop
             // Tests that dynamic-code defaults are owned by the bundled dynamic-code tool.
             string constantsAssemblyName = typeof(DynamicCodeConstants).Assembly.GetName().Name;
 
-            Assert.That(constantsAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(constantsAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
         }
 
         [Test]
@@ -91,7 +106,7 @@ namespace io.github.hatayama.UnityCliLoop
             // Tests that play-mode compilation policy values stay with the bundled compile tool.
             string optionsAssemblyName = typeof(ScriptChangesDuringPlayOptions).Assembly.GetName().Name;
 
-            Assert.That(optionsAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(optionsAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
         }
 
         [Test]
@@ -158,13 +173,13 @@ namespace io.github.hatayama.UnityCliLoop
             string sourcePreparationAssemblyName = typeof(IDynamicCodeSourcePreparationService).Assembly.GetName().Name;
             string assemblyBuilderAssemblyName = typeof(ICompiledAssemblyBuilder).Assembly.GetName().Name;
 
-            Assert.That(serviceAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(factoryAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(registryAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(runtimeFactoryAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(dynamicServicesAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(sourcePreparationAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(assemblyBuilderAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(serviceAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(factoryAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(registryAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(runtimeFactoryAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(dynamicServicesAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(sourcePreparationAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(assemblyBuilderAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
         }
 
         [Test]
@@ -181,15 +196,15 @@ namespace io.github.hatayama.UnityCliLoop
             string planAssemblyName = typeof(DynamicCompilationPlan).Assembly.GetName().Name;
             string preparedCodeAssemblyName = typeof(PreparedDynamicCode).Assembly.GetName().Name;
 
-            Assert.That(requestAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(resultAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(errorAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(backendKindAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(buildResultAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(loadResultAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(diagnosticsAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(planAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(preparedCodeAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(requestAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(resultAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(errorAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(backendKindAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(buildResultAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(loadResultAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(diagnosticsAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(planAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(preparedCodeAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
         }
 
         [Test]
@@ -200,9 +215,9 @@ namespace io.github.hatayama.UnityCliLoop
             string requestAssemblyName = typeof(UnityCliLoopHierarchyRequest).Assembly.GetName().Name;
             string resultAssemblyName = typeof(UnityCliLoopHierarchyResult).Assembly.GetName().Name;
 
-            Assert.That(serviceAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(requestAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(resultAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(serviceAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(requestAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(resultAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
         }
 
         [Test]
@@ -211,7 +226,7 @@ namespace io.github.hatayama.UnityCliLoop
             // Tests that the bundled tool owns the hierarchy implementation.
             string useCaseAssemblyName = typeof(GetHierarchyUseCase).Assembly.GetName().Name;
 
-            Assert.That(useCaseAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(useCaseAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
         }
 
         [Test]
@@ -222,9 +237,9 @@ namespace io.github.hatayama.UnityCliLoop
             string requestAssemblyName = typeof(UnityCliLoopTestExecutionRequest).Assembly.GetName().Name;
             string resultAssemblyName = typeof(UnityCliLoopTestExecutionResult).Assembly.GetName().Name;
 
-            Assert.That(serviceAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(requestAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(resultAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(serviceAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(requestAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(resultAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
         }
 
         [Test]
@@ -233,7 +248,7 @@ namespace io.github.hatayama.UnityCliLoop
             // Tests that the bundled tool owns the test execution implementation.
             string useCaseAssemblyName = typeof(RunTestsUseCase).Assembly.GetName().Name;
 
-            Assert.That(useCaseAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(useCaseAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
         }
 
         [Test]
@@ -245,10 +260,10 @@ namespace io.github.hatayama.UnityCliLoop
             string resultAssemblyName = typeof(UnityCliLoopGameObjectSearchResult).Assembly.GetName().Name;
             string componentAssemblyName = typeof(ComponentInfo).Assembly.GetName().Name;
 
-            Assert.That(serviceAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(requestAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(resultAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(componentAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(serviceAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(requestAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(resultAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(componentAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
         }
 
         [Test]
@@ -257,7 +272,7 @@ namespace io.github.hatayama.UnityCliLoop
             // Tests that the bundled tool owns the GameObject search implementation.
             string useCaseAssemblyName = typeof(FindGameObjectsUseCase).Assembly.GetName().Name;
 
-            Assert.That(useCaseAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(useCaseAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
         }
 
         [Test]
@@ -269,10 +284,10 @@ namespace io.github.hatayama.UnityCliLoop
             string resultAssemblyName = typeof(UnityCliLoopScreenshotResult).Assembly.GetName().Name;
             string elementAssemblyName = typeof(UIElementInfo).Assembly.GetName().Name;
 
-            Assert.That(serviceAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(requestAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(resultAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(elementAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(serviceAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(requestAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(resultAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(elementAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
         }
 
         [Test]
@@ -281,7 +296,7 @@ namespace io.github.hatayama.UnityCliLoop
             // Tests that the bundled tool owns the screenshot implementation.
             string useCaseAssemblyName = typeof(ScreenshotUseCase).Assembly.GetName().Name;
 
-            Assert.That(useCaseAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(useCaseAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
         }
 
         [Test]
@@ -297,14 +312,14 @@ namespace io.github.hatayama.UnityCliLoop
             string recordActionAssemblyName = typeof(RecordInputAction).Assembly.GetName().Name;
             string replayActionAssemblyName = typeof(ReplayInputAction).Assembly.GetName().Name;
 
-            Assert.That(recordServiceAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(recordRequestAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(recordResultAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(replayServiceAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(replayRequestAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(replayResultAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(recordActionAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(replayActionAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(recordServiceAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(recordRequestAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(recordResultAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(replayServiceAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(replayRequestAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(replayResultAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(recordActionAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(replayActionAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
         }
 
         [Test]
@@ -314,8 +329,8 @@ namespace io.github.hatayama.UnityCliLoop
             string recordUseCaseAssemblyName = typeof(RecordInputUseCase).Assembly.GetName().Name;
             string replayUseCaseAssemblyName = typeof(ReplayInputUseCase).Assembly.GetName().Name;
 
-            Assert.That(recordUseCaseAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(replayUseCaseAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(recordUseCaseAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(replayUseCaseAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
         }
 
         [Test]
@@ -332,15 +347,15 @@ namespace io.github.hatayama.UnityCliLoop
             string mouseUiRequestAssemblyName = typeof(UnityCliLoopMouseUiSimulationRequest).Assembly.GetName().Name;
             string mouseUiResultAssemblyName = typeof(UnityCliLoopMouseUiSimulationResult).Assembly.GetName().Name;
 
-            Assert.That(keyboardServiceAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(keyboardRequestAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(keyboardResultAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(mouseServiceAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(mouseRequestAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(mouseResultAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(mouseUiServiceAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(mouseUiRequestAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(mouseUiResultAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(keyboardServiceAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(keyboardRequestAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(keyboardResultAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(mouseServiceAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(mouseRequestAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(mouseResultAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(mouseUiServiceAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(mouseUiRequestAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(mouseUiResultAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
         }
 
         [Test]
@@ -351,9 +366,9 @@ namespace io.github.hatayama.UnityCliLoop
             string mouseUseCaseAssemblyName = typeof(SimulateMouseInputUseCase).Assembly.GetName().Name;
             string mouseUiUseCaseAssemblyName = typeof(SimulateMouseUiUseCase).Assembly.GetName().Name;
 
-            Assert.That(keyboardUseCaseAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(mouseUseCaseAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(mouseUiUseCaseAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(keyboardUseCaseAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(mouseUseCaseAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(mouseUiUseCaseAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
         }
 
         [Test]
@@ -425,10 +440,23 @@ namespace io.github.hatayama.UnityCliLoop
         [Test]
         public void FirstPartyToolsAsmdef_WhenLoaded_DoesNotReferenceImplementationLayers()
         {
-            // Tests that first-party tools use the same public contract boundary as extension tools.
+            // Tests that the first-party startup assembly depends on tool modules, not platform implementation layers.
             string[] references = ReadResolvedReferences("Packages/src/Editor/FirstPartyTools/UnityCLILoop.FirstPartyTools.Editor.asmdef");
 
-            Assert.That(references, Does.Contain(ToolContractsAssemblyName));
+            Assert.That(references, Does.Contain(ClearConsoleAssemblyName));
+            Assert.That(references, Does.Contain(CompileAssemblyName));
+            Assert.That(references, Does.Contain(ControlPlayModeAssemblyName));
+            Assert.That(references, Does.Contain(ExecuteDynamicCodeAssemblyName));
+            Assert.That(references, Does.Contain(FindGameObjectsAssemblyName));
+            Assert.That(references, Does.Contain(GetHierarchyAssemblyName));
+            Assert.That(references, Does.Contain(GetLogsAssemblyName));
+            Assert.That(references, Does.Contain(RecordInputAssemblyName));
+            Assert.That(references, Does.Contain(ReplayInputAssemblyName));
+            Assert.That(references, Does.Contain(RunTestsAssemblyName));
+            Assert.That(references, Does.Contain(ScreenshotAssemblyName));
+            Assert.That(references, Does.Contain(SimulateKeyboardAssemblyName));
+            Assert.That(references, Does.Contain(SimulateMouseInputAssemblyName));
+            Assert.That(references, Does.Contain(SimulateMouseUiAssemblyName));
             Assert.That(references, Does.Not.Contain(ApplicationAssemblyName));
             Assert.That(references, Does.Not.Contain(DomainAssemblyName));
             Assert.That(references, Does.Not.Contain(InfrastructureAssemblyName));
@@ -498,7 +526,7 @@ namespace io.github.hatayama.UnityCliLoop
             // Tests that bundled dynamic-code services are initialized by the first-party tool itself.
             string servicesAssemblyName = typeof(DynamicCodeServicesRegistry).Assembly.GetName().Name;
 
-            Assert.That(servicesAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(servicesAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
         }
 
         [Test]
@@ -508,8 +536,8 @@ namespace io.github.hatayama.UnityCliLoop
             string factoryAssemblyName = typeof(DynamicCodeCompilationServiceFactory).Assembly.GetName().Name;
             string runtimeFactoryAssemblyName = typeof(DynamicCompilationRuntimeServicesFactory).Assembly.GetName().Name;
 
-            Assert.That(factoryAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(runtimeFactoryAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(factoryAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(runtimeFactoryAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
         }
 
         [Test]
@@ -524,13 +552,13 @@ namespace io.github.hatayama.UnityCliLoop
             string cacheManagerAssemblyName = typeof(CompilationCacheManager).Assembly.GetName().Name;
             string sharedWorkerAssemblyName = typeof(SharedRoslynCompilerWorkerHost).Assembly.GetName().Name;
 
-            Assert.That(compilerAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(plannerAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(sourcePreparationAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(assemblyBuilderAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(assemblyLoadServiceAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(cacheManagerAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
-            Assert.That(sharedWorkerAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(compilerAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(plannerAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(sourcePreparationAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(assemblyBuilderAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(assemblyLoadServiceAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(cacheManagerAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
+            Assert.That(sharedWorkerAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
         }
 
         [Test]
@@ -661,7 +689,7 @@ namespace io.github.hatayama.UnityCliLoop
             // Tests that Unity Console mutation is owned by the bundled clear-console tool.
             string serviceAssemblyName = typeof(ConsoleClearService).Assembly.GetName().Name;
 
-            Assert.That(serviceAssemblyName, Is.EqualTo(FirstPartyToolsAssemblyName));
+            Assert.That(serviceAssemblyName, Does.StartWith(FirstPartyToolsAssemblyNamePrefix));
         }
 
         [Test]
@@ -1061,7 +1089,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             Dictionary<string, string> guidToAssemblyNameMap = BuildGuidToAssemblyNameMap();
             string[] rawReferences = ReadRawReferences(asmdefPath);
-            List<string> resolvedReferences = new List<string>();
+            List<string> resolvedReferences = new();
 
             foreach (string rawReference in rawReferences)
             {
@@ -1140,7 +1168,7 @@ namespace io.github.hatayama.UnityCliLoop
         private static string[] FindForbiddenReferences(string path, string[] forbiddenReferences)
         {
             string source = File.ReadAllText(path);
-            List<string> violations = new List<string>();
+            List<string> violations = new();
 
             foreach (string forbiddenReference in forbiddenReferences)
             {
@@ -1159,7 +1187,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             string source = File.ReadAllText(path);
             string relativePath = NormalizeRelativePath(Path.GetRelativePath(UnityCliLoopPathResolver.GetProjectRoot(), path));
-            List<string> violations = new List<string>();
+            List<string> violations = new();
 
             if (source.Contains("[InitializeOnLoad]")
                 || source.Contains("[UnityEditor.InitializeOnLoad]"))
@@ -1186,7 +1214,7 @@ namespace io.github.hatayama.UnityCliLoop
         private static Dictionary<string, string> BuildGuidToAssemblyNameMap()
         {
             string[] asmdefPaths = ReadProjectAsmdefPaths();
-            Dictionary<string, string> guidToAssemblyNameMap = new Dictionary<string, string>();
+            Dictionary<string, string> guidToAssemblyNameMap = new();
 
             foreach (string asmdefPath in asmdefPaths)
             {
@@ -1211,7 +1239,7 @@ namespace io.github.hatayama.UnityCliLoop
         private static string[] ReadProjectAsmdefPaths()
         {
             string projectRoot = UnityCliLoopPathResolver.GetProjectRoot();
-            List<string> asmdefPaths = new List<string>();
+            List<string> asmdefPaths = new();
             string assetsPath = Path.Combine(projectRoot, "Assets");
             string packagesSrcPath = Path.Combine(projectRoot, "Packages", "src");
 

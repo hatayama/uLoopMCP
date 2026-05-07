@@ -96,7 +96,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             if (File.Exists(SettingsFilePath))
             {
-                FileInfo fileInfo = new FileInfo(SettingsFilePath);
+                FileInfo fileInfo = new(SettingsFilePath);
                 Debug.Assert(fileInfo.Length <= UnityCliLoopConstants.MAX_SETTINGS_SIZE_BYTES,
                     $"Settings file exceeds size limit: {fileInfo.Length} bytes");
 

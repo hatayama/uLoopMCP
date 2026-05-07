@@ -146,8 +146,7 @@ namespace io.github.hatayama.UnityCliLoop
             {
                 incrementBuildCount();
 
-                ProcessStartInfo startInfo = new ProcessStartInfo
-                {
+                ProcessStartInfo startInfo = new()                {
                     FileName = externalCompilerPaths.DotnetHostPath,
                     Arguments = $"{QuoteCommandLineArgument(externalCompilerPaths.CompilerDllPath)} @{QuoteCommandLineArgument(responseFilePath)}",
                     WorkingDirectory = Directory.GetCurrentDirectory(),
@@ -210,8 +209,7 @@ namespace io.github.hatayama.UnityCliLoop
             IReadOnlyCollection<string> defineSymbols,
             bool allowUnsafeCode)
         {
-            List<string> lines = new List<string>
-            {
+            List<string> lines = new()            {
                 "-nologo",
                 "-nostdlib+",
                 "-target:library",
@@ -244,7 +242,7 @@ namespace io.github.hatayama.UnityCliLoop
             IReadOnlyCollection<string> defineSymbols,
             bool allowUnsafeCode)
         {
-            List<string> lines = new List<string> { Path.GetFullPath(sourcePath), Path.GetFullPath(dllPath) };
+            List<string> lines = new() { Path.GetFullPath(sourcePath), Path.GetFullPath(dllPath) };
             lines.Add(allowUnsafeCode ? "unsafe:1" : "unsafe:0");
 
             string serializedDefines = SerializeDefineSymbols(defineSymbols);
@@ -269,7 +267,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return Array.Empty<string>();
             }
 
-            List<string> filteredDefines = new List<string>(activeDefines.Length);
+            List<string> filteredDefines = new(activeDefines.Length);
             foreach (string define in activeDefines)
             {
                 if (!string.IsNullOrWhiteSpace(define))
@@ -299,7 +297,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return string.Empty;
             }
 
-            List<string> filteredDefines = new List<string>(defineSymbols.Count);
+            List<string> filteredDefines = new(defineSymbols.Count);
             foreach (string defineSymbol in defineSymbols)
             {
                 if (!string.IsNullOrWhiteSpace(defineSymbol))

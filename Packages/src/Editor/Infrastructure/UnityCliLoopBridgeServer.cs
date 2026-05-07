@@ -20,7 +20,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         public IUnityCliLoopServerInstance Create()
         {
-            UnityCliLoopBridgeServer server = new UnityCliLoopBridgeServer();
+            UnityCliLoopBridgeServer server = new();
             server.ServerStarted += NotifyServerStarted;
             server.ServerStopping += NotifyServerStopping;
             server.ServerLoopExited += NotifyServerLoopExited;
@@ -220,7 +220,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return;
             }
 
-            List<string> clientsToRemove = new List<string>();
+            List<string> clientsToRemove = new();
 
             foreach (KeyValuePair<string, Stream> client in _clientStreams)
             {

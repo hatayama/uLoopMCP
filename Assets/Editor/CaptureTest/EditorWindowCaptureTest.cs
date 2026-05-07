@@ -34,7 +34,7 @@ namespace io.github.hatayama.UnityCliLoop
                 EditorWindow[] windows = EditorWindowCaptureUtility.FindWindowsByName(_windowName, _matchMode);
                 if (windows.Length > 0)
                 {
-                    System.Text.StringBuilder sb = new System.Text.StringBuilder();
+                    System.Text.StringBuilder sb = new();
                     sb.AppendLine($"Found {windows.Length} window(s):");
                     for (int i = 0; i < windows.Length; i++)
                     {
@@ -124,7 +124,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
 
             string timestamp = System.DateTime.Now.ToString("yyyyMMdd_HHmmss");
-            System.Text.StringBuilder sb = new System.Text.StringBuilder();
+            System.Text.StringBuilder sb = new();
             sb.AppendLine($"Captured {windows.Length} window(s):");
 
             for (int i = 0; i < windows.Length; i++)

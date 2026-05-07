@@ -370,7 +370,7 @@ namespace io.github.hatayama.UnityCliLoop
 
                 foreach (MouseButton button in heldButtons)
                 {
-                    MouseInputState.GetButtonControl(mouse, button).WriteValueIntoEvent(1f, eventPtr);
+                    MouseButtonControlResolver.GetButtonControl(mouse, button).WriteValueIntoEvent(1f, eventPtr);
                 }
 
                 InputState.Change(mouse, eventPtr, updateType);
@@ -409,7 +409,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static Key[] BuildAllKeys()
         {
-            List<Key> keys = new List<Key>();
+            List<Key> keys = new();
             foreach (Key key in Enum.GetValues(typeof(Key)))
             {
                 if (key == Key.None)
@@ -425,7 +425,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static Dictionary<string, Key> BuildKeyLookup()
         {
-            Dictionary<string, Key> lookup = new Dictionary<string, Key>(StringComparer.OrdinalIgnoreCase);
+            Dictionary<string, Key> lookup = new(StringComparer.OrdinalIgnoreCase);
             foreach (Key key in Enum.GetValues(typeof(Key)))
             {
                 if (key == Key.None)
@@ -470,7 +470,7 @@ namespace io.github.hatayama.UnityCliLoop
             SetUiInputModulesSuppressed(leftHeld || justReleased);
 
             Vector2 gameViewSize = Handles.GetMainGameViewSize();
-            Vector2 inputPos = new Vector2(screenPos.x, gameViewSize.y - screenPos.y);
+            Vector2 inputPos = new(screenPos.x, gameViewSize.y - screenPos.y);
 
             if (justPressed)
             {
@@ -487,7 +487,7 @@ namespace io.github.hatayama.UnityCliLoop
 
                 if (_isDragging)
                 {
-                    Vector2 pressInputPos = new Vector2(_pressScreenPosition.x, gameViewSize.y - _pressScreenPosition.y);
+                    Vector2 pressInputPos = new(_pressScreenPosition.x, gameViewSize.y - _pressScreenPosition.y);
                     SimulateMouseUiOverlayState.Update(
                         MouseAction.Drag, inputPos, pressInputPos, null, gameViewSize);
                 }

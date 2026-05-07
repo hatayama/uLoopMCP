@@ -11,11 +11,11 @@ namespace io.github.hatayama.UnityCliLoop
     {
         public static RaycastResult? RaycastUI(Vector2 screenPosition, EventSystem eventSystem)
         {
-            PointerEventData pointerData = new PointerEventData(eventSystem)
+            PointerEventData pointerData = new(eventSystem)
             {
                 position = screenPosition
             };
-            List<RaycastResult> results = new List<RaycastResult>();
+            List<RaycastResult> results = new();
             eventSystem.RaycastAll(pointerData, results);
 
             if (results.Count > 0)

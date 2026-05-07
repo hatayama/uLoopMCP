@@ -163,7 +163,7 @@ namespace io.github.hatayama.UnityCliLoop
                 };
             }
 
-            Vector2 inputPos = new Vector2(request.X, request.Y);
+            Vector2 inputPos = new(request.X, request.Y);
             Vector2 screenPos = InputToScreen(inputPos);
             MouseButton button = ToRuntimeMouseButton(request.Button);
             string buttonName = button.ToString();
@@ -223,7 +223,7 @@ namespace io.github.hatayama.UnityCliLoop
                 };
             }
 
-            Vector2 inputPos = new Vector2(request.X, request.Y);
+            Vector2 inputPos = new(request.X, request.Y);
             Vector2 screenPos = InputToScreen(inputPos);
             MouseButton button = ToRuntimeMouseButton(request.Button);
             string buttonName = button.ToString();
@@ -271,7 +271,7 @@ namespace io.github.hatayama.UnityCliLoop
         private async Task<UnityCliLoopMouseInputSimulationResult> ExecuteMoveDelta(
             Mouse mouse, UnityCliLoopMouseInputSimulationRequest request, CancellationToken ct)
         {
-            Vector2 delta = new Vector2(request.DeltaX, request.DeltaY);
+            Vector2 delta = new(request.DeltaX, request.DeltaY);
             SimulateMouseInputOverlayState.SetMoveDelta(delta);
 
             await InputSystemUpdateHelper.ApplyOnNextConfiguredUpdate(
@@ -289,7 +289,7 @@ namespace io.github.hatayama.UnityCliLoop
         private async Task<UnityCliLoopMouseInputSimulationResult> ExecuteScroll(
             Mouse mouse, UnityCliLoopMouseInputSimulationRequest request, CancellationToken ct)
         {
-            Vector2 scroll = new Vector2(request.ScrollX, request.ScrollY);
+            Vector2 scroll = new(request.ScrollX, request.ScrollY);
 
             int scrollDir = request.ScrollY > 0f ? 1 : request.ScrollY < 0f ? -1 : 0;
             SimulateMouseInputOverlayState.SetScrollDirection(scrollDir);
@@ -322,7 +322,7 @@ namespace io.github.hatayama.UnityCliLoop
                 };
             }
 
-            Vector2 totalDelta = new Vector2(request.DeltaX, request.DeltaY);
+            Vector2 totalDelta = new(request.DeltaX, request.DeltaY);
             float duration = request.Duration;
             float startTime = Time.realtimeSinceStartup;
             float previousT = 0f;

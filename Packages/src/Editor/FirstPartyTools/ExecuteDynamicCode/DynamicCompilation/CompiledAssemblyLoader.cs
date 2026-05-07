@@ -32,7 +32,7 @@ namespace io.github.hatayama.UnityCliLoop
             Assembly compiledAssembly = Assembly.Load(assemblyBytes);
             if (securityLevel == DynamicCodeSecurityLevel.Restricted)
             {
-                IlSecurityValidator postLoadValidator = new IlSecurityValidator();
+                IlSecurityValidator postLoadValidator = new();
                 SecurityValidationResult postLoadValidationResult = postLoadValidator.Validate(compiledAssembly);
                 if (!postLoadValidationResult.IsValid)
                 {
@@ -55,8 +55,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static SecurityValidationResult ValidateBeforeAssemblyLoad(byte[] assemblyBytes)
         {
-            SecurityValidationResult aggregatedResult = new SecurityValidationResult
-            {
+            SecurityValidationResult aggregatedResult = new()            {
                 IsValid = true,
                 Violations = new List<SecurityViolation>(),
                 CompilationErrors = new List<string>()
@@ -72,11 +71,11 @@ namespace io.github.hatayama.UnityCliLoop
 
             if (shouldRunMetadataFallback)
             {
-                SystemReflectionMetadataPreloadValidator fallbackValidator = new SystemReflectionMetadataPreloadValidator();
+                SystemReflectionMetadataPreloadValidator fallbackValidator = new();
                 MergeValidationResult(aggregatedResult, fallbackValidator.Validate(assemblyBytes));
             }
 
-            PreloadIlSecurityValidator ilValidator = new PreloadIlSecurityValidator();
+            PreloadIlSecurityValidator ilValidator = new();
             MergeValidationResult(aggregatedResult, ilValidator.Validate(assemblyBytes));
 
             aggregatedResult.IsValid = aggregatedResult.Violations.Count == 0 &&
@@ -93,7 +92,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return;
             }
 
-            HashSet<string> seenViolations = new HashSet<string>(System.StringComparer.Ordinal);
+            HashSet<string> seenViolations = new(System.StringComparer.Ordinal);
             foreach (SecurityViolation violation in target.Violations)
             {
                 seenViolations.Add(CreateViolationKey(violation));

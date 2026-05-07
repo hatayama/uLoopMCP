@@ -61,7 +61,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         public string GenerateCacheKey(CompilationRequest request)
         {
-            StringBuilder keyBuilder = new StringBuilder();
+            StringBuilder keyBuilder = new();
             keyBuilder.Append(request.Code);
             keyBuilder.Append("|");
             keyBuilder.Append(request.ClassName ?? "");
@@ -121,8 +121,7 @@ namespace io.github.hatayama.UnityCliLoop
         private static List<string> BuildCachedCompilationTimings(
             DynamicCompilationBackendKind compilationBackendKind)
         {
-            List<string> timings = new List<string>
-            {
+            List<string> timings = new()            {
                 "[Perf] ReferenceResolution: 0.0ms",
                 "[Perf] Build: 0.0ms",
                 "[Perf] AssemblyLoad: 0.0ms"
@@ -147,7 +146,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static List<CompilationError> CloneCompilationErrors(List<CompilationError> errors)
         {
-            List<CompilationError> clonedErrors = new List<CompilationError>();
+            List<CompilationError> clonedErrors = new();
             if (errors == null)
             {
                 return clonedErrors;
@@ -169,7 +168,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static List<SecurityViolation> CloneSecurityViolations(List<SecurityViolation> securityViolations)
         {
-            List<SecurityViolation> clonedViolations = new List<SecurityViolation>();
+            List<SecurityViolation> clonedViolations = new();
             if (securityViolations == null)
             {
                 return clonedViolations;
@@ -195,7 +194,7 @@ namespace io.github.hatayama.UnityCliLoop
         private static Dictionary<string, List<string>> CloneAmbiguousTypeCandidates(
             Dictionary<string, List<string>> ambiguousTypeCandidates)
         {
-            Dictionary<string, List<string>> clonedCandidates = new Dictionary<string, List<string>>();
+            Dictionary<string, List<string>> clonedCandidates = new();
             if (ambiguousTypeCandidates == null)
             {
                 return clonedCandidates;

@@ -35,8 +35,7 @@ namespace io.github.hatayama.UnityCliLoop
             // instead of JSON parameter parsing. The parsing is handled by the tool dispatch layer.
             
             // Arrange - Test the Schema object directly
-            RunTestsSchema schema = new RunTestsSchema
-            {
+            RunTestsSchema schema = new()            {
                 FilterType = TestFilterType.regex,
                 FilterValue = "TestClass"
             };
@@ -56,7 +55,7 @@ namespace io.github.hatayama.UnityCliLoop
             // Test the default values of the Schema object
             
             // Act - Create Schema with default values
-            RunTestsSchema schema = new RunTestsSchema();
+            RunTestsSchema schema = new();
 
             // Assert - Schema should have default values
             Assert.That(schema.FilterType, Is.EqualTo(TestFilterType.all));

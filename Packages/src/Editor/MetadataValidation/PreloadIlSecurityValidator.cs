@@ -20,13 +20,12 @@ namespace io.github.hatayama.UnityCliLoop
 
         public SecurityValidationResult Validate(byte[] assemblyBytes)
         {
-            SecurityValidationResult result = new SecurityValidationResult
-            {
+            SecurityValidationResult result = new()            {
                 IsValid = true,
                 Violations = new List<SecurityViolation>()
             };
 
-            HashSet<string> seenViolations = new HashSet<string>(System.StringComparer.Ordinal);
+            HashSet<string> seenViolations = new(System.StringComparer.Ordinal);
 
             using MemoryStream stream = new MemoryStream(assemblyBytes, writable: false);
             using PEReader peReader = new PEReader(stream);
@@ -64,7 +63,7 @@ namespace io.github.hatayama.UnityCliLoop
             SecurityValidationResult result,
             HashSet<string> seenViolations)
         {
-            MetadataTypeNameDecoder decoder = new MetadataTypeNameDecoder(reader, this);
+            MetadataTypeNameDecoder decoder = new(reader, this);
             MethodSignature<string> signature = methodDefinition.DecodeSignature(decoder, genericContext: null);
 
             foreach (string parameterTypeName in signature.ParameterTypes)
@@ -118,7 +117,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
 
             StandaloneSignature standaloneSignature = reader.GetStandaloneSignature(methodBody.LocalSignature);
-            MetadataTypeNameDecoder decoder = new MetadataTypeNameDecoder(reader, this);
+            MetadataTypeNameDecoder decoder = new(reader, this);
             ImmutableArray<string> localTypes = standaloneSignature.DecodeLocalSignature(decoder, genericContext: null);
 
             foreach (string localTypeName in localTypes)
@@ -365,7 +364,7 @@ namespace io.github.hatayama.UnityCliLoop
         private string DecodeTypeSpecification(MetadataReader reader, TypeSpecificationHandle handle)
         {
             TypeSpecification typeSpecification = reader.GetTypeSpecification(handle);
-            MetadataTypeNameDecoder decoder = new MetadataTypeNameDecoder(reader, this);
+            MetadataTypeNameDecoder decoder = new(reader, this);
             return typeSpecification.DecodeSignature(decoder, genericContext: null);
         }
 
@@ -483,7 +482,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             public string GetGenericInstantiation(string genericType, ImmutableArray<string> typeArguments)
             {
-                List<string> flattenedTypeNames = new List<string>();
+                List<string> flattenedTypeNames = new();
                 AddFlattenedTypeName(flattenedTypeNames, genericType);
                 foreach (string typeArgument in typeArguments)
                 {

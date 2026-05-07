@@ -13,7 +13,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         protected override async Task<FindGameObjectsResponse> ExecuteAsync(FindGameObjectsSchema parameters, CancellationToken ct)
         {
-            FindGameObjectsUseCase useCase = new FindGameObjectsUseCase(new GameObjectFinderService(), new ComponentSerializer());
+            FindGameObjectsUseCase useCase = new(new GameObjectFinderService(), new ComponentSerializer());
             UnityCliLoopGameObjectSearchResult result = await useCase.FindGameObjectsAsync(ToRequest(parameters), ct);
             return ToResponse(result);
         }

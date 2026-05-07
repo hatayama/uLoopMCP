@@ -11,8 +11,8 @@ namespace io.github.hatayama.UnityCliLoop
 
         public static HoistedLiteralRewriteResult Rewrite(string source)
         {
-            StringBuilder rewrittenSource = new StringBuilder(source.Length);
-            List<HoistedLiteralBinding> bindings = new List<HoistedLiteralBinding>();
+            StringBuilder rewrittenSource = new(source.Length);
+            List<HoistedLiteralBinding> bindings = new();
             int index = 0;
 
             while (index < source.Length)
@@ -56,7 +56,7 @@ namespace io.github.hatayama.UnityCliLoop
                 index++;
             }
 
-            List<string> declarationLines = new List<string>();
+            List<string> declarationLines = new();
             foreach (HoistedLiteralBinding binding in bindings)
             {
                 declarationLines.Add(
@@ -698,7 +698,7 @@ namespace io.github.hatayama.UnityCliLoop
         private static bool TryUnescapeRegularStringLiteral(string token, out string value)
         {
             string inner = token.Substring(1, token.Length - 2);
-            StringBuilder unescaped = new StringBuilder(inner.Length);
+            StringBuilder unescaped = new(inner.Length);
 
             for (int index = 0; index < inner.Length; index++)
             {

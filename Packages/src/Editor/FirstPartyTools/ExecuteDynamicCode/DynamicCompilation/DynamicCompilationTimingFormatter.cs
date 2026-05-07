@@ -12,8 +12,7 @@ namespace io.github.hatayama.UnityCliLoop
             double assemblyLoadMilliseconds,
             DynamicCompilationBackendKind backendKind = DynamicCompilationBackendKind.Unknown)
         {
-            List<string> timings = new List<string>
-            {
+            List<string> timings = new()            {
                 $"[Perf] ReferenceResolution: {referenceResolutionMilliseconds:F1}ms",
                 $"[Perf] Build: {buildMilliseconds:F1}ms",
                 $"[Perf] AssemblyLoad: {assemblyLoadMilliseconds:F1}ms"

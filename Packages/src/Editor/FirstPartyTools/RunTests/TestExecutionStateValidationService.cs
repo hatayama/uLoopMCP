@@ -64,7 +64,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static string[] DetectCurrentUnsavedEditorChanges()
         {
-            List<string> unsavedEditorChanges = new List<string>();
+            List<string> unsavedEditorChanges = new();
             AddDirtyLoadedScenes(unsavedEditorChanges);
             AddDirtyPrefabStage(unsavedEditorChanges);
             return unsavedEditorChanges.ToArray();
@@ -72,7 +72,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static ValidationResult SaveCurrentUnsavedEditorChanges()
         {
-            List<string> failedChanges = new List<string>();
+            List<string> failedChanges = new();
             SaveDirtyLoadedScenes(failedChanges);
             SaveDirtyPrefabStage(failedChanges);
             if (failedChanges.Count > 0)

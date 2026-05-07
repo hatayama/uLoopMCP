@@ -458,7 +458,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static List<string> ReadDiagnosticLines(CancellationToken ct)
         {
-            List<string> outputLines = new List<string>();
+            List<string> outputLines = new();
             while (true)
             {
                 string outputLine = ReadProtocolLine(_sharedCompilerWorkerProcess.StandardOutput, ct);
@@ -515,8 +515,7 @@ namespace io.github.hatayama.UnityCliLoop
             ExternalCompilerPaths externalCompilerPaths,
             WorkerPaths workerPaths)
         {
-            ProcessStartInfo startInfo = new ProcessStartInfo
-            {
+            ProcessStartInfo startInfo = new()            {
                 FileName = externalCompilerPaths.DotnetHostPath,
                 Arguments = "exec"
                     + " --runtimeconfig " + QuoteCommandLineArgument(externalCompilerPaths.CompilerRuntimeConfigPath)
@@ -566,8 +565,7 @@ namespace io.github.hatayama.UnityCliLoop
                 workerAssemblyPath,
                 BuildWorkerReferenceSet(externalCompilerPaths));
 
-            ProcessStartInfo startInfo = new ProcessStartInfo
-            {
+            ProcessStartInfo startInfo = new()            {
                 FileName = externalCompilerPaths.DotnetHostPath,
                 Arguments = $"{QuoteCommandLineArgument(externalCompilerPaths.CompilerDllPath)} @{QuoteCommandLineArgument(workerCompileResponseFilePath)}",
                 WorkingDirectory = Path.GetDirectoryName(workerSourcePath),
@@ -622,8 +620,7 @@ namespace io.github.hatayama.UnityCliLoop
         private static List<string> BuildWorkerReferenceSet(ExternalCompilerPaths externalCompilerPaths)
         {
             string sharedRuntimeDirectoryPath = externalCompilerPaths.NetCoreRuntimeSharedDirectoryPath;
-            List<string> references = new List<string>
-            {
+            List<string> references = new()            {
                 Path.Combine(sharedRuntimeDirectoryPath, "System.Private.CoreLib.dll"),
                 Path.Combine(sharedRuntimeDirectoryPath, "System.Runtime.dll"),
                 Path.Combine(sharedRuntimeDirectoryPath, "System.Console.dll"),
@@ -654,8 +651,7 @@ namespace io.github.hatayama.UnityCliLoop
             string dllPath,
             IReadOnlyCollection<string> references)
         {
-            List<string> lines = new List<string>
-            {
+            List<string> lines = new()            {
                 "-nologo",
                 "-nostdlib+",
                 "-target:exe",

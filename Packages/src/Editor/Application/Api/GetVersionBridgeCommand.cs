@@ -9,8 +9,7 @@ namespace io.github.hatayama.UnityCliLoop
     {
         public static GetVersionResponse Execute()
         {
-            GetVersionResponse response = new GetVersionResponse
-            {
+            GetVersionResponse response = new()            {
                 UnityVersion = Application.unityVersion,
                 Platform = Application.platform.ToString(),
                 DataPath = Application.dataPath,

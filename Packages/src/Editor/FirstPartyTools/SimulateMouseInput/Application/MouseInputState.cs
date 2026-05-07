@@ -206,16 +206,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         internal ButtonControl GetButtonControl(Mouse mouse, MouseButton button)
         {
-            switch (button)
-            {
-                case MouseButton.Right:
-                    return mouse.rightButton;
-                case MouseButton.Middle:
-                    return mouse.middleButton;
-                default:
-                    Debug.Assert(button == MouseButton.Left, $"Unexpected MouseButton value: {button}");
-                    return mouse.leftButton;
-            }
+            return MouseButtonControlResolver.GetButtonControl(mouse, button);
         }
 
         private void OnPlayModeStateChanged(PlayModeStateChange state)

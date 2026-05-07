@@ -24,8 +24,7 @@ namespace io.github.hatayama.UnityCliLoop
                 namespaceName,
                 className);
 
-            CompilationRequest normalizedRequest = new CompilationRequest
-            {
+            CompilationRequest normalizedRequest = new()            {
                 Code = preparedCode.PreparedSource ?? request.Code,
                 ClassName = className,
                 Namespace = namespaceName,

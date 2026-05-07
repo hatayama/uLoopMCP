@@ -88,7 +88,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return;
             }
 
-            Ray ray = new Ray(cameraTransform.position, cameraTransform.forward);
+            Ray ray = new(cameraTransform.position, cameraTransform.forward);
             if (!Physics.Raycast(ray, out RaycastHit hit, BlockConstants.InteractionRange))
             {
                 ResetActionTimer();

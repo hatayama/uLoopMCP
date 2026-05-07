@@ -35,7 +35,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static void CreateCamera()
         {
-            GameObject cameraGo = new GameObject("Main Camera");
+            GameObject cameraGo = new("Main Camera");
             Camera camera = cameraGo.AddComponent<Camera>();
             camera.clearFlags = CameraClearFlags.SolidColor;
             camera.backgroundColor = new Color(0.15f, 0.15f, 0.2f, 1f);
@@ -45,7 +45,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static void CreateEventSystem()
         {
-            GameObject eventSystemGo = new GameObject("EventSystem");
+            GameObject eventSystemGo = new("EventSystem");
             eventSystemGo.AddComponent<EventSystem>();
             eventSystemGo.AddComponent<InputSystemUIInputModule>();
         }
@@ -75,7 +75,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static void CreateUI(GameObject cube)
         {
-            GameObject canvasGo = new GameObject("Canvas");
+            GameObject canvasGo = new("Canvas");
             Canvas canvas = canvasGo.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
 
@@ -139,7 +139,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             MeshRenderer? renderer = cube.GetComponent<MeshRenderer>();
             InputReplayVerificationController controller = cube.AddComponent<InputReplayVerificationController>();
-            SerializedObject so = new SerializedObject(controller);
+            SerializedObject so = new(controller);
             so.FindProperty("_frameText").objectReferenceValue = frameText;
             so.FindProperty("_positionText").objectReferenceValue = positionText;
             so.FindProperty("_rotationText").objectReferenceValue = rotationText;
@@ -160,7 +160,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static GameObject CreateVerifyPanel(Transform canvasTransform)
         {
-            GameObject panel = new GameObject("VerifyPanel");
+            GameObject panel = new("VerifyPanel");
             panel.transform.SetParent(canvasTransform, false);
 
             RectTransform panelRect = panel.AddComponent<RectTransform>();
@@ -199,7 +199,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static void CreateButton(Transform parent, string name, string label, Vector2 anchorPos, float yOffset, Color bgColor)
         {
-            GameObject go = new GameObject(name);
+            GameObject go = new(name);
             go.transform.SetParent(parent, false);
 
             RectTransform rect = go.AddComponent<RectTransform>();
@@ -214,7 +214,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             go.AddComponent<Button>();
 
-            GameObject textGo = new GameObject("Text");
+            GameObject textGo = new("Text");
             textGo.transform.SetParent(go.transform, false);
 
             RectTransform textRect = textGo.AddComponent<RectTransform>();
@@ -238,7 +238,7 @@ namespace io.github.hatayama.UnityCliLoop
             Vector2 anchoredPosition, Vector2 sizeDelta,
             int fontSize, FontStyle fontStyle, Color color, TextAnchor alignment)
         {
-            GameObject go = new GameObject(name);
+            GameObject go = new(name);
             go.transform.SetParent(parent, false);
 
             RectTransform rect = go.AddComponent<RectTransform>();

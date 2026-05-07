@@ -9,11 +9,10 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
         [Test]
         public void AddAssemblyReferenceIfMissing_WhenAssemblyIdentityAlreadyExistsUnderDifferentPath_ShouldSkipDuplicate()
         {
-            List<string> currentReferences = new List<string>
-            {
+            List<string> currentReferences = new()            {
                 "/reference/System.Runtime.dll"
             };
-            List<string> assemblyReferencesToAdd = new List<string>();
+            List<string> assemblyReferencesToAdd = new();
 
             AutoUsingResolver.AddAssemblyReferenceIfMissing(
                 assemblyReferencesToAdd,
@@ -26,11 +25,10 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
         [Test]
         public void AddAssemblyReferenceIfMissing_WhenAssemblyIdentityIsNew_ShouldAddReference()
         {
-            List<string> currentReferences = new List<string>
-            {
+            List<string> currentReferences = new()            {
                 "/reference/System.Runtime.dll"
             };
-            List<string> assemblyReferencesToAdd = new List<string>();
+            List<string> assemblyReferencesToAdd = new();
 
             AutoUsingResolver.AddAssemblyReferenceIfMissing(
                 assemblyReferencesToAdd,

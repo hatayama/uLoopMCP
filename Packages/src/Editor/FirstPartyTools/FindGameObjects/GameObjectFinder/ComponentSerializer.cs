@@ -24,7 +24,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return new ComponentInfo[0];
                 
             Component[] components = gameObject.GetComponents<Component>();
-            List<ComponentInfo> componentInfos = new List<ComponentInfo>();
+            List<ComponentInfo> componentInfos = new();
             
             foreach (Component component in components)
             {
@@ -34,8 +34,7 @@ namespace io.github.hatayama.UnityCliLoop
                 string componentTypeName = component.GetType().Name;
                 ComponentPropertyInfo[] properties = _propertySerializer.SerializeProperties(component);
                 
-                ComponentInfo info = new ComponentInfo
-                {
+                ComponentInfo info = new()                {
                     type = componentTypeName,
                     fullTypeName = component.GetType().FullName,
                     properties = properties

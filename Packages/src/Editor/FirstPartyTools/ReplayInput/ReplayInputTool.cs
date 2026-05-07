@@ -13,7 +13,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         protected override async Task<ReplayInputResponse> ExecuteAsync(ReplayInputSchema parameters, CancellationToken ct)
         {
-            ReplayInputUseCase useCase = new ReplayInputUseCase();
+            ReplayInputUseCase useCase = new();
             UnityCliLoopReplayInputResult result = await useCase.ReplayInputAsync(ToRequest(parameters), ct);
             return ToResponse(result);
         }

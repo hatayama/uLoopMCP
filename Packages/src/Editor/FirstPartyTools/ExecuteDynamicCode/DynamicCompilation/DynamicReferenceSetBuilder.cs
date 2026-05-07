@@ -32,7 +32,7 @@ namespace io.github.hatayama.UnityCliLoop
             ExternalCompilerPaths externalCompilerPaths)
         {
             Dictionary<string, string> assemblyLocationsByName = GetCachedAssemblyLocationsByName();
-            List<string> baseReferences = new List<string>();
+            List<string> baseReferences = new();
 
             foreach (string assemblyName in BaseReferenceAssemblyNames)
             {
@@ -51,7 +51,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             AddLoadedAssemblyReferences(baseReferences, assemblyLocationsByName);
 
-            List<string> mergedAdditionalReferences = new List<string>();
+            List<string> mergedAdditionalReferences = new();
             AddExistingReferences(mergedAdditionalReferences, additionalReferences);
             AddExistingReferences(mergedAdditionalReferences, resolvedAssemblyReferences);
 
@@ -66,8 +66,8 @@ namespace io.github.hatayama.UnityCliLoop
             UnityEngine.Debug.Assert(baseReferences != null, "baseReferences must not be null");
             UnityEngine.Debug.Assert(additionalReferences != null, "additionalReferences must not be null");
 
-            HashSet<string> seenNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            List<string> mergedReferences = new List<string>(baseReferences.Length + additionalReferences.Count);
+            HashSet<string> seenNames = new(StringComparer.OrdinalIgnoreCase);
+            List<string> mergedReferences = new(baseReferences.Length + additionalReferences.Count);
 
             foreach (string baseReference in baseReferences)
             {
@@ -108,7 +108,7 @@ namespace io.github.hatayama.UnityCliLoop
             List<string> destination,
             IReadOnlyDictionary<string, string> assemblyLocationsByName)
         {
-            List<string> assemblyNames = new List<string>(assemblyLocationsByName.Keys);
+            List<string> assemblyNames = new(assemblyLocationsByName.Keys);
             assemblyNames.Sort(StringComparer.OrdinalIgnoreCase);
 
             foreach (string assemblyName in assemblyNames)
@@ -216,7 +216,7 @@ namespace io.github.hatayama.UnityCliLoop
             string editorContentsPath,
             string scriptingRootPath)
         {
-            HashSet<string> emittedPaths = new HashSet<string>(StringComparer.Ordinal);
+            HashSet<string> emittedPaths = new(StringComparer.Ordinal);
 
             if (!string.IsNullOrEmpty(scriptingRootPath) && emittedPaths.Add(scriptingRootPath))
             {

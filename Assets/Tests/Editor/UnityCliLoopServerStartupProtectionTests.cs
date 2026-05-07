@@ -75,7 +75,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static UnityCliLoopServerControllerService CreateControllerService()
         {
-            TestServerInstanceFactory serverInstanceFactory = new TestServerInstanceFactory();
+            TestServerInstanceFactory serverInstanceFactory = new();
             UnityCliLoopServerLifecycleRegistryService lifecycleRegistry =
                 new UnityCliLoopServerLifecycleRegistryService();
             return new UnityCliLoopServerControllerService(

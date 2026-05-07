@@ -33,7 +33,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         public void ClearLogs()
         {
-            LogDisplayDto displayData = new LogDisplayDto(new LogEntryDto[0], 0);
+            LogDisplayDto displayData = new(new LogEntryDto[0], 0);
             OnLogDataUpdated?.Invoke(displayData);
         }
 

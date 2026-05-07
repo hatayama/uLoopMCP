@@ -19,9 +19,9 @@ namespace io.github.hatayama.UnityCliLoop
             }
 
             ct.ThrowIfCancellationRequested();
-            ConsoleClearService consoleClear = new ConsoleClearService();
+            ConsoleClearService consoleClear = new();
             UnityCliLoopConsoleClearResult result = consoleClear.Clear(parameters.AddConfirmationMessage);
-            ClearConsoleResponse response = new ClearConsoleResponse(
+            ClearConsoleResponse response = new(
                 success: result.Success,
                 clearedLogCount: result.ClearedLogCount,
                 clearedCounts: new ClearedLogCounts(

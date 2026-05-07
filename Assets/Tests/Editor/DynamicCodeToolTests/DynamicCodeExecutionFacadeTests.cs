@@ -12,7 +12,7 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
         [Test]
         public async Task ExecuteAsync_WhenSameSecurityLevelUsedTwice_ShouldReuseExecutor()
         {
-            FakeDynamicCodeExecutorProvider provider = new FakeDynamicCodeExecutorProvider();
+            FakeDynamicCodeExecutorProvider provider = new();
             using DynamicCodeExecutorPool pool = new DynamicCodeExecutorPool(provider);
             using DynamicCodeExecutionFacade facade = new DynamicCodeExecutionFacade(
                 new FakeCompiledAssemblyBuilder(true),
@@ -31,7 +31,7 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
         [Test]
         public async Task ExecuteAsync_WhenSecurityLevelChanges_ShouldCreateSeparateExecutors()
         {
-            FakeDynamicCodeExecutorProvider provider = new FakeDynamicCodeExecutorProvider();
+            FakeDynamicCodeExecutorProvider provider = new();
             using DynamicCodeExecutorPool pool = new DynamicCodeExecutorPool(provider);
             using DynamicCodeExecutionFacade facade = new DynamicCodeExecutionFacade(
                 new FakeCompiledAssemblyBuilder(true),
@@ -51,9 +51,9 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
         [Test]
         public void Dispose_WhenExecutorsWereCreated_ShouldDisposeCachedExecutors()
         {
-            FakeDynamicCodeExecutorProvider provider = new FakeDynamicCodeExecutorProvider();
+            FakeDynamicCodeExecutorProvider provider = new();
             using DynamicCodeExecutorPool pool = new DynamicCodeExecutorPool(provider);
-            DynamicCodeExecutionFacade facade = new DynamicCodeExecutionFacade(
+            DynamicCodeExecutionFacade facade = new(
                 new FakeCompiledAssemblyBuilder(true),
                 pool);
 
@@ -72,7 +72,7 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
         [Test]
         public void SupportsAutoPrewarm_ShouldDelegateToAssemblyBuilderCapability()
         {
-            FakeDynamicCodeExecutorProvider provider = new FakeDynamicCodeExecutorProvider();
+            FakeDynamicCodeExecutorProvider provider = new();
             using DynamicCodeExecutorPool pool = new DynamicCodeExecutorPool(provider);
             using DynamicCodeExecutionFacade supported = new DynamicCodeExecutionFacade(
                 new FakeCompiledAssemblyBuilder(true),
@@ -112,7 +112,7 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
 
                 CreateCallsBySecurityLevel[securityLevel]++;
 
-                FakeDynamicCodeExecutor executor = new FakeDynamicCodeExecutor();
+                FakeDynamicCodeExecutor executor = new();
                 CreatedExecutors.Add(executor);
                 return executor;
             }

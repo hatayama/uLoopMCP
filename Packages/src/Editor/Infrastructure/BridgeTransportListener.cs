@@ -134,7 +134,7 @@ namespace io.github.hatayama.UnityCliLoop
         public BridgeClientConnection AcceptClient(CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
-            NamedPipeServerStream pipe = new NamedPipeServerStream(
+            NamedPipeServerStream pipe = new(
                 Endpoint.PipeName,
                 PipeDirection.InOut,
                 NamedPipeServerStream.MaxAllowedServerInstances,

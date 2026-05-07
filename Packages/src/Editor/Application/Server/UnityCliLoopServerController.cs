@@ -283,7 +283,7 @@ namespace io.github.hatayama.UnityCliLoop
             Debug.Assert(scheduleDelayCall != null, "scheduleDelayCall must not be null");
             Debug.Assert(restoreServerState != null, "restoreServerState must not be null");
 
-            TaskCompletionSource<bool> scheduledRecoveryCompletionSource = new TaskCompletionSource<bool>();
+            TaskCompletionSource<bool> scheduledRecoveryCompletionSource = new();
             _currentRecoveryTask = scheduledRecoveryCompletionSource.Task;
 
             scheduleDelayCall(() =>

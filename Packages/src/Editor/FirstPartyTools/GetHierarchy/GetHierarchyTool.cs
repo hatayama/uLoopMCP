@@ -13,7 +13,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         protected override async Task<GetHierarchyResponse> ExecuteAsync(GetHierarchySchema parameters, CancellationToken ct)
         {
-            GetHierarchyUseCase useCase = new GetHierarchyUseCase(new HierarchyService(), new HierarchySerializer());
+            GetHierarchyUseCase useCase = new(new HierarchyService(), new HierarchySerializer());
             UnityCliLoopHierarchyResult result = await useCase.GetHierarchyAsync(ToRequest(parameters), ct);
             return new GetHierarchyResponse(result.FilePath, result.Message);
         }

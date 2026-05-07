@@ -24,8 +24,8 @@ namespace io.github.hatayama.UnityCliLoop
 
         public static CompilerDiagnostics FromMessages(CompilerMessage[] messages)
         {
-            List<CompilationError> errors = new List<CompilationError>();
-            List<string> warnings = new List<string>();
+            List<CompilationError> errors = new();
+            List<string> warnings = new();
             bool hasAmbiguityErrors = false;
 
             foreach (CompilerMessage message in messages)

@@ -79,8 +79,7 @@ namespace io.github.hatayama.UnityCliLoop
                     return compileOnlyResult;
                 }
 
-                ExecutionContext context = new ExecutionContext
-                {
+                ExecutionContext context = new()                {
                     CompiledAssembly = compilationResult.CompiledAssembly,
                     Parameters = BuildExecutionParameters(parameters, preparedCode.HoistedLiteralBindings),
                     CancellationToken = cancellationToken
@@ -149,8 +148,7 @@ namespace io.github.hatayama.UnityCliLoop
             string className,
             CancellationToken ct)
         {
-            CompilationRequest request = new CompilationRequest
-            {
+            CompilationRequest request = new()            {
                 Code = code,
                 ClassName = className,
                 Namespace = DynamicCodeConstants.DEFAULT_NAMESPACE
@@ -288,7 +286,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static List<string> BuildViolationMessages(List<SecurityViolation> violations)
         {
-            List<string> violationMessages = new List<string>();
+            List<string> violationMessages = new();
             if (violations == null)
             {
                 return violationMessages;
@@ -359,7 +357,7 @@ namespace io.github.hatayama.UnityCliLoop
             object[] parameters,
             IReadOnlyCollection<HoistedLiteralBinding> hoistedLiteralBindings)
         {
-            Dictionary<string, object> executionParameters = new Dictionary<string, object>();
+            Dictionary<string, object> executionParameters = new();
 
             if (hoistedLiteralBindings != null)
             {
@@ -385,7 +383,7 @@ namespace io.github.hatayama.UnityCliLoop
             List<string> executionTimings,
             string executionEntry)
         {
-            List<string> mergedTimings = new List<string>();
+            List<string> mergedTimings = new();
             if (compilationTimings != null)
             {
                 mergedTimings.AddRange(compilationTimings);

@@ -24,8 +24,7 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
         {
             DynamicCodeStartupTelemetry.MarkServerReady();
             DynamicCodeStartupTelemetry.MarkPrewarmCompleted();
-            ExecuteDynamicCodeResponse response = new ExecuteDynamicCodeResponse
-            {
+            ExecuteDynamicCodeResponse response = new()            {
                 Timings = new List<string>
                 {
                     "[Perf] Backend: SharedRoslynWorker"
@@ -49,8 +48,7 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
         [Test]
         public void AppendTimingEntries_WhenResponseTimingsAreNull_ShouldCreateTimingList()
         {
-            ExecuteDynamicCodeResponse response = new ExecuteDynamicCodeResponse
-            {
+            ExecuteDynamicCodeResponse response = new()            {
                 Timings = null
             };
 
@@ -69,8 +67,7 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
         [Test]
         public void Serialize_WhenTimingsExist_ShouldOmitTimingsFromJson()
         {
-            ExecuteDynamicCodeResponse response = new ExecuteDynamicCodeResponse
-            {
+            ExecuteDynamicCodeResponse response = new()            {
                 Success = true,
                 Timings = new List<string>
                 {

@@ -25,7 +25,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return Task.CompletedTask;
             }
 
-            TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>();
+            TaskCompletionSource<bool> tcs = new();
             
             Timer timer = null;
             timer = new Timer(_ =>
@@ -74,7 +74,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return Task.CompletedTask;
             }
 
-            TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>();
+            TaskCompletionSource<bool> tcs = new();
             
             Timer timer = null;
             timer = new Timer(_ =>

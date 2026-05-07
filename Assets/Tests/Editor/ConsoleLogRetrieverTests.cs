@@ -187,7 +187,7 @@ namespace io.github.hatayama.UnityCliLoop
             string testMessage = $"MessageWithStack_{uniqueTestId}";
             
             // Create a dummy GameObject to use as context (this generates stack trace)
-            GameObject testObject = new GameObject("TestObject");
+            GameObject testObject = new("TestObject");
             
             LogAssert.Expect(UnityEngine.LogType.Log, testMessage);
             Debug.Log(testMessage, testObject);
@@ -325,7 +325,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             // Act & Assert - Reflection-based initialization should succeed
             Assert.DoesNotThrow(() => {
-                ConsoleLogRetriever newRetriever = new ConsoleLogRetriever();
+                ConsoleLogRetriever newRetriever = new();
 
                 // Basic reflection functionality should work
                 int count = newRetriever.GetLogCount();

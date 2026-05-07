@@ -254,7 +254,7 @@ namespace io.github.hatayama.UnityCliLoop
             {
                 if (useRegex)
                 {
-                    Regex regex = new Regex(searchText);
+                    Regex regex = new(searchText);
                     allEntries = allEntries.FindAll(entry => 
                     {
                         bool messageMatch = regex.IsMatch(entry.Message);

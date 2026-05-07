@@ -78,8 +78,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         public static SecurityValidationResult Scan(string sourceCode)
         {
-            SecurityValidationResult result = new SecurityValidationResult
-            {
+            SecurityValidationResult result = new()            {
                 IsValid = true,
                 Violations = new List<SecurityViolation>()
             };

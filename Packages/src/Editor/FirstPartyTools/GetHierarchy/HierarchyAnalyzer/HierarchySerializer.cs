@@ -27,7 +27,7 @@ namespace io.github.hatayama.UnityCliLoop
             int nodeCount = nodes.Count;
             int maxDepth = nodes.Any() ? nodes.Max(n => n.depth) : 0;
 
-            HierarchyContext updatedContext = new HierarchyContext(
+            HierarchyContext updatedContext = new(
                 context.sceneType,
                 context.sceneName,
                 nodeCount,
@@ -46,11 +46,11 @@ namespace io.github.hatayama.UnityCliLoop
         private SceneHierarchyGroup BuildGroupForScene(string sceneName, List<HierarchyNode> sceneNodes, HierarchySerializationOptions options)
         {
             // Build nested structure per scene
-            Dictionary<int, HierarchyNodeNested> nodeDict = new Dictionary<int, HierarchyNodeNested>();
+            Dictionary<int, HierarchyNodeNested> nodeDict = new();
 
             foreach (HierarchyNode flat in sceneNodes)
             {
-                HierarchyNodeNested nested = new HierarchyNodeNested(
+                HierarchyNodeNested nested = new(
                     name: flat.name,
                     isActive: flat.isActive,
                     components: flat.components,
@@ -62,7 +62,7 @@ namespace io.github.hatayama.UnityCliLoop
                 nodeDict[flat.id] = nested;
             }
 
-            List<HierarchyNodeNested> roots = new List<HierarchyNodeNested>();
+            List<HierarchyNodeNested> roots = new();
             foreach (HierarchyNode flat in sceneNodes)
             {
                 HierarchyNodeNested nested = nodeDict[flat.id];
@@ -84,7 +84,7 @@ namespace io.github.hatayama.UnityCliLoop
             int rootCount = roots.Count;
             int groupNodeCount = sceneNodes.Count;
             int groupMaxDepth = sceneNodes.Any() ? sceneNodes.Max(n => n.depth) : 0;
-            SceneHierarchyStats stats = new SceneHierarchyStats(rootCount, groupNodeCount, groupMaxDepth);
+            SceneHierarchyStats stats = new(rootCount, groupNodeCount, groupMaxDepth);
 
             // Optional LUTs
             List<string> componentsLut = null;
@@ -108,7 +108,7 @@ namespace io.github.hatayama.UnityCliLoop
             if (options.UseComponentsLut == "true") return true;
             if (options.UseComponentsLut == "false") return false;
             // auto heuristic: high duplication of component names
-            List<string> all = new List<string>();
+            List<string> all = new();
             foreach (var n in sceneNodes)
             {
                 if (n.components != null && n.components.Length > 0)
@@ -123,8 +123,8 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static List<string> BuildComponentsLutAndApply(List<HierarchyNode> sceneNodes, Dictionary<int, HierarchyNodeNested> nodeDict)
         {
-            Dictionary<string, int> lutIndex = new Dictionary<string, int>();
-            List<string> lut = new List<string>();
+            Dictionary<string, int> lutIndex = new();
+            List<string> lut = new();
 
             foreach (HierarchyNode flat in sceneNodes)
             {

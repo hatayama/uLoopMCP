@@ -59,7 +59,7 @@ namespace io.github.hatayama.UnityCliLoop
             using SHA256 sha256 = SHA256.Create();
             byte[] bytes = Encoding.UTF8.GetBytes(canonicalProjectRoot);
             byte[] hashBytes = sha256.ComputeHash(bytes);
-            StringBuilder builder = new StringBuilder(16);
+            StringBuilder builder = new(16);
             for (int i = 0; i < 8; i++)
             {
                 builder.Append(hashBytes[i].ToString("x2"));

@@ -141,7 +141,7 @@ namespace io.github.hatayama.UnityCliLoop
             Debug.Log("=== Cancellation Test Started ===");
             Debug.Log("==============================");
             
-            CancellationTokenSource cts = new CancellationTokenSource();
+            CancellationTokenSource cts = new();
             
             TestCancellableTaskAsync(cts.Token).Forget();
             

@@ -14,7 +14,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             Debug.Assert(source != null, "source must not be null");
 
-            SourceShapeResult result = new SourceShapeResult();
+            SourceShapeResult result = new();
             int length = source.Length;
             int pos = 0;
             int braceDepth = 0;

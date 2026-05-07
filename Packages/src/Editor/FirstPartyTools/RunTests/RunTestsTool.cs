@@ -13,7 +13,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         protected override async Task<RunTestsResponse> ExecuteAsync(RunTestsSchema parameters, CancellationToken ct)
         {
-            RunTestsUseCase useCase = new RunTestsUseCase();
+            RunTestsUseCase useCase = new();
             UnityCliLoopTestExecutionResult result = await useCase.RunTestsAsync(ToRequest(parameters), ct);
             return ToResponse(result);
         }

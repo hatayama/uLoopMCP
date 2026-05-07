@@ -26,10 +26,10 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
         public async Task RequestAsync_WhenSupportedAndWarmupSucceeds_ShouldExecuteIdleRuntime()
         {
             // Tests that first-party prewarm goes through the local runtime instead of platform host services.
-            FakePrewarmRuntime runtime = new FakePrewarmRuntime(
+            FakePrewarmRuntime runtime = new(
                 true,
                 new RuntimeResult(true, new ExecutionResult { Success = true }));
-            PrewarmDynamicCodeUseCase useCase = new PrewarmDynamicCodeUseCase(runtime);
+            PrewarmDynamicCodeUseCase useCase = new(runtime);
 
             await useCase.RequestAsync();
 
@@ -46,10 +46,10 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
         public async Task RequestAsync_WhenFastPathIsUnavailable_ShouldSkipExecution()
         {
             // Tests that unsupported runtimes skip prewarm without touching execution.
-            FakePrewarmRuntime runtime = new FakePrewarmRuntime(
+            FakePrewarmRuntime runtime = new(
                 false,
                 new RuntimeResult(true, new ExecutionResult { Success = true }));
-            PrewarmDynamicCodeUseCase useCase = new PrewarmDynamicCodeUseCase(runtime);
+            PrewarmDynamicCodeUseCase useCase = new(runtime);
 
             await useCase.RequestAsync();
 
@@ -63,10 +63,10 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
         public async Task RequestAsync_WhenRuntimeIsBusy_ShouldMarkForegroundPreemption()
         {
             // Tests that a busy runtime yields to foreground work without retrying through host services.
-            FakePrewarmRuntime runtime = new FakePrewarmRuntime(
+            FakePrewarmRuntime runtime = new(
                 true,
                 new RuntimeResult(false, new ExecutionResult { Success = false }));
-            PrewarmDynamicCodeUseCase useCase = new PrewarmDynamicCodeUseCase(runtime);
+            PrewarmDynamicCodeUseCase useCase = new(runtime);
 
             await useCase.RequestAsync();
 
@@ -80,14 +80,14 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
         public async Task RequestAsync_WhenWarmupFails_ShouldRecordFailure()
         {
             // Tests that runtime failure is reported without escaping through platform services.
-            FakePrewarmRuntime runtime = new FakePrewarmRuntime(
+            FakePrewarmRuntime runtime = new(
                 true,
                 new RuntimeResult(true, new ExecutionResult
                 {
                     Success = false,
                     ErrorMessage = "warmup failed"
                 }));
-            PrewarmDynamicCodeUseCase useCase = new PrewarmDynamicCodeUseCase(runtime);
+            PrewarmDynamicCodeUseCase useCase = new(runtime);
 
             await useCase.RequestAsync();
 
@@ -103,10 +103,10 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
             // Tests that cancellation prevents prewarm from entering the runtime.
             using CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
             cancellationTokenSource.Cancel();
-            FakePrewarmRuntime runtime = new FakePrewarmRuntime(
+            FakePrewarmRuntime runtime = new(
                 true,
                 new RuntimeResult(true, new ExecutionResult { Success = true }));
-            PrewarmDynamicCodeUseCase useCase = new PrewarmDynamicCodeUseCase(
+            PrewarmDynamicCodeUseCase useCase = new(
                 runtime,
                 cancellationTokenSource.Token);
 

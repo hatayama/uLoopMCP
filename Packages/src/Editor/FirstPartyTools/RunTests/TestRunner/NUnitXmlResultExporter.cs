@@ -61,7 +61,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// </summary>
         private static string GenerateNUnitXml(ITestResultAdaptor testResult)
         {
-            XmlDocument doc = new XmlDocument();
+            XmlDocument doc = new();
 
             // Add XML declaration.
             XmlDeclaration declaration = doc.CreateXmlDeclaration("1.0", "UTF-8", null);
@@ -88,8 +88,7 @@ namespace io.github.hatayama.UnityCliLoop
             // Return formatted XML.
             using (StringWriter stringWriter = new StringWriter())
             {
-                XmlWriterSettings settings = new XmlWriterSettings
-                {
+                XmlWriterSettings settings = new()                {
                     Indent = true,
                     IndentChars = "  ",
                     NewLineChars = "\n",

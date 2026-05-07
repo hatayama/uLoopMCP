@@ -50,7 +50,7 @@ namespace Tests.PlayMode
         public void UnityEngineTest_ShouldPass()
         {
             // Test Unity engine functionality
-            Vector3 vector = new Vector3(1, 2, 3);
+            Vector3 vector = new(1, 2, 3);
             float magnitude = vector.magnitude;
             
             Assert.Greater(magnitude, 0, "Vector magnitude should be positive");

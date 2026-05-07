@@ -81,7 +81,7 @@ namespace io.github.hatayama.UnityCliLoop
                 prewarmDetail = _prewarmDetail;
             }
 
-            List<string> entries = new List<string>();
+            List<string> entries = new();
             if (serverReadyTimestamp > 0)
             {
                 entries.Add($"[Perf] ServerReadyAge: {ToMilliseconds(serverReadyTimestamp, Stopwatch.GetTimestamp()):F1}ms");

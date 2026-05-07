@@ -45,7 +45,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
-            GameObject cameraGo = new GameObject("Main Camera");
+            GameObject cameraGo = new("Main Camera");
             Camera camera = cameraGo.AddComponent<Camera>();
             camera.clearFlags = CameraClearFlags.SolidColor;
             camera.backgroundColor = new Color(0.08f, 0.09f, 0.12f, 1f);
@@ -56,11 +56,11 @@ namespace io.github.hatayama.UnityCliLoop
             CreateGround();
             CreateKeyboardInputCube();
 
-            GameObject eventSystemGo = new GameObject("EventSystem");
+            GameObject eventSystemGo = new("EventSystem");
             eventSystemGo.AddComponent<EventSystem>();
             eventSystemGo.AddComponent<InputSystemUIInputModule>();
 
-            GameObject canvasGo = new GameObject("Canvas");
+            GameObject canvasGo = new("Canvas");
             Canvas canvas = canvasGo.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
 
@@ -86,7 +86,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static void CreateDirectionalLight()
         {
-            GameObject lightGo = new GameObject("Directional Light");
+            GameObject lightGo = new("Directional Light");
             Light light = lightGo.AddComponent<Light>();
             light.type = LightType.Directional;
             light.color = new Color(1f, 0.96f, 0.84f);
@@ -119,7 +119,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static void CreateTitle(Transform parent)
         {
-            GameObject go = new GameObject("Title");
+            GameObject go = new("Title");
             go.transform.SetParent(parent, false);
 
             RectTransform rect = go.AddComponent<RectTransform>();
@@ -140,7 +140,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static void CreateStatusText(Transform parent)
         {
-            GameObject go = new GameObject("StatusText");
+            GameObject go = new("StatusText");
             go.transform.SetParent(parent, false);
 
             RectTransform rect = go.AddComponent<RectTransform>();
@@ -160,7 +160,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static void CreateKeyboard(Transform parent)
         {
-            GameObject panel = new GameObject("KeyboardPanel");
+            GameObject panel = new("KeyboardPanel");
             panel.transform.SetParent(parent, false);
 
             RectTransform panelRect = panel.AddComponent<RectTransform>();
@@ -284,7 +284,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static void CreateKey(Transform parent, KeyDef keyDef, float x, float y)
         {
-            GameObject go = new GameObject($"Key_{keyDef.Key}");
+            GameObject go = new($"Key_{keyDef.Key}");
             go.transform.SetParent(parent, false);
 
             RectTransform rect = go.AddComponent<RectTransform>();
@@ -300,7 +300,7 @@ namespace io.github.hatayama.UnityCliLoop
             DemoKeyIndicator indicator = go.AddComponent<DemoKeyIndicator>();
 
             // Label
-            GameObject labelGo = new GameObject("Label");
+            GameObject labelGo = new("Label");
             labelGo.transform.SetParent(go.transform, false);
 
             RectTransform labelRect = labelGo.AddComponent<RectTransform>();

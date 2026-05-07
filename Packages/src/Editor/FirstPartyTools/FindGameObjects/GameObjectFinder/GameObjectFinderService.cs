@@ -29,7 +29,7 @@ namespace io.github.hatayama.UnityCliLoop
         
         public GameObjectDetails[] FindGameObjectsAdvanced(GameObjectSearchOptions options)
         {
-            List<GameObjectDetails> results = new List<GameObjectDetails>();
+            List<GameObjectDetails> results = new();
             
             // Handle hierarchy path search separately
             if (options.SearchMode == SearchMode.Path && !string.IsNullOrEmpty(options.NamePattern))
@@ -37,8 +37,7 @@ namespace io.github.hatayama.UnityCliLoop
                 GameObject found = FindGameObjectByPath(options.NamePattern);
                 if (found != null)
                 {
-                    GameObjectDetails details = new GameObjectDetails
-                    {
+                    GameObjectDetails details = new()                    {
                         Found = true,
                         GameObject = found,
                         Name = found.name,
@@ -57,8 +56,7 @@ namespace io.github.hatayama.UnityCliLoop
             {
                 if (MatchesAllCriteria(gameObject, options))
                 {
-                    GameObjectDetails details = new GameObjectDetails
-                    {
+                    GameObjectDetails details = new()                    {
                         Found = true,
                         GameObject = gameObject,
                         Name = gameObject.name,
@@ -107,7 +105,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private List<GameObject> GetAllGameObjects(bool includeInactive)
         {
-            List<GameObject> allGameObjects = new List<GameObject>();
+            List<GameObject> allGameObjects = new();
 
             // Prefab Stage has its own scene not visible via SceneManager
             PrefabStage prefabStage = PrefabStageUtility.GetCurrentPrefabStage();
@@ -186,7 +184,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return new GameObjectDetails[0];
             }
 
-            List<GameObjectDetails> results = new List<GameObjectDetails>();
+            List<GameObjectDetails> results = new();
 
             foreach (GameObject gameObject in selectedGameObjects)
             {
@@ -200,8 +198,7 @@ namespace io.github.hatayama.UnityCliLoop
                     continue;
                 }
 
-                GameObjectDetails details = new GameObjectDetails
-                {
+                GameObjectDetails details = new()                {
                     Found = true,
                     GameObject = gameObject,
                     Name = gameObject.name,

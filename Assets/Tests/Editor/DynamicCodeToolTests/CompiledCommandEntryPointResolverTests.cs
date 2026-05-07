@@ -11,7 +11,7 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
         [Test]
         public void TryFindExecuteMethod_WhenDirectTypeHasOverloads_ShouldPickSupportedSignature()
         {
-            CompiledCommandEntryPointResolver resolver = new CompiledCommandEntryPointResolver();
+            CompiledCommandEntryPointResolver resolver = new();
 
             (System.Type targetType, MethodInfo executeMethod) = resolver.TryFindExecuteMethod(
                 typeof(global::UnityCliLoop.Dynamic.DynamicCommand).Assembly);

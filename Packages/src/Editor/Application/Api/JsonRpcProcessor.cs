@@ -224,15 +224,14 @@ namespace io.github.hatayama.UnityCliLoop
         /// <param name="result">Command execution result</param>
         private static string CreateSuccessResponse(object id, UnityCliLoopToolResponse result)
         {
-            JsonSerializerSettings settings = new JsonSerializerSettings
-            {
+            JsonSerializerSettings settings = new()            {
                 ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
                 MaxDepth = UnityCliLoopServerConfig.DEFAULT_JSON_MAX_DEPTH
             };
             
             try
             {
-                JsonRpcSuccessResponse response = new JsonRpcSuccessResponse(
+                JsonRpcSuccessResponse response = new(
                     UnityCliLoopServerConfig.JSONRPC_VERSION,
                     id,
                     result
@@ -248,7 +247,7 @@ namespace io.github.hatayama.UnityCliLoop
                     commandType = result != null ? result.GetType().Name : "unknown"
                 };
                 
-                JsonRpcSuccessResponse fallbackResponse = new JsonRpcSuccessResponse(
+                JsonRpcSuccessResponse fallbackResponse = new(
                     UnityCliLoopServerConfig.JSONRPC_VERSION,
                     id,
                     fallbackResult
@@ -265,7 +264,7 @@ namespace io.github.hatayama.UnityCliLoop
         private static string CreateErrorResponse(object id, Exception ex)
         {
             // Centralize exception -> user-facing message via UserFriendlyErrorConverter
-            UserFriendlyErrorConverter handler = new UserFriendlyErrorConverter();
+            UserFriendlyErrorConverter handler = new();
             UserFriendlyErrorDto exceptionResponse = handler.ProcessException(ex);
             
             // Map UserFriendlyErrorDto to JsonRpcError
@@ -281,14 +280,13 @@ namespace io.github.hatayama.UnityCliLoop
                 errorData = new InternalErrorData(exceptionResponse.Explanation ?? ex.Message);
             }
 
-            JsonRpcErrorResponse errorResponse = new JsonRpcErrorResponse(
+            JsonRpcErrorResponse errorResponse = new(
                 UnityCliLoopServerConfig.JSONRPC_VERSION,
                 id,
                 new JsonRpcError(UnityCliLoopServerConfig.INTERNAL_ERROR_CODE, errorMessage, errorData)
             );
             
-            JsonSerializerSettings settings = new JsonSerializerSettings
-            {
+            JsonSerializerSettings settings = new()            {
                 ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
                 MaxDepth = UnityCliLoopServerConfig.DEFAULT_JSON_MAX_DEPTH
             };

@@ -18,7 +18,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// </summary>
         public List<HierarchyNode> GetHierarchyNodes(HierarchyOptions options)
         {
-            List<HierarchyNode> nodes = new List<HierarchyNode>();
+            List<HierarchyNode> nodes = new();
             GameObject[] rootObjects = options.UseSelection
                 ? GetSelectedRootGameObjects()
                 : GetRootGameObjects(options.RootPath);
@@ -46,7 +46,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return System.Array.Empty<GameObject>();
             }
 
-            List<GameObject> roots = new List<GameObject>();
+            List<GameObject> roots = new();
             foreach (GameObject obj in selected)
             {
                 if (obj == null)
@@ -115,7 +115,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return string.Empty;
             }
 
-            System.Collections.Generic.List<string> names = new System.Collections.Generic.List<string>();
+            System.Collections.Generic.List<string> names = new();
             for (int i = 0; i < count; i++)
             {
                 Scene scene = SceneManager.GetSceneAt(i);
@@ -169,7 +169,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
             
             // Normal scene mode: iterate all loaded scenes (additive included)
-            List<GameObject> results = new List<GameObject>();
+            List<GameObject> results = new();
             GameObject[] ddolRoots = GetDontDestroyOnLoadRootObjects();
 
             int sceneCount = SceneManager.sceneCount;
@@ -302,7 +302,7 @@ namespace io.github.hatayama.UnityCliLoop
                     return System.Array.Empty<GameObject>();
                 }
 
-                System.Collections.Generic.List<GameObject> filtered = new System.Collections.Generic.List<GameObject>();
+                System.Collections.Generic.List<GameObject> filtered = new();
                 for (int i = 0; i < roots.Length; i++)
                 {
                     GameObject root = roots[i];
@@ -352,7 +352,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
             
             // Create node
-            HierarchyNode node = new HierarchyNode(
+            HierarchyNode node = new(
                 id: obj.GetInstanceID(),
                 name: obj.name,
                 parent: parentId,

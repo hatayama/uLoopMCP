@@ -41,7 +41,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
         [Test]
         public void Provider_ReturnsUpdatedInMemoryFlag()
         {
-            UnityCliLoopEditorDomainReloadStateProvider provider = new UnityCliLoopEditorDomainReloadStateProvider();
+            UnityCliLoopEditorDomainReloadStateProvider provider = new();
 
             try
             {

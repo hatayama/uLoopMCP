@@ -39,7 +39,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             if (!forceRecompile) return; // Don't save normal compilation
 
-            CompileRequestInfo requestInfo = new CompileRequestInfo(requestId, forceRecompile, clientEndpoint);
+            CompileRequestInfo requestInfo = new(requestId, forceRecompile, clientEndpoint);
             string json = JsonConvert.SerializeObject(requestInfo);
             
             UnityCliLoopEditorSettings.SetCompileRequestJson(requestId, json);

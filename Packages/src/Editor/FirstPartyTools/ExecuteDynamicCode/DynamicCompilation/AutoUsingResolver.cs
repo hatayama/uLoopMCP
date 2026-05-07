@@ -55,7 +55,7 @@ namespace io.github.hatayama.UnityCliLoop
                 }
 
                 HashSet<string> namespacesToAdd = new(System.StringComparer.Ordinal);
-                List<string> assemblyReferencesToAdd = new List<string>();
+                List<string> assemblyReferencesToAdd = new();
                 AssemblyTypeIndex index = AssemblyTypeIndex.Instance;
                 Stopwatch resolutionStopwatch = Stopwatch.StartNew();
 
@@ -140,7 +140,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         internal static string InsertUsingDirectives(string source, IEnumerable<string> namespaces)
         {
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
             foreach (string ns in namespaces)
             {
                 sb.AppendLine($"using {ns};");

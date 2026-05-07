@@ -117,8 +117,7 @@ namespace io.github.hatayama.UnityCliLoop
         [Test]
         public void GetSettings_WhenNewFileExists_ShouldIgnoreLegacy()
         {
-            ULoopSettingsData newSettings = new ULoopSettingsData
-            {
+            ULoopSettingsData newSettings = new()            {
                 dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.FullAccess
             };
             File.WriteAllText(SettingsFilePath, JsonUtility.ToJson(newSettings, true));
@@ -139,8 +138,7 @@ namespace io.github.hatayama.UnityCliLoop
         [Test]
         public void SetAndGet_RoundTrip_ShouldPreserveRemainingValues()
         {
-            ULoopSettingsData written = new ULoopSettingsData
-            {
+            ULoopSettingsData written = new()            {
                 dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.Restricted
             };
             ULoopSettings.SaveSettings(written);
@@ -196,8 +194,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             DeleteIfExists(SettingsFilePath);
 
-            SettingsFileFixture backupData = new SettingsFileFixture
-            {
+            SettingsFileFixture backupData = new()            {
                 allowThirdPartyTools = false,
                 dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.FullAccess
             };
@@ -219,8 +216,7 @@ namespace io.github.hatayama.UnityCliLoop
             DeleteIfExists(SettingsFilePath);
             DeleteIfExists(LegacySettingsFilePath);
 
-            SettingsFileFixture oldData = new SettingsFileFixture
-            {
+            SettingsFileFixture oldData = new()            {
                 allowThirdPartyTools = false,
                 dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.Restricted
             };
@@ -242,8 +238,7 @@ namespace io.github.hatayama.UnityCliLoop
             DeleteIfExists(SettingsFilePath);
             DeleteIfExists(ToolSettingsFilePath);
 
-            ULoopSettingsData oldData = new ULoopSettingsData
-            {
+            ULoopSettingsData oldData = new()            {
                 dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.Restricted
             };
             File.WriteAllText(OldSettingsFilePath, JsonUtility.ToJson(oldData, true));

@@ -13,7 +13,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         protected override async Task<SimulateMouseInputResponse> ExecuteAsync(SimulateMouseInputSchema parameters, CancellationToken ct)
         {
-            SimulateMouseInputUseCase useCase = new SimulateMouseInputUseCase();
+            SimulateMouseInputUseCase useCase = new();
             UnityCliLoopMouseInputSimulationResult result =
                 await useCase.SimulateMouseInputAsync(ToRequest(parameters), ct);
             return ToResponse(result);

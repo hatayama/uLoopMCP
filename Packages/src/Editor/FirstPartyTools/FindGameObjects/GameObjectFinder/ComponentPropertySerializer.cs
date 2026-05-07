@@ -19,10 +19,10 @@ namespace io.github.hatayama.UnityCliLoop
             if (component == null)
                 return new ComponentPropertyInfo[0];
                 
-            List<ComponentPropertyInfo> propertyInfos = new List<ComponentPropertyInfo>();
+            List<ComponentPropertyInfo> propertyInfos = new();
             
             // Use SerializedObject to get only Inspector-visible properties
-            SerializedObject serializedObject = new SerializedObject(component);
+            SerializedObject serializedObject = new(component);
             SerializedProperty iterator = serializedObject.GetIterator();
 
             if (iterator.NextVisible(true))
@@ -36,8 +36,7 @@ namespace io.github.hatayama.UnityCliLoop
                     object value = GetSerializedPropertyValue(iterator);
                     if (value != null)
                     {
-                        ComponentPropertyInfo info = new ComponentPropertyInfo
-                        {
+                        ComponentPropertyInfo info = new()                        {
                             name = iterator.displayName,
                             type = iterator.propertyType.ToString(),
                             value = SerializeValue(value)

@@ -496,12 +496,11 @@ namespace Tests.PlayMode
         {
             yield return null;
 
-            SimulateKeyboardSchema parameters = new SimulateKeyboardSchema
-            {
+            SimulateKeyboardSchema parameters = new()            {
                 Action = UnityCliLoopKeyboardAction.KeyDown,
                 Key = "W"
             };
-            CancellationTokenSource cts = new CancellationTokenSource();
+            CancellationTokenSource cts = new();
             Task<SimulateKeyboardResponse> task = tool.ExecuteWithCancellationAsync(parameters, cts.Token);
 
             yield return new WaitUntil(() => KeyboardKeyState.IsKeyHeld(Key.W) || task.IsCompleted);

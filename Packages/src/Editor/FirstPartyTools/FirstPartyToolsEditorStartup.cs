@@ -5,16 +5,14 @@ namespace io.github.hatayama.UnityCliLoop
     {
         internal static void Initialize()
         {
-            AssemblyTypeIndex.InvalidateForEditorStartup();
-            DynamicReferenceSetBuilder.InvalidateReferenceCacheForEditorStartup();
-            SharedRoslynCompilerWorkerHost.RegisterLifecycleForEditorStartup();
-            LogGetter.InitializeForEditorStartup();
+            ExecuteDynamicCodeEditorStartup.Initialize();
+            GetLogsEditorStartup.Initialize();
 #if ULOOP_HAS_INPUT_SYSTEM
-            InputRecorder.InitializeForEditorStartup();
-            InputReplayer.InitializeForEditorStartup();
-            KeyboardKeyState.InitializeForEditorStartup();
-            MouseInputState.InitializeForEditorStartup();
-            MouseDragState.InitializeForEditorStartup();
+            RecordInputEditorStartup.Initialize();
+            ReplayInputEditorStartup.Initialize();
+            SimulateKeyboardEditorStartup.Initialize();
+            SimulateMouseInputEditorStartup.Initialize();
+            SimulateMouseUiEditorStartup.Initialize();
 #endif
         }
     }

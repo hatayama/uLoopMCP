@@ -104,7 +104,7 @@ namespace io.github.hatayama.UnityCliLoop
         public void LogException(string operation, Exception exception, object context = null, 
                                        string correlationId = null, string humanNote = null, string aiTodo = null, bool includeStackTrace = true)
         {
-            Dictionary<string, object> exceptionContext = new Dictionary<string, object>();
+            Dictionary<string, object> exceptionContext = new();
             if (context != null)
             {
                 exceptionContext["original_context"] = context;
@@ -138,7 +138,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             lock (_lockObject)
             {
-                List<VibeLogEntry> filteredLogs = new List<VibeLogEntry>(_memoryLogs);
+                List<VibeLogEntry> filteredLogs = new(_memoryLogs);
                 
                 if (!string.IsNullOrEmpty(operation))
                 {
@@ -176,8 +176,7 @@ namespace io.github.hatayama.UnityCliLoop
         private void Log(string level, string operation, string message, object context,
                                string correlationId, string humanNote, string aiTodo, bool includeStackTrace = true)
         {
-            VibeLogEntry logEntry = new VibeLogEntry
-            {
+            VibeLogEntry logEntry = new()            {
                 timestamp = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss.fffzzz"),
                 level = level,
                 operation = operation,
@@ -242,7 +241,7 @@ namespace io.github.hatayama.UnityCliLoop
             // Check file size and rotate if necessary
             if (File.Exists(filePath))
             {
-                FileInfo fileInfo = new FileInfo(filePath);
+                FileInfo fileInfo = new(filePath);
                 if (fileInfo.Length > MAX_FILE_SIZE_MB * 1024 * 1024)
                 {
                     string rotatedFileName = $"{LOG_FILE_PREFIX}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.json";

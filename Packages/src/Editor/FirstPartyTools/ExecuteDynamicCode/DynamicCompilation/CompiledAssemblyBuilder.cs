@@ -159,7 +159,7 @@ namespace io.github.hatayama.UnityCliLoop
                     initialReferenceResolutionStopwatch.Stop();
                     referenceResolutionMilliseconds += initialReferenceResolutionStopwatch.Elapsed.TotalMilliseconds;
 
-                    AutoUsingResolver resolver = new AutoUsingResolver();
+                    AutoUsingResolver resolver = new();
                     AutoUsingResult autoResult = await resolver.ResolveAsync(
                         sourcePath,
                         dllPath,
@@ -245,7 +245,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return DynamicCodeConstants.DEFAULT_CLASS_NAME;
             }
 
-            StringBuilder builder = new StringBuilder(value.Length);
+            StringBuilder builder = new(value.Length);
             foreach (char ch in value)
             {
                 builder.Append(IsUnsafeFileNameCharacter(ch) ? '_' : ch);
@@ -350,7 +350,7 @@ namespace io.github.hatayama.UnityCliLoop
             PreUsingResult preUsingResult,
             AutoUsingResult autoResult)
         {
-            List<string> mergedNamespaces = new List<string>();
+            List<string> mergedNamespaces = new();
 
             if (!preUsingRolledBack && preUsingResult != null && preUsingResult.AddedNamespaces.Count > 0)
             {

@@ -79,8 +79,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// </summary>
         private static Filter CreateUnityFilter(TestMode testMode, TestExecutionFilter filter)
         {
-            Filter unityFilter = new Filter
-            {
+            Filter unityFilter = new()            {
                 testMode = testMode
             };
 

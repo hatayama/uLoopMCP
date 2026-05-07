@@ -36,7 +36,7 @@ namespace io.github.hatayama.UnityCliLoop
                 parameters.IncludeStackTrace);
             ct.ThrowIfCancellationRequested();
 
-            GetLogsResponse response = new GetLogsResponse(
+            GetLogsResponse response = new(
                 totalCount: logData.TotalCount,
                 displayedCount: logs.Length,
                 logType: parameters.LogType,

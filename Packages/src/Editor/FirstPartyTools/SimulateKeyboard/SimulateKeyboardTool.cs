@@ -13,7 +13,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         protected override async Task<SimulateKeyboardResponse> ExecuteAsync(SimulateKeyboardSchema parameters, CancellationToken ct)
         {
-            SimulateKeyboardUseCase useCase = new SimulateKeyboardUseCase();
+            SimulateKeyboardUseCase useCase = new();
             UnityCliLoopKeyboardSimulationResult result = await useCase.SimulateKeyboardAsync(ToRequest(parameters), ct);
             return ToResponse(result);
         }

@@ -14,7 +14,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         protected override async Task<ScreenshotResponse> ExecuteAsync(ScreenshotSchema parameters, CancellationToken ct)
         {
-            ScreenshotUseCase useCase = new ScreenshotUseCase();
+            ScreenshotUseCase useCase = new();
             UnityCliLoopScreenshotResult result = await useCase.CaptureAsync(ToRequest(parameters), ct);
             return ToResponse(result);
         }
@@ -58,7 +58,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return new List<ScreenshotInfo>();
             }
 
-            List<ScreenshotInfo> screenshotInfos = new List<ScreenshotInfo>();
+            List<ScreenshotInfo> screenshotInfos = new();
             foreach (UnityCliLoopScreenshotInfo sourceInfo in sourceInfos)
             {
                 screenshotInfos.Add(ToScreenshotInfo(sourceInfo));

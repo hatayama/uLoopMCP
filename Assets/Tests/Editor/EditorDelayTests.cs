@@ -219,7 +219,7 @@ namespace io.github.hatayama.UnityCliLoop
         public void DelayFrame_WithImmediateCancellation_ThrowsImmediately()
         {
             // Arrange - Already cancelled token
-            CancellationTokenSource cts = new CancellationTokenSource();
+            CancellationTokenSource cts = new();
             cts.Cancel(); // Cancel in advance
             
             bool executed = false;
@@ -259,7 +259,7 @@ namespace io.github.hatayama.UnityCliLoop
         public IEnumerator DelayFrame_WithDelayedCancellation_CancelsCorrectly()
         {
             // Arrange
-            CancellationTokenSource cts = new CancellationTokenSource();
+            CancellationTokenSource cts = new();
             bool taskStarted = false;
             bool executed = false;
             

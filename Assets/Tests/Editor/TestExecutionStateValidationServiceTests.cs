@@ -91,7 +91,7 @@ namespace io.github.hatayama.UnityCliLoop
             {
                 "Scene: Assets/Scenes/Minecraft.unity"
             };
-            StubTestExecutionStateValidationService service = new StubTestExecutionStateValidationService(
+            StubTestExecutionStateValidationService service = new(
                 isPlaying: false,
                 unsavedEditorChanges: unsavedEditorChanges,
                 saveResult: ValidationResult.Success(),

@@ -38,16 +38,14 @@ namespace io.github.hatayama.UnityCliLoop
             string filePath = Path.Combine(exportDir, filename);
 
             // Create export data structure
-            FindGameObjectsExportData exportData = new FindGameObjectsExportData
-            {
+            FindGameObjectsExportData exportData = new()            {
                 ExportTimestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
                 TotalCount = results.Length,
                 Results = results
             };
 
             // Export to JSON using Newtonsoft.Json for proper serialization
-            JsonSerializerSettings settings = new JsonSerializerSettings
-            {
+            JsonSerializerSettings settings = new()            {
                 ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
                 MaxDepth = UnityCliLoopServerConfig.DEFAULT_JSON_MAX_DEPTH,
                 Formatting = Formatting.Indented,

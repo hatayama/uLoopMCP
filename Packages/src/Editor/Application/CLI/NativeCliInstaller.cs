@@ -530,7 +530,7 @@ namespace io.github.hatayama.UnityCliLoop
                 new[] { separator },
                 StringSplitOptions.RemoveEmptyEntries);
             StringComparison comparison = GetPathComparison(platform);
-            StringBuilder builder = new StringBuilder(installDirectory);
+            StringBuilder builder = new(installDirectory);
             foreach (string entry in entries)
             {
                 if (string.Equals(entry, installDirectory, comparison))
@@ -563,7 +563,7 @@ namespace io.github.hatayama.UnityCliLoop
                 new[] { separator },
                 StringSplitOptions.RemoveEmptyEntries);
             StringComparison comparison = GetPathComparison(platform);
-            StringBuilder builder = new StringBuilder();
+            StringBuilder builder = new();
             foreach (string entry in entries)
             {
                 if (string.Equals(entry, installDirectory, comparison))
@@ -900,7 +900,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             UnityEngine.Debug.Assert(!string.IsNullOrEmpty(installDirectory), "installDirectory must not be null or empty");
 
-            DirectoryInfo installDirectoryInfo = new DirectoryInfo(installDirectory);
+            DirectoryInfo installDirectoryInfo = new(installDirectory);
             DirectoryInfo nativeInstallRoot = installDirectoryInfo.Parent;
             if (nativeInstallRoot == null)
             {
@@ -1075,8 +1075,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return new CliInstallResult(true, "");
             }
 
-            ProcessStartInfo startInfo = new ProcessStartInfo
-            {
+            ProcessStartInfo startInfo = new()            {
                 FileName = "/bin/chmod",
                 Arguments = $"+x {QuoteProcessArgument(installPath)}",
                 UseShellExecute = false,

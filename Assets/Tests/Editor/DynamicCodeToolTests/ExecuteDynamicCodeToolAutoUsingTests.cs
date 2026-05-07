@@ -15,8 +15,7 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
 
             try
             {
-                JObject paramsToken = new JObject
-                {
+                JObject paramsToken = new()                {
                     ["Code"] = "StringBuilder builder = new StringBuilder(); builder.Append(\"ok\"); return builder.ToString();",
                     ["CompileOnly"] = true
                 };

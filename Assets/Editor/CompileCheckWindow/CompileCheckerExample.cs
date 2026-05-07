@@ -8,7 +8,7 @@ namespace io.github.hatayama.UnityCliLoop
         [MenuItem("UnityCliLoop/Debug/Compile Tests/Compile Checker Usage Example")]
         public static async void TestCompileChecker()
         {
-            CompileController compileController = new CompileController();
+            CompileController compileController = new();
             
             try
             {
@@ -42,7 +42,7 @@ namespace io.github.hatayama.UnityCliLoop
         [MenuItem("UnityCliLoop/Debug/Compile Tests/Force Compile Checker Usage Example")]
         public static async void TestForceCompileChecker()
         {
-            CompileController compileController = new CompileController();
+            CompileController compileController = new();
             
             try
             {

@@ -539,7 +539,7 @@ namespace io.github.hatayama.UnityCliLoop
                 if (File.Exists(SettingsFilePath))
                 {
                     // Security: Check file size before reading
-                    FileInfo fileInfo = new FileInfo(SettingsFilePath);
+                    FileInfo fileInfo = new(SettingsFilePath);
                     if (fileInfo.Length > UnityCliLoopConstants.MAX_SETTINGS_SIZE_BYTES)
                     {
                         throw new SecurityException("Settings file exceeds size limit");
@@ -580,7 +580,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return;
             }
 
-            FileInfo fileInfo = new FileInfo(settingsPath);
+            FileInfo fileInfo = new(settingsPath);
             if (fileInfo.Length > UnityCliLoopConstants.MAX_SETTINGS_SIZE_BYTES)
             {
                 throw new SecurityException("Settings file exceeds size limit");

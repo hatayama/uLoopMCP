@@ -10,7 +10,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         protected override async Task<ControlPlayModeResponse> ExecuteAsync(ControlPlayModeSchema parameters, CancellationToken ct)
         {
-            ControlPlayModeUseCase useCase = new ControlPlayModeUseCase();
+            ControlPlayModeUseCase useCase = new();
             return await useCase.ExecuteAsync(parameters, ct);
         }
     }

@@ -97,7 +97,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static DomainReloadRecoveryUseCase CreateUseCase()
         {
-            TestRecoveryCoordinator recoveryCoordinator = new TestRecoveryCoordinator();
+            TestRecoveryCoordinator recoveryCoordinator = new();
             SessionRecoveryService sessionRecoveryService =
                 new SessionRecoveryService(recoveryCoordinator);
             return new DomainReloadRecoveryUseCase(sessionRecoveryService);

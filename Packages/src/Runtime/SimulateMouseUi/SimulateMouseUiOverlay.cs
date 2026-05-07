@@ -302,7 +302,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static Image CreateImage(string name, Transform parent)
         {
-            GameObject go = new GameObject(name);
+            GameObject go = new(name);
             go.transform.SetParent(parent, false);
             RectTransform rect = go.AddComponent<RectTransform>();
             rect.anchorMin = Vector2.zero;

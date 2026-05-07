@@ -129,7 +129,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             // Pull origin behind the camera so downward rays can hit blocks at the player's feet
             Vector3 origin = playerCamera.transform.position - playerCamera.transform.forward * BlockConstants.RaycastOriginPullback;
-            Ray ray = new Ray(origin, playerCamera.transform.forward);
+            Ray ray = new(origin, playerCamera.transform.forward);
             return Physics.Raycast(ray, out hit, BlockConstants.InteractionRange);
         }
     }

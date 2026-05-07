@@ -13,7 +13,7 @@ namespace io.github.hatayama.UnityCliLoop
         public void Update_ClosedWithoutToolListData_DoesNotCreateToolRows()
         {
             VisualElement root = CreateRootElement();
-            ToolSettingsSection section = new ToolSettingsSection(root);
+            ToolSettingsSection section = new(root);
             ToolSettingsSectionData data = CreateData(
                 compileEnabled: true,
                 includeGetLogs: true,
@@ -32,7 +32,7 @@ namespace io.github.hatayama.UnityCliLoop
         public void Update_OpenWithoutToolListData_ShowsLoadingWithoutToolRows()
         {
             VisualElement root = CreateRootElement();
-            ToolSettingsSection section = new ToolSettingsSection(root);
+            ToolSettingsSection section = new(root);
             ToolSettingsSectionData data = CreateData(
                 compileEnabled: true,
                 includeGetLogs: true,
@@ -54,7 +54,7 @@ namespace io.github.hatayama.UnityCliLoop
         public void Update_LoadedData_PopulatesVirtualizedRows()
         {
             VisualElement root = CreateRootElement();
-            ToolSettingsSection section = new ToolSettingsSection(root);
+            ToolSettingsSection section = new(root);
             ToolSettingsSectionData data = CreateData(
                 compileEnabled: true,
                 includeGetLogs: true,
@@ -75,7 +75,7 @@ namespace io.github.hatayama.UnityCliLoop
         public void Update_HeaderOnlyRefreshAfterLoad_PreservesLoadedRows()
         {
             VisualElement root = CreateRootElement();
-            ToolSettingsSection section = new ToolSettingsSection(root);
+            ToolSettingsSection section = new(root);
             ToolSettingsSectionData loadedData = CreateData(
                 compileEnabled: true,
                 includeGetLogs: false,
@@ -99,7 +99,7 @@ namespace io.github.hatayama.UnityCliLoop
         public void Update_ClosedAfterLoad_ReleasesLoadedRows()
         {
             VisualElement root = CreateRootElement();
-            ToolSettingsSection section = new ToolSettingsSection(root);
+            ToolSettingsSection section = new(root);
             ToolSettingsSectionData loadedData = CreateData(
                 compileEnabled: true,
                 includeGetLogs: false,
@@ -123,7 +123,7 @@ namespace io.github.hatayama.UnityCliLoop
         public void Update_RestrictedLevel_MarksRestrictedButtonAsActive()
         {
             VisualElement root = CreateRootElement();
-            ToolSettingsSection section = new ToolSettingsSection(root);
+            ToolSettingsSection section = new(root);
             ToolSettingsSectionData data = CreateData(
                 compileEnabled: true,
                 includeGetLogs: false,
@@ -142,7 +142,7 @@ namespace io.github.hatayama.UnityCliLoop
         public void Update_FullAccessLevel_MarksFullAccessButtonAsWarningActive()
         {
             VisualElement root = CreateRootElement();
-            ToolSettingsSection section = new ToolSettingsSection(root);
+            ToolSettingsSection section = new(root);
             ToolSettingsSectionData data = CreateData(
                 compileEnabled: true,
                 includeGetLogs: false,
@@ -162,34 +162,27 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static VisualElement CreateRootElement()
         {
-            VisualElement root = new VisualElement();
-            Foldout foldout = new Foldout
-            {
+            VisualElement root = new();
+            Foldout foldout = new()            {
                 name = "tool-settings-foldout"
             };
-            VisualElement container = new VisualElement
-            {
+            VisualElement container = new()            {
                 name = "tool-list-container"
             };
 
-            Label cliReferenceLink = new Label
-            {
+            Label cliReferenceLink = new()            {
                 name = "cli-reference-link"
             };
-            Button securityLevelRestrictedButton = new Button
-            {
+            Button securityLevelRestrictedButton = new()            {
                 name = "security-level-restricted-button"
             };
-            Button securityLevelFullAccessButton = new Button
-            {
+            Button securityLevelFullAccessButton = new()            {
                 name = "security-level-full-access-button"
             };
-            Label securityLevelDescription = new Label
-            {
+            Label securityLevelDescription = new()            {
                 name = "security-level-description"
             };
-            VisualElement toolSettingsInfoContainer = new VisualElement
-            {
+            VisualElement toolSettingsInfoContainer = new()            {
                 name = "tool-settings-info-container"
             };
 
@@ -211,7 +204,7 @@ namespace io.github.hatayama.UnityCliLoop
             bool hasToolListData = true,
             DynamicCodeSecurityLevel dynamicCodeSecurityLevel = DynamicCodeSecurityLevel.Restricted)
         {
-            ToolToggleItem compile = new ToolToggleItem(
+            ToolToggleItem compile = new(
                 toolName: "compile",
                 isEnabled: compileEnabled,
                 isThirdParty: false);
@@ -228,7 +221,7 @@ namespace io.github.hatayama.UnityCliLoop
             ToolToggleItem[] builtInTools;
             if (includeGetLogs)
             {
-                ToolToggleItem getLogs = new ToolToggleItem(
+                ToolToggleItem getLogs = new(
                     toolName: "get-logs",
                     isEnabled: true,
                     isThirdParty: false);

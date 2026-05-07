@@ -310,7 +310,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static string CreateLayoutSignature(ToolSettingsSectionData data)
         {
-            StringBuilder builder = new StringBuilder();
+            StringBuilder builder = new();
             AppendGroupSignature(builder, data.BuiltInTools, "B");
             AppendGroupSignature(builder, data.ThirdPartyTools, "T");
             return builder.ToString();
@@ -333,7 +333,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static Label CreateToolListStatusLabel()
         {
-            Label label = new Label();
+            Label label = new();
             label.name = "tool-list-status-label";
             label.AddToClassList("unity-cli-loop-tool-registry-unavailable");
             return label;
@@ -341,7 +341,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private ListView CreateToolListView()
         {
-            ListView listView = new ListView();
+            ListView listView = new();
             listView.name = "tool-list-view";
             listView.AddToClassList("unity-cli-loop-tool-list-view");
             listView.fixedItemHeight = ToolListRowHeight;
@@ -356,11 +356,11 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static VisualElement CreateToolListRowElement()
         {
-            VisualElement row = new VisualElement();
+            VisualElement row = new();
             row.AddToClassList("unity-cli-loop-tool-toggle-row");
             row.AddToClassList("unity-cli-loop-tool-list-row");
 
-            Toggle toggle = new Toggle();
+            Toggle toggle = new();
             toggle.name = "tool-list-row-toggle";
             toggle.AddToClassList("unity-cli-loop-tool-toggle-row__toggle");
             toggle.RegisterValueChangedCallback(evt =>
@@ -375,7 +375,7 @@ namespace io.github.hatayama.UnityCliLoop
                 item.Owner?.OnToolToggled?.Invoke(item.ToolName, evt.newValue);
             });
 
-            Label label = new Label();
+            Label label = new();
             label.name = "tool-list-row-label";
             label.AddToClassList("unity-cli-loop-tool-toggle-row__label");
             label.RegisterCallback<ClickEvent>(evt =>

@@ -37,7 +37,7 @@ namespace io.github.hatayama.UnityCliLoop.Factory
             }
 
             ICompiledCommandInvoker invoker = new CommandRunner(_entryPointResolver);
-            DynamicCodeExecutor executor = new DynamicCodeExecutor(
+            DynamicCodeExecutor executor = new(
                 compiler,
                 invoker,
                 _sourcePreparationService);

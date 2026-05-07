@@ -26,7 +26,7 @@ namespace io.github.hatayama.UnityCliLoop
         public async Task ExecuteAsync_WithDefaultParameters_ReturnsHierarchyExport()
         {
             // Tests that the bundled hierarchy tool executes without host-service injection.
-            JObject parameters = new JObject();
+            JObject parameters = new();
             
             UnityCliLoopToolResponse baseResponse = await _tool.ExecuteAsync(parameters);
             GetHierarchyResponse response = baseResponse as GetHierarchyResponse;
@@ -41,8 +41,7 @@ namespace io.github.hatayama.UnityCliLoop
         public async Task ExecuteAsync_WithMaxDepthParameter_MapsRequest()
         {
             // Tests that MaxDepth is accepted by the self-contained first-party tool.
-            JObject parameters = new JObject
-            {
+            JObject parameters = new()            {
                 ["MaxDepth"] = 1
             };
             
@@ -57,8 +56,7 @@ namespace io.github.hatayama.UnityCliLoop
         public async Task ExecuteAsync_WithIncludeComponentsFalse_MapsRequest()
         {
             // Tests that component inclusion is accepted by the self-contained first-party tool.
-            JObject parameters = new JObject
-            {
+            JObject parameters = new()            {
                 ["IncludeComponents"] = false
             };
             

@@ -37,7 +37,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             foreach (string resultFilePath in resultFiles)
             {
-                FileInfo fileInfo = new FileInfo(resultFilePath);
+                FileInfo fileInfo = new(resultFilePath);
                 if (fileInfo.LastWriteTimeUtc < staleThreshold)
                 {
                     File.Delete(resultFilePath);

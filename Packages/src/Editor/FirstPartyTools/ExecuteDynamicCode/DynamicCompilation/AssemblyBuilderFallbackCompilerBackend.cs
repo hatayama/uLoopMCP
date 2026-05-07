@@ -25,7 +25,7 @@ namespace io.github.hatayama.UnityCliLoop
                 ? DynamicReferenceSetBuilder.MergeReferencesByAssemblyName(Array.Empty<string>(), references)
                 : Array.Empty<string>();
 
-            AssemblyBuilder builder = new AssemblyBuilder(dllPath, sourcePath)
+            AssemblyBuilder builder = new(dllPath, sourcePath)
             {
                 referencesOptions = ReferencesOptions.UseEngineModules,
                 additionalReferences = referenceArray

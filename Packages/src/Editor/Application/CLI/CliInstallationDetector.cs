@@ -108,8 +108,7 @@ namespace io.github.hatayama.UnityCliLoop
             // FindExecutablePath resolves .cmd shims on Windows via 'where' command
             string fileName = executablePath ?? CliConstants.EXECUTABLE_NAME;
 
-            ProcessStartInfo startInfo = new ProcessStartInfo
-            {
+            ProcessStartInfo startInfo = new()            {
                 FileName = fileName,
                 Arguments = CliConstants.VERSION_FLAG,
                 UseShellExecute = false,
@@ -124,7 +123,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return new CliInstallationDetection(null, executablePath);
             }
 
-            StringBuilder outputBuilder = new StringBuilder();
+            StringBuilder outputBuilder = new();
 
             process.OutputDataReceived += (sender, e) =>
             {

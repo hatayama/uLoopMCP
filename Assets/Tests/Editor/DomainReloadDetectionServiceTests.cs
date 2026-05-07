@@ -41,7 +41,7 @@ namespace io.github.hatayama.UnityCliLoop
         public void RollbackDomainReloadStart_ClearsTemporaryFlagsProviderStateAndLockFile()
         {
             const string correlationId = "test-correlation";
-            UnityCliLoopEditorDomainReloadStateProvider provider = new UnityCliLoopEditorDomainReloadStateProvider();
+            UnityCliLoopEditorDomainReloadStateProvider provider = new();
 
             DomainReloadDetectionService.StartDomainReload(correlationId, true);
 

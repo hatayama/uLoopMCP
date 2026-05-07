@@ -16,13 +16,12 @@ namespace io.github.hatayama.UnityCliLoop
 
         public SecurityValidationResult Validate(byte[] assemblyBytes)
         {
-            SecurityValidationResult result = new SecurityValidationResult
-            {
+            SecurityValidationResult result = new()            {
                 IsValid = true,
                 Violations = new List<SecurityViolation>()
             };
 
-            HashSet<string> seenViolations = new HashSet<string>(System.StringComparer.Ordinal);
+            HashSet<string> seenViolations = new(System.StringComparer.Ordinal);
 
             using MemoryStream stream = new MemoryStream(assemblyBytes, writable: false);
             using PEReader peReader = new PEReader(stream);
@@ -244,7 +243,7 @@ namespace io.github.hatayama.UnityCliLoop
         private string DecodeTypeSpecification(MetadataReader reader, TypeSpecificationHandle handle)
         {
             TypeSpecification typeSpecification = reader.GetTypeSpecification(handle);
-            MetadataTypeNameDecoder decoder = new MetadataTypeNameDecoder(reader, this);
+            MetadataTypeNameDecoder decoder = new(reader, this);
             return typeSpecification.DecodeSignature(decoder, genericContext: null);
         }
 

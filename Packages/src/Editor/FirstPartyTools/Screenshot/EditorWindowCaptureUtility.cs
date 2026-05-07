@@ -27,7 +27,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return Array.Empty<EditorWindow>();
             }
 
-            List<EditorWindow> matchingWindows = new List<EditorWindow>();
+            List<EditorWindow> matchingWindows = new();
             EditorWindow[] allWindows = Resources.FindObjectsOfTypeAll<EditorWindow>();
             foreach (EditorWindow window in allWindows)
             {
@@ -89,7 +89,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
 
             // For Linear color space, disable the sRGB flag to prevent double gamma conversion
-            RenderTextureDescriptor descriptor = new RenderTextureDescriptor(width, height, RenderTextureFormat.ARGB32, 24);
+            RenderTextureDescriptor descriptor = new(width, height, RenderTextureFormat.ARGB32, 24);
             if (QualitySettings.activeColorSpace == ColorSpace.Linear)
             {
                 descriptor.sRGB = false;
@@ -101,7 +101,7 @@ namespace io.github.hatayama.UnityCliLoop
             RenderTexture previousActive = RenderTexture.active;
             RenderTexture.active = rt;
 
-            Texture2D texture = new Texture2D(width, height, TextureFormat.RGB24, false);
+            Texture2D texture = new(width, height, TextureFormat.RGB24, false);
             texture.ReadPixels(new Rect(0, 0, width, height), 0, 0);
             texture.Apply();
 
@@ -123,7 +123,7 @@ namespace io.github.hatayama.UnityCliLoop
         public static string[] GetOpenWindowNames()
         {
             EditorWindow[] allWindows = Resources.FindObjectsOfTypeAll<EditorWindow>();
-            List<string> names = new List<string>();
+            List<string> names = new();
 
             foreach (EditorWindow window in allWindows)
             {
@@ -158,7 +158,7 @@ namespace io.github.hatayama.UnityCliLoop
             int yOffset = (int)Handles.GetMainGameViewSize().y - rt.height;
 
             // RenderTexture uses bottom-left origin; flip vertically for standard top-left image format
-            RenderTextureDescriptor flipDescriptor = new RenderTextureDescriptor(rt.width, rt.height, rt.format, 0);
+            RenderTextureDescriptor flipDescriptor = new(rt.width, rt.height, rt.format, 0);
             if (QualitySettings.activeColorSpace == ColorSpace.Linear)
             {
                 flipDescriptor.sRGB = false;
@@ -169,7 +169,7 @@ namespace io.github.hatayama.UnityCliLoop
             RenderTexture previousActive = RenderTexture.active;
             RenderTexture.active = flipped;
 
-            Texture2D texture = new Texture2D(rt.width, rt.height, TextureFormat.RGB24, false);
+            Texture2D texture = new(rt.width, rt.height, TextureFormat.RGB24, false);
             texture.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0);
             texture.Apply();
 
@@ -189,7 +189,7 @@ namespace io.github.hatayama.UnityCliLoop
             int newWidth = Mathf.RoundToInt(originalTexture.width * scale);
             int newHeight = Mathf.RoundToInt(originalTexture.height * scale);
 
-            Texture2D scaledTexture = new Texture2D(newWidth, newHeight, originalTexture.format, false);
+            Texture2D scaledTexture = new(newWidth, newHeight, originalTexture.format, false);
 
             RenderTexture rt = RenderTexture.GetTemporary(newWidth, newHeight);
             Graphics.Blit(originalTexture, rt);

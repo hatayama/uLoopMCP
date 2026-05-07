@@ -185,7 +185,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static string BuildInputStateText(Keyboard keyboard, Mouse mouse)
         {
-            List<string> held = new List<string>();
+            List<string> held = new();
             if (keyboard[Key.W].isPressed) held.Add("W");
             if (keyboard[Key.A].isPressed) held.Add("A");
             if (keyboard[Key.S].isPressed) held.Add("S");

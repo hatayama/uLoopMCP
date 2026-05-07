@@ -57,8 +57,7 @@ namespace io.github.hatayama.UnityCliLoop
             await EditorDelay.DelayFrame(AutoPrewarmDelayFrameCount, _lifecycleCancellationToken);
             DynamicCodeStartupTelemetry.MarkPrewarmStarted();
 
-            DynamicCodeExecutionRequest request = new DynamicCodeExecutionRequest
-            {
+            DynamicCodeExecutionRequest request = new()            {
                 Code = AutoPrewarmCode,
                 ClassName = DynamicCodeConstants.DEFAULT_CLASS_NAME,
                 CompileOnly = false,

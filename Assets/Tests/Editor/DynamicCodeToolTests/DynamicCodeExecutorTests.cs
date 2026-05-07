@@ -12,9 +12,9 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
         [Test]
         public async Task ExecuteCodeAsync_WhenCompilationIsCancelled_ShouldReturnNeutralCancelledMessage()
         {
-            CancelledCompilationService compiler = new CancelledCompilationService();
-            CountingCompiledCommandInvoker invoker = new CountingCompiledCommandInvoker();
-            DynamicCodeExecutor executor = new DynamicCodeExecutor(
+            CancelledCompilationService compiler = new();
+            CountingCompiledCommandInvoker invoker = new();
+            DynamicCodeExecutor executor = new(
                 compiler,
                 invoker,
                 new DynamicCodeSourcePreparationService());
@@ -33,8 +33,8 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
         public async Task ExecuteCodeAsync_WhenCompileOnlyCompilationHasNullTimings_ShouldReturnExecutorStageTimings()
         {
             NullTimingCompilationService compiler = NullTimingCompilationService.CreateSuccessful();
-            CountingCompiledCommandInvoker invoker = new CountingCompiledCommandInvoker();
-            DynamicCodeExecutor executor = new DynamicCodeExecutor(
+            CountingCompiledCommandInvoker invoker = new();
+            DynamicCodeExecutor executor = new(
                 compiler,
                 invoker,
                 new DynamicCodeSourcePreparationService());
@@ -55,8 +55,8 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
         public async Task ExecuteCodeAsync_WhenCompilationFailureHasNullTimings_ShouldReturnExecutorStageTimings()
         {
             NullTimingCompilationService compiler = NullTimingCompilationService.CreateFailed();
-            CountingCompiledCommandInvoker invoker = new CountingCompiledCommandInvoker();
-            DynamicCodeExecutor executor = new DynamicCodeExecutor(
+            CountingCompiledCommandInvoker invoker = new();
+            DynamicCodeExecutor executor = new(
                 compiler,
                 invoker,
                 new DynamicCodeSourcePreparationService());
@@ -77,8 +77,8 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
         public async Task ExecuteCodeAsync_WhenCompileOnlyUsesAssemblyBuilderFallback_ShouldSurfaceWarningLog()
         {
             AdvisoryCompilationService compiler = AdvisoryCompilationService.CreateSuccessfulCompileOnly();
-            CountingCompiledCommandInvoker invoker = new CountingCompiledCommandInvoker();
-            DynamicCodeExecutor executor = new DynamicCodeExecutor(
+            CountingCompiledCommandInvoker invoker = new();
+            DynamicCodeExecutor executor = new(
                 compiler,
                 invoker,
                 new DynamicCodeSourcePreparationService());

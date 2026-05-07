@@ -13,7 +13,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         protected override async Task<RecordInputResponse> ExecuteAsync(RecordInputSchema parameters, CancellationToken ct)
         {
-            RecordInputUseCase useCase = new RecordInputUseCase();
+            RecordInputUseCase useCase = new();
             UnityCliLoopRecordInputResult result = await useCase.RecordInputAsync(ToRequest(parameters), ct);
             return ToResponse(result);
         }

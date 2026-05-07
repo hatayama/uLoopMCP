@@ -19,7 +19,7 @@ namespace io.github.hatayama.UnityCliLoop
             string body,
             IReadOnlyList<string> preambleLines = null)
         {
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
 
             sb.AppendLine("#pragma warning disable CS0162");
             sb.AppendLine("#pragma warning disable CS1998");

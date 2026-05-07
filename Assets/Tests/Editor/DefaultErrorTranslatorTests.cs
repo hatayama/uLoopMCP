@@ -20,7 +20,7 @@ namespace io.github.hatayama.UnityCliLoop
         [Test]
         public void TranslateFromException_ToolDisabled_ShouldReturnToolNameInMessage()
         {
-            ToolDisabledException exception = new ToolDisabledException("compile");
+            ToolDisabledException exception = new("compile");
 
             TranslationOutput result = _translator.TranslateFromException(exception);
 
@@ -31,7 +31,7 @@ namespace io.github.hatayama.UnityCliLoop
         [Test]
         public void TranslateFromException_ToolDisabled_ShouldIncludeMenuPath()
         {
-            ToolDisabledException exception = new ToolDisabledException("compile");
+            ToolDisabledException exception = new("compile");
 
             TranslationOutput result = _translator.TranslateFromException(exception);
 
@@ -41,7 +41,7 @@ namespace io.github.hatayama.UnityCliLoop
         [Test]
         public void TranslateFromException_ToolDisabled_ShouldHaveExplanation()
         {
-            ToolDisabledException exception = new ToolDisabledException("compile");
+            ToolDisabledException exception = new("compile");
 
             TranslationOutput result = _translator.TranslateFromException(exception);
 
@@ -51,7 +51,7 @@ namespace io.github.hatayama.UnityCliLoop
         [Test]
         public void TranslateFromException_ToolDisabled_ShouldHaveSolution()
         {
-            ToolDisabledException exception = new ToolDisabledException("get-logs");
+            ToolDisabledException exception = new("get-logs");
 
             TranslationOutput result = _translator.TranslateFromException(exception);
 
@@ -64,7 +64,7 @@ namespace io.github.hatayama.UnityCliLoop
         [Test]
         public void DetermineSeverity_ToolDisabled_ShouldBeMedium()
         {
-            ToolDisabledException exception = new ToolDisabledException("compile");
+            ToolDisabledException exception = new("compile");
             TranslationOutput translation = _translator.TranslateFromException(exception);
 
             UserFriendlyErrorDto dto = _formatter.Format(translation, exception.Message, exception);
@@ -77,7 +77,7 @@ namespace io.github.hatayama.UnityCliLoop
         [Test]
         public void TranslateFromException_GenericException_ShouldReturnInternalError()
         {
-            System.Exception exception = new System.Exception("something went wrong");
+            System.Exception exception = new("something went wrong");
 
             TranslationOutput result = _translator.TranslateFromException(exception);
 

@@ -34,7 +34,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <returns>Shutdown result</returns>
         public override Task<ServerShutdownResponse> ExecuteAsync(ServerShutdownSchema parameters, CancellationToken cancellationToken)
         {
-            ServerShutdownResponse response = new ServerShutdownResponse();
+            ServerShutdownResponse response = new();
 
             try
             {

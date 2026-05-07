@@ -163,8 +163,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return null;
             }
 
-            ProcessStartInfo startInfo = new ProcessStartInfo
-            {
+            ProcessStartInfo startInfo = new()            {
                 FileName = executablePath,
                 Arguments = arguments,
                 WorkingDirectory = workingDirectory,
@@ -247,8 +246,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return new CliInstallResult(true, "");
             }
 
-            ProcessStartInfo startInfo = new ProcessStartInfo
-            {
+            ProcessStartInfo startInfo = new()            {
                 FileName = "/bin/chmod",
                 Arguments = $"+x {QuoteProcessArgument(projectLocalCliPath)}",
                 UseShellExecute = false,
@@ -294,8 +292,8 @@ namespace io.github.hatayama.UnityCliLoop
             UnityEngine.Debug.Assert(!string.IsNullOrEmpty(leftPath), "leftPath must not be null or empty");
             UnityEngine.Debug.Assert(!string.IsNullOrEmpty(rightPath), "rightPath must not be null or empty");
 
-            FileInfo leftInfo = new FileInfo(leftPath);
-            FileInfo rightInfo = new FileInfo(rightPath);
+            FileInfo leftInfo = new(leftPath);
+            FileInfo rightInfo = new(rightPath);
             if (leftInfo.Length != rightInfo.Length)
             {
                 return false;

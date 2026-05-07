@@ -16,8 +16,7 @@ namespace Samples
 
         protected override Task<GetProjectInfoResponse> ExecuteAsync(GetProjectInfoSchema parameters, CancellationToken cancellationToken)
         {
-            GetProjectInfoResponse response = new GetProjectInfoResponse
-            {
+            GetProjectInfoResponse response = new()            {
                 ProjectName = Application.productName,
                 CompanyName = Application.companyName,
                 Version = Application.version,

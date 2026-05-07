@@ -109,7 +109,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private BadgeEntry CreateBadge()
         {
-            GameObject badge = new GameObject("KeyBadge");
+            GameObject badge = new("KeyBadge");
             badge.transform.SetParent(_container.transform, false);
 
             badge.AddComponent<RectTransform>();
@@ -120,7 +120,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             LayoutElement layoutElement = badge.AddComponent<LayoutElement>();
 
-            GameObject textGo = new GameObject("KeyText");
+            GameObject textGo = new("KeyText");
             textGo.transform.SetParent(badge.transform, false);
 
             RectTransform textRect = textGo.AddComponent<RectTransform>();

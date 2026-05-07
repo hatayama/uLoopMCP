@@ -11,7 +11,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             ConsoleUtility.GetConsoleLogCounts(out int errorCount, out int warningCount, out int logCount);
             int totalLogCount = errorCount + warningCount + logCount;
-            UnityCliLoopConsoleClearCounts clearedCounts = new UnityCliLoopConsoleClearCounts(
+            UnityCliLoopConsoleClearCounts clearedCounts = new(
                 errorCount,
                 warningCount,
                 logCount);

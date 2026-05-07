@@ -16,7 +16,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         protected override async Task<CompileResponse> ExecuteAsync(CompileSchema parameters, CancellationToken ct)
         {
-            CompileUseCase useCase = new CompileUseCase();
+            CompileUseCase useCase = new();
             UnityCliLoopCompileResult result = await useCase.CompileAsync(ToRequest(parameters), ct);
             return ToResponse(result);
         }
@@ -43,7 +43,7 @@ namespace io.github.hatayama.UnityCliLoop
                 throw new System.ArgumentNullException(nameof(result));
             }
 
-            CompileResponse response = new CompileResponse(
+            CompileResponse response = new(
                 success: result.Success,
                 errorCount: result.ErrorCount,
                 warningCount: result.WarningCount,

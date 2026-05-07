@@ -11,12 +11,11 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
         [Test]
         public async Task ExecuteAsync_WhenCallerCancellationIsRequested_ShouldReturnNeutralCancelledMessage()
         {
-            CommandRunner runner = new CommandRunner();
+            CommandRunner runner = new();
             using CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
             cancellationTokenSource.Cancel();
 
-            io.github.hatayama.UnityCliLoop.ExecutionContext context = new io.github.hatayama.UnityCliLoop.ExecutionContext
-            {
+            io.github.hatayama.UnityCliLoop.ExecutionContext context = new()            {
                 CompiledAssembly = typeof(global::UnityCliLoop.Dynamic.DynamicCommand).Assembly,
                 Parameters = new Dictionary<string, object>(),
                 CancellationToken = cancellationTokenSource.Token
@@ -33,10 +32,9 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
         [Test]
         public async Task ExecuteAsync_WhenSyncFallbackAcceptsCancellationToken_ShouldUseSupportedSignature()
         {
-            CommandRunner runner = new CommandRunner();
+            CommandRunner runner = new();
 
-            io.github.hatayama.UnityCliLoop.ExecutionContext context = new io.github.hatayama.UnityCliLoop.ExecutionContext
-            {
+            io.github.hatayama.UnityCliLoop.ExecutionContext context = new()            {
                 CompiledAssembly = typeof(global::UnityCliLoop.Dynamic.DynamicCommand).Assembly,
                 Parameters = new Dictionary<string, object>(),
                 CancellationToken = CancellationToken.None

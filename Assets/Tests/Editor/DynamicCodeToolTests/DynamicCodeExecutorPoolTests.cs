@@ -12,7 +12,7 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
         [Test]
         public void GetOrCreate_WhenSameSecurityLevelRequestedTwice_ShouldReuseExecutor()
         {
-            FakeDynamicCodeExecutorProvider provider = new FakeDynamicCodeExecutorProvider();
+            FakeDynamicCodeExecutorProvider provider = new();
             using DynamicCodeExecutorPool pool = new DynamicCodeExecutorPool(provider);
 
             IDynamicCodeExecutor first = pool.GetOrCreate(DynamicCodeSecurityLevel.Restricted);
@@ -25,8 +25,8 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
         [Test]
         public void Dispose_WhenExecutorsWereCreated_ShouldDisposeAllExecutors()
         {
-            FakeDynamicCodeExecutorProvider provider = new FakeDynamicCodeExecutorProvider();
-            DynamicCodeExecutorPool pool = new DynamicCodeExecutorPool(provider);
+            FakeDynamicCodeExecutorProvider provider = new();
+            DynamicCodeExecutorPool pool = new(provider);
 
             pool.GetOrCreate(DynamicCodeSecurityLevel.Restricted);
             pool.GetOrCreate(DynamicCodeSecurityLevel.FullAccess);
@@ -39,8 +39,8 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
         [Test]
         public void GetOrCreate_AfterDispose_ShouldThrowObjectDisposedException()
         {
-            FakeDynamicCodeExecutorProvider provider = new FakeDynamicCodeExecutorProvider();
-            DynamicCodeExecutorPool pool = new DynamicCodeExecutorPool(provider);
+            FakeDynamicCodeExecutorProvider provider = new();
+            DynamicCodeExecutorPool pool = new(provider);
 
             pool.Dispose();
 
@@ -52,7 +52,7 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
         [Test]
         public void GetOrCreate_WhenProviderReturnsStubFirst_ShouldReplaceItWhenRealExecutorBecomesAvailable()
         {
-            SequenceDynamicCodeExecutorProvider provider = new SequenceDynamicCodeExecutorProvider(
+            SequenceDynamicCodeExecutorProvider provider = new(
                 new DynamicCodeExecutorStub(),
                 new FakeDynamicCodeExecutor());
             using DynamicCodeExecutorPool pool = new DynamicCodeExecutorPool(provider);
@@ -80,7 +80,7 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
 
                 CreateCallsBySecurityLevel[securityLevel]++;
 
-                FakeDynamicCodeExecutor executor = new FakeDynamicCodeExecutor();
+                FakeDynamicCodeExecutor executor = new();
                 CreatedExecutors.Add(executor);
                 return executor;
             }

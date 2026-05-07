@@ -73,7 +73,7 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
             ExternalCompilerPaths externalCompilerPaths = ExternalCompilerPathResolver.Resolve();
             Assert.That(externalCompilerPaths, Is.Not.Null, "Unity external compiler layout should be available for this test");
 
-            DynamicReferenceSetBuilderService referenceSetBuilder = new DynamicReferenceSetBuilderService();
+            DynamicReferenceSetBuilderService referenceSetBuilder = new();
             List<string> references = referenceSetBuilder.BuildReferenceSet(
                 new List<string>(),
                 null,
@@ -86,8 +86,7 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
             File.WriteAllText(sourcePath, source);
             WriteCompilerResponseFile(responsePath, sourcePath, dllPath, references);
 
-            ProcessStartInfo startInfo = new ProcessStartInfo
-            {
+            ProcessStartInfo startInfo = new()            {
                 FileName = externalCompilerPaths.DotnetHostPath,
                 Arguments = $"\"{externalCompilerPaths.CompilerDllPath}\" @\"{responsePath}\"",
                 WorkingDirectory = _tempDirectoryPath,
@@ -114,8 +113,7 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
             string dllPath,
             IReadOnlyCollection<string> references)
         {
-            List<string> lines = new List<string>
-            {
+            List<string> lines = new()            {
                 "-nologo",
                 "-target:library",
                 $"-out:\"{dllPath}\""

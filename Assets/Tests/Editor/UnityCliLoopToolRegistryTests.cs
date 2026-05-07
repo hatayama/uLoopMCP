@@ -17,6 +17,21 @@ namespace io.github.hatayama.UnityCliLoop
     [TestFixture]
     public sealed class UnityCliLoopToolRegistryTests
     {
+        private const string ClearConsoleAssemblyName = "UnityCLILoop.FirstPartyTools.ClearConsole.Editor";
+        private const string CompileAssemblyName = "UnityCLILoop.FirstPartyTools.Compile.Editor";
+        private const string ControlPlayModeAssemblyName = "UnityCLILoop.FirstPartyTools.ControlPlayMode.Editor";
+        private const string ExecuteDynamicCodeAssemblyName = "UnityCLILoop.FirstPartyTools.ExecuteDynamicCode.Editor";
+        private const string FindGameObjectsAssemblyName = "UnityCLILoop.FirstPartyTools.FindGameObjects.Editor";
+        private const string GetHierarchyAssemblyName = "UnityCLILoop.FirstPartyTools.GetHierarchy.Editor";
+        private const string GetLogsAssemblyName = "UnityCLILoop.FirstPartyTools.GetLogs.Editor";
+        private const string RecordInputAssemblyName = "UnityCLILoop.FirstPartyTools.RecordInput.Editor";
+        private const string ReplayInputAssemblyName = "UnityCLILoop.FirstPartyTools.ReplayInput.Editor";
+        private const string RunTestsAssemblyName = "UnityCLILoop.FirstPartyTools.RunTests.Editor";
+        private const string ScreenshotAssemblyName = "UnityCLILoop.FirstPartyTools.Screenshot.Editor";
+        private const string SimulateKeyboardAssemblyName = "UnityCLILoop.FirstPartyTools.SimulateKeyboard.Editor";
+        private const string SimulateMouseInputAssemblyName = "UnityCLILoop.FirstPartyTools.SimulateMouseInput.Editor";
+        private const string SimulateMouseUiAssemblyName = "UnityCLILoop.FirstPartyTools.SimulateMouseUi.Editor";
+
         [Test]
         public void Constructor_WhenFirstPartyToolsUseToolAttribute_RegistersThem()
         {
@@ -47,7 +62,7 @@ namespace io.github.hatayama.UnityCliLoop
             System.Type toolType = registry.GetToolType("get-logs");
 
             Assert.That(toolType, Is.Not.Null);
-            Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo("UnityCLILoop.FirstPartyTools.Editor"));
+            Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo(GetLogsAssemblyName));
             Assert.That(registry.IsThirdPartyTool("get-logs"), Is.False);
         }
 
@@ -60,7 +75,7 @@ namespace io.github.hatayama.UnityCliLoop
             System.Type toolType = registry.GetToolType("compile");
 
             Assert.That(toolType, Is.Not.Null);
-            Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo("UnityCLILoop.FirstPartyTools.Editor"));
+            Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo(CompileAssemblyName));
             Assert.That(registry.IsThirdPartyTool("compile"), Is.False);
         }
 
@@ -73,7 +88,7 @@ namespace io.github.hatayama.UnityCliLoop
             System.Type toolType = registry.GetToolType("execute-dynamic-code");
 
             Assert.That(toolType, Is.Not.Null);
-            Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo("UnityCLILoop.FirstPartyTools.Editor"));
+            Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo(ExecuteDynamicCodeAssemblyName));
             Assert.That(registry.IsThirdPartyTool("execute-dynamic-code"), Is.False);
         }
 
@@ -86,7 +101,7 @@ namespace io.github.hatayama.UnityCliLoop
             System.Type toolType = registry.GetToolType("control-play-mode");
 
             Assert.That(toolType, Is.Not.Null);
-            Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo("UnityCLILoop.FirstPartyTools.Editor"));
+            Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo(ControlPlayModeAssemblyName));
             Assert.That(registry.IsThirdPartyTool("control-play-mode"), Is.False);
         }
 
@@ -99,7 +114,7 @@ namespace io.github.hatayama.UnityCliLoop
             System.Type toolType = registry.GetToolType("clear-console");
 
             Assert.That(toolType, Is.Not.Null);
-            Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo("UnityCLILoop.FirstPartyTools.Editor"));
+            Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo(ClearConsoleAssemblyName));
             Assert.That(registry.IsThirdPartyTool("clear-console"), Is.False);
         }
 
@@ -112,7 +127,7 @@ namespace io.github.hatayama.UnityCliLoop
             System.Type toolType = registry.GetToolType("get-hierarchy");
 
             Assert.That(toolType, Is.Not.Null);
-            Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo("UnityCLILoop.FirstPartyTools.Editor"));
+            Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo(GetHierarchyAssemblyName));
             Assert.That(registry.IsThirdPartyTool("get-hierarchy"), Is.False);
         }
 
@@ -125,7 +140,7 @@ namespace io.github.hatayama.UnityCliLoop
             System.Type toolType = registry.GetToolType("run-tests");
 
             Assert.That(toolType, Is.Not.Null);
-            Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo("UnityCLILoop.FirstPartyTools.Editor"));
+            Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo(RunTestsAssemblyName));
             Assert.That(registry.IsThirdPartyTool("run-tests"), Is.False);
         }
 
@@ -138,7 +153,7 @@ namespace io.github.hatayama.UnityCliLoop
             System.Type toolType = registry.GetToolType("find-game-objects");
 
             Assert.That(toolType, Is.Not.Null);
-            Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo("UnityCLILoop.FirstPartyTools.Editor"));
+            Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo(FindGameObjectsAssemblyName));
             Assert.That(registry.IsThirdPartyTool("find-game-objects"), Is.False);
         }
 
@@ -151,7 +166,7 @@ namespace io.github.hatayama.UnityCliLoop
             System.Type toolType = registry.GetToolType("screenshot");
 
             Assert.That(toolType, Is.Not.Null);
-            Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo("UnityCLILoop.FirstPartyTools.Editor"));
+            Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo(ScreenshotAssemblyName));
             Assert.That(registry.IsThirdPartyTool("screenshot"), Is.False);
         }
 
@@ -164,7 +179,7 @@ namespace io.github.hatayama.UnityCliLoop
             System.Type toolType = registry.GetToolType("record-input");
 
             Assert.That(toolType, Is.Not.Null);
-            Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo("UnityCLILoop.FirstPartyTools.Editor"));
+            Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo(RecordInputAssemblyName));
             Assert.That(registry.IsThirdPartyTool("record-input"), Is.False);
         }
 
@@ -177,7 +192,7 @@ namespace io.github.hatayama.UnityCliLoop
             System.Type toolType = registry.GetToolType("replay-input");
 
             Assert.That(toolType, Is.Not.Null);
-            Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo("UnityCLILoop.FirstPartyTools.Editor"));
+            Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo(ReplayInputAssemblyName));
             Assert.That(registry.IsThirdPartyTool("replay-input"), Is.False);
         }
 
@@ -190,7 +205,7 @@ namespace io.github.hatayama.UnityCliLoop
             System.Type toolType = registry.GetToolType("simulate-keyboard");
 
             Assert.That(toolType, Is.Not.Null);
-            Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo("UnityCLILoop.FirstPartyTools.Editor"));
+            Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo(SimulateKeyboardAssemblyName));
             Assert.That(registry.IsThirdPartyTool("simulate-keyboard"), Is.False);
         }
 
@@ -203,7 +218,7 @@ namespace io.github.hatayama.UnityCliLoop
             System.Type toolType = registry.GetToolType("simulate-mouse-input");
 
             Assert.That(toolType, Is.Not.Null);
-            Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo("UnityCLILoop.FirstPartyTools.Editor"));
+            Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo(SimulateMouseInputAssemblyName));
             Assert.That(registry.IsThirdPartyTool("simulate-mouse-input"), Is.False);
         }
 
@@ -216,7 +231,7 @@ namespace io.github.hatayama.UnityCliLoop
             System.Type toolType = registry.GetToolType("simulate-mouse-ui");
 
             Assert.That(toolType, Is.Not.Null);
-            Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo("UnityCLILoop.FirstPartyTools.Editor"));
+            Assert.That(toolType.Assembly.GetName().Name, Is.EqualTo(SimulateMouseUiAssemblyName));
             Assert.That(registry.IsThirdPartyTool("simulate-mouse-ui"), Is.False);
         }
 
@@ -363,7 +378,7 @@ namespace io.github.hatayama.UnityCliLoop
         [Test]
         public void FirstPartyToolsAsmdef_DoesNotReferenceImplementationLayers()
         {
-            // Tests that bundled plugin tools do not depend on UnityCliLoop platform implementation layers.
+            // Tests that bundled plugin startup wiring does not depend on UnityCliLoop platform implementation layers.
             string asmdefPath = Path.Combine(
                 UnityCliLoopPathResolver.GetProjectRoot(),
                 "Packages",
@@ -374,7 +389,20 @@ namespace io.github.hatayama.UnityCliLoop
             JObject asmdef = JObject.Parse(File.ReadAllText(asmdefPath));
             string[] references = asmdef["references"]?.Values<string>().ToArray() ?? new string[0];
 
-            Assert.That(references, Does.Contain("UnityCLILoop.ToolContracts"));
+            Assert.That(references, Does.Contain(ClearConsoleAssemblyName));
+            Assert.That(references, Does.Contain(CompileAssemblyName));
+            Assert.That(references, Does.Contain(ControlPlayModeAssemblyName));
+            Assert.That(references, Does.Contain(ExecuteDynamicCodeAssemblyName));
+            Assert.That(references, Does.Contain(FindGameObjectsAssemblyName));
+            Assert.That(references, Does.Contain(GetHierarchyAssemblyName));
+            Assert.That(references, Does.Contain(GetLogsAssemblyName));
+            Assert.That(references, Does.Contain(RecordInputAssemblyName));
+            Assert.That(references, Does.Contain(ReplayInputAssemblyName));
+            Assert.That(references, Does.Contain(RunTestsAssemblyName));
+            Assert.That(references, Does.Contain(ScreenshotAssemblyName));
+            Assert.That(references, Does.Contain(SimulateKeyboardAssemblyName));
+            Assert.That(references, Does.Contain(SimulateMouseInputAssemblyName));
+            Assert.That(references, Does.Contain(SimulateMouseUiAssemblyName));
             Assert.That(references, Does.Not.Contain("UnityCLILoop.Application"));
             Assert.That(references, Does.Not.Contain("UnityCLILoop.Domain"));
             Assert.That(references, Does.Not.Contain("UnityCLILoop.Infrastructure"));

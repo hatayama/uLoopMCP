@@ -93,7 +93,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return path;
             }
 
-            StringBuilder builder = new StringBuilder(1024);
+            StringBuilder builder = new(1024);
             uint length = GetFinalPathNameByHandle(handle, builder, builder.Capacity, 0);
             if (length == 0 || length >= builder.Capacity)
             {

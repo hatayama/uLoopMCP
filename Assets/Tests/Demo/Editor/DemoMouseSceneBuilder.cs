@@ -33,7 +33,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static void CreateDirectionalLight()
         {
-            GameObject lightGo = new GameObject("Directional Light");
+            GameObject lightGo = new("Directional Light");
             Light light = lightGo.AddComponent<Light>();
             light.type = LightType.Directional;
             light.color = new Color(1f, 0.96f, 0.84f);
@@ -73,14 +73,14 @@ namespace io.github.hatayama.UnityCliLoop
         // DemoMouseLook expects CinemachineVirtualCamera + Transposer + Composer
         private static void CreateFollowCamera(Transform target)
         {
-            GameObject cameraGo = new GameObject("Main Camera");
+            GameObject cameraGo = new("Main Camera");
             cameraGo.tag = "MainCamera";
             Camera camera = cameraGo.AddComponent<Camera>();
             camera.clearFlags = CameraClearFlags.Skybox;
             camera.fieldOfView = 60f;
             cameraGo.AddComponent<CinemachineBrain>();
 
-            GameObject vcamGo = new GameObject("CM vcam - UnityChan Follow");
+            GameObject vcamGo = new("CM vcam - UnityChan Follow");
             CinemachineVirtualCamera vcam = vcamGo.AddComponent<CinemachineVirtualCamera>();
             vcam.Follow = target;
             vcam.LookAt = target;

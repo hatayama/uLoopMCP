@@ -13,7 +13,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         protected override async Task<GetLogsResponse> ExecuteAsync(GetLogsSchema parameters, CancellationToken ct)
         {
-            GetLogsUseCase useCase = new GetLogsUseCase(new LogRetrievalService(), new LogFilteringService());
+            GetLogsUseCase useCase = new(new LogRetrievalService(), new LogFilteringService());
             return await useCase.ExecuteAsync(parameters, ct);
         }
     }

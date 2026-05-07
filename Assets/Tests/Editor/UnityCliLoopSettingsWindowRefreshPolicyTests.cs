@@ -8,7 +8,7 @@ namespace io.github.hatayama.UnityCliLoop
         public void ShouldRefreshOnEditorUpdate_WhenRepaintIsRequested_ReturnsTrue()
         {
             // Verifies that an explicit repaint request triggers the editor update refresh.
-            RuntimeState runtimeState = new RuntimeState(needsRepaint: true);
+            RuntimeState runtimeState = new(needsRepaint: true);
 
             bool shouldRefresh = UnityCliLoopSettingsWindowRefreshPolicy.ShouldRefreshOnEditorUpdate(runtimeState);
 
@@ -19,7 +19,7 @@ namespace io.github.hatayama.UnityCliLoop
         public void ShouldRefreshOnEditorUpdate_WhenPostCompileModeHasNoRepaintRequest_ReturnsFalse()
         {
             // Verifies that post-compile mode alone does not force a refresh.
-            RuntimeState runtimeState = new RuntimeState(
+            RuntimeState runtimeState = new(
                 needsRepaint: false,
                 isPostCompileMode: true);
 

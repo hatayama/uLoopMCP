@@ -22,7 +22,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return ApplyOnExplicitUpdate(apply, targetUpdateType, ct);
             }
 
-            TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>();
+            TaskCompletionSource<bool> tcs = new();
             CancellationTokenRegistration registration = default;
             Action? callback = null;
 
@@ -126,7 +126,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             ct.ThrowIfCancellationRequested();
 
-            TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>();
+            TaskCompletionSource<bool> tcs = new();
             CancellationTokenRegistration registration = default;
             Action? callback = null;
 

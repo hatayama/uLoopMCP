@@ -12,8 +12,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             FindGameObjectsTool tool = CreateTool();
             
-            JObject parameters = new JObject
-            {
+            JObject parameters = new()            {
                 ["RequiredComponents"] = new JArray { "Camera" },
                 ["MaxResults"] = 1,
                 ["IncludeInheritedProperties"] = true
@@ -55,8 +54,7 @@ namespace io.github.hatayama.UnityCliLoop
             FindGameObjectsTool tool = CreateTool();
             
             // Search for Main Camera by path
-            JObject parameters = new JObject
-            {
+            JObject parameters = new()            {
                 ["NamePattern"] = "Main Camera",
                 ["SearchMode"] = "Path",
                 ["MaxResults"] = 1

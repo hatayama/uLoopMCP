@@ -166,7 +166,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             _isCompiling = false;
 
-            CompileResult result = new CompileResult(
+            CompileResult result = new(
                 success: false,
                 errorCount: 0,
                 warningCount: 0,

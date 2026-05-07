@@ -21,11 +21,11 @@ namespace io.github.hatayama.UnityCliLoop
         public static ToolParameterSchema FromDto<TDto>() where TDto : class, new()
         {
             Type dtoType = typeof(TDto);
-            Dictionary<string, ParameterInfo> properties = new Dictionary<string, ParameterInfo>();
-            List<string> required = new List<string>();
+            Dictionary<string, ParameterInfo> properties = new();
+            List<string> required = new();
 
             // Create instance to get default values
-            TDto defaultInstance = new TDto();
+            TDto defaultInstance = new();
 
             foreach (PropertyInfo property in dtoType.GetProperties())
             {
@@ -60,7 +60,7 @@ namespace io.github.hatayama.UnityCliLoop
                 }
 
                 // Create parameter info
-                ParameterInfo paramInfo = new ParameterInfo(
+                ParameterInfo paramInfo = new(
                     parameterType,
                     description,
                     defaultValue,

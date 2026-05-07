@@ -66,8 +66,7 @@ namespace io.github.hatayama.UnityCliLoop
             
             // Create JsonSerializerSettings with CamelCasePropertyNamesContractResolver
             // This allows client side to use camelCase while C# uses PascalCase
-            JsonSerializerSettings settings = new JsonSerializerSettings
-            {
+            JsonSerializerSettings settings = new()            {
                 ContractResolver = new Newtonsoft.Json.Serialization.CamelCasePropertyNamesContractResolver()
             };
             

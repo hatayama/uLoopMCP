@@ -51,8 +51,8 @@ namespace io.github.hatayama.UnityCliLoop
 
         public static List<UIElementInfo> CollectInteractiveElements()
         {
-            List<UIElementInfo> elements = new List<UIElementInfo>();
-            HashSet<GameObject> processedObjects = new HashSet<GameObject>();
+            List<UIElementInfo> elements = new();
+            HashSet<GameObject> processedObjects = new();
 
             CollectSelectables(elements, processedObjects);
             CollectEventHandlers(elements, processedObjects);
@@ -104,7 +104,7 @@ namespace io.github.hatayama.UnityCliLoop
         public static GameObject CreateAnnotationOverlay(List<UIElementInfo> elements, float outputResolutionScale)
         {
             AnnotationBorderMetrics borderMetrics = CalculateAnnotationBorderMetrics(outputResolutionScale);
-            GameObject root = new GameObject("__UIAnnotation__");
+            GameObject root = new("__UIAnnotation__");
             root.hideFlags = HideFlags.HideAndDontSave;
 
             Canvas canvas = root.AddComponent<Canvas>();
@@ -437,7 +437,7 @@ namespace io.github.hatayama.UnityCliLoop
             Rect rect,
             Color color)
         {
-            GameObject edgeGo = new GameObject($"Border_{name}");
+            GameObject edgeGo = new($"Border_{name}");
             edgeGo.hideFlags = HideFlags.HideAndDontSave;
             edgeGo.transform.SetParent(parent, false);
 
@@ -458,7 +458,7 @@ namespace io.github.hatayama.UnityCliLoop
             float x, float y,
             Color backgroundColor, Color textColor, Font font, float outlineDistance)
         {
-            GameObject bgGo = new GameObject("LabelBg");
+            GameObject bgGo = new("LabelBg");
             bgGo.hideFlags = HideFlags.HideAndDontSave;
             bgGo.transform.SetParent(parent, false);
 
@@ -484,7 +484,7 @@ namespace io.github.hatayama.UnityCliLoop
             layout.padding = new RectOffset(LABEL_PADDING_H, LABEL_PADDING_H, LABEL_PADDING_V, LABEL_PADDING_V);
             layout.childAlignment = TextAnchor.MiddleLeft;
 
-            GameObject textGo = new GameObject("LabelText");
+            GameObject textGo = new("LabelText");
             textGo.hideFlags = HideFlags.HideAndDontSave;
             textGo.transform.SetParent(bgGo.transform, false);
 

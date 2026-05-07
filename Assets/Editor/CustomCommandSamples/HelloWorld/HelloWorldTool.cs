@@ -31,7 +31,7 @@ namespace Samples
             };
 
             // Create type-safe response
-            HelloWorldResponse response = new HelloWorldResponse(
+            HelloWorldResponse response = new(
                 message: greeting,
                 language: language.ToString().ToLower(),
                 timestamp: includeTimestamp ? DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") : null

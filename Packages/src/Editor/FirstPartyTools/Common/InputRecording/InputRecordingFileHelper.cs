@@ -13,6 +13,8 @@ namespace io.github.hatayama.UnityCliLoop
 {
     internal static class InputRecordingFileHelper
     {
+        private const string JSON_FILE_PATTERN = "*.json";
+
         private static readonly JsonSerializerSettings WRITE_SETTINGS = new JsonSerializerSettings
         {
             ContractResolver = new CamelCasePropertyNamesContractResolver(),
@@ -78,7 +80,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return "";
             }
 
-            string[] files = Directory.GetFiles(outputDir, ReplayInputConstants.JSON_FILE_PATTERN);
+            string[] files = Directory.GetFiles(outputDir, JSON_FILE_PATTERN);
             if (files.Length == 0)
             {
                 return "";
@@ -94,7 +96,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return null;
             }
 
-            HashSet<Key> filter = new HashSet<Key>();
+            HashSet<Key> filter = new();
             string[] parts = keys.Split(',');
 
             for (int i = 0; i < parts.Length; i++)

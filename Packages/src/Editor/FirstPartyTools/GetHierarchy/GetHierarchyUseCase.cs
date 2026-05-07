@@ -36,8 +36,7 @@ namespace io.github.hatayama.UnityCliLoop
             try
             {
                 // 1. Hierarchy information retrieval
-                HierarchyOptions options = new HierarchyOptions
-                {
+                HierarchyOptions options = new()                {
                     IncludeInactive = parameters.IncludeInactive,
                     MaxDepth = parameters.MaxDepth,
                     RootPath = parameters.RootPath,
@@ -52,8 +51,7 @@ namespace io.github.hatayama.UnityCliLoop
 
                 // 2. Data conversion to scene-grouped structure
                 ct.ThrowIfCancellationRequested();
-                HierarchySerializationOptions serOptions = new HierarchySerializationOptions
-                {
+                HierarchySerializationOptions serOptions = new()                {
                     IncludePaths = parameters.IncludePaths,
                     UseComponentsLut = parameters.UseComponentsLut
                 };

@@ -21,7 +21,7 @@ namespace io.github.hatayama.UnityCliLoop
     public class UnityCliLoopToolRegistry
     {
         private const string ApplicationAssemblyName = "UnityCLILoop.Application";
-        private const string FirstPartyToolsAssemblyName = "UnityCLILoop.FirstPartyTools.Editor";
+        private const string FirstPartyToolsAssemblyNamePrefix = "UnityCLILoop.FirstPartyTools.";
 
         private readonly Dictionary<string, IUnityCliLoopTool> _tools = new();
 
@@ -38,7 +38,7 @@ namespace io.github.hatayama.UnityCliLoop
         private void RegisterToolsWithAttributes()
         {
             Assembly[] assemblies = System.AppDomain.CurrentDomain.GetAssemblies();
-            List<Type> toolTypes = new List<Type>();
+            List<Type> toolTypes = new();
 
             foreach (Assembly assembly in assemblies)
             {
@@ -249,7 +249,7 @@ namespace io.github.hatayama.UnityCliLoop
         private static bool IsThirdPartyAssembly(string assemblyName)
         {
             return assemblyName != ApplicationAssemblyName &&
-                   assemblyName != FirstPartyToolsAssemblyName;
+                   !assemblyName.StartsWith(FirstPartyToolsAssemblyNamePrefix, StringComparison.Ordinal);
         }
 
         /// <summary>

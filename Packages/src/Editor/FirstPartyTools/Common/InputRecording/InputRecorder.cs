@@ -96,8 +96,7 @@ namespace io.github.hatayama.UnityCliLoop
             int totalFrames = Time.frameCount - _startFrameCount;
             float duration = Time.realtimeSinceStartup - _startTime;
 
-            InputRecordingData data = new InputRecordingData
-            {
+            InputRecordingData data = new()            {
                 Metadata = new InputRecordingMetadata
                 {
                     RecordedAt = DateTime.UtcNow.ToString("o"),
@@ -177,7 +176,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             if (_frameEvents.Count > 0)
             {
-                List<RecordedInputEvent> snapshot = new List<RecordedInputEvent>(_frameEvents);
+                List<RecordedInputEvent> snapshot = new(_frameEvents);
                 _recordedFrames.Add(new InputFrameEvents
                 {
                     Frame = relativeFrame,
@@ -251,7 +250,7 @@ namespace io.github.hatayama.UnityCliLoop
             for (int i = 0; i < _mouseButtons.Length; i++)
             {
                 MouseButton button = _mouseButtons[i];
-                if (MouseInputState.GetButtonControl(mouse, button).isPressed)
+                if (MouseButtonControlResolver.GetButtonControl(mouse, button).isPressed)
                 {
                     _currentButtonStates.Add(button);
                 }
@@ -362,7 +361,7 @@ namespace io.github.hatayama.UnityCliLoop
         // otherwise replay starts with those controls released until a state change occurs.
         private void EmitInitialHeldEvents()
         {
-            List<RecordedInputEvent> events = new List<RecordedInputEvent>();
+            List<RecordedInputEvent> events = new();
 
             foreach (Key key in _previousKeyStates)
             {
@@ -431,7 +430,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             for (int i = 0; i < _mouseButtons.Length; i++)
             {
-                if (MouseInputState.GetButtonControl(mouse, _mouseButtons[i]).isPressed)
+                if (MouseButtonControlResolver.GetButtonControl(mouse, _mouseButtons[i]).isPressed)
                 {
                     _previousButtonStates.Add(_mouseButtons[i]);
                 }

@@ -27,7 +27,7 @@ namespace io.github.hatayama.UnityCliLoop
                 ? "dotnet.exe"
                 : "dotnet";
 
-            List<string> missingComponents = new List<string>();
+            List<string> missingComponents = new();
             if (string.IsNullOrEmpty(scriptingRootPath))
             {
                 missingComponents.Add(Path.Combine(contentsPath, "NetCoreRuntime"));

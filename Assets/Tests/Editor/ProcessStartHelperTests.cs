@@ -10,8 +10,7 @@ namespace io.github.hatayama.UnityCliLoop
         [Test]
         public void TryStart_NonExistentExecutable_ReturnsNull()
         {
-            ProcessStartInfo startInfo = new ProcessStartInfo
-            {
+            ProcessStartInfo startInfo = new()            {
                 FileName = "/nonexistent/path/to/executable",
                 UseShellExecute = false,
                 CreateNoWindow = true
@@ -26,8 +25,7 @@ namespace io.github.hatayama.UnityCliLoop
         public void TryStart_ValidExecutable_ReturnsNonNullProcess()
         {
             bool isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
-            ProcessStartInfo startInfo = new ProcessStartInfo
-            {
+            ProcessStartInfo startInfo = new()            {
                 FileName = isWindows ? "cmd.exe" : "/bin/echo",
                 Arguments = isWindows ? "/c echo test" : "test",
                 UseShellExecute = false,

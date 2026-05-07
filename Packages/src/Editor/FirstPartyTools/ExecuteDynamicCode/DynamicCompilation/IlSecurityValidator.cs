@@ -17,8 +17,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         public SecurityValidationResult Validate(Assembly assembly)
         {
-            SecurityValidationResult result = new SecurityValidationResult
-            {
+            SecurityValidationResult result = new()            {
                 IsValid = true,
                 Violations = new List<SecurityViolation>()
             };

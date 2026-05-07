@@ -29,7 +29,7 @@ namespace io.github.hatayama.UnityCliLoop
         /// <returns>Initialization result</returns>
         public override Task<ServerInitializationResponse> ExecuteAsync(ServerInitializationSchema parameters, CancellationToken cancellationToken)
         {
-            ServerInitializationResponse response = new ServerInitializationResponse();
+            ServerInitializationResponse response = new();
 
             try
             {

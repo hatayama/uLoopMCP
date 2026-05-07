@@ -55,7 +55,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return new UnityCliLoopScreenshotResult();
             }
 
-            List<UIElementInfo> annotatedElements = new List<UIElementInfo>();
+            List<UIElementInfo> annotatedElements = new();
 
             if (request.AnnotateElements)
             {
@@ -66,7 +66,7 @@ namespace io.github.hatayama.UnityCliLoop
             if (request.ElementsOnly)
             {
                 UIElementAnnotator.ConvertToSimCoordinates(annotatedElements, (int)Handles.GetMainGameViewSize().y);
-                UnityCliLoopScreenshotInfo elementsOnlyInfo = new UnityCliLoopScreenshotInfo();
+                UnityCliLoopScreenshotInfo elementsOnlyInfo = new();
                 elementsOnlyInfo.CoordinateSystem = UnityCliLoopScreenshotCoordinateSystem.GameView;
                 elementsOnlyInfo.AnnotatedElements = annotatedElements;
                 return new UnityCliLoopScreenshotResult
@@ -112,7 +112,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             int width = texture.width;
             int height = texture.height;
-            List<UnityCliLoopScreenshotInfo> screenshots = new List<UnityCliLoopScreenshotInfo>();
+            List<UnityCliLoopScreenshotInfo> screenshots = new();
 
             try
             {
@@ -122,9 +122,8 @@ namespace io.github.hatayama.UnityCliLoop
 
                 SaveTextureAsPng(texture, savedPath);
 
-                FileInfo savedFileInfo = new FileInfo(savedPath);
-                UnityCliLoopScreenshotInfo info = new UnityCliLoopScreenshotInfo
-                {
+                FileInfo savedFileInfo = new(savedPath);
+                UnityCliLoopScreenshotInfo info = new()                {
                     ImagePath = savedPath,
                     FileSizeBytes = savedFileInfo.Length,
                     Width = width,
@@ -180,7 +179,7 @@ namespace io.github.hatayama.UnityCliLoop
             string outputDirectory = EnsureOutputDirectoryExists(request.OutputDirectory);
             string safeWindowName = SanitizeFileName(request.WindowName);
             string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss_fff");
-            List<UnityCliLoopScreenshotInfo> screenshots = new List<UnityCliLoopScreenshotInfo>();
+            List<UnityCliLoopScreenshotInfo> screenshots = new();
 
             for (int i = 0; i < windows.Length; i++)
             {
@@ -208,7 +207,7 @@ namespace io.github.hatayama.UnityCliLoop
                 {
                     SaveTextureAsPng(texture, savedPath);
 
-                    FileInfo savedFileInfo = new FileInfo(savedPath);
+                    FileInfo savedFileInfo = new(savedPath);
                     screenshots.Add(new UnityCliLoopScreenshotInfo
                     {
                         ImagePath = savedPath,

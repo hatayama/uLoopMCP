@@ -78,7 +78,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             // Tests that asynchronous startup recovery remains pending until its restore task completes.
             System.Action scheduledAction = null;
-            TaskCompletionSource<bool> recoveryCompletionSource = new TaskCompletionSource<bool>();
+            TaskCompletionSource<bool> recoveryCompletionSource = new();
             UnityCliLoopServerControllerService service = CreateControllerService();
 
             Task recoveryTask = service.ScheduleStartupRecovery(
@@ -99,7 +99,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static UnityCliLoopServerControllerService CreateControllerService()
         {
-            TestServerInstanceFactory serverInstanceFactory = new TestServerInstanceFactory();
+            TestServerInstanceFactory serverInstanceFactory = new();
             UnityCliLoopServerLifecycleRegistryService lifecycleRegistry =
                 new UnityCliLoopServerLifecycleRegistryService();
             return new UnityCliLoopServerControllerService(

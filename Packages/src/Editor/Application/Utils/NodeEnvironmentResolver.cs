@@ -52,8 +52,7 @@ namespace io.github.hatayama.UnityCliLoop
         private static string TryWhichCommand(string executableName)
         {
             string shell = GetUserShell();
-            ProcessStartInfo startInfo = new ProcessStartInfo
-            {
+            ProcessStartInfo startInfo = new()            {
                 FileName = shell,
                 Arguments = "-l -i -c \"echo " + WHICH_START_MARKER + "; which " + executableName + "; echo " + WHICH_END_MARKER + "\"",
                 UseShellExecute = false,
@@ -94,8 +93,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static string[] TryWhereCommandAll(string executableName)
         {
-            ProcessStartInfo startInfo = new ProcessStartInfo
-            {
+            ProcessStartInfo startInfo = new()            {
                 FileName = "cmd.exe",
                 Arguments = $"/c where {executableName}",
                 UseShellExecute = false,
@@ -108,7 +106,7 @@ namespace io.github.hatayama.UnityCliLoop
             if (!string.IsNullOrEmpty(output))
             {
                 string[] lines = output.Split('\n');
-                List<string> result = new List<string>();
+                List<string> result = new();
                 foreach (string line in lines)
                 {
                     string trimmed = line.Trim();
@@ -136,7 +134,7 @@ namespace io.github.hatayama.UnityCliLoop
                     return null;
                 }
 
-                System.Text.StringBuilder stdoutBuilder = new System.Text.StringBuilder();
+                System.Text.StringBuilder stdoutBuilder = new();
 
                 process.OutputDataReceived += (sender, e) =>
                 {
@@ -193,8 +191,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
 
             string shell = GetUserShell();
-            ProcessStartInfo startInfo = new ProcessStartInfo
-            {
+            ProcessStartInfo startInfo = new()            {
                 FileName = shell,
                 Arguments = "-l -i -c \"echo " + PATH_START_MARKER + "; printenv PATH; echo " + PATH_END_MARKER + "\"",
                 UseShellExecute = false,

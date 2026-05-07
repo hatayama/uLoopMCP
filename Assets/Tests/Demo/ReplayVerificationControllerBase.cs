@@ -134,7 +134,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             int maxLines = Mathf.Max(normalizedRecording.Length, normalizedReplay.Length);
             int diffCount = 0;
-            System.Text.StringBuilder sb = new System.Text.StringBuilder();
+            System.Text.StringBuilder sb = new();
 
             for (int i = 0; i < maxLines; i++)
             {

@@ -381,8 +381,7 @@ namespace io.github.hatayama.UnityCliLoop
             ExecutionResult result,
             string originalCode)
         {
-            ExecuteDynamicCodeResponse response = new ExecuteDynamicCodeResponse
-            {
+            ExecuteDynamicCodeResponse response = new()            {
                 Success = result.Success,
                 Result = result.Result?.ToString() ?? string.Empty,
                 Logs = result.Logs ?? new List<string>(),

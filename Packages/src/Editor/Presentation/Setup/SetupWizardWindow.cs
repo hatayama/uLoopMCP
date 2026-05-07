@@ -723,14 +723,14 @@ namespace io.github.hatayama.UnityCliLoop
 
             foreach (SkillSetupApplicationFacade.SkillTargetInfo target in installableTargets)
             {
-                VisualElement item = new VisualElement();
+                VisualElement item = new();
                 item.AddToClassList("setup-target-item");
 
-                Label nameLabel = new Label($"{target.DisplayName} ({target.DirName}/)");
+                Label nameLabel = new($"{target.DisplayName} ({target.DirName}/)");
                 nameLabel.AddToClassList("setup-target-item__label");
                 item.Add(nameLabel);
 
-                Label statusLabel = new Label(GetSkillInstallStatusText(
+                Label statusLabel = new(GetSkillInstallStatusText(
                     target.InstallState,
                     target.HasDifferentLayoutSkills,
                     !_installSkillsFlat));

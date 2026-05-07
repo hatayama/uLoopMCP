@@ -211,12 +211,12 @@ namespace io.github.hatayama.UnityCliLoop
         private async Task<UnityCliLoopMouseUiSimulationResult> ExecuteClick(
             MouseUiSimulationCommand parameters, EventSystem eventSystem, CancellationToken ct)
         {
-            Vector2 inputPos = new Vector2(parameters.X, parameters.Y);
+            Vector2 inputPos = new(parameters.X, parameters.Y);
             Vector2 screenPos = InputToScreen(inputPos);
             RaycastResult? hit = parameters.BypassRaycast ? null : RaycastUI(screenPos, eventSystem);
 
             PointerEventData.InputButton inputButton = ToInputButton(parameters.Button);
-            PointerEventData pointerData = new PointerEventData(eventSystem)
+            PointerEventData pointerData = new(eventSystem)
             {
                 position = screenPos,
                 pressPosition = screenPos,
@@ -337,12 +337,12 @@ namespace io.github.hatayama.UnityCliLoop
                 };
             }
 
-            Vector2 inputPos = new Vector2(parameters.X, parameters.Y);
+            Vector2 inputPos = new(parameters.X, parameters.Y);
             Vector2 screenPos = InputToScreen(inputPos);
             RaycastResult? hit = parameters.BypassRaycast ? null : RaycastUI(screenPos, eventSystem);
 
             PointerEventData.InputButton inputButton = ToInputButton(parameters.Button);
-            PointerEventData pointerData = new PointerEventData(eventSystem)
+            PointerEventData pointerData = new(eventSystem)
             {
                 position = screenPos,
                 pressPosition = screenPos,
@@ -464,7 +464,7 @@ namespace io.github.hatayama.UnityCliLoop
             GameObject dragTarget,
             PointerEventData.InputButton inputButton)
         {
-            PointerEventData pointerData = new PointerEventData(eventSystem)
+            PointerEventData pointerData = new(eventSystem)
             {
                 position = screenPos,
                 pressPosition = screenPos,
@@ -489,12 +489,12 @@ namespace io.github.hatayama.UnityCliLoop
         private async Task<UnityCliLoopMouseUiSimulationResult> ExecuteDragOneShot(
             MouseUiSimulationCommand parameters, EventSystem eventSystem, CancellationToken ct)
         {
-            Vector2 inputStart = new Vector2(parameters.FromX, parameters.FromY);
-            Vector2 inputEnd = new Vector2(parameters.X, parameters.Y);
+            Vector2 inputStart = new(parameters.FromX, parameters.FromY);
+            Vector2 inputEnd = new(parameters.X, parameters.Y);
             Vector2 screenStart = InputToScreen(inputStart);
             Vector2 screenEnd = InputToScreen(inputEnd);
             RaycastResult? hit = parameters.BypassRaycast ? null : RaycastUI(screenStart, eventSystem);
-            RaycastResult startRaycast = new RaycastResult();
+            RaycastResult startRaycast = new();
             GameObject? rawTarget = null;
 
             if (parameters.BypassRaycast)
@@ -624,7 +624,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private void UpdatePointerRaycast(PointerEventData pointerData)
         {
-            List<RaycastResult> results = new List<RaycastResult>();
+            List<RaycastResult> results = new();
             EventSystem.current.RaycastAll(pointerData, results);
 
             if (results.Count > 0)
@@ -702,10 +702,10 @@ namespace io.github.hatayama.UnityCliLoop
                 };
             }
 
-            Vector2 inputPos = new Vector2(parameters.X, parameters.Y);
+            Vector2 inputPos = new(parameters.X, parameters.Y);
             Vector2 screenPos = InputToScreen(inputPos);
             RaycastResult? hit = parameters.BypassRaycast ? null : RaycastUI(screenPos, eventSystem);
-            RaycastResult startRaycast = new RaycastResult();
+            RaycastResult startRaycast = new();
             GameObject? rawTarget = null;
 
             if (parameters.BypassRaycast)
@@ -813,7 +813,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return invalidResponse;
             }
 
-            Vector2 inputEnd = new Vector2(parameters.X, parameters.Y);
+            Vector2 inputEnd = new(parameters.X, parameters.Y);
             Vector2 screenEnd = InputToScreen(inputEnd);
 
             SimulateMouseUiOverlayState.Update(
@@ -864,7 +864,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return invalidResponse;
             }
 
-            Vector2 inputEnd = new Vector2(parameters.X, parameters.Y);
+            Vector2 inputEnd = new(parameters.X, parameters.Y);
             Vector2 screenEnd = InputToScreen(inputEnd);
             string targetName = MouseDragState.Target!.name;
             GameObject? explicitDropTarget = null;

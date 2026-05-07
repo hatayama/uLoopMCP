@@ -16,8 +16,7 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
         {
             // Arrange
             UnityCliLoopToolRegistry registry = ToolRegistryTestFactory.Create();
-            JObject paramsToken = new JObject
-            {
+            JObject paramsToken = new()            {
                 ["Code"] = "return \"ok\";",
                 ["Parameters"] = "{}", // invalid: string instead of object
                 ["CompileOnly"] = true
@@ -42,8 +41,7 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
             DynamicCodeSecurityLevel prev = ULoopSettings.GetDynamicCodeSecurityLevel();
             ULoopSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
             UnityCliLoopToolRegistry registry = ToolRegistryTestFactory.Create();
-            JObject paramsToken = new JObject
-            {
+            JObject paramsToken = new()            {
                 ["Code"] = "return \"ok\";",
                 ["Parameters"] = new JObject(), // valid: object
                 ["CompileOnly"] = true
@@ -74,8 +72,7 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
             DynamicCodeSecurityLevel prev = ULoopSettings.GetDynamicCodeSecurityLevel();
             ULoopSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
             UnityCliLoopToolRegistry registry = ToolRegistryTestFactory.Create();
-            JObject paramsToken = new JObject
-            {
+            JObject paramsToken = new()            {
                 ["Code"] = "int x = 1; // no explicit return",
                 ["CompileOnly"] = false
             };

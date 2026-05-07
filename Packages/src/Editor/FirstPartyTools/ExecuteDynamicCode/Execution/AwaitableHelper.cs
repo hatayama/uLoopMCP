@@ -91,7 +91,7 @@ namespace io.github.hatayama.UnityCliLoop
                     }
                 }
 
-                TaskCompletionSource<object> tcs = new TaskCompletionSource<object>();
+                TaskCompletionSource<object> tcs = new();
 
                 Action continuation = () =>
                 {
@@ -168,7 +168,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             object awaiter = getAwaiter.Invoke(valueTask, null);
             Type awaiterType = awaiter.GetType();
-            TaskCompletionSource<object> tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            TaskCompletionSource<object> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
             MethodInfo onCompleted = awaiterType.GetMethod("OnCompleted", BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic, null, new Type[] { typeof(Action) }, null);
             MethodInfo unsafeOnCompleted = awaiterType.GetMethod("UnsafeOnCompleted", BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic, null, new Type[] { typeof(Action) }, null);
             MethodInfo getResult = awaiterType.GetMethod("GetResult", BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic, null, Type.EmptyTypes, null);
@@ -269,7 +269,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             object awaiter = getAwaiter.Invoke(valueTaskT, null);
             Type awaiterType = awaiter.GetType();
-            TaskCompletionSource<object> tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            TaskCompletionSource<object> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
             MethodInfo onCompleted = awaiterType.GetMethod("OnCompleted", BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic, null, new Type[] { typeof(Action) }, null);
             MethodInfo unsafeOnCompleted = awaiterType.GetMethod("UnsafeOnCompleted", BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic, null, new Type[] { typeof(Action) }, null);
             MethodInfo getResult = awaiterType.GetMethod("GetResult", BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic, null, Type.EmptyTypes, null);

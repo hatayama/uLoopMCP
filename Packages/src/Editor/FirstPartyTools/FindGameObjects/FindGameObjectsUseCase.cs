@@ -55,8 +55,7 @@ namespace io.github.hatayama.UnityCliLoop
             
             try
             {
-                GameObjectSearchOptions options = new GameObjectSearchOptions
-                {
+                GameObjectSearchOptions options = new()                {
                     NamePattern = parameters.NamePattern,
                     SearchMode = parameters.SearchMode,
                     RequiredComponents = parameters.RequiredComponents,
@@ -71,7 +70,7 @@ namespace io.github.hatayama.UnityCliLoop
                 // 3. Result conversion and formatting
                 ct.ThrowIfCancellationRequested();
                 
-                List<UnityCliLoopGameObjectResult> results = new List<UnityCliLoopGameObjectResult>();
+                List<UnityCliLoopGameObjectResult> results = new();
                 
                 foreach (GameObjectDetails details in foundObjects)
                 {
@@ -81,8 +80,7 @@ namespace io.github.hatayama.UnityCliLoop
                     
                     try
                     {
-                        UnityCliLoopGameObjectResult result = new UnityCliLoopGameObjectResult
-                        {
+                        UnityCliLoopGameObjectResult result = new()                        {
                             Name = details.Name,
                             Path = details.Path,
                             IsActive = details.IsActive,
@@ -106,8 +104,7 @@ namespace io.github.hatayama.UnityCliLoop
                     }
                 }
                 
-                UnityCliLoopGameObjectSearchResult response = new UnityCliLoopGameObjectSearchResult
-                {
+                UnityCliLoopGameObjectSearchResult response = new()                {
                     Results = results.ToArray(),
                     TotalFound = results.Count
                 };
@@ -158,8 +155,8 @@ namespace io.github.hatayama.UnityCliLoop
             }
 
             // Convert to FindGameObjectResult array
-            List<UnityCliLoopGameObjectResult> results = new List<UnityCliLoopGameObjectResult>();
-            List<UnityCliLoopGameObjectProcessingError> errors = new List<UnityCliLoopGameObjectProcessingError>();
+            List<UnityCliLoopGameObjectResult> results = new();
+            List<UnityCliLoopGameObjectProcessingError> errors = new();
 
             foreach (GameObjectDetails details in selectedObjects)
             {
@@ -167,8 +164,7 @@ namespace io.github.hatayama.UnityCliLoop
 
                 try
                 {
-                    UnityCliLoopGameObjectResult result = new UnityCliLoopGameObjectResult
-                    {
+                    UnityCliLoopGameObjectResult result = new()                    {
                         Name = details.Name,
                         Path = details.Path,
                         IsActive = details.IsActive,

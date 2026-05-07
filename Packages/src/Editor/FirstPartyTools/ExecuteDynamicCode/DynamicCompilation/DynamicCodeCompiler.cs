@@ -117,8 +117,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             if (buildResult.Diagnostics.Errors.Count > 0)
             {
-                CompilationResult failureResult = new CompilationResult
-                {
+                CompilationResult failureResult = new()                {
                     Success = false,
                     Errors = buildResult.Diagnostics.Errors,
                     Warnings = buildResult.Diagnostics.Warnings,
@@ -167,8 +166,7 @@ namespace io.github.hatayama.UnityCliLoop
                 return assemblySecurityFailure;
             }
 
-            CompilationResult result = new CompilationResult
-            {
+            CompilationResult result = new()            {
                 Success = true,
                 CompiledAssembly = assemblyLoadResult.CompiledAssembly,
                 Warnings = buildResult.Diagnostics.Warnings,

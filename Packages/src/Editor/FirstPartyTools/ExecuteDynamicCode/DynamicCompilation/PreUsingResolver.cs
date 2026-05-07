@@ -41,7 +41,7 @@ namespace io.github.hatayama.UnityCliLoop
             HashSet<string> qualifiedTypeIdentifiers = ExtractQualifiedTypeIdentifiers(userCodeSection);
 
             HashSet<string> namespacesToAdd = new(System.StringComparer.Ordinal);
-            List<string> assemblyReferencesToAdd = new List<string>();
+            List<string> assemblyReferencesToAdd = new();
             foreach (string typeName in candidateTypes)
             {
                 List<string> namespaces = index.FindNamespacesForType(typeName);
@@ -220,7 +220,7 @@ namespace io.github.hatayama.UnityCliLoop
             int pos = 0;
             int length = source.Length;
             bool sawDot = false;
-            List<string> qualifiedChainParts = new List<string>();
+            List<string> qualifiedChainParts = new();
 
             while (pos < length)
             {

@@ -15,8 +15,7 @@ namespace io.github.hatayama.UnityCliLoop.DynamicCodeToolTests
 
             try
             {
-                JObject paramsToken = new JObject
-                {
+                JObject paramsToken = new()                {
                     ["Code"] = "bool exists = System.IO.File.Exists(\"dummy.txt\"); return exists;",
                     ["CompileOnly"] = false
                 };

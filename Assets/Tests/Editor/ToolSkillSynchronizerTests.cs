@@ -883,7 +883,7 @@ namespace io.github.hatayama.UnityCliLoop
             WriteSkillFile(
                 Path.Combine(manualTargetRoot, SkillInstallLayout.SkillsDirName, "find-orphaned-meta"),
                 "---\nname: find-orphaned-meta\n---\n");
-            SkillInstallationDetector detector = new SkillInstallationDetector();
+            SkillInstallationDetector detector = new();
             Assert.IsFalse(detector.AreSkillsInstalled(temporaryRoot, ".claude"),
                 "Manual local skills should not be treated as installed uLoop skills");
 
@@ -909,7 +909,7 @@ namespace io.github.hatayama.UnityCliLoop
         {
             string temporaryRoot = CreateTemporaryProjectRoot();
             CreateFakeSourceSkill(temporaryRoot, "uloop-compile", "CompileTool", "reference.md", "reference");
-            SkillInstallationDetector detector = new SkillInstallationDetector();
+            SkillInstallationDetector detector = new();
 
             string flatTargetRoot = Path.Combine(temporaryRoot, ".claude");
             WriteSkillFile(Path.Combine(flatTargetRoot, SkillInstallLayout.SkillsDirName, "uloop-compile"));
@@ -932,7 +932,7 @@ namespace io.github.hatayama.UnityCliLoop
             string temporaryRoot = CreateTemporaryProjectRoot();
             string targetRoot = Path.Combine(temporaryRoot, ".cursor");
             Directory.CreateDirectory(Path.Combine(targetRoot, SkillInstallLayout.SkillsDirName, "uloop-compile"));
-            SkillInstallationDetector detector = new SkillInstallationDetector();
+            SkillInstallationDetector detector = new();
 
             Assert.IsTrue(detector.AreSkillsInstalled(temporaryRoot, ".cursor", false));
             Assert.IsFalse(detector.AreSkillsInstalled(temporaryRoot, ".cursor", true));

@@ -19,9 +19,9 @@ namespace io.github.hatayama.UnityCliLoop
             "Packages/src/Editor/FirstPartyTools/ExecuteDynamicCode/Execution/DynamicCodeForegroundWarmupState.cs",
             "Packages/src/Editor/FirstPartyTools/ExecuteDynamicCode/Execution/DynamicCodeStartupTelemetry.cs",
             "Packages/src/Editor/ToolContracts/EditorDelayManager.cs",
-            "Packages/src/Editor/FirstPartyTools/RecordInput/Application/InputRecorder.cs",
+            "Packages/src/Editor/FirstPartyTools/Common/InputRecording/InputRecorder.cs",
             "Packages/src/Editor/FirstPartyTools/RecordInput/Application/RecordingsApplicationFacade.cs",
-            "Packages/src/Editor/FirstPartyTools/ReplayInput/Application/InputReplayer.cs",
+            "Packages/src/Editor/FirstPartyTools/Common/InputRecording/InputReplayer.cs",
             "Packages/src/Editor/FirstPartyTools/SimulateKeyboard/Application/KeyboardKeyState.cs",
             "Packages/src/Editor/FirstPartyTools/SimulateMouseInput/Application/MouseInputState.cs",
             "Packages/src/Editor/FirstPartyTools/SimulateMouseUi/Application/MouseDragState.cs",
@@ -105,7 +105,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static List<string> FindMutableStaticFieldViolations(string[] relativePaths)
         {
-            List<string> violations = new List<string>();
+            List<string> violations = new();
             string projectRoot = UnityCliLoopPathResolver.GetProjectRoot();
 
             for (int pathIndex = 0; pathIndex < relativePaths.Length; pathIndex++)
@@ -135,7 +135,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static List<string> FindDirectStaticEventViolations()
         {
-            List<string> violations = new List<string>();
+            List<string> violations = new();
             string projectRoot = UnityCliLoopPathResolver.GetProjectRoot();
             string packagesSrcRoot = Path.Combine(projectRoot, "Packages/src");
             string[] sourcePaths = Directory.GetFiles(packagesSrcRoot, "*.cs", SearchOption.AllDirectories);
@@ -161,7 +161,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static List<string> FindStaticClassViolations(string[] relativePaths)
         {
-            List<string> violations = new List<string>();
+            List<string> violations = new();
             string projectRoot = UnityCliLoopPathResolver.GetProjectRoot();
 
             for (int pathIndex = 0; pathIndex < relativePaths.Length; pathIndex++)

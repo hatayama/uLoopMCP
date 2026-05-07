@@ -16,7 +16,7 @@ namespace io.github.hatayama.UnityCliLoop
             string stderr,
             int exitCode)
         {
-            List<CompilerMessage> messages = new List<CompilerMessage>();
+            List<CompilerMessage> messages = new();
             AddParsedMessages(messages, stdout);
             AddParsedMessages(messages, stderr);
 

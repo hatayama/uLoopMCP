@@ -57,8 +57,7 @@ namespace io.github.hatayama.UnityCliLoop
                     break;
             }
 
-            ControlPlayModeResponse response = new ControlPlayModeResponse
-            {
+            ControlPlayModeResponse response = new()            {
                 IsPlaying = EditorApplication.isPlaying,
                 IsPaused = EditorApplication.isPaused,
                 Message = message
