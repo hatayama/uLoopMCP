@@ -9,7 +9,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// Related classes: DomainReloadDetectionService, SessionRecoveryService
     /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - UseCase + Tool Pattern (DDD Integration)
     /// </summary>
-    internal class DomainReloadRecoveryUseCase
+    public class DomainReloadRecoveryUseCase
     {
         private readonly SessionRecoveryService _sessionRecoveryService;
 

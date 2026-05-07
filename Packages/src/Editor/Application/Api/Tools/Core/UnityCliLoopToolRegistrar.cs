@@ -88,7 +88,7 @@ namespace io.github.hatayama.UnityCliLoop
             return _sharedRegistry;
         }
 
-        internal void WarmupRegistry()
+        public void WarmupRegistry()
         {
             _ = SharedRegistry;
         }
@@ -181,7 +181,7 @@ namespace io.github.hatayama.UnityCliLoop
             return Service.TryGetRegistry();
         }
 
-        internal static void WarmupRegistry()
+        public static void WarmupRegistry()
         {
             Service.WarmupRegistry();
         }

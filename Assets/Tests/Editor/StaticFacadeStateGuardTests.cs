@@ -28,7 +28,7 @@ namespace io.github.hatayama.UnityCliLoop
             "Packages/src/Editor/FirstPartyTools/Common/Overlay/OverlayCanvasFactory.cs",
             "Packages/src/Editor/Application/Core/CoreTools/Util/MainThreadSwitcher.cs",
             "Packages/src/Editor/ToolContracts/VibeLogger.cs",
-            "Packages/src/Editor/Application/Server/UnityCliLoopServerController.cs",
+            "Packages/src/Editor/Application/Server/UnityCliLoopServerApplicationService.cs",
             "Packages/src/Runtime/RecordInput/RecordInputOverlayState.cs",
             "Packages/src/Runtime/ReplayInput/ReplayInputOverlayState.cs",
             "Packages/src/Runtime/SimulateKeyboard/SimulateKeyboardOverlayState.cs",

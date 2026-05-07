@@ -3,7 +3,7 @@ using System.Threading;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    internal interface IUnityCliLoopServerRecoveryCoordinator
+    public interface IUnityCliLoopServerRecoveryCoordinator
     {
         IUnityCliLoopServerInstance CurrentServer { get; }
 
@@ -13,7 +13,7 @@ namespace io.github.hatayama.UnityCliLoop
     /// <summary>
     /// Restores persisted server session state after domain reload without owning transport details.
     /// </summary>
-    internal sealed class SessionRecoveryService
+    public sealed class SessionRecoveryService
     {
         private readonly IUnityCliLoopServerRecoveryCoordinator _recoveryCoordinator;
 

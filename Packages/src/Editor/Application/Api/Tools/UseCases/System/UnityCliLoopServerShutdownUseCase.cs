@@ -3,7 +3,7 @@ using System.Threading;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    internal interface IUnityCliLoopServerStateReader
+    public interface IUnityCliLoopServerStateReader
     {
         IUnityCliLoopServerInstance CurrentServer { get; }
     }
@@ -19,7 +19,7 @@ namespace io.github.hatayama.UnityCliLoop
         private readonly UnityCliLoopServerStartupService _startupService;
         private readonly IUnityCliLoopServerStateReader _serverStateReader;
 
-        internal UnityCliLoopServerShutdownUseCase(
+        public UnityCliLoopServerShutdownUseCase(
             UnityCliLoopServerStartupService startupService,
             IUnityCliLoopServerStateReader serverStateReader)
         {
