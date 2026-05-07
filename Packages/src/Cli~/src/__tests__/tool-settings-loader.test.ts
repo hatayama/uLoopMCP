@@ -154,6 +154,17 @@ describe('tool-settings-loader', () => {
 
       expect(isToolEnabled('run-tests')).toBe(false);
     });
+
+    it('should use packages-lock when manifest cannot be read', () => {
+      mkdirSync(join(testDir, 'Packages', 'manifest.json'), { recursive: true });
+      writePackagesLock(testDir, { 'com.unity.test-framework': { version: '1.3.9' } });
+      writeFileSync(
+        join(testDir, '.uloop', 'settings.tools.json'),
+        JSON.stringify({ disabledTools: ['run-tests'] }),
+      );
+
+      expect(isToolEnabled('run-tests')).toBe(false);
+    });
   });
 
   // ── filterEnabledTools ─────────────────────────────────────────

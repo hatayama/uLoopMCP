@@ -127,6 +127,19 @@ function fileContainsUnityTestFramework(filePath: string): boolean {
     return false;
   }
 
-  const content: string = readFileSync(filePath, 'utf-8');
+  const content: string | null = tryReadTextFile(filePath);
+  if (content === null) {
+    return false;
+  }
+
   return UNITY_TEST_FRAMEWORK_DEPENDENCY_PATTERN.test(content);
+}
+
+function tryReadTextFile(filePath: string): string | null {
+  try {
+    return readFileSync(filePath, 'utf-8');
+  } catch {
+    // Files can disappear or become unreadable between existsSync and readFileSync.
+    return null;
+  }
 }

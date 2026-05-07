@@ -61,7 +61,7 @@ Returns JSON with:
 - `PassedCount` (number): Passed tests
 - `FailedCount` (number): Failed tests
 - `SkippedCount` (number): Skipped tests
-- `XmlPath` (string): Path to NUnit XML result file. Empty string when no XML was saved (typically on `Success: true`); populated only when tests failed and the XML file exists on disk.
+- `XmlPath` (string | null): Path to NUnit XML result file. `null` when no XML was saved; populated only when tests failed and the XML file exists on disk.
 
 ### XML Result File
 

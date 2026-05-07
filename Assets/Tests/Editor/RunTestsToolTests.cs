@@ -126,6 +126,7 @@ namespace io.github.hatayama.uLoopMCP
             Assert.That(response.PassedCount, Is.EqualTo(0));
             Assert.That(response.FailedCount, Is.EqualTo(0));
             Assert.That(response.SkippedCount, Is.EqualTo(0));
+            Assert.That(response.XmlPath, Is.Null);
         }
     }
 } 

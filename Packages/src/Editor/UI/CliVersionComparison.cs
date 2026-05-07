@@ -57,7 +57,7 @@ namespace io.github.hatayama.uLoopMCP
                 normalized = normalized.Substring(0, preReleaseIndex);
             }
 
-            if (preReleaseIndex >= 0 && string.IsNullOrEmpty(preRelease))
+            if (preReleaseIndex >= 0 && !IsValidPreRelease(preRelease))
             {
                 return false;
             }
@@ -96,6 +96,50 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             return int.TryParse(component, NumberStyles.None, CultureInfo.InvariantCulture, out value);
+        }
+
+        private static bool IsValidPreRelease(string preRelease)
+        {
+            if (string.IsNullOrEmpty(preRelease))
+            {
+                return false;
+            }
+
+            string[] identifiers = preRelease.Split('.');
+            foreach (string identifier in identifiers)
+            {
+                if (!IsValidPreReleaseIdentifier(identifier))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static bool IsValidPreReleaseIdentifier(string identifier)
+        {
+            if (string.IsNullOrEmpty(identifier))
+            {
+                return false;
+            }
+
+            bool numericOnly = true;
+            foreach (char character in identifier)
+            {
+                bool isDigit = character >= '0' && character <= '9';
+                bool isUpper = character >= 'A' && character <= 'Z';
+                bool isLower = character >= 'a' && character <= 'z';
+                bool isHyphen = character == '-';
+                if (!isDigit && !isUpper && !isLower && !isHyphen)
+                {
+                    return false;
+                }
+
+                numericOnly = numericOnly && isDigit;
+            }
+
+            return !numericOnly || identifier.Length == 1 || identifier[0] != '0';
         }
 
         private static int Compare(CliSemanticVersion left, CliSemanticVersion right)

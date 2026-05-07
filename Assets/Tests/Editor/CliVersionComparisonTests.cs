@@ -26,6 +26,9 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
         [TestCase("invalid", "2.1.0")]
         [TestCase("2.1.0", "invalid")]
         [TestCase("2.1", "2.1.0")]
+        [TestCase("3.0.0-alpha..1", "3.0.0")]
+        [TestCase("3.0.0-alpha_1", "3.0.0")]
+        [TestCase("3.0.0-01", "3.0.0")]
         public void TryCompare_WhenVersionCannotParse_ReturnsFalse(string leftVersion, string rightVersion)
         {
             bool parsed = CliVersionComparison.TryCompare(leftVersion, rightVersion, out int comparison);
