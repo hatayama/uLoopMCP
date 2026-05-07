@@ -20,36 +20,39 @@ namespace io.github.hatayama.UnityCliLoop
         public string ExecutablePath { get; }
     }
 
-    public static class CliInstallationDetector
+    /// <summary>
+    /// Detects the installed CLI dispatcher and keeps the result in an instance-scoped editor cache.
+    /// </summary>
+    public sealed class CliInstallationDetector
     {
         private const int PROCESS_TIMEOUT_MS = 5000;
 
-        private static string _cachedCliVersion;
-        private static string _cachedCliExecutablePath;
-        private static bool _cacheInitialized;
-        private static bool _isRefreshing;
+        private string _cachedCliVersion;
+        private string _cachedCliExecutablePath;
+        private bool _cacheInitialized;
+        private bool _isRefreshing;
 
-        public static bool IsCliInstalled()
+        public bool IsCliInstalled()
         {
             return GetCachedCliVersion() != null;
         }
 
-        public static string GetCachedCliVersion()
+        public string GetCachedCliVersion()
         {
             return _cacheInitialized ? _cachedCliVersion : null;
         }
 
-        public static string GetCachedCliExecutablePath()
+        public string GetCachedCliExecutablePath()
         {
             return _cacheInitialized ? _cachedCliExecutablePath : null;
         }
 
-        public static bool IsCheckCompleted()
+        public bool IsCheckCompleted()
         {
             return _cacheInitialized;
         }
 
-        public static async Task RefreshCliVersionAsync(CancellationToken ct)
+        public async Task RefreshCliVersionAsync(CancellationToken ct)
         {
             if (_cacheInitialized || _isRefreshing)
             {
@@ -70,44 +73,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        public static bool AreSkillsInstalled(string targetDir)
-        {
-            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(targetDir), "targetDir must not be null or empty");
-
-            string projectRoot = UnityCliLoopPathResolver.GetProjectRoot();
-            return AreSkillsInstalled(projectRoot, targetDir);
-        }
-
-        public static bool AreSkillsInstalled(string targetDir, bool groupSkillsUnderUnityCliLoop)
-        {
-            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(targetDir), "targetDir must not be null or empty");
-
-            string projectRoot = UnityCliLoopPathResolver.GetProjectRoot();
-            return AreSkillsInstalled(projectRoot, targetDir, groupSkillsUnderUnityCliLoop);
-        }
-
-        internal static bool AreSkillsInstalled(string projectRoot, string targetDir)
-        {
-            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(projectRoot), "projectRoot must not be null or empty");
-            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(targetDir), "targetDir must not be null or empty");
-
-            string targetRoot = Path.Combine(projectRoot, targetDir);
-            return SkillInstallLayout.HasInstalledSkills(projectRoot, targetRoot);
-        }
-
-        internal static bool AreSkillsInstalled(
-            string projectRoot,
-            string targetDir,
-            bool groupSkillsUnderUnityCliLoop)
-        {
-            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(projectRoot), "projectRoot must not be null or empty");
-            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(targetDir), "targetDir must not be null or empty");
-
-            string targetRoot = Path.Combine(projectRoot, targetDir);
-            return SkillInstallLayout.HasInstalledSkills(projectRoot, targetRoot, groupSkillsUnderUnityCliLoop);
-        }
-
-        public static async Task ForceRefreshCliVersionAsync(CancellationToken ct)
+        public async Task ForceRefreshCliVersionAsync(CancellationToken ct)
         {
             CliInstallationDetection detection = await DetectCliInstallationAsync(ct);
             _cachedCliVersion = detection.Version;
@@ -115,7 +81,7 @@ namespace io.github.hatayama.UnityCliLoop
             _cacheInitialized = true;
         }
 
-        public static void InvalidateCache()
+        public void InvalidateCache()
         {
             _cachedCliVersion = null;
             _cachedCliExecutablePath = null;
@@ -211,42 +177,98 @@ namespace io.github.hatayama.UnityCliLoop
     }
 
     /// <summary>
-    /// Application facade for editor setup UI workflows.
-    /// UI code uses this facade so presentation code does not depend on CLI installer internals.
+    /// Checks whether project-local agent skill files have been installed for a target client.
     /// </summary>
-    public static class CliSetupApplicationFacade
+    public sealed class SkillInstallationDetector
     {
-        public static bool IsCliCheckCompleted()
+        public bool AreSkillsInstalled(string targetDir)
         {
-            return CliInstallationDetector.IsCheckCompleted();
+            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(targetDir), "targetDir must not be null or empty");
+
+            string projectRoot = UnityCliLoopPathResolver.GetProjectRoot();
+            return AreSkillsInstalled(projectRoot, targetDir);
         }
 
-        public static bool IsCliInstalled()
+        public bool AreSkillsInstalled(string targetDir, bool groupSkillsUnderUnityCliLoop)
         {
-            return CliInstallationDetector.IsCliInstalled();
+            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(targetDir), "targetDir must not be null or empty");
+
+            string projectRoot = UnityCliLoopPathResolver.GetProjectRoot();
+            return AreSkillsInstalled(projectRoot, targetDir, groupSkillsUnderUnityCliLoop);
         }
 
-        public static string GetCachedCliVersion()
+        internal bool AreSkillsInstalled(string projectRoot, string targetDir)
         {
-            return CliInstallationDetector.GetCachedCliVersion();
+            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(projectRoot), "projectRoot must not be null or empty");
+            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(targetDir), "targetDir must not be null or empty");
+
+            string targetRoot = Path.Combine(projectRoot, targetDir);
+            return SkillInstallLayout.HasInstalledSkills(projectRoot, targetRoot);
         }
 
-        public static string GetCachedCliExecutablePath()
+        internal bool AreSkillsInstalled(
+            string projectRoot,
+            string targetDir,
+            bool groupSkillsUnderUnityCliLoop)
         {
-            return CliInstallationDetector.GetCachedCliExecutablePath();
+            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(projectRoot), "projectRoot must not be null or empty");
+            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(targetDir), "targetDir must not be null or empty");
+
+            string targetRoot = Path.Combine(projectRoot, targetDir);
+            return SkillInstallLayout.HasInstalledSkills(projectRoot, targetRoot, groupSkillsUnderUnityCliLoop);
+        }
+    }
+
+    /// <summary>
+    /// Coordinates CLI setup workflows for editor UI without exposing installer details to presentation code.
+    /// </summary>
+    public sealed class CliSetupApplicationService
+    {
+        private readonly CliInstallationDetector _cliInstallationDetector;
+
+        public CliSetupApplicationService(CliInstallationDetector cliInstallationDetector)
+        {
+            UnityEngine.Debug.Assert(cliInstallationDetector != null, "cliInstallationDetector must not be null");
+
+            _cliInstallationDetector = cliInstallationDetector;
         }
 
-        public static Task RefreshCliVersionAsync(CancellationToken ct)
+        public bool IsCliCheckCompleted()
         {
-            return CliInstallationDetector.RefreshCliVersionAsync(ct);
+            return _cliInstallationDetector.IsCheckCompleted();
         }
 
-        public static Task ForceRefreshCliVersionAsync(CancellationToken ct)
+        public bool IsCliInstalled()
         {
-            return CliInstallationDetector.ForceRefreshCliVersionAsync(ct);
+            return _cliInstallationDetector.IsCliInstalled();
         }
 
-        public static string GetRequiredDispatcherVersion(string packageVersion)
+        public string GetCachedCliVersion()
+        {
+            return _cliInstallationDetector.GetCachedCliVersion();
+        }
+
+        public string GetCachedCliExecutablePath()
+        {
+            return _cliInstallationDetector.GetCachedCliExecutablePath();
+        }
+
+        public Task RefreshCliVersionAsync(CancellationToken ct)
+        {
+            return _cliInstallationDetector.RefreshCliVersionAsync(ct);
+        }
+
+        public Task ForceRefreshCliVersionAsync(CancellationToken ct)
+        {
+            return _cliInstallationDetector.ForceRefreshCliVersionAsync(ct);
+        }
+
+        public void InvalidateCliCache()
+        {
+            _cliInstallationDetector.InvalidateCache();
+        }
+
+        public string GetRequiredDispatcherVersion(string packageVersion)
         {
             UnityEngine.Debug.Assert(!string.IsNullOrEmpty(packageVersion), "packageVersion must not be null or empty");
 
@@ -256,7 +278,7 @@ namespace io.github.hatayama.UnityCliLoop
                 : requiredDispatcherVersion;
         }
 
-        public static CliInstallResult EnsureProjectLocalCliCurrent(string projectRoot, string packageVersion)
+        public CliInstallResult EnsureProjectLocalCliCurrent(string projectRoot, string packageVersion)
         {
             UnityEngine.Debug.Assert(!string.IsNullOrEmpty(projectRoot), "projectRoot must not be null or empty");
             UnityEngine.Debug.Assert(!string.IsNullOrEmpty(packageVersion), "packageVersion must not be null or empty");
@@ -264,24 +286,24 @@ namespace io.github.hatayama.UnityCliLoop
             return ProjectLocalCliAutoInstaller.EnsureProjectLocalCliCurrent(projectRoot, packageVersion);
         }
 
-        public static bool IsPackageOwnedCurrentUserInstallPath(
+        public bool IsPackageOwnedCurrentUserInstallPath(
             string cliExecutablePath,
             RuntimePlatform platform)
         {
             return NativeCliInstaller.IsPackageOwnedCurrentUserInstallPath(cliExecutablePath, platform);
         }
 
-        public static bool IsCliVersionLessThan(string leftVersion, string rightVersion)
+        public bool IsCliVersionLessThan(string leftVersion, string rightVersion)
         {
             return CliVersionComparer.IsVersionLessThan(leftVersion, rightVersion);
         }
 
-        public static bool IsCliVersionGreaterThanOrEqual(string leftVersion, string rightVersion)
+        public bool IsCliVersionGreaterThanOrEqual(string leftVersion, string rightVersion)
         {
             return CliVersionComparer.IsVersionGreaterThanOrEqual(leftVersion, rightVersion);
         }
 
-        public static Task<CliInstallResult> InstallGlobalCliAsync(
+        public Task<CliInstallResult> InstallGlobalCliAsync(
             RuntimePlatform platform,
             string packageVersion,
             CancellationToken ct)
@@ -292,14 +314,14 @@ namespace io.github.hatayama.UnityCliLoop
             return NativeCliInstaller.InstallAsync(platform, packageVersion);
         }
 
-        public static Task<CliInstallResult> UninstallGlobalCliAsync(RuntimePlatform platform, CancellationToken ct)
+        public Task<CliInstallResult> UninstallGlobalCliAsync(RuntimePlatform platform, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
 
             return NativeCliInstaller.UninstallAsync(platform);
         }
 
-        public static NativeCliInstallCommand GetGlobalCliInstallCommand(
+        public NativeCliInstallCommand GetGlobalCliInstallCommand(
             RuntimePlatform platform,
             string packageVersion,
             bool removeLegacyLaunchers)
@@ -307,6 +329,109 @@ namespace io.github.hatayama.UnityCliLoop
             UnityEngine.Debug.Assert(!string.IsNullOrEmpty(packageVersion), "packageVersion must not be null or empty");
 
             return NativeCliInstaller.GetInstallCommand(platform, packageVersion, removeLegacyLaunchers);
+        }
+    }
+
+    /// <summary>
+    /// Holds shared editor setup services until editor windows receive services from the composition root.
+    /// </summary>
+    internal static class CliSetupApplicationServices
+    {
+        private static readonly CliSetupApplicationService ServiceValue =
+            new CliSetupApplicationService(new CliInstallationDetector());
+
+        public static CliSetupApplicationService Service
+        {
+            get { return ServiceValue; }
+        }
+    }
+
+    /// <summary>
+    /// Compatibility facade for editor setup UI workflows.
+    /// </summary>
+    public static class CliSetupApplicationFacade
+    {
+        public static bool IsCliCheckCompleted()
+        {
+            return CliSetupApplicationServices.Service.IsCliCheckCompleted();
+        }
+
+        public static bool IsCliInstalled()
+        {
+            return CliSetupApplicationServices.Service.IsCliInstalled();
+        }
+
+        public static string GetCachedCliVersion()
+        {
+            return CliSetupApplicationServices.Service.GetCachedCliVersion();
+        }
+
+        public static string GetCachedCliExecutablePath()
+        {
+            return CliSetupApplicationServices.Service.GetCachedCliExecutablePath();
+        }
+
+        public static Task RefreshCliVersionAsync(CancellationToken ct)
+        {
+            return CliSetupApplicationServices.Service.RefreshCliVersionAsync(ct);
+        }
+
+        public static Task ForceRefreshCliVersionAsync(CancellationToken ct)
+        {
+            return CliSetupApplicationServices.Service.ForceRefreshCliVersionAsync(ct);
+        }
+
+        public static void InvalidateCliCache()
+        {
+            CliSetupApplicationServices.Service.InvalidateCliCache();
+        }
+
+        public static string GetRequiredDispatcherVersion(string packageVersion)
+        {
+            return CliSetupApplicationServices.Service.GetRequiredDispatcherVersion(packageVersion);
+        }
+
+        public static CliInstallResult EnsureProjectLocalCliCurrent(string projectRoot, string packageVersion)
+        {
+            return CliSetupApplicationServices.Service.EnsureProjectLocalCliCurrent(projectRoot, packageVersion);
+        }
+
+        public static bool IsPackageOwnedCurrentUserInstallPath(
+            string cliExecutablePath,
+            RuntimePlatform platform)
+        {
+            return CliSetupApplicationServices.Service.IsPackageOwnedCurrentUserInstallPath(cliExecutablePath, platform);
+        }
+
+        public static bool IsCliVersionLessThan(string leftVersion, string rightVersion)
+        {
+            return CliSetupApplicationServices.Service.IsCliVersionLessThan(leftVersion, rightVersion);
+        }
+
+        public static bool IsCliVersionGreaterThanOrEqual(string leftVersion, string rightVersion)
+        {
+            return CliSetupApplicationServices.Service.IsCliVersionGreaterThanOrEqual(leftVersion, rightVersion);
+        }
+
+        public static Task<CliInstallResult> InstallGlobalCliAsync(
+            RuntimePlatform platform,
+            string packageVersion,
+            CancellationToken ct)
+        {
+            return CliSetupApplicationServices.Service.InstallGlobalCliAsync(platform, packageVersion, ct);
+        }
+
+        public static Task<CliInstallResult> UninstallGlobalCliAsync(RuntimePlatform platform, CancellationToken ct)
+        {
+            return CliSetupApplicationServices.Service.UninstallGlobalCliAsync(platform, ct);
+        }
+
+        public static NativeCliInstallCommand GetGlobalCliInstallCommand(
+            RuntimePlatform platform,
+            string packageVersion,
+            bool removeLegacyLaunchers)
+        {
+            return CliSetupApplicationServices.Service.GetGlobalCliInstallCommand(platform, packageVersion, removeLegacyLaunchers);
         }
     }
 

@@ -883,14 +883,15 @@ namespace io.github.hatayama.UnityCliLoop
             WriteSkillFile(
                 Path.Combine(manualTargetRoot, SkillInstallLayout.SkillsDirName, "find-orphaned-meta"),
                 "---\nname: find-orphaned-meta\n---\n");
-            Assert.IsFalse(CliInstallationDetector.AreSkillsInstalled(temporaryRoot, ".claude"),
+            SkillInstallationDetector detector = new SkillInstallationDetector();
+            Assert.IsFalse(detector.AreSkillsInstalled(temporaryRoot, ".claude"),
                 "Manual local skills should not be treated as installed uLoop skills");
 
             string legacyTargetRoot = Path.Combine(temporaryRoot, ".codex");
             WriteSkillFile(
                 Path.Combine(legacyTargetRoot, SkillInstallLayout.SkillsDirName, "acme-third-party"),
                 "---\nname: acme-third-party\ntoolName: acme-third-party\n---\n");
-            Assert.IsTrue(CliInstallationDetector.AreSkillsInstalled(temporaryRoot, ".codex"),
+            Assert.IsTrue(detector.AreSkillsInstalled(temporaryRoot, ".codex"),
                 "Legacy third-party managed skills should be detected");
 
             string managedTargetRoot = Path.Combine(temporaryRoot, ".agents");
@@ -899,7 +900,7 @@ namespace io.github.hatayama.UnityCliLoop
                 SkillInstallLayout.SkillsDirName,
                 SkillInstallLayout.ManagedSkillsDirName,
                 "uloop-compile"));
-            Assert.IsTrue(CliInstallationDetector.AreSkillsInstalled(temporaryRoot, ".agents"),
+            Assert.IsTrue(detector.AreSkillsInstalled(temporaryRoot, ".agents"),
                 "Namespaced managed skills should be detected");
         }
 
@@ -908,11 +909,12 @@ namespace io.github.hatayama.UnityCliLoop
         {
             string temporaryRoot = CreateTemporaryProjectRoot();
             CreateFakeSourceSkill(temporaryRoot, "uloop-compile", "CompileTool", "reference.md", "reference");
+            SkillInstallationDetector detector = new SkillInstallationDetector();
 
             string flatTargetRoot = Path.Combine(temporaryRoot, ".claude");
             WriteSkillFile(Path.Combine(flatTargetRoot, SkillInstallLayout.SkillsDirName, "uloop-compile"));
-            Assert.IsTrue(CliInstallationDetector.AreSkillsInstalled(temporaryRoot, ".claude", false));
-            Assert.IsFalse(CliInstallationDetector.AreSkillsInstalled(temporaryRoot, ".claude", true));
+            Assert.IsTrue(detector.AreSkillsInstalled(temporaryRoot, ".claude", false));
+            Assert.IsFalse(detector.AreSkillsInstalled(temporaryRoot, ".claude", true));
 
             string groupedTargetRoot = Path.Combine(temporaryRoot, ".codex");
             WriteSkillFile(Path.Combine(
@@ -920,8 +922,8 @@ namespace io.github.hatayama.UnityCliLoop
                 SkillInstallLayout.SkillsDirName,
                 SkillInstallLayout.ManagedSkillsDirName,
                 "uloop-compile"));
-            Assert.IsTrue(CliInstallationDetector.AreSkillsInstalled(temporaryRoot, ".codex", true));
-            Assert.IsFalse(CliInstallationDetector.AreSkillsInstalled(temporaryRoot, ".codex", false));
+            Assert.IsTrue(detector.AreSkillsInstalled(temporaryRoot, ".codex", true));
+            Assert.IsFalse(detector.AreSkillsInstalled(temporaryRoot, ".codex", false));
         }
 
         [Test]
@@ -930,9 +932,10 @@ namespace io.github.hatayama.UnityCliLoop
             string temporaryRoot = CreateTemporaryProjectRoot();
             string targetRoot = Path.Combine(temporaryRoot, ".cursor");
             Directory.CreateDirectory(Path.Combine(targetRoot, SkillInstallLayout.SkillsDirName, "uloop-compile"));
+            SkillInstallationDetector detector = new SkillInstallationDetector();
 
-            Assert.IsTrue(CliInstallationDetector.AreSkillsInstalled(temporaryRoot, ".cursor", false));
-            Assert.IsFalse(CliInstallationDetector.AreSkillsInstalled(temporaryRoot, ".cursor", true));
+            Assert.IsTrue(detector.AreSkillsInstalled(temporaryRoot, ".cursor", false));
+            Assert.IsFalse(detector.AreSkillsInstalled(temporaryRoot, ".cursor", true));
         }
 
         [Test]

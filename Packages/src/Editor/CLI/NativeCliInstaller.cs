@@ -88,7 +88,7 @@ namespace io.github.hatayama.UnityCliLoop
                 sourceBinaryPath,
                 installDirectory,
                 platform));
-            CliInstallationDetector.InvalidateCache();
+            CliSetupApplicationFacade.InvalidateCliCache();
 
             if (result.Success)
             {
@@ -119,7 +119,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
 
             CliInstallResult result = await Task.Run(() => UninstallGlobalCli(installDirectory, platform));
-            CliInstallationDetector.InvalidateCache();
+            CliSetupApplicationFacade.InvalidateCliCache();
             if (!result.Success)
             {
                 return result;
