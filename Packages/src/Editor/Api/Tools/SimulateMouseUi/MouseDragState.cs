@@ -5,34 +5,62 @@ using UnityEngine.EventSystems;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    // Tool instances are created fresh per invocation, so drag state
-    // between DragStart/DragMove/DragEnd must be held statically.
-    [InitializeOnLoad]
-    internal static class MouseDragState
+    internal sealed class MouseDragStateService
     {
-        internal static bool IsDragging => Target != null && PointerData != null;
-        internal static GameObject? Target { get; set; }
-        internal static PointerEventData? PointerData { get; set; }
+        internal bool IsDragging => Target != null && PointerData != null;
+        internal GameObject? Target { get; set; }
+        internal PointerEventData? PointerData { get; set; }
 
-        static MouseDragState()
+        internal void RegisterPlayModeCallbacks()
         {
             // PlayMode exit leaves dangling references to destroyed GameObjects
+            EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
         }
 
-        internal static void Clear()
+        internal void Clear()
         {
             Target = null;
             PointerData = null;
         }
 
-        private static void OnPlayModeStateChanged(PlayModeStateChange state)
+        private void OnPlayModeStateChanged(PlayModeStateChange state)
         {
             if (state == PlayModeStateChange.ExitingPlayMode)
             {
                 Clear();
                 SimulateMouseUiOverlayState.Clear();
             }
+        }
+    }
+
+    [InitializeOnLoad]
+    internal static class MouseDragState
+    {
+        private static readonly MouseDragStateService ServiceValue = new MouseDragStateService();
+
+        static MouseDragState()
+        {
+            ServiceValue.RegisterPlayModeCallbacks();
+        }
+
+        internal static bool IsDragging => ServiceValue.IsDragging;
+
+        internal static GameObject? Target
+        {
+            get => ServiceValue.Target;
+            set => ServiceValue.Target = value;
+        }
+
+        internal static PointerEventData? PointerData
+        {
+            get => ServiceValue.PointerData;
+            set => ServiceValue.PointerData = value;
+        }
+
+        internal static void Clear()
+        {
+            ServiceValue.Clear();
         }
     }
 }

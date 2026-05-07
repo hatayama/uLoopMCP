@@ -7,45 +7,42 @@ using UnityEngine.InputSystem.LowLevel;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    // Tool instances are created fresh per invocation, so held-key state
-    // between KeyDown/KeyUp must be held statically.
-    [InitializeOnLoad]
-    internal static class KeyboardKeyState
+    internal sealed class KeyboardKeyStateService
     {
-        private static readonly HashSet<Key> _heldKeys = new();
-        private static readonly HashSet<Key> _transientKeys = new();
+        private readonly HashSet<Key> _heldKeys = new HashSet<Key>();
+        private readonly HashSet<Key> _transientKeys = new HashSet<Key>();
 
-        public static bool IsKeyHeld(Key key) => _heldKeys.Contains(key);
-        public static IReadOnlyCollection<Key> HeldKeys => _heldKeys;
+        public bool IsKeyHeld(Key key) => _heldKeys.Contains(key);
+        public IReadOnlyCollection<Key> HeldKeys => _heldKeys;
 
-        static KeyboardKeyState()
+        public void RegisterPlayModeCallbacks()
         {
             // Guard against duplicate subscriptions on domain reload
             EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
         }
 
-        public static void SetKeyDown(Key key)
+        public void SetKeyDown(Key key)
         {
             _heldKeys.Add(key);
         }
 
-        public static void SetKeyUp(Key key)
+        public void SetKeyUp(Key key)
         {
             _heldKeys.Remove(key);
         }
 
-        public static void RegisterTransientKey(Key key)
+        public void RegisterTransientKey(Key key)
         {
             _transientKeys.Add(key);
         }
 
-        public static void UnregisterTransientKey(Key key)
+        public void UnregisterTransientKey(Key key)
         {
             _transientKeys.Remove(key);
         }
 
-        public static void Clear()
+        public void Clear()
         {
             _heldKeys.Clear();
             _transientKeys.Clear();
@@ -54,7 +51,7 @@ namespace io.github.hatayama.UnityCliLoop
         // Keyboard keys are stored as a bitfield, so StateEvent.From captures
         // the entire keyboard state. To support simultaneous key holds, we write
         // ALL currently held keys into every event — not just the target key.
-        public static void SetKeyState(Keyboard keyboard, Key key, bool pressed)
+        public void SetKeyState(Keyboard keyboard, Key key, bool pressed)
         {
             InputUpdateType updateType = InputUpdateTypeResolver.Resolve();
             using (StateEvent.From(keyboard, out InputEventPtr eventPtr))
@@ -75,7 +72,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        public static void ReleaseAllKeys()
+        public void ReleaseAllKeys()
         {
             Keyboard keyboard = Keyboard.current;
             if (keyboard == null)
@@ -106,13 +103,62 @@ namespace io.github.hatayama.UnityCliLoop
             _transientKeys.Clear();
         }
 
-        private static void OnPlayModeStateChanged(PlayModeStateChange state)
+        private void OnPlayModeStateChanged(PlayModeStateChange state)
         {
             if (state == PlayModeStateChange.ExitingPlayMode)
             {
                 ReleaseAllKeys();
                 SimulateKeyboardOverlayState.Clear();
             }
+        }
+    }
+
+    [InitializeOnLoad]
+    internal static class KeyboardKeyState
+    {
+        private static readonly KeyboardKeyStateService ServiceValue = new KeyboardKeyStateService();
+
+        static KeyboardKeyState()
+        {
+            ServiceValue.RegisterPlayModeCallbacks();
+        }
+
+        public static bool IsKeyHeld(Key key) => ServiceValue.IsKeyHeld(key);
+        public static IReadOnlyCollection<Key> HeldKeys => ServiceValue.HeldKeys;
+
+        public static void SetKeyDown(Key key)
+        {
+            ServiceValue.SetKeyDown(key);
+        }
+
+        public static void SetKeyUp(Key key)
+        {
+            ServiceValue.SetKeyUp(key);
+        }
+
+        public static void RegisterTransientKey(Key key)
+        {
+            ServiceValue.RegisterTransientKey(key);
+        }
+
+        public static void UnregisterTransientKey(Key key)
+        {
+            ServiceValue.UnregisterTransientKey(key);
+        }
+
+        public static void Clear()
+        {
+            ServiceValue.Clear();
+        }
+
+        public static void SetKeyState(Keyboard keyboard, Key key, bool pressed)
+        {
+            ServiceValue.SetKeyState(keyboard, key, pressed);
+        }
+
+        public static void ReleaseAllKeys()
+        {
+            ServiceValue.ReleaseAllKeys();
         }
     }
 }

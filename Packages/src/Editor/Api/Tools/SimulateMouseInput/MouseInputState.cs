@@ -10,32 +10,29 @@ using UnityEngine.InputSystem.LowLevel;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    // Tool instances are created fresh per invocation, so held-button state
-    // between Click/LongPress must be held statically.
-    [InitializeOnLoad]
-    internal static class MouseInputState
+    internal sealed class MouseInputStateService
     {
-        private static readonly HashSet<MouseButton> _heldButtons = new();
+        private readonly HashSet<MouseButton> _heldButtons = new HashSet<MouseButton>();
 
         // Pending reset callbacks for per-frame values (delta, scroll).
         // Tracked so we can unsubscribe on PlayMode exit to prevent leaks.
-        private static Action? _pendingDeltaReset;
-        private static Action? _pendingScrollReset;
+        private Action? _pendingDeltaReset;
+        private Action? _pendingScrollReset;
 
-        public static bool IsButtonHeld(MouseButton button) => _heldButtons.Contains(button);
+        public bool IsButtonHeld(MouseButton button) => _heldButtons.Contains(button);
 
-        static MouseInputState()
+        public void RegisterPlayModeCallbacks()
         {
             EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
         }
 
-        public static void SetButtonDown(MouseButton button)
+        public void SetButtonDown(MouseButton button)
         {
             _heldButtons.Add(button);
         }
 
-        public static void SetButtonUp(MouseButton button)
+        public void SetButtonUp(MouseButton button)
         {
             _heldButtons.Remove(button);
         }
@@ -43,7 +40,7 @@ namespace io.github.hatayama.UnityCliLoop
         // StateEvent.From captures the full mouse state snapshot.
         // All currently held buttons must be written into every event
         // to avoid accidentally releasing them.
-        public static void SetButtonState(Mouse mouse, MouseButton button, bool pressed)
+        public void SetButtonState(Mouse mouse, MouseButton button, bool pressed)
         {
             Debug.Assert(mouse != null, "mouse must not be null");
             ApplyStateEvent(mouse!, eventPtr =>
@@ -52,7 +49,7 @@ namespace io.github.hatayama.UnityCliLoop
             });
         }
 
-        public static void SetPositionState(Mouse mouse, Vector2 position)
+        public void SetPositionState(Mouse mouse, Vector2 position)
         {
             Debug.Assert(mouse != null, "mouse must not be null");
             ApplyStateEvent(mouse!, eventPtr =>
@@ -61,7 +58,7 @@ namespace io.github.hatayama.UnityCliLoop
             });
         }
 
-        public static void SetDeltaState(Mouse mouse, Vector2 delta)
+        public void SetDeltaState(Mouse mouse, Vector2 delta)
         {
             InjectDelta(mouse, delta);
             SchedulePerFrameReset(mouse!, mouse!.delta, isDelta: true);
@@ -69,7 +66,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         // Inject delta without scheduling a reset. Used by SmoothDelta which
         // manages its own lifecycle — resetting only after the final frame.
-        public static void InjectDelta(Mouse mouse, Vector2 delta)
+        public void InjectDelta(Mouse mouse, Vector2 delta)
         {
             Debug.Assert(mouse != null, "mouse must not be null");
             ApplyStateEvent(mouse!, eventPtr =>
@@ -78,7 +75,7 @@ namespace io.github.hatayama.UnityCliLoop
             });
         }
 
-        public static void SetScrollState(Mouse mouse, Vector2 scroll)
+        public void SetScrollState(Mouse mouse, Vector2 scroll)
         {
             Debug.Assert(mouse != null, "mouse must not be null");
             ApplyStateEvent(mouse!, eventPtr =>
@@ -89,7 +86,7 @@ namespace io.github.hatayama.UnityCliLoop
             SchedulePerFrameReset(mouse!, mouse!.scroll, isDelta: false);
         }
 
-        public static void ReleaseAllButtons()
+        public void ReleaseAllButtons()
         {
             Mouse? mouse = Mouse.current;
             if (mouse == null)
@@ -114,7 +111,7 @@ namespace io.github.hatayama.UnityCliLoop
             ClearPendingResets();
         }
 
-        private static void ApplyStateEvent(Mouse mouse, Action<InputEventPtr> writePayload)
+        private void ApplyStateEvent(Mouse mouse, Action<InputEventPtr> writePayload)
         {
             InputUpdateType updateType = InputUpdateTypeResolver.Resolve();
             using (StateEvent.From(mouse, out InputEventPtr eventPtr))
@@ -131,7 +128,7 @@ namespace io.github.hatayama.UnityCliLoop
 
         // delta and scroll are per-frame values; leaving them non-zero causes
         // accumulation across frames. Reset on the next input update.
-        private static void SchedulePerFrameReset(
+        private void SchedulePerFrameReset(
             Mouse mouse,
             InputControl<Vector2> control,
             bool isDelta)
@@ -192,7 +189,7 @@ namespace io.github.hatayama.UnityCliLoop
             InputSystem.onBeforeUpdate += resetCallback;
         }
 
-        private static void ClearPendingResets()
+        private void ClearPendingResets()
         {
             if (_pendingDeltaReset != null)
             {
@@ -207,7 +204,7 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        internal static ButtonControl GetButtonControl(Mouse mouse, MouseButton button)
+        internal ButtonControl GetButtonControl(Mouse mouse, MouseButton button)
         {
             switch (button)
             {
@@ -221,13 +218,71 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        private static void OnPlayModeStateChanged(PlayModeStateChange state)
+        private void OnPlayModeStateChanged(PlayModeStateChange state)
         {
             if (state == PlayModeStateChange.ExitingPlayMode)
             {
                 ReleaseAllButtons();
                 SimulateMouseInputOverlayState.Clear();
             }
+        }
+    }
+
+    [InitializeOnLoad]
+    internal static class MouseInputState
+    {
+        private static readonly MouseInputStateService ServiceValue = new MouseInputStateService();
+
+        static MouseInputState()
+        {
+            ServiceValue.RegisterPlayModeCallbacks();
+        }
+
+        public static bool IsButtonHeld(MouseButton button) => ServiceValue.IsButtonHeld(button);
+
+        public static void SetButtonDown(MouseButton button)
+        {
+            ServiceValue.SetButtonDown(button);
+        }
+
+        public static void SetButtonUp(MouseButton button)
+        {
+            ServiceValue.SetButtonUp(button);
+        }
+
+        public static void SetButtonState(Mouse mouse, MouseButton button, bool pressed)
+        {
+            ServiceValue.SetButtonState(mouse, button, pressed);
+        }
+
+        public static void SetPositionState(Mouse mouse, Vector2 position)
+        {
+            ServiceValue.SetPositionState(mouse, position);
+        }
+
+        public static void SetDeltaState(Mouse mouse, Vector2 delta)
+        {
+            ServiceValue.SetDeltaState(mouse, delta);
+        }
+
+        public static void InjectDelta(Mouse mouse, Vector2 delta)
+        {
+            ServiceValue.InjectDelta(mouse, delta);
+        }
+
+        public static void SetScrollState(Mouse mouse, Vector2 scroll)
+        {
+            ServiceValue.SetScrollState(mouse, scroll);
+        }
+
+        public static void ReleaseAllButtons()
+        {
+            ServiceValue.ReleaseAllButtons();
+        }
+
+        internal static ButtonControl GetButtonControl(Mouse mouse, MouseButton button)
+        {
+            return ServiceValue.GetButtonControl(mouse, button);
         }
     }
 }

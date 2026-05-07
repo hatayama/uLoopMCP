@@ -4,19 +4,13 @@ using UnityEditor;
 namespace io.github.hatayama.UnityCliLoop
 {
     // Instantiates the InputVisualizationCanvas prefab and manages its lifecycle.
-    internal static class OverlayCanvasFactory
+    internal sealed class OverlayCanvasFactoryService
     {
         private const string CANVAS_PREFAB_PATH = "Packages/io.github.hatayama.uloopmcp/Runtime/Common/InputVisualizationCanvas.prefab";
 
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetStaticFields()
-        {
-            _instance = null;
-        }
+        private InputVisualizationCanvas _instance;
 
-        private static InputVisualizationCanvas _instance;
-
-        public static InputVisualizationCanvas VisualizationCanvas
+        public InputVisualizationCanvas VisualizationCanvas
         {
             get
             {
@@ -26,7 +20,12 @@ namespace io.github.hatayama.UnityCliLoop
             }
         }
 
-        public static void EnsureExists()
+        public void Reset()
+        {
+            _instance = null;
+        }
+
+        public void EnsureExists()
         {
             if (_instance != null)
             {
@@ -59,6 +58,24 @@ namespace io.github.hatayama.UnityCliLoop
             Object.DontDestroyOnLoad(go);
             _instance = go.GetComponent<InputVisualizationCanvas>();
             Debug.Assert(_instance != null, "InputVisualizationCanvas component not found on prefab");
+        }
+    }
+
+    internal static class OverlayCanvasFactory
+    {
+        private static readonly OverlayCanvasFactoryService ServiceValue = new OverlayCanvasFactoryService();
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStaticFields()
+        {
+            ServiceValue.Reset();
+        }
+
+        public static InputVisualizationCanvas VisualizationCanvas => ServiceValue.VisualizationCanvas;
+
+        public static void EnsureExists()
+        {
+            ServiceValue.EnsureExists();
         }
     }
 }
