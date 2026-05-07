@@ -195,10 +195,11 @@ namespace io.github.hatayama.UnityCliLoop
     /// <summary>
     /// Manages the Unity CLI bridge server state and restores it after assembly reload.
     /// </summary>
-    public sealed class UnityCliLoopServerControllerService
+    public sealed class UnityCliLoopServerControllerService : IUnityCliLoopServerRecoveryCoordinator
     {
         private readonly IUnityCliLoopServerInstanceFactory _serverInstanceFactory;
         private readonly UnityCliLoopServerLifecycleRegistryService _serverLifecycleRegistry;
+        private readonly SessionRecoveryService _sessionRecoveryService;
         private IUnityCliLoopServerInstance _bridgeServer;
         private readonly SemaphoreSlim _startupSemaphore = new SemaphoreSlim(1, 1);
         private long _startupProtectionUntilTicks = 0;
@@ -213,6 +214,7 @@ namespace io.github.hatayama.UnityCliLoop
 
             _serverInstanceFactory = serverInstanceFactory ?? throw new ArgumentNullException(nameof(serverInstanceFactory));
             _serverLifecycleRegistry = serverLifecycleRegistry ?? throw new ArgumentNullException(nameof(serverLifecycleRegistry));
+            _sessionRecoveryService = new SessionRecoveryService(this);
         }
 
         private bool IsBackgroundUnityProcess()
@@ -464,8 +466,8 @@ namespace io.github.hatayama.UnityCliLoop
         {
             ClearStartupProtection();
 
-            // Create and execute DomainReloadRecoveryUseCase instance
-            DomainReloadRecoveryUseCase useCase = new();
+            DomainReloadRecoveryUseCase useCase =
+                new DomainReloadRecoveryUseCase(_sessionRecoveryService);
             ServiceResult<string> result = useCase.ExecuteBeforeDomainReload(_bridgeServer);
             
             // Clear instance if server shutdown succeeded
@@ -484,8 +486,8 @@ namespace io.github.hatayama.UnityCliLoop
         /// </summary>
         private void OnAfterAssemblyReload()
         {
-            // Create and execute DomainReloadRecoveryUseCase instance
-            DomainReloadRecoveryUseCase useCase = new();
+            DomainReloadRecoveryUseCase useCase =
+                new DomainReloadRecoveryUseCase(_sessionRecoveryService);
             _ = useCase.ExecuteAfterDomainReloadAsync(System.Threading.CancellationToken.None).ContinueWith(task =>
             {
                 if (task.IsFaulted)

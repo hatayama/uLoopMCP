@@ -1,4 +1,6 @@
 using NUnit.Framework;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace io.github.hatayama.UnityCliLoop
 {
@@ -38,7 +40,7 @@ namespace io.github.hatayama.UnityCliLoop
             // Arrange
             UnityCliLoopEditorSettings.SetIsServerRunning(true);
 
-            DomainReloadRecoveryUseCase useCase = new();
+            DomainReloadRecoveryUseCase useCase = CreateUseCase();
 
             // Act
             ServiceResult<string> result = useCase.ExecuteBeforeDomainReload(null);
@@ -55,7 +57,7 @@ namespace io.github.hatayama.UnityCliLoop
             UnityCliLoopEditorSettings.SetIsServerRunning(false);
             UnityCliLoopEditorSettings.SetIsAfterCompile(false);
 
-            DomainReloadRecoveryUseCase useCase = new();
+            DomainReloadRecoveryUseCase useCase = CreateUseCase();
 
             // Act
             ServiceResult<string> result = useCase.ExecuteBeforeDomainReload(null);
@@ -78,7 +80,7 @@ namespace io.github.hatayama.UnityCliLoop
                 server = new UnityCliLoopBridgeServer();
                 server.StartServer();
 
-                DomainReloadRecoveryUseCase useCase = new();
+                DomainReloadRecoveryUseCase useCase = CreateUseCase();
 
                 // Act
                 ServiceResult<string> result = useCase.ExecuteBeforeDomainReload(server);
@@ -90,6 +92,24 @@ namespace io.github.hatayama.UnityCliLoop
             finally
             {
                 server?.Dispose();
+            }
+        }
+
+        private static DomainReloadRecoveryUseCase CreateUseCase()
+        {
+            TestRecoveryCoordinator recoveryCoordinator = new TestRecoveryCoordinator();
+            SessionRecoveryService sessionRecoveryService =
+                new SessionRecoveryService(recoveryCoordinator);
+            return new DomainReloadRecoveryUseCase(sessionRecoveryService);
+        }
+
+        private sealed class TestRecoveryCoordinator : IUnityCliLoopServerRecoveryCoordinator
+        {
+            public IUnityCliLoopServerInstance CurrentServer => null;
+
+            public Task StartRecoveryIfNeededAsync(bool isAfterCompile, CancellationToken cancellationToken)
+            {
+                return Task.CompletedTask;
             }
         }
     }

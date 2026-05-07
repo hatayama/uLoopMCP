@@ -42,6 +42,11 @@ namespace io.github.hatayama.UnityCliLoop
             "Packages/src/Editor/ToolContracts/UnityCliLoopToolResponse.cs"
         };
 
+        private static readonly string[] InstanceServicePaths = new string[]
+        {
+            "Packages/src/Editor/Core/ApplicationServices/SessionRecoveryService.cs"
+        };
+
         private static readonly Regex DirectMutableStaticFieldPattern = new Regex(
             @"\b(private|internal|public|protected)\s+static\s+(?!readonly\b)(?!event\b)(?!extern\b)[^(\r\n;=]*[;=]",
             RegexOptions.Compiled);
@@ -52,6 +57,10 @@ namespace io.github.hatayama.UnityCliLoop
 
         private static readonly Regex DirectStaticEventPattern = new Regex(
             @"\b(private|internal|public|protected)\s+static\s+event\b",
+            RegexOptions.Compiled);
+
+        private static readonly Regex StaticClassPattern = new Regex(
+            @"\b(public|internal|private|protected)\s+static\s+class\b",
             RegexOptions.Compiled);
 
         [Test]
@@ -77,6 +86,15 @@ namespace io.github.hatayama.UnityCliLoop
         {
             // Tests that extension-facing contracts do not share mutable state across tool responses.
             List<string> violations = FindMutableStaticFieldViolations(PublicContractPaths);
+
+            Assert.That(violations, Is.Empty, string.Join("\n", violations));
+        }
+
+        [Test]
+        public void InstanceServices_WhenScanned_AreNotStaticClasses()
+        {
+            // Tests that migrated services stay instance-owned instead of sliding back into static services.
+            List<string> violations = FindStaticClassViolations(InstanceServicePaths);
 
             Assert.That(violations, Is.Empty, string.Join("\n", violations));
         }
@@ -133,6 +151,30 @@ namespace io.github.hatayama.UnityCliLoop
                 {
                     string line = lines[lineIndex];
                     if (DirectStaticEventPattern.IsMatch(line))
+                    {
+                        violations.Add($"{relativePath}:{lineIndex + 1}: {line.Trim()}");
+                    }
+                }
+            }
+
+            return violations;
+        }
+
+        private static List<string> FindStaticClassViolations(string[] relativePaths)
+        {
+            List<string> violations = new List<string>();
+            string projectRoot = UnityCliLoopPathResolver.GetProjectRoot();
+
+            for (int pathIndex = 0; pathIndex < relativePaths.Length; pathIndex++)
+            {
+                string relativePath = relativePaths[pathIndex];
+                string absolutePath = Path.Combine(projectRoot, relativePath);
+                string[] lines = File.ReadAllLines(absolutePath);
+
+                for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
+                {
+                    string line = lines[lineIndex];
+                    if (StaticClassPattern.IsMatch(line))
                     {
                         violations.Add($"{relativePath}:{lineIndex + 1}: {line.Trim()}");
                     }

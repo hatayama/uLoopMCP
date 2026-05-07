@@ -9,8 +9,18 @@ namespace io.github.hatayama.UnityCliLoop
     /// Related classes: DomainReloadDetectionService, SessionRecoveryService
     /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - UseCase + Tool Pattern (DDD Integration)
     /// </summary>
-    public class DomainReloadRecoveryUseCase
+    internal class DomainReloadRecoveryUseCase
     {
+        private readonly SessionRecoveryService _sessionRecoveryService;
+
+        public DomainReloadRecoveryUseCase(SessionRecoveryService sessionRecoveryService)
+        {
+            System.Diagnostics.Debug.Assert(sessionRecoveryService != null, "sessionRecoveryService must not be null");
+
+            _sessionRecoveryService = sessionRecoveryService
+                ?? throw new System.ArgumentNullException(nameof(sessionRecoveryService));
+        }
+
         /// <summary>
         /// Execute processing before Domain Reload starts
         /// </summary>
@@ -83,11 +93,12 @@ namespace io.github.hatayama.UnityCliLoop
             // 3. Start timeout for reconnection UI display if needed
             if (DomainReloadDetectionService.ShouldShowReconnectingUI())
             {
-                SessionRecoveryService.StartReconnectionUITimeoutAsync().Forget();
+                _sessionRecoveryService.StartReconnectionUITimeoutAsync(cancellationToken).Forget();
             }
 
             // 4. Restore server state
-            ValidationResult restoreResult = SessionRecoveryService.RestoreServerStateIfNeeded();
+            ValidationResult restoreResult =
+                _sessionRecoveryService.RestoreServerStateIfNeeded(cancellationToken);
             if (!restoreResult.IsValid)
             {
                 return Task.FromResult(ServiceResult<string>.FailureResult($"Server restoration failed: {restoreResult.ErrorMessage}"));

@@ -1,33 +1,40 @@
 using System.Threading.Tasks;
 using System.Threading;
-using UnityEditor;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    /// <summary>
-    /// Application service responsible for session recovery processing
-    /// Single responsibility: Server session recovery and retry control
-    /// Related classes: UnityCliLoopEditorSettings, IUnityCliLoopServerInstance
-    /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - Application Service Layer (Single Function Implementation)
-    /// </summary>
-    public static class SessionRecoveryService
+    internal interface IUnityCliLoopServerRecoveryCoordinator
     {
-        private const int MAX_RETRIES = 3;
+        IUnityCliLoopServerInstance CurrentServer { get; }
 
-        /// <summary>
-        /// Restore server state if needed
-        /// </summary>
-        /// <returns>Recovery process result</returns>
-        public static ValidationResult RestoreServerStateIfNeeded()
+        Task StartRecoveryIfNeededAsync(bool isAfterCompile, CancellationToken cancellationToken);
+    }
+
+    /// <summary>
+    /// Restores persisted server session state after domain reload without owning transport details.
+    /// </summary>
+    internal sealed class SessionRecoveryService
+    {
+        private readonly IUnityCliLoopServerRecoveryCoordinator _recoveryCoordinator;
+
+        public SessionRecoveryService(IUnityCliLoopServerRecoveryCoordinator recoveryCoordinator)
         {
+            System.Diagnostics.Debug.Assert(recoveryCoordinator != null, "recoveryCoordinator must not be null");
+
+            _recoveryCoordinator = recoveryCoordinator
+                ?? throw new System.ArgumentNullException(nameof(recoveryCoordinator));
+        }
+
+        public ValidationResult RestoreServerStateIfNeeded(CancellationToken ct)
+        {
+            ct.ThrowIfCancellationRequested();
+
             bool wasRunning = UnityCliLoopEditorSettings.GetIsServerRunning();
             bool isAfterCompile = UnityCliLoopEditorSettings.GetIsAfterCompile();
 
-            // If server is already running
-            IUnityCliLoopServerInstance currentServer = UnityCliLoopServerController.CurrentServer;
+            IUnityCliLoopServerInstance currentServer = _recoveryCoordinator.CurrentServer;
             if (currentServer?.IsRunning == true)
             {
-                // Server is running, clean up lock files
                 CompilationLockService.DeleteLockFile();
                 DomainReloadDetectionService.DeleteLockFile();
                 // Why: only the startup generation that created serverstarting.lock knows whether
@@ -42,16 +49,14 @@ namespace io.github.hatayama.UnityCliLoop
                 return ValidationResult.Success();
             }
 
-            // Clear after-compile flag
             if (isAfterCompile)
             {
                 UnityCliLoopEditorSettings.ClearAfterCompileFlag();
             }
 
-            // If server was running and is currently stopped, delegate to centralized controller logic
             if (wasRunning && (currentServer == null || !currentServer.IsRunning))
             {
-                _ = UnityCliLoopServerController.StartRecoveryIfNeededAsync(isAfterCompile, CancellationToken.None).ContinueWith(task =>
+                _ = _recoveryCoordinator.StartRecoveryIfNeededAsync(isAfterCompile, ct).ContinueWith(task =>
                 {
                     if (task.IsFaulted)
                     {
@@ -64,84 +69,11 @@ namespace io.github.hatayama.UnityCliLoop
             return ValidationResult.Success();
         }
 
-        /// <summary>
-        /// Attempt server recovery with retry mechanism
-        /// </summary>
-        /// <param name="retryCount">Current retry count</param>
-        /// <returns>Recovery process result</returns>
-        public static ValidationResult TryRestoreServerWithRetry(int retryCount)
-        {
-            try
-            {
-                // Stop existing server instance
-                IUnityCliLoopServerInstance currentServer = UnityCliLoopServerController.CurrentServer;
-                if (currentServer != null)
-                {
-                    currentServer.Dispose();
-                }
-
-                IUnityCliLoopServerInstance newServer =
-                    UnityCliLoopServerController.CreateServerInstanceForRecovery();
-                newServer.StartServer();
-                UnityCliLoopServerController.RegisterRecoveredServer(newServer);
-
-                // Update session state
-                UnityCliLoopEditorSettings.UpdateSettings(s => s with
-                {
-                    isReconnecting = false
-                });
-
-                return ValidationResult.Success();
-            }
-            catch (System.Exception ex)
-            {
-                if (retryCount < MAX_RETRIES)
-                {
-                    // Execute retry
-                    _ = RetryServerRestoreAsync(retryCount).ContinueWith(task =>
-                    {
-                        if (task.IsFaulted)
-                        {
-                            VibeLogger.LogError("server_restore_retry_failed", 
-                                $"Failed to retry server restore (attempt {retryCount}): {task.Exception?.GetBaseException().Message}");
-                        }
-                    }, TaskScheduler.FromCurrentSynchronizationContext());
-                    return ValidationResult.Success();
-                }
-                else
-                {
-                    // Clear session when maximum retry count is reached
-                    UnityCliLoopEditorSettings.ClearServerSession();
-                    return ValidationResult.Failure($"Failed to restore server after {MAX_RETRIES} retries: {ex.Message}");
-                }
-            }
-        }
-
-        /// <summary>
-        /// Retry server recovery (asynchronous)
-        /// </summary>
-        /// <param name="retryCount">Current retry count</param>
-        private static async Task RetryServerRestoreAsync(int retryCount)
-        {
-            await EditorDelay.DelayFrame(5);
-            _ = UnityCliLoopServerController.StartRecoveryIfNeededAsync(false, CancellationToken.None).ContinueWith(task =>
-            {
-                if (task.IsFaulted)
-                {
-                    VibeLogger.LogError("server_startup_restore_failed",
-                        $"Failed to restore server: {task.Exception?.GetBaseException().Message}");
-                }
-            }, TaskScheduler.FromCurrentSynchronizationContext());
-        }
-
-        /// <summary>
-        /// Start reconnection UI display timeout
-        /// </summary>
-        /// <returns>Task for timeout processing</returns>
-        public static async Task StartReconnectionUITimeoutAsync()
+        public async Task StartReconnectionUITimeoutAsync(CancellationToken ct)
         {
             int timeoutFrames = UnityCliLoopConstants.RECONNECTION_TIMEOUT_SECONDS * 60;
-            await EditorDelay.DelayFrame(timeoutFrames);
+            await EditorDelay.DelayFrame(timeoutFrames, ct);
+            ct.ThrowIfCancellationRequested();
 
             bool isStillShowingUI = UnityCliLoopEditorSettings.GetShowReconnectingUI();
             if (isStillShowingUI)
