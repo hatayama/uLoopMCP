@@ -90,6 +90,47 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
         }
 
         [Test]
+        public async Task RequestAsync_WhenIdleExecutionDoesNotEnter_ShouldAllowRetry()
+        {
+            // Tests that transient busy startup prewarm attempts do not permanently block later startup prewarm.
+            FakeDynamicCodeExecutionRuntime runtime = new(
+                new ExecutionResult
+                {
+                    Success = true,
+                    Result = "warm"
+                });
+            runtime.EnqueueIdleEntryResults(false, true);
+            DynamicCodeStartupPrewarmer prewarmer = new(runtime, 0);
+
+            await prewarmer.RequestAsync(CancellationToken.None);
+            await prewarmer.RequestAsync(CancellationToken.None);
+
+            Assert.That(runtime.TryExecuteRequests, Has.Count.EqualTo(2));
+        }
+
+        [Test]
+        public async Task RequestAsync_WhenIdleExecutionFails_ShouldAllowRetry()
+        {
+            // Tests that failed startup prewarm attempts do not make startup prewarm one-shot.
+            FakeDynamicCodeExecutionRuntime runtime = new(
+                new ExecutionResult
+                {
+                    Success = false
+                },
+                new ExecutionResult
+                {
+                    Success = true,
+                    Result = "warm"
+                });
+            DynamicCodeStartupPrewarmer prewarmer = new(runtime, 0);
+
+            await prewarmer.RequestAsync(CancellationToken.None);
+            await prewarmer.RequestAsync(CancellationToken.None);
+
+            Assert.That(runtime.TryExecuteRequests, Has.Count.EqualTo(2));
+        }
+
+        [Test]
         public async Task RequestAsync_WhenForegroundWarmupAlreadyStarted_ShouldNotEnterRuntime()
         {
             // Tests that startup prewarm yields when the visible foreground warmup path already owns the warmup state.
@@ -109,6 +150,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
         private sealed class FakeDynamicCodeExecutionRuntime : IDynamicCodeExecutionRuntime
         {
             private readonly Queue<ExecutionResult> _results;
+            private readonly Queue<bool> _idleEntryResults = new();
 
             internal FakeDynamicCodeExecutionRuntime(params ExecutionResult[] results)
             {
@@ -118,6 +160,14 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
             internal List<DynamicCodeExecutionRequest> Requests { get; } = new List<DynamicCodeExecutionRequest>();
 
             internal List<DynamicCodeExecutionRequest> TryExecuteRequests { get; } = new List<DynamicCodeExecutionRequest>();
+
+            internal void EnqueueIdleEntryResults(params bool[] enteredResults)
+            {
+                for (int index = 0; index < enteredResults.Length; index++)
+                {
+                    _idleEntryResults.Enqueue(enteredResults[index]);
+                }
+            }
 
             public Task<ExecutionResult> ExecuteAsync(
                 DynamicCodeExecutionRequest request,
@@ -132,7 +182,11 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.DynamicCodeToolTests
                 CancellationToken ct = default)
             {
                 TryExecuteRequests.Add(CloneRequest(request));
-                return Task.FromResult<(bool, ExecutionResult)>((true, _results.Dequeue()));
+                bool entered = _idleEntryResults.Count == 0 || _idleEntryResults.Dequeue();
+                ExecutionResult result = entered && _results.Count > 0
+                    ? _results.Dequeue()
+                    : new ExecutionResult { Success = false };
+                return Task.FromResult<(bool, ExecutionResult)>((entered, result));
             }
 
             private static DynamicCodeExecutionRequest CloneRequest(DynamicCodeExecutionRequest request)

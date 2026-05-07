@@ -83,7 +83,17 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 if (!completed)
                 {
                     DynamicCodeForegroundWarmupState.ResetAfterIncompleteAttempt();
+                    ResetRequestStateAfterIncompleteAttempt();
                 }
+            }
+        }
+
+        private void ResetRequestStateAfterIncompleteAttempt()
+        {
+            lock (_syncRoot)
+            {
+                _requested = false;
+                _prewarmTask = null;
             }
         }
     }

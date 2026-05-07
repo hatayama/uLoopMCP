@@ -102,6 +102,19 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             Assert.That(violations, Is.Empty, string.Join("\n", violations));
         }
 
+        [Test]
+        public void MutableStaticFieldLine_WhenInitializerUsesTargetTypedNew_IsReported()
+        {
+            // Tests that the guard catches mutable static fields even when the initializer contains new().
+            string line = "private static List<int> Cache = new();";
+            bool isViolation =
+                !IsAllowedStaticLine(line)
+                && (DirectMutableStaticFieldPattern.IsMatch(line)
+                    || ReadonlyMutableStaticFieldPattern.IsMatch(line));
+
+            Assert.That(isViolation, Is.True);
+        }
+
         private static List<string> FindMutableStaticFieldViolations()
         {
             return FindMutableStaticFieldViolations(MigratedFacadePaths);
@@ -194,7 +207,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
                 return true;
             }
 
-            if (line.Contains("("))
+            if (line.Contains("(") && !line.Contains("=") && !line.TrimEnd().EndsWith(";"))
             {
                 return true;
             }

@@ -156,7 +156,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             }
 
             bool looksLikeMissingReturn = LooksLikeMissingReturn(executionResult);
-            if (!looksLikeMissingReturn || !string.IsNullOrEmpty(executionResult.UpdatedCode))
+            if (!looksLikeMissingReturn)
             {
                 return executionResult;
             }
