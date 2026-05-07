@@ -20,6 +20,7 @@ namespace io.github.hatayama.UnityCliLoop
                 ToolSettings.RegisterService(toolSettingsRepository);
                 UnityCliLoopEditorSettings.RegisterService(editorSettingsRepository);
                 ULoopSettings.RegisterService(uLoopSettingsRepository);
+                CompilationLockService.RegisterService(new CompilationLockFileService());
                 UnityCliLoopToolRegistrar.RegisterService(new UnityCliLoopToolRegistrarService(
                     new SkillInstallLayoutInternalToolNameProvider()));
                 SkillSetupApplicationFacade.RegisterService(new SkillSetupApplicationService(

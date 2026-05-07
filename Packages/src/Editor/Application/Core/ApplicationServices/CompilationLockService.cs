@@ -1,61 +1,47 @@
-using System.IO;
-using UnityEditor;
-using UnityEditor.Compilation;
+using System;
+using System.Diagnostics;
 
 namespace io.github.hatayama.UnityCliLoop
 {
-    /// <summary>
-    /// Application service responsible for compilation lock file management.
-    /// Single responsibility: Create/delete lock file during compilation for CLI detection.
-    /// Related classes: DomainReloadDetectionService (similar pattern for domain reload)
-    /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - Application Service Layer (Single Function Implementation)
-    /// </summary>
+    // Port for the compilation lock file used by external CLI processes.
+    public interface ICompilationLockService
+    {
+        void RegisterForEditorStartup();
+        void DeleteLockFile();
+    }
+
+    // Static facade retained for Unity callbacks and server cleanup paths outside constructor control.
     public static class CompilationLockService
     {
-        private const string LOCK_FILE_NAME = "compiling.lock";
+        private static ICompilationLockService ServiceValue;
 
-        private static string LockFilePath => Path.Combine(UnityEngine.Application.dataPath, "..", "Temp", LOCK_FILE_NAME);
-
-        internal static void RegisterForEditorStartup()
+        internal static void RegisterService(ICompilationLockService service)
         {
-            CompilationPipeline.compilationStarted -= OnCompilationStarted;
-            CompilationPipeline.compilationStarted += OnCompilationStarted;
-            CompilationPipeline.compilationFinished -= OnCompilationFinished;
-            CompilationPipeline.compilationFinished += OnCompilationFinished;
+            Debug.Assert(service != null, "service must not be null");
+
+            ServiceValue = service ?? throw new ArgumentNullException(nameof(service));
         }
 
-        private static void OnCompilationStarted(object context)
+        public static void RegisterForEditorStartup()
         {
-            CreateLockFile();
+            Service.RegisterForEditorStartup();
         }
 
-        private static void OnCompilationFinished(object context)
-        {
-            DeleteLockFile();
-        }
-
-        private static void CreateLockFile()
-        {
-            string lockPath = LockFilePath;
-            string tempDir = Path.GetDirectoryName(lockPath);
-
-            if (!Directory.Exists(tempDir))
-            {
-                return;
-            }
-
-            File.WriteAllText(lockPath, System.DateTime.UtcNow.ToString("o"));
-        }
-
-        /// <summary>
-        /// Delete lock file. Called on server startup to handle crash recovery.
-        /// </summary>
         public static void DeleteLockFile()
         {
-            string lockPath = LockFilePath;
-            if (File.Exists(lockPath))
+            Service.DeleteLockFile();
+        }
+
+        private static ICompilationLockService Service
+        {
+            get
             {
-                File.Delete(lockPath);
+                if (ServiceValue == null)
+                {
+                    throw new InvalidOperationException("Unity CLI Loop compilation lock service is not registered.");
+                }
+
+                return ServiceValue;
             }
         }
     }

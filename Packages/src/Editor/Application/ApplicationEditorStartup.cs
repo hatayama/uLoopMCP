@@ -9,7 +9,6 @@ namespace io.github.hatayama.UnityCliLoop
             MainThreadSwitcher.InitializeForEditorStartup();
             EditorDelayManager.InitializeForEditorStartup();
             DomainReloadDetectionService.RegisterForEditorStartup();
-            CompilationLockService.RegisterForEditorStartup();
         }
     }
 }
