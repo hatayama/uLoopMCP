@@ -27,15 +27,9 @@ namespace io.github.hatayama.UnityCliLoop.ToolContracts
             }
         }
 
-        public static string PackageName => PackageInfo.name;
-
         public static string PackageAssetPath => PackageInfo.assetPath;
 
         public static string PackageResolvedPath => PackageInfo.resolvedPath;
-
-        public static string PackageNamePattern => $"{PackageName}@*";
-
-        public static string PackageNamespace => typeof(UnityCliLoopConstants).Namespace;
 
         public const string PROJECT_NAME = "UnityCliLoop";
         
@@ -52,11 +46,7 @@ namespace io.github.hatayama.UnityCliLoop.ToolContracts
         public const int RECONNECTION_TIMEOUT_SECONDS = 10;
         
         // Package path constants
-        public const string PACKAGES_DIR = "Packages";
-        public const string SRC_DIR = "src";
-        public const string LIBRARY_DIR = "Library";
         public const string TEMP_DIR = "Temp";
-        public const string PACKAGE_CACHE_DIR = "PackageCache";
         public const string UNITYCLILOOP_DIR = "UnityCliLoop";
         public const string COMPILE_RESULTS_DIR = "compile-results";
         public const string JSON_FILE_EXTENSION = ".json";
@@ -75,7 +65,6 @@ namespace io.github.hatayama.UnityCliLoop.ToolContracts
         // File output directories
         public const string OUTPUT_ROOT_DIR = ".uloop/outputs";
         public const string TEST_RESULTS_DIR = "TestResults";
-        public const string SEARCH_RESULTS_DIR = "SearchResults";
         public const string HIERARCHY_RESULTS_DIR = "HierarchyResults";
         public const string FIND_GAMEOBJECTS_RESULTS_DIR = "FindGameObjectsResults";
         public const string SCREENSHOTS_DIR = "Screenshots";
@@ -92,41 +81,12 @@ namespace io.github.hatayama.UnityCliLoop.ToolContracts
         public const string ERROR_MESSAGE_NO_EXECUTE_METHOD = "No Execute method found in compiled assembly";
         public const string ERROR_MESSAGE_FAILED_TO_CREATE_INSTANCE = "Failed to create instance of target type";
         public const string ERROR_MESSAGE_UNSUPPORTED_SIGNATURE = "Execute method signature not supported";
-        
-        public const int TEST_COMPILE_TIMEOUT_MS = 5000;
-
-        // Screenshot coordinate system values
-        public const string COORDINATE_SYSTEM_GAME_VIEW = "gameView";
-        public const string COORDINATE_SYSTEM_WINDOW = "window";
-
-        // SimulateMouseUi constants
-        public const float SIMULATE_MOUSE_UI_DEFAULT_DRAG_SPEED = 2000f;
 
         public const int COMPILE_START_TIMEOUT_MS = 5000;
         public const int COMPILE_START_POLL_INTERVAL_MS = 100;
-        public const int COMPILE_DOMAIN_RELOAD_WAIT_TIMEOUT_MS = 10000;
-        public const int COMPILE_DOMAIN_RELOAD_WAIT_POLL_INTERVAL_MS = 100;
         
-        public const int MAX_JSON_SIZE_BYTES = 1024 * 1024;
         public const int MAX_SETTINGS_SIZE_BYTES = 1024 * 16;
         public const string SECURITY_LOG_PREFIX = "[UnityCliLoop Security]";
-        
-        // Security: Allowed namespaces for reflection operations
-        public static readonly string[] ALLOWED_NAMESPACES = {
-            "UnityEditor",
-            "Unity.EditorCoroutines",
-            "Unity.VisualScripting",
-            PackageNamespace
-        };
-        
-        // Security: Denied types for reflection operations
-        public static readonly string[] DENIED_SYSTEM_TYPES = {
-            "System.Diagnostics.Process",
-            "System.IO.File",
-            "System.IO.Directory", 
-            "System.Reflection.Assembly",
-            "System.Activator"
-        };
         
         public static string GenerateCorrelationId()
         {
