@@ -16,15 +16,6 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
     public static class NUnitXmlResultExporter
     {
         /// <summary>
-        /// Logs the test result as XML.
-        /// </summary>
-        public static void LogTestResultAsXml(ITestResultAdaptor testResult)
-        {
-            GenerateNUnitXml(testResult);
-            // Test Result XML generated
-        }
-
-        /// <summary>
         /// Saves the test result as an XML file.
         /// </summary>
         public static string SaveTestResultAsXml(ITestResultAdaptor testResult)

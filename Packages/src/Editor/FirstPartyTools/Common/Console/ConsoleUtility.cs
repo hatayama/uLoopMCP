@@ -1,4 +1,3 @@
-using UnityEngine;
 #if UNITY_6000_0_OR_NEWER
 using UnityEditor;
 #endif
@@ -35,32 +34,6 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         public static void ClearConsole()
         {
             GenericConsoleWindowUtility.ClearConsole();
-        }
-
-        /// <summary>
-        /// Gets Unity version info for debugging
-        /// </summary>
-        /// <returns>Unity version and API info</returns>
-        public static string GetVersionInfo()
-        {
-#if UNITY_6000_0_OR_NEWER
-            return $"Unity {UnityEngine.Application.unityVersion} - Using Unity 6+ Standard ConsoleWindowUtility API";
-#else
-            return $"Unity {UnityEngine.Application.unityVersion} - Using Custom LogByReflection ConsoleWindowUtility API";
-#endif
-        }
-
-        /// <summary>
-        /// Checks if Unity 6+ standard API is being used
-        /// </summary>
-        /// <returns>True if using Unity 6+ standard API</returns>
-        public static bool IsUsingStandardAPI()
-        {
-#if UNITY_6000_0_OR_NEWER
-            return true;
-#else
-            return false;
-#endif
         }
     }
 }

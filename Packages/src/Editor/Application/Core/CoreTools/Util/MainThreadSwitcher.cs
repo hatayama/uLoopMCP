@@ -3,31 +3,14 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
-using io.github.hatayama.UnityCliLoop.ToolContracts;
-
 namespace io.github.hatayama.UnityCliLoop.Application
 {
-    /// <summary>
-    /// Enum for PlayerLoopTiming (dummy implementation in Editor version).
-    /// </summary>
-    public enum PlayerLoopTiming
-    {
-        Initialization = 0,
-        EarlyUpdate = 1,
-        FixedUpdate = 2,
-        PreUpdate = 3,
-        Update = 4,
-        PreLateUpdate = 5,
-        PostLateUpdate = 6
-    }
-
     // Port for dispatching continuations onto Unity's main thread.
     /// <summary>
     /// Defines the Main Thread Dispatcher contract used by Unity CLI Loop.
     /// </summary>
     public interface IMainThreadDispatcher
     {
-        int MainThreadId { get; }
         bool IsMainThread { get; }
         void Initialize();
         void AddContinuation(Action continuation);
@@ -41,11 +24,6 @@ namespace io.github.hatayama.UnityCliLoop.Application
     public static class MainThreadSwitcher
     {
         private static IMainThreadDispatcher ServiceValue;
-
-        /// <summary>
-        /// Gets the ID of the main thread.
-        /// </summary>
-        public static int MainThreadId => Service.MainThreadId;
 
         /// <summary>
         /// Determines whether the current thread is the main thread.
@@ -75,32 +53,6 @@ namespace io.github.hatayama.UnityCliLoop.Application
         public static SwitchToMainThreadAwaitable SwitchToMainThread()
         {
             return new SwitchToMainThreadAwaitable(CancellationToken.None);
-        }
-        
-        /// <summary>
-        /// Switches to the main thread (with CancellationToken).
-        /// </summary>
-        public static SwitchToMainThreadAwaitable SwitchToMainThread(CancellationToken cancellationToken)
-        {
-            return new SwitchToMainThreadAwaitable(cancellationToken);
-        }
-        
-        /// <summary>
-        /// Switches to the main thread (with PlayerLoopTiming specified).
-        /// PlayerLoopTiming is ignored in the Editor version.
-        /// </summary>
-        public static SwitchToMainThreadAwaitable SwitchToMainThread(PlayerLoopTiming timing)
-        {
-            return new SwitchToMainThreadAwaitable(CancellationToken.None);
-        }
-        
-        /// <summary>
-        /// Switches to the main thread (with PlayerLoopTiming and CancellationToken specified).
-        /// PlayerLoopTiming is ignored in the Editor version.
-        /// </summary>
-        public static SwitchToMainThreadAwaitable SwitchToMainThread(PlayerLoopTiming timing, CancellationToken cancellationToken)
-        {
-            return new SwitchToMainThreadAwaitable(cancellationToken);
         }
 
         private static IMainThreadDispatcher Service

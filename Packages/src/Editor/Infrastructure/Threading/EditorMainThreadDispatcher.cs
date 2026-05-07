@@ -16,7 +16,6 @@ namespace io.github.hatayama.UnityCliLoop.Infrastructure
         private readonly ConcurrentQueue<Action> _continuationQueue = new ConcurrentQueue<Action>();
         private int _mainThreadId;
 
-        public int MainThreadId => _mainThreadId;
         public bool IsMainThread => Thread.CurrentThread.ManagedThreadId == _mainThreadId;
 
         public void Initialize()

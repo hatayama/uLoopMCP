@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text.RegularExpressions;
 
 using io.github.hatayama.UnityCliLoop.Domain;
 using io.github.hatayama.UnityCliLoop.ToolContracts;
@@ -21,12 +19,11 @@ namespace io.github.hatayama.UnityCliLoop.Application
     }
 
     /// <summary>
-    /// Translate raw errors/exceptions into structured data (no severity weighting)
+    /// Translates raw exceptions into structured data before severity weighting.
     /// </summary>
     public interface IErrorTranslator
     {
         TranslationOutput TranslateFromException(Exception exception);
-        TranslationOutput TranslateFromMessage(string errorMessage);
     }
 
     /// <summary>
@@ -38,13 +35,10 @@ namespace io.github.hatayama.UnityCliLoop.Application
     }
 
     /// <summary>
-    /// Default translator using pattern dictionary and simple fallbacks
+    /// Maps known Unity CLI Loop exception types to stable user-facing messages.
     /// </summary>
     public class DefaultErrorTranslator : IErrorTranslator
     {
-        private readonly ErrorTranslationDictionary _dictionary = new();
-        private readonly FriendlyMessageGenerator _messageGenerator = new();
-
         public TranslationOutput TranslateFromException(Exception exception)
         {
             if (exception == null)
@@ -117,51 +111,6 @@ namespace io.github.hatayama.UnityCliLoop.Application
                 Explanation = exception.Message
             };
         }
-
-        public TranslationOutput TranslateFromMessage(string errorMessage)
-        {
-            ErrorPattern pattern = _dictionary.FindPattern(errorMessage);
-
-            string friendly = pattern?.FriendlyMessage ?? _messageGenerator.TranslateError(errorMessage);
-            string explanation = pattern?.Explanation ?? string.Empty;
-            string example = pattern?.Example ?? string.Empty;
-            List<string> solutions = pattern?.Solutions ?? new List<string>();
-            List<string> tips = GetLearningTips(errorMessage);
-
-            return new TranslationOutput
-            {
-                FriendlyMessage = friendly,
-                Explanation = explanation,
-                Example = example,
-                Solutions = solutions,
-                LearningTips = tips
-            };
-        }
-
-        private List<string> GetLearningTips(string errorMessage)
-        {
-            List<string> tips = new();
-
-            if (errorMessage.Contains("Top-level statements"))
-            {
-                tips.Add("In Dynamic Tool, you can write code directly");
-                tips.Add("Class and namespace declarations are not required");
-            }
-
-            if (errorMessage.Contains("not all code paths return"))
-            {
-                tips.Add("Add a return statement at the end of the code");
-                tips.Add("Return the execution result as a string");
-            }
-
-            if (errorMessage.Contains("ambiguous reference"))
-            {
-                tips.Add("Clearly distinguish between UnityEngine.Object and System.Object");
-                tips.Add("Using the full name (UnityEngine.Object) is safer");
-            }
-
-            return tips;
-        }
     }
 
     /// <summary>
@@ -220,8 +169,7 @@ namespace io.github.hatayama.UnityCliLoop.Application
     }
 
     /// <summary>
-    /// Related Classes: FriendlyMessageGenerator, ErrorTranslationDictionary
-    /// Now delegates to Translator and Formatter
+    /// Converts exceptions into user-friendly API error data.
     /// </summary>
     public class UserFriendlyErrorConverter
     {
@@ -232,12 +180,6 @@ namespace io.github.hatayama.UnityCliLoop.Application
         {
             _translator = new DefaultErrorTranslator();
             _formatter = new DefaultErrorFormatter();
-        }
-
-        public UserFriendlyErrorConverter(IErrorTranslator translator, IErrorFormatter formatter)
-        {
-            _translator = translator ?? new DefaultErrorTranslator();
-            _formatter = formatter ?? new DefaultErrorFormatter();
         }
 
         /// <summary>
@@ -262,144 +204,6 @@ namespace io.github.hatayama.UnityCliLoop.Application
             TranslationOutput translation = _translator.TranslateFromException(exception);
             return _formatter.Format(translation, exception.Message, exception);
         }
-
-        /// <summary>
-        /// Convert execution result errors into a more understandable format
-        /// </summary>
-        public UserFriendlyErrorDto ProcessError(
-            string errorMessage,
-            IReadOnlyList<string> logs)
-        {
-            string combinedMessage = errorMessage ?? string.Empty;
-            if (logs?.Any() == true)
-            {
-                string combinedErrors = string.Join(" ", logs);
-                if (!string.IsNullOrEmpty(combinedErrors))
-                {
-                    combinedMessage += " " + combinedErrors;
-                }
-            }
-
-            TranslationOutput translation = _translator.TranslateFromMessage(combinedMessage);
-            return _formatter.Format(translation, combinedMessage);
-        }
-    }
-
-    /// <summary>
-    /// Error Translation Dictionary - Translating Common Error Patterns into Understandable Messages
-    /// </summary>
-    public class ErrorTranslationDictionary
-    {
-        private static readonly Dictionary<string, ErrorPattern> Patterns = new()
-        {
-            ["Top-level statements must precede"] = new ErrorPattern
-            {
-                PatternRegex = @"Top-level statements must precede",
-                FriendlyMessage = "There is an issue with the code structure",
-                Explanation = "In the Dynamic Tool, class and namespace declarations are not required. Write Unity API processing directly.",
-                Example = @"AVOID: namespace Test { class MyClass { void Method() { ... } } }
-
-CORRECT: GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
-cube.transform.position = Vector3.zero;
-return ""Cube creation completed"";",
-                Solutions = new List<string>
-                {
-                    "Remove class definition and write only the code inside the method",
-                    "Remove namespace declaration", 
-                    "Keep using statements and extract only the main processing"
-                }
-            },
-            
-            ["not all code paths return a value"] = new ErrorPattern
-            {
-                PatternRegex = @"not all code paths return",
-                FriendlyMessage = "A return value is required at the end of the code",
-                Explanation = "In the Dynamic Tool, you must return the execution result. Please add a return statement at the end of the processing.",
-                Example = @"AVOID: GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
-Debug.Log(""Completed"");
-
-CORRECT: GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
-Debug.Log(""Completed"");
-return ""Cube creation completed"";",
-                Solutions = new List<string>
-                {
-                    "Add 'return \"Execution completed\";' at the end of the code",
-                    "Add return statements to all paths of conditional branching",
-                    "Return the execution result as a string"
-                }
-            },
-
-            ["Object' is an ambiguous reference"] = new ErrorPattern
-            {
-                PatternRegex = @"'Object' is an ambiguous reference",
-                FriendlyMessage = "Object class reference is ambiguous",
-                Explanation = "UnityEngine.Object and System.Object are mixed. Please specify explicitly.",
-                Example = @"AVOID: Object.DestroyImmediate(obj);
-
-CORRECT: UnityEngine.Object.DestroyImmediate(obj);",
-                Solutions = new List<string>
-                {
-                    "Explicitly specify UnityEngine.Object",
-                    "Use full name description"
-                }
-            }
-        };
-
-        public ErrorPattern FindPattern(string errorMessage)
-        {
-            foreach (var kvp in Patterns)
-            {
-                if (Regex.IsMatch(errorMessage, kvp.Value.PatternRegex))
-                {
-                    return kvp.Value;
-                }
-            }
-            return null;
-        }
-    }
-
-    /// <summary>
-    /// User-Friendly Message Generation Feature
-    /// </summary>
-    public class FriendlyMessageGenerator
-    {
-        public string TranslateError(string originalError)
-        {
-            // Basic error translation logic
-            if (originalError.Contains("Top-level statements"))
-            {
-                return "There is an issue with the code structure. Class and namespace definitions are not required.";
-            }
-            
-            if (originalError.Contains("not all code paths return"))
-            {
-                return "A return value is required at the end of the code. Please add 'return \"Completed\";'.";
-            }
-            
-            if (originalError.Contains("ambiguous reference"))
-            {
-                return "Class reference is ambiguous. Please explicitly write UnityEngine.Object.";
-            }
-            
-            if (originalError.Contains("Identifier expected"))
-            {
-                return "Syntax error. Please verify the code syntax.";
-            }
-            
-            return originalError; // Fallback
-        }
-    }
-
-    /// <summary>
-    /// Error Pattern Definition
-    /// </summary>
-    public class ErrorPattern
-    {
-        public string PatternRegex { get; set; } = "";
-        public string FriendlyMessage { get; set; } = "";
-        public string Explanation { get; set; } = "";
-        public string Example { get; set; } = "";
-        public List<string> Solutions { get; set; } = new();
     }
 
     /// <summary>
@@ -423,7 +227,6 @@ CORRECT: UnityEngine.Object.DestroyImmediate(obj);",
     {
         Low,
         Medium,
-        High,
-        Critical
+        High
     }
 }
