@@ -102,17 +102,19 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         }
 
         /// <summary>
-        /// Captures the source snapshot of the current compile before this domain answers any uloop
-        /// command, so an edit made after the compile returned is never captured as compiled source.
+        /// Starts the source snapshot capture of the current compile before this domain answers any
+        /// uloop command, without waiting for it. The guarantee that an edit made after the compile
+        /// returned is never captured as compiled source comes from get-compile-status holding the
+        /// compile completion while the capture runs (up to 30 seconds).
         /// </summary>
-        internal static void CaptureSourceSnapshotBeforeServingCommands(Func<string, bool> isToolEnabled)
+        internal static void StartSourceSnapshotCaptureBeforeServingCommands(Func<string, bool> isToolEnabled)
         {
             CaptureAtStartupUnlessReadersAreDisabled(
                 HotReloadConstants.SourceSnapshotCaptureTriggerDomainLoad, isToolEnabled);
         }
 
         /// <summary>
-        /// Captures the source snapshot at a startup trigger unless both tools that read it are
+        /// Starts the source snapshot capture at a startup trigger unless both tools that read it are
         /// disabled in the tool settings.
         /// </summary>
         internal static void CaptureAtStartupUnlessReadersAreDisabled(string trigger, Func<string, bool> isToolEnabled)

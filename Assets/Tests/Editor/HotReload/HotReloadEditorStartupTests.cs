@@ -20,7 +20,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         /// What: the capture before serving commands runs the installed capture once and records the domain-load trigger.
         /// </summary>
         [Test]
-        public void CaptureSourceSnapshotBeforeServingCommands_RunsTheInstalledCaptureOnceWithTheDomainLoadTrigger()
+        public void StartSourceSnapshotCaptureBeforeServingCommands_RunsTheInstalledCaptureOnceWithTheDomainLoadTrigger()
         {
             VibeLogger.ClearMemoryLogs();
             int captureCount = 0;
@@ -32,7 +32,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
 
             using (HotReloadServicesTestScope.BeginWithSourceSnapshotCapture(capture))
             {
-                HotReloadEditorStartup.CaptureSourceSnapshotBeforeServingCommands(AllToolsEnabled);
+                HotReloadEditorStartup.StartSourceSnapshotCaptureBeforeServingCommands(AllToolsEnabled);
             }
 
             Assert.That(captureCount, Is.EqualTo(1), "captures");
@@ -46,7 +46,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         /// tick's capture runs it again.
         /// </summary>
         [Test]
-        public void CaptureSourceSnapshotBeforeServingCommands_WhenTheCaptureFails_LogsFailedAndLeavesItForTheNextCall()
+        public void StartSourceSnapshotCaptureBeforeServingCommands_WhenTheCaptureFails_LogsFailedAndLeavesItForTheNextCall()
         {
             VibeLogger.ClearMemoryLogs();
             int captureCount = 0;
@@ -64,7 +64,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             using (HotReloadServicesTestScope.BeginWithSourceSnapshotCapture(capture))
             {
                 Assert.DoesNotThrow(
-                    () => HotReloadEditorStartup.CaptureSourceSnapshotBeforeServingCommands(AllToolsEnabled));
+                    () => HotReloadEditorStartup.StartSourceSnapshotCaptureBeforeServingCommands(AllToolsEnabled));
                 JObject failed = HotReloadWarmUpTestDoubles.ReadSingleVibeContext(
                     HotReloadConstants.VibeLogSourceSnapshotCaptureFailed);
                 Assert.That((string)failed["trigger"], Is.EqualTo(HotReloadConstants.SourceSnapshotCaptureTriggerDomainLoad));
@@ -83,7 +83,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         /// reader that runs later captures through the gate.
         /// </summary>
         [Test]
-        public void CaptureSourceSnapshotBeforeServingCommands_WhenNeitherReaderToolIsEnabled_SkipsAndLeavesTheCaptureForAReader()
+        public void StartSourceSnapshotCaptureBeforeServingCommands_WhenNeitherReaderToolIsEnabled_SkipsAndLeavesTheCaptureForAReader()
         {
             VibeLogger.ClearMemoryLogs();
             int captureCount = 0;
@@ -91,7 +91,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
 
             using (HotReloadServicesTestScope.BeginWithSourceSnapshotCapture(capture))
             {
-                HotReloadEditorStartup.CaptureSourceSnapshotBeforeServingCommands(NoToolEnabled);
+                HotReloadEditorStartup.StartSourceSnapshotCaptureBeforeServingCommands(NoToolEnabled);
 
                 Assert.That(captureCount, Is.EqualTo(0), "captures while both readers are disabled");
                 JObject skipped = HotReloadWarmUpTestDoubles.ReadSingleVibeContext(HotReloadConstants.VibeLogSourceSnapshotSkipped);
@@ -112,7 +112,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         /// </summary>
         [TestCase(UnityCliLoopConstants.TOOL_NAME_HOT_RELOAD)]
         [TestCase(UnityCliLoopConstants.SETTINGS_TOOL_NAME_PAUSE_POINT)]
-        public void CaptureSourceSnapshotBeforeServingCommands_WhenOnlyOneReaderToolIsEnabled_Captures(string enabledTool)
+        public void StartSourceSnapshotCaptureBeforeServingCommands_WhenOnlyOneReaderToolIsEnabled_Captures(string enabledTool)
         {
             VibeLogger.ClearMemoryLogs();
             int captureCount = 0;
@@ -120,7 +120,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
 
             using (HotReloadServicesTestScope.BeginWithSourceSnapshotCapture(capture))
             {
-                HotReloadEditorStartup.CaptureSourceSnapshotBeforeServingCommands(name => name == enabledTool);
+                HotReloadEditorStartup.StartSourceSnapshotCaptureBeforeServingCommands(name => name == enabledTool);
             }
 
             Assert.That(captureCount, Is.EqualTo(1), "captures");

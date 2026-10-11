@@ -8,8 +8,8 @@ After every domain reload, hot reload copies the sources of the compile into a s
 later tell which methods were edited. That capture now runs on a pool thread:
 
 - The domain load reads on the main thread only the values the capture needs from Unity (the
-  project root, the compile start record, the package roots, the compiled assemblies). It hands
-  them to the pool and returns without waiting.
+  project root, the compile start record, and the package roots). It hands them to the pool and
+  returns without waiting.
 - At most one capture runs per domain. A hot reload run awaits it. A pause point blocks on it,
   except while a capture runs and the file on disk matches the checksum the compiled assembly's
   PDB recorded: those are the bytes the compiler read, so the pause point reads that file
@@ -18,7 +18,7 @@ later tell which methods were edited. That capture now runs on a pool thread:
   after the capture, up to 30 seconds. The hold lives in the internal bridge command, because
   the CLI waits for a compile by polling it, outside the tool execution path.
 - A domain reload or a compile start cancels the running capture without waiting. A capture that
-  failed, found no compiled assembly, or was cancelled leaves the domain uncaptured, and the
+  failed, found no compiled dll with a PDB, or was cancelled leaves the domain uncaptured, and the
   next reader starts a new one.
 
 ## Context
@@ -29,9 +29,11 @@ hot reload was not used. Copying only the changed sources and skipping the captu
 readers are disabled shortened it, but the main thread still waited on it, most of all on
 listing the compilation assemblies from Unity.
 
-What the capture calls on Unity must stay on the main thread: `CompilationPipeline.GetAssemblies`,
-`SessionState`, and the Package Manager. Everything else it does is file IO and PDB reads, which
-the pool can do.
+The capture used to list the assemblies with `CompilationPipeline.GetAssemblies`, which Unity
+allows on the main thread only. #3283 made it list them from the compiled dlls and their PDBs
+instead, so what stays on the main thread is the compile start record (`SessionState`) and the
+package list (the Package Manager). Everything else the capture does is file IO and PDB reads,
+which the pool can do.
 
 The guarantee that an edit made right after `uloop compile` returns is never captured as
 compiled source used to hold because the capture finished inside the domain load, before the
