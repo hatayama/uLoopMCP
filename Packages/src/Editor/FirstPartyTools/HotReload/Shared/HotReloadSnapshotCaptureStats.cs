@@ -9,6 +9,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
     internal sealed class HotReloadSnapshotCaptureStats
     {
         // Times are TimeSpan ticks, summed over every assembly and source of the capture.
+        internal long ListingTicks;
+        internal long PdbSourcesTicks;
         internal long PackageLookupTicks;
         internal long StampTicks;
         internal long MvidTicks;
@@ -22,16 +24,18 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         internal int AssembliesImmutable;
         internal int AssembliesUnchanged;
         internal int AssembliesCaptured;
+        internal int AssembliesSkippedPdbMismatch;
         internal int FilesReused;
         internal int FilesCopied;
         internal long BytesCopied;
         internal int FilesChecked;
 
-        internal object ToVibeLogContext(long getAssembliesMs, long totalMs)
+        internal object ToVibeLogContext(long totalMs)
         {
             return new
             {
-                getAssembliesMs,
+                getAssembliesMs = ToMilliseconds(ListingTicks),
+                pdbSourcesMs = ToMilliseconds(PdbSourcesTicks),
                 packageLookupMs = ToMilliseconds(PackageLookupTicks),
                 stampMs = ToMilliseconds(StampTicks),
                 mvidMs = ToMilliseconds(MvidTicks),
@@ -45,6 +49,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 assembliesImmutable = AssembliesImmutable,
                 assembliesUnchanged = AssembliesUnchanged,
                 assembliesCaptured = AssembliesCaptured,
+                assembliesSkippedPdbMismatch = AssembliesSkippedPdbMismatch,
                 filesReused = FilesReused,
                 filesCopied = FilesCopied,
                 bytesCopied = BytesCopied,
