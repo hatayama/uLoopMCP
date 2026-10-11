@@ -366,35 +366,83 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         /// <summary>
         /// Verifies that the capture takes the recorded compile start as the start of the PDB check, so
         /// a source saved after the compile started but before the DLL was written is checked and, with
-        /// no PDB document to confirm it, marked as edited after the compile.
+        /// no PDB document to confirm it, marked as edited after the compile. The capture counts that
+        /// one file as checked.
         /// </summary>
         [Test]
         public void CaptureAssemblies_ASourceSavedAfterTheCompileStartedButBeforeTheDll_IsMarked()
         {
             string snapshotDirectory = CaptureWithSourceSavedBetweenStartAndDll(
-                HotReloadCompileStart.At(CompileStartUtc.Ticks));
+                HotReloadCompileStart.At(CompileStartUtc.Ticks),
+                out HotReloadSnapshotCaptureStats stats);
 
             HotReloadSourceStampManifest manifest = HotReloadSourceStampManifest.Load(snapshotDirectory);
             Assert.That(manifest.IsEditedAfterCompile(SnapshotFileName()), Is.True);
+            Assert.That(stats.FilesChecked, Is.EqualTo(1), "files checked");
         }
 
         /// <summary>
         /// Verifies that without a recorded compile start the same source is not checked, because the
         /// check then starts at the DLL write; the mark in the case above comes from the compile start.
+        /// The capture counts no file as checked, though it copied one.
         /// </summary>
         [Test]
         public void CaptureAssemblies_WithoutARecordedStart_LeavesASourceSavedBeforeTheDllUnmarked()
         {
-            string snapshotDirectory = CaptureWithSourceSavedBetweenStartAndDll(HotReloadCompileStart.Unknown);
+            string snapshotDirectory = CaptureWithSourceSavedBetweenStartAndDll(
+                HotReloadCompileStart.Unknown,
+                out HotReloadSnapshotCaptureStats stats);
 
             HotReloadSourceStampManifest manifest = HotReloadSourceStampManifest.Load(snapshotDirectory);
             Assert.That(manifest.IsEditedAfterCompile(SnapshotFileName()), Is.False);
             Assert.That(manifest.TryGetStamp(SnapshotFileName(), out long _, out long _), Is.True);
+            Assert.That(stats.FilesCopied, Is.EqualTo(1), "files copied");
+            Assert.That(stats.FilesChecked, Is.EqualTo(0), "files checked");
+        }
+
+        /// <summary>
+        /// Verifies a capture reports how many assemblies it captured or found unchanged and how many
+        /// files and bytes it copied: the first capture copies the two sources that exist and skips the
+        /// missing one, and a second capture of the same build copies nothing.
+        /// </summary>
+        [Test]
+        public void CaptureAssemblies_ReturnsWhatItCopiedAndWhatItSkipped()
+        {
+            PlantCompiledAssembly("Fixture");
+            WriteSourceWrittenBeforeTheCompile("Assets/Three.cs", "abc");
+            WriteSourceWrittenBeforeTheCompile("Assets/Five.cs", "abcde");
+            UnityCompilationAssembly[] assemblies =
+            {
+                CreateAssemblyWithSources("Fixture", new[] { "Assets/Three.cs", "Assets/Five.cs", "Assets/Missing.cs" })
+            };
+
+            HotReloadSnapshotCaptureStats first = HotReloadSourceSnapshotter.CaptureAssemblies(
+                _projectRoot,
+                assemblies,
+                HotReloadCompileStart.Unknown,
+                CreateDocumentIndex());
+            HotReloadSnapshotCaptureStats second = HotReloadSourceSnapshotter.CaptureAssemblies(
+                _projectRoot,
+                assemblies,
+                HotReloadCompileStart.Unknown,
+                CreateDocumentIndex());
+
+            Assert.That(first.Assemblies, Is.EqualTo(1), "first: assemblies");
+            Assert.That(first.AssembliesCaptured, Is.EqualTo(1), "first: captured");
+            Assert.That(first.AssembliesUnchanged, Is.EqualTo(0), "first: unchanged");
+            Assert.That(first.FilesCopied, Is.EqualTo(2), "first: files copied");
+            Assert.That(first.BytesCopied, Is.EqualTo(8), "first: bytes copied");
+            Assert.That(second.AssembliesCaptured, Is.EqualTo(0), "second: captured");
+            Assert.That(second.AssembliesUnchanged, Is.EqualTo(1), "second: unchanged");
+            Assert.That(second.FilesCopied, Is.EqualTo(0), "second: files copied");
         }
 
         // Plants the compiled assembly and orders the write times as compile start < source < DLL.
         // The fixture source has no document in the planted PDB, so a check cannot confirm it.
-        private string CaptureWithSourceSavedBetweenStartAndDll(HotReloadCompileStart compileStart)
+        // Returns the snapshot directory and hands out what the capture reported.
+        private string CaptureWithSourceSavedBetweenStartAndDll(
+            HotReloadCompileStart compileStart,
+            out HotReloadSnapshotCaptureStats stats)
         {
             string dllPath = PlantCompiledAssembly("Fixture");
             File.SetLastWriteTimeUtc(dllPath, new DateTime(2025, 6, 1, 0, 0, 0, DateTimeKind.Utc));
@@ -403,13 +451,22 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc));
             string mvid = HotReloadAssemblyMvid.Read(dllPath);
 
-            HotReloadSourceSnapshotter.CaptureAssemblies(
+            stats = HotReloadSourceSnapshotter.CaptureAssemblies(
                 _projectRoot,
                 new[] { CreateAssembly("Fixture") },
                 compileStart,
                 CreateDocumentIndex());
 
             return Path.Combine(_snapshotRoot, "Fixture-" + mvid);
+        }
+
+        // Writes the source as ASCII with a write time before the planted compile, so the capture
+        // copies it without a PDB check.
+        private void WriteSourceWrittenBeforeTheCompile(string projectRelativePath, string text)
+        {
+            string path = Path.Combine(_projectRoot, projectRelativePath.Replace('/', Path.DirectorySeparatorChar));
+            File.WriteAllBytes(path, System.Text.Encoding.ASCII.GetBytes(text));
+            File.SetLastWriteTimeUtc(path, new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc));
         }
 
         private static string SnapshotFileName()

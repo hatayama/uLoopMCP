@@ -9,6 +9,8 @@ using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Cecil.Pdb;
 
+using Newtonsoft.Json.Linq;
+
 using NUnit.Framework;
 
 using UnityEditor.Compilation;
@@ -17,6 +19,7 @@ using UnityEngine;
 using UnityEngine.TestTools;
 
 using io.github.hatayama.UnityCliLoop.FirstPartyTools;
+using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 using UnityCompilationAssembly = UnityEditor.Compilation.Assembly;
 
@@ -189,6 +192,34 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
 
             Assert.That(reason, Is.EqualTo(HotReloadSnapshotMissReason.None));
             Assert.That(loaded, Is.EqualTo(File.ReadAllText(Path.Combine(projectRoot, PackageSourcePhysicalPath))));
+        }
+
+        /// <summary>
+        /// What: a capture after a domain reload writes one breakdown entry over a non-empty assembly
+        /// list, carrying every phase time and count, none of them negative.
+        /// </summary>
+        [Test]
+        public void CaptureAfterDomainReload_LogsOneBreakdownWithEveryPhase()
+        {
+            VibeLogger.ClearMemoryLogs();
+
+            HotReloadSourceSnapshotter.CaptureAfterDomainReload();
+
+            JObject context = HotReloadWarmUpTestDoubles.ReadSingleVibeContext(HotReloadConstants.VibeLogSourceSnapshotBreakdown);
+            string[] fields =
+            {
+                "getAssembliesMs", "packageLookupMs", "stampMs", "mvidMs", "statMs", "readWriteMs",
+                "pdbCheckMs", "publishMs", "cleanupMs", "totalMs", "assemblies", "assembliesImmutable",
+                "assembliesUnchanged", "assembliesCaptured", "filesCopied", "bytesCopied", "filesChecked"
+            };
+            foreach (string field in fields)
+            {
+                Assert.That(context[field], Is.Not.Null, field);
+                Assert.That(context[field].Type, Is.EqualTo(JTokenType.Integer), field + " type");
+                Assert.That((long)context[field], Is.GreaterThanOrEqualTo(0), field);
+            }
+
+            Assert.That((long)context["assemblies"], Is.GreaterThan(0));
         }
 
         /// <summary>
@@ -598,7 +629,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                     snapshotDirectory,
                     new[] { sourceRelativePath },
                     "LongPathAssembly",
-                    SuspectsNothing(root));
+                    SuspectsNothing(root),
+                    new HotReloadSnapshotCaptureStats());
 
                 string normalizedRelativePath = sourceRelativePath.Replace('\\', '/');
                 string snapshotPath = Path.Combine(
@@ -672,7 +704,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                         snapshotDirectory,
                         sourceRelativePaths,
                         "LockedSourceAssembly",
-                        SuspectsNothing(root));
+                        SuspectsNothing(root),
+                        new HotReloadSnapshotCaptureStats());
                 }
 
                 Assert.That(Directory.Exists(snapshotDirectory), Is.True);
