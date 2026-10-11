@@ -176,12 +176,12 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
         /// <summary>
         /// Completes when this domain's capture has run, passing on the exception of a capture that
-        /// failed. Main thread only.
+        /// failed. Main thread only. It may complete on a pool thread, so a caller that continues with
+        /// main-thread work switches back itself.
         /// </summary>
         internal async Task EnsureCapturedAsync(string trigger)
         {
-            // Why no ConfigureAwait(false): the caller continues with main-thread work.
-            await StartIfNeeded(trigger);
+            await StartIfNeeded(trigger).ConfigureAwait(false);
         }
 
         /// <summary>

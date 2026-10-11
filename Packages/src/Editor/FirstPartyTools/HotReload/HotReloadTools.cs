@@ -334,11 +334,11 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             // Why here: both the default selection below and the run read the snapshot of the compile
             // the last reload loaded. This waits for the capture the domain load started, or starts
             // one when that capture failed, found no compiled assembly, or was cancelled.
-            await services.SourceSnapshotCapture.EnsureCapturedAsync(HotReloadConstants.SourceSnapshotCaptureTriggerApply);
-            // Why switch explicitly: the capture finishes on a pool thread, and the selection below
-            // reads Unity's compilation assemblies, which only the main thread may. Returning there
-            // through the synchronization context would break silently if the wait ever gained a
-            // ConfigureAwait(false).
+            await services.SourceSnapshotCapture.EnsureCapturedAsync(HotReloadConstants.SourceSnapshotCaptureTriggerApply)
+                .ConfigureAwait(false);
+            // Why switch explicitly: the capture finishes on a pool thread and the wait does not return
+            // through the synchronization context, while the selection below reads Unity's compilation
+            // assemblies, which only the main thread may.
             await MainThreadSwitcher.SwitchToMainThread(ct);
             HotReloadDefaultFileSelection selection = HotReloadDefaultFileSelector.Resolve(
                 parameters.Files,
