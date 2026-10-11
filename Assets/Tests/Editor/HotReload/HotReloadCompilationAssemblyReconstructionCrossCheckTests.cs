@@ -120,9 +120,10 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             Assert.That(rebuilt, Is.GreaterThan(0), "Precondition: some assembly must be rebuilt.");
             Assert.That(mismatches, Is.Empty, "rebuilt entries");
             Assert.That(refused, Is.EquivalentTo(lostSources), "refused assemblies");
-            // Why equal and not only a subset: every PDB here that lost sources lost an interface- or
-            // enum-only file, so the type check must flag exactly those and no PDB that lost none.
-            Assert.That(typeCheckFlagged, Is.EquivalentTo(lostSources), "type check");
+            // Why only a subset: a PDB that lost nothing but AssemblyInfo.cs has no type without a
+            // document, which is no fault of the type check. What must hold is that it never flags a
+            // PDB that lost nothing; that it finds a type-only file is HotReloadPdbTypeDocumentCoverageTests'.
+            Assert.That(typeCheckFlagged, Is.SubsetOf(lostSources), "type check false positives");
         }
 
         private HotReloadCompilationAssemblyListStore SaveClean(UnityCompilationAssembly[] fetched)

@@ -13,6 +13,7 @@ using UnityEditor.Compilation;
 using UnityEngine;
 
 using io.github.hatayama.UnityCliLoop.FirstPartyTools;
+using io.github.hatayama.UnityCliLoop.ToolContracts;
 
 using UnityCompilationAssembly = UnityEditor.Compilation.Assembly;
 
@@ -255,7 +256,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 return Array.Empty<UnityCompilationAssembly>();
             });
 
-            Task<bool> refill = CreateRefill(store, cache).RunAsync(CancellationToken.None);
+            Task<bool> refill = CreateRefill(store, cache).RunAsync();
 
             Assert.That(refill.Status, Is.EqualTo(TaskStatus.RanToCompletion), "refill status");
             Assert.That(refill.Result, Is.True, "kept");
@@ -279,12 +280,53 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             HotReloadCompilationAssemblyCache cache = new HotReloadCompilationAssemblyCache(() => fetched);
             cache.Current();
 
-            Task<bool> refill = CreateRefill(store, cache).RunAsync(CancellationToken.None);
+            Task<bool> refill = CreateRefill(store, cache).RunAsync();
 
             Assert.That(refill.Status, Is.EqualTo(TaskStatus.RanToCompletion), "refill status");
             Assert.That(refill.Result, Is.False, "kept");
             Assert.That(cache.Current(), Is.SameAs(fetched), "cache content");
             Assert.That(_backgroundRuns, Is.EqualTo(savesBefore), "saves");
+        }
+
+        /// <summary>
+        /// What: a rebuild cancelled while it runs in the background keeps nothing, saves nothing and
+        /// reports the cancellation instead of faulting.
+        /// </summary>
+        [Test]
+        public async Task ReconstructAndFill_CancelledWhileRebuilding_KeepsNothing()
+        {
+            HotReloadCompilationAssemblyListStore store = SaveCleanThenEdit(saved => { });
+            int savesBefore = _backgroundRuns;
+            HotReloadCompilationAssemblyCache cache = new HotReloadCompilationAssemblyCache(Array.Empty<UnityCompilationAssembly>);
+            TaskCompletionSource<HotReloadCompilationListReconstruction> held =
+                new TaskCompletionSource<HotReloadCompilationListReconstruction>();
+            Func<HotReloadCompilationListReconstruction> rebuild = null;
+            HotReloadCompilationListRefill refill = new HotReloadCompilationListRefill(
+                store,
+                cache,
+                HotReloadSnapshotCaptureInputs.ReadOnMainThread,
+                work =>
+                {
+                    rebuild = work;
+                    return held.Task;
+                });
+            VibeLogger.ClearMemoryLogs();
+
+            Task<bool> run = refill.RunAsync();
+            HotReloadCompilationListReconstruction rebuilt = rebuild();
+            Assert.That(rebuilt.Assemblies, Is.Not.Null, "Precondition: the rebuild must give a list.");
+            refill.Cancel();
+            held.SetResult(rebuilt);
+            // Why awaited: the rest of the run resumes off this thread after the held rebuild completes.
+            bool kept = await run;
+
+            Assert.That(run.Status, Is.EqualTo(TaskStatus.RanToCompletion), "refill status");
+            Assert.That(kept, Is.False, "kept");
+            Assert.That(cache.IsFilled, Is.False, "cache filled");
+            Assert.That(_backgroundRuns, Is.EqualTo(savesBefore), "saves");
+            Assert.That(
+                (string)HotReloadWarmUpTestDoubles.ReadSingleVibeContext(HotReloadConstants.VibeLogCompilationListReconstructed)["reason"],
+                Is.EqualTo(HotReloadConstants.CompilationListReasonCancelled));
         }
 
         private void AssertRecompiledTargetGives(string reason, Action<HotReloadSavedReference> editTargetReference)

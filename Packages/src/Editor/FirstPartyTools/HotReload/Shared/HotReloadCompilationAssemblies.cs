@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.IO;
-using System.Threading;
 using System.Threading.Tasks;
 
 using UnityEditor;
@@ -36,8 +35,12 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         private static readonly HotReloadCompilationAssemblyCache Cache =
             new HotReloadCompilationAssemblyCache(FetchAndSaveIfClean);
 
-        // Main thread only. Cancelled when the files it reads are about to change or the domain ends.
-        private static CancellationTokenSource RefillCancellation;
+        private static readonly HotReloadCompilationListRefill Refill =
+            new HotReloadCompilationListRefill(
+                Store,
+                Cache,
+                HotReloadSnapshotCaptureInputs.ReadOnMainThread,
+                rebuild => Task.Run(rebuild));
 
         static HotReloadCompilationAssemblies()
         {
@@ -79,14 +82,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         /// </summary>
         internal static Task<bool> RefillInBackground()
         {
-            RefillCancellation?.Cancel();
-            RefillCancellation = new CancellationTokenSource();
-            HotReloadCompilationListRefill refill = new HotReloadCompilationListRefill(
-                Store,
-                Cache,
-                HotReloadSnapshotCaptureInputs.ReadOnMainThread,
-                rebuild => Task.Run(rebuild));
-            return refill.RunAsync(RefillCancellation.Token);
+            return Refill.RunAsync();
         }
 
         // Main thread: the cache asks for the list from Current().
@@ -116,7 +112,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         // ends the domain whose cache it would fill.
         private static void CancelRefill()
         {
-            RefillCancellation?.Cancel();
+            Refill.Cancel();
         }
 
         /// <summary>

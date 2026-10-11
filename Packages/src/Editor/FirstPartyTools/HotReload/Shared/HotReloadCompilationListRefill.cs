@@ -21,6 +21,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         private readonly Func<HotReloadSnapshotCaptureInputs> _readInputs;
         private readonly Func<Func<HotReloadCompilationListReconstruction>, Task<HotReloadCompilationListReconstruction>> _runInBackground;
 
+        // Main thread only. Replaced by each run, so cancelling stops only the latest one.
+        private CancellationTokenSource _cancellation = new CancellationTokenSource();
+
         internal HotReloadCompilationListRefill(
             HotReloadCompilationAssemblyListStore store,
             HotReloadCompilationAssemblyCache cache,
@@ -40,9 +43,26 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         /// <summary>
         /// Rebuilds the list in the background and keeps it when the cache is still empty and no
         /// invalidation happened meanwhile. Returns whether the list was kept. Never throws: the
-        /// cache asks Unity as before when nothing was kept. Call on the main thread.
+        /// cache asks Unity as before when nothing was kept. Cancels an earlier run that is still
+        /// going. Call on the main thread.
         /// </summary>
-        internal async Task<bool> RunAsync(CancellationToken ct)
+        internal Task<bool> RunAsync()
+        {
+            _cancellation.Cancel();
+            _cancellation = new CancellationTokenSource();
+            return RunUntilCancelledAsync(_cancellation.Token);
+        }
+
+        /// <summary>
+        /// Stops the run in progress, if any: the files it reads are about to change or the domain
+        /// ends. Main thread only.
+        /// </summary>
+        internal void Cancel()
+        {
+            _cancellation.Cancel();
+        }
+
+        private async Task<bool> RunUntilCancelledAsync(CancellationToken ct)
         {
             Stopwatch watch = Stopwatch.StartNew();
             try
