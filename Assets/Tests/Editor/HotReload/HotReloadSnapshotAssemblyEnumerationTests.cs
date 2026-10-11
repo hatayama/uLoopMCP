@@ -366,30 +366,38 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         /// <summary>
         /// Verifies that the capture takes the recorded compile start as the start of the PDB check, so
         /// a source saved after the compile started but before the DLL was written is checked and, with
-        /// no PDB document to confirm it, marked as edited after the compile.
+        /// no PDB document to confirm it, marked as edited after the compile. The capture counts that
+        /// one file as checked.
         /// </summary>
         [Test]
         public void CaptureAssemblies_ASourceSavedAfterTheCompileStartedButBeforeTheDll_IsMarked()
         {
             string snapshotDirectory = CaptureWithSourceSavedBetweenStartAndDll(
-                HotReloadCompileStart.At(CompileStartUtc.Ticks));
+                HotReloadCompileStart.At(CompileStartUtc.Ticks),
+                out HotReloadSnapshotCaptureStats stats);
 
             HotReloadSourceStampManifest manifest = HotReloadSourceStampManifest.Load(snapshotDirectory);
             Assert.That(manifest.IsEditedAfterCompile(SnapshotFileName()), Is.True);
+            Assert.That(stats.FilesChecked, Is.EqualTo(1), "files checked");
         }
 
         /// <summary>
         /// Verifies that without a recorded compile start the same source is not checked, because the
         /// check then starts at the DLL write; the mark in the case above comes from the compile start.
+        /// The capture counts no file as checked, though it copied one.
         /// </summary>
         [Test]
         public void CaptureAssemblies_WithoutARecordedStart_LeavesASourceSavedBeforeTheDllUnmarked()
         {
-            string snapshotDirectory = CaptureWithSourceSavedBetweenStartAndDll(HotReloadCompileStart.Unknown);
+            string snapshotDirectory = CaptureWithSourceSavedBetweenStartAndDll(
+                HotReloadCompileStart.Unknown,
+                out HotReloadSnapshotCaptureStats stats);
 
             HotReloadSourceStampManifest manifest = HotReloadSourceStampManifest.Load(snapshotDirectory);
             Assert.That(manifest.IsEditedAfterCompile(SnapshotFileName()), Is.False);
             Assert.That(manifest.TryGetStamp(SnapshotFileName(), out long _, out long _), Is.True);
+            Assert.That(stats.FilesCopied, Is.EqualTo(1), "files copied");
+            Assert.That(stats.FilesChecked, Is.EqualTo(0), "files checked");
         }
 
         /// <summary>
@@ -431,7 +439,10 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
 
         // Plants the compiled assembly and orders the write times as compile start < source < DLL.
         // The fixture source has no document in the planted PDB, so a check cannot confirm it.
-        private string CaptureWithSourceSavedBetweenStartAndDll(HotReloadCompileStart compileStart)
+        // Returns the snapshot directory and hands out what the capture reported.
+        private string CaptureWithSourceSavedBetweenStartAndDll(
+            HotReloadCompileStart compileStart,
+            out HotReloadSnapshotCaptureStats stats)
         {
             string dllPath = PlantCompiledAssembly("Fixture");
             File.SetLastWriteTimeUtc(dllPath, new DateTime(2025, 6, 1, 0, 0, 0, DateTimeKind.Utc));
@@ -440,7 +451,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc));
             string mvid = HotReloadAssemblyMvid.Read(dllPath);
 
-            HotReloadSourceSnapshotter.CaptureAssemblies(
+            stats = HotReloadSourceSnapshotter.CaptureAssemblies(
                 _projectRoot,
                 new[] { CreateAssembly("Fixture") },
                 compileStart,
