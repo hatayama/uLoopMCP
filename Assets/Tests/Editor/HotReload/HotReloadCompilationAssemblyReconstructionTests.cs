@@ -4,9 +4,6 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Mono.Cecil;
-using Mono.Cecil.Cil;
-
 using Newtonsoft.Json;
 
 using NUnit.Framework;
@@ -196,7 +193,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             Directory.CreateDirectory(scriptAssemblies);
             string dllPath = Path.Combine(scriptAssemblies, TargetAssemblyName + ".dll");
             string pdbPath = Path.ChangeExtension(dllPath, ".pdb");
-            RewriteWithCecil(dllPath);
+            CecilPdbRewrite.Rewrite(_projectRoot, TargetAssemblyName, _directory, dllPath);
             HotReloadPdbCompilationInfo rewritten = HotReloadPdbCompilationInfo.Read(pdbPath);
             Assert.That(rewritten.SourceFileCount, Is.Not.Null, "Precondition: the rewritten PDB must keep the compiler's source count.");
             Assert.That(rewritten.DocumentCount, Is.LessThan(rewritten.SourceFileCount.Value), "Precondition: the rewrite must drop some document.");
@@ -459,32 +456,6 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             int found = saved.references.FindIndex(reference => !targetFileNames.Contains(Path.GetFileName(reference.path)));
             Assert.That(found, Is.GreaterThanOrEqualTo(0), "Precondition: some reference must be outside the target's.");
             return found;
-        }
-
-        // Reads the target assembly with its symbols and writes both again, as an IL post-processor
-        // does. Cecil keeps only the documents a method refers to.
-        private void RewriteWithCecil(string outputDllPath)
-        {
-            CompiledAssemblyLayout real = CompiledAssemblyLayout.Resolve(_projectRoot);
-            string sourceDll = Path.Combine(_directory, "Source", TargetAssemblyName + ".dll");
-            Directory.CreateDirectory(Path.GetDirectoryName(sourceDll));
-            File.Copy(real.DllPath(TargetAssemblyName), sourceDll);
-            File.Copy(real.PdbPath(TargetAssemblyName), Path.ChangeExtension(sourceDll, ".pdb"));
-            using (DefaultAssemblyResolver resolver = new DefaultAssemblyResolver())
-            {
-                resolver.AddSearchDirectory(real.CompiledAssembliesDirectory);
-                resolver.AddSearchDirectory(Path.GetDirectoryName(typeof(object).Assembly.Location));
-                using (ModuleDefinition module = ModuleDefinition.ReadModule(
-                    sourceDll,
-                    new ReaderParameters { ReadSymbols = true, AssemblyResolver = resolver }))
-                {
-                    module.Write(outputDllPath, new WriterParameters
-                    {
-                        WriteSymbols = true,
-                        SymbolWriterProvider = new PortablePdbWriterProvider(),
-                    });
-                }
-            }
         }
 
         private static int IndexOf(string assemblyName)
