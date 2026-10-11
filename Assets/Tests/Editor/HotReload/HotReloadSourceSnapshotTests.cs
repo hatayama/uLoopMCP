@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 
 using Mono.Cecil;
 using Mono.Cecil.Cil;
@@ -180,7 +181,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         [Test]
         public void LoadVerifiedSnapshotSource_PackageSourceGivenByItsAssetPath_ReturnsTheVerifiedSource()
         {
-            HotReloadSourceSnapshotter.CaptureAfterDomainReload(HotReloadSnapshotCaptureInputs.ReadOnMainThread());
+            HotReloadSourceSnapshotter.CaptureAfterDomainReload(HotReloadSnapshotCaptureInputs.ReadOnMainThread(), CancellationToken.None);
             string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
             string dllPath = Path.Combine(
                 projectRoot,
@@ -203,7 +204,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         {
             VibeLogger.ClearMemoryLogs();
 
-            HotReloadSourceSnapshotter.CaptureAfterDomainReload(HotReloadSnapshotCaptureInputs.ReadOnMainThread());
+            HotReloadSourceSnapshotter.CaptureAfterDomainReload(HotReloadSnapshotCaptureInputs.ReadOnMainThread(), CancellationToken.None);
 
             JObject context = HotReloadWarmUpTestDoubles.ReadSingleVibeContext(HotReloadConstants.VibeLogSourceSnapshotBreakdown);
             string[] fields =

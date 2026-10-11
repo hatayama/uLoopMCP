@@ -696,9 +696,16 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         public const string VibeLogWarmUpSkipped = "hot_reload_warm_up_skipped";
         public const string VibeLogCallerNoteBackfillComplete = "hot_reload_caller_note_backfill_complete";
         public const string VibeLogSourceSnapshotCaptured = "hot_reload_source_snapshot_captured";
+        // The other entries of a source snapshot capture that runs off the main thread: its start,
+        // the ways it can end without capturing, and the compile completion giving up on it.
+        public const string VibeLogSourceSnapshotCaptureStarted = "hot_reload_source_snapshot_capture_started";
+        public const string VibeLogSourceSnapshotCaptureCancelled = "hot_reload_source_snapshot_capture_cancelled";
+        public const string VibeLogSourceSnapshotCaptureFailed = "hot_reload_source_snapshot_capture_failed";
+        public const string VibeLogSourceSnapshotCaptureEmpty = "hot_reload_source_snapshot_capture_empty";
+        public const string VibeLogSourceSnapshotCaptureHoldCapExceeded = "hot_reload_source_snapshot_capture_hold_cap_exceeded";
 
         // What captured the source snapshot of a domain, as named in the trigger field of
-        // hot_reload_source_snapshot_captured.
+        // hot_reload_source_snapshot_captured and the other capture entries.
         public const string SourceSnapshotCaptureTriggerDomainLoad = "domain_load";
         public const string SourceSnapshotCaptureTriggerFirstUpdateTick = "first_update_tick";
         public const string SourceSnapshotCaptureTriggerApply = "apply";
@@ -721,6 +728,20 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         // the saved file is torn, of another format version or missing a required field.
         public const string CompilationListReasonNoSavedList = "no_saved_list";
         public const string CompilationListReasonSavedListUnreadable = "saved_list_unreadable";
+
+        // Why a domain did not rebuild the list from the saved one and the compiled files, or did not
+        // keep the rebuilt list, as logged in hot_reload_compilation_list_reconstructed.
+        public const string VibeLogCompilationListReconstructed = "hot_reload_compilation_list_reconstructed";
+        public const string CompilationListReasonAssemblySetChanged = "assembly_set_changed";
+        public const string CompilationListReasonPdbMismatch = "pdb_mismatch";
+        public const string CompilationListReasonPdbDocumentsIncomplete = "pdb_documents_incomplete";
+        public const string CompilationListReasonCompilationFailed = "compilation_failed";
+        public const string CompilationListReasonUnresolvedReference = "unresolved_reference";
+        public const string CompilationListReasonReferenceMissing = "reference_missing";
+        public const string CompilationListReasonReferenceChanged = "reference_changed";
+        public const string CompilationListReasonSuperseded = "superseded";
+        public const string CompilationListReasonCancelled = "cancelled";
+        public const string CompilationListReasonToolDisabled = "tool_disabled";
 
         // What stopped a running warm-up or caller-note backfill, as named in the cancelledBy field
         // of hot_reload_warm_up_complete and hot_reload_caller_note_backfill_complete.

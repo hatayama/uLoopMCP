@@ -40,8 +40,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         }
 
         /// <summary>
-        /// Runs the first-party tool work that has to finish before this domain answers its first
-        /// uloop command. Called once, at the end of the Editor startup. <paramref name="isToolEnabled"/>
+        /// Starts the first-party tool work that has to begin before this domain answers its first
+        /// uloop command: the source snapshot capture, which then runs in the background. Called
+        /// once, at the end of the Editor startup. <paramref name="isToolEnabled"/>
         /// answers whether the user enabled a tool in the tool settings, by its settings name.
         /// </summary>
         public static void PrepareBeforeServingCommands(Func<string, bool> isToolEnabled)
@@ -54,7 +55,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 return;
             }
 
-            HotReloadEditorStartup.CaptureSourceSnapshotBeforeServingCommands(isToolEnabled);
+            HotReloadEditorStartup.StartSourceSnapshotCaptureBeforeServingCommands(isToolEnabled);
         }
 
         public static void ResetServerScopedServices()

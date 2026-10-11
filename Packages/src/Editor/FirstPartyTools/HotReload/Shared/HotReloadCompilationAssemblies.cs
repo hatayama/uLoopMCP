@@ -35,11 +35,20 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         private static readonly HotReloadCompilationAssemblyCache Cache =
             new HotReloadCompilationAssemblyCache(FetchAndSaveIfClean);
 
+        private static readonly HotReloadCompilationListRefill Refill =
+            new HotReloadCompilationListRefill(
+                Store,
+                Cache,
+                HotReloadSnapshotCaptureInputs.ReadOnMainThread,
+                () => EditorUtility.scriptCompilationFailed,
+                rebuild => Task.Run(rebuild));
+
         static HotReloadCompilationAssemblies()
         {
             // Why: a compile that fails keeps the domain alive, so without this the list would keep
             // the asmdefs and source files from before that compile until the next reload.
             CompilationPipeline.compilationStarted += OnCompilationStarted;
+            AssemblyReloadEvents.beforeAssemblyReload += CancelRefill;
         }
 
         /// <summary>
@@ -67,6 +76,16 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             return Cache.FindByName(assemblyName);
         }
 
+        /// <summary>
+        /// Starts rebuilding the list from the one a previous domain saved and the compiled files,
+        /// off the main thread, and keeps it unless a caller asked Unity first or the script set
+        /// changed meanwhile. Completes with whether the list was kept; never faults. Main thread only.
+        /// </summary>
+        internal static Task<bool> RefillInBackground()
+        {
+            return Refill.RunAsync();
+        }
+
         // Main thread: the cache asks for the list from Current().
         private static UnityCompilationAssembly[] FetchAndSaveIfClean()
         {
@@ -86,7 +105,15 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
         private static void OnCompilationStarted(object context)
         {
+            CancelRefill();
             Cache.Invalidate();
+        }
+
+        // Why the rebuild stops here: a compile rewrites the dlls and PDBs it reads, and a reload
+        // ends the domain whose cache it would fill.
+        private static void CancelRefill()
+        {
+            Refill.Cancel();
         }
 
         /// <summary>
