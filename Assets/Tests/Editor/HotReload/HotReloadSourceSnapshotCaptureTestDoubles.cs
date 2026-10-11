@@ -27,7 +27,13 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         /// <summary>Inputs that no test capture reads.</summary>
         internal static HotReloadSnapshotCaptureInputs FixedInputs()
         {
-            return new HotReloadSnapshotCaptureInputs();
+            return new HotReloadSnapshotCaptureInputs(
+                "project-root",
+                HotReloadCompileStart.Unknown,
+                Array.Empty<HotReloadSnapshotPackageRoot>(),
+                StringComparison.Ordinal,
+                Array.Empty<HotReloadCaptureAssembly>(),
+                0);
         }
 
         // Why the exception goes into the task: Task.Run does the same, and the gate must see a
