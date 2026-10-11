@@ -138,7 +138,7 @@ func planUnityPackageRelease(ctx context.Context, options unityPackageReleasePla
 	}
 	plan := unityPackageReleasePlan{Tag: tag, Version: version, AssetName: signedUnityPackageAssetName(version)}
 
-	release, published, err := lookupPublishedUnityPackageRelease(ctx, deps.runOutput, options.Repository, tag)
+	release, published, err := lookupPublishedRelease(ctx, deps.runOutput, options.Repository, tag)
 	if err != nil {
 		return unityPackageReleasePlan{}, err
 	}
@@ -151,7 +151,7 @@ func planUnityPackageRelease(ctx context.Context, options unityPackageReleasePla
 // planPublishedUnityPackageRelease never creates anything: a published release is immutable. A
 // missing tarball is reported as a warning, not a failure, because no run can attach it any more,
 // and failing would repeat on every release workflow run until the next version is released.
-func planPublishedUnityPackageRelease(plan unityPackageReleasePlan, release unityPackageRelease, dryRun bool) unityPackageReleasePlan {
+func planPublishedUnityPackageRelease(plan unityPackageReleasePlan, release publishedRelease, dryRun bool) unityPackageReleasePlan {
 	plan.SourceRef = "refs/tags/" + plan.Tag
 	switch {
 	case dryRun:

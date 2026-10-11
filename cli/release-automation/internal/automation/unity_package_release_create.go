@@ -150,7 +150,7 @@ func validateUnityPackageReleaseCreateOptions(options unityPackageReleaseCreateO
 
 func createUnityPackageRelease(ctx context.Context, stdout io.Writer, options unityPackageReleaseCreateOptions, deps unityPackageReleaseCreateDeps) error {
 	assetName := filepath.Base(options.Asset)
-	release, published, err := lookupPublishedUnityPackageRelease(ctx, deps.runOutput, options.Repository, options.Tag)
+	release, published, err := lookupPublishedRelease(ctx, deps.runOutput, options.Repository, options.Tag)
 	if err != nil {
 		return err
 	}
@@ -251,7 +251,7 @@ func unityPackageReleaseCreateArgs(options unityPackageReleaseCreateOptions, not
 // OpenUPM reads is published and carries a non-empty tarball.
 func confirmUnityPackageReleasePublished(ctx context.Context, stdout io.Writer, options unityPackageReleaseCreateOptions, assetName string, deps unityPackageReleaseCreateDeps) error {
 	confirmed, err := rereadUnityPackageRelease(deps, func() (bool, error) {
-		release, published, err := lookupPublishedUnityPackageRelease(ctx, deps.runOutput, options.Repository, options.Tag)
+		release, published, err := lookupPublishedRelease(ctx, deps.runOutput, options.Repository, options.Tag)
 		if err != nil {
 			return false, err
 		}
