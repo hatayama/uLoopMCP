@@ -93,7 +93,12 @@ command ran against:
   `hot_reload_source_snapshot_captured` appears once per domain when the source snapshot
   capture ran to completion, with its `trigger` (`domain_load` normally; `first_update_tick` or
   `apply` only when the capture at domain load threw or Unity listed no compilation assembly
-  yet) and `captureMs`.
+  yet; `apply` or `pause_point` when the captures at startup were skipped and a hot reload run
+  or a pause point is the first to read the snapshot) and `captureMs`. When both the hot-reload
+  and pause-point tools are disabled in the tool settings, the captures at `domain_load` and
+  `first_update_tick` each write `hot_reload_source_snapshot_skipped` with that `trigger` and
+  `reason` `tools_disabled` instead, and the first hot reload run or pause point after either
+  tool is enabled captures it.
   `hot_reload_source_snapshot_breakdown` appears once each time the capture runs to the end,
   just before `hot_reload_source_snapshot_captured`. It also appears when Unity listed no
   compilation assembly, in which case no captured entry follows, and it does not appear when the
@@ -126,7 +131,8 @@ command ran against:
   assemblies, each item's `outcome` (`done`, `cancelled` or `failed`) and time, and `cancelledBy`
   (`run`, `beforeAssemblyReload`, `compilationStarted`, or null), or one
   `hot_reload_warm_up_skipped` with its `reason` (`no_targets`, `compiling`, `updating`,
-  `no_compiled_assembly`, `run_started_first`). `cancelled` covers both an item that never started
+  `no_compiled_assembly`, `run_started_first`, `tool_disabled` when the hot-reload tool is
+  disabled in the tool settings). `cancelled` covers both an item that never started
   (`ms` 0) and one stopped between its units (one dll or one transform worker request each) with
   units left, with the time it ran. The items run in the order `publicized_targets`, `call_sites`,
   `referenced_method_sets`, `transform_worker`, `pdb_documents`. The warm-up's transform worker
