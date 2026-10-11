@@ -116,7 +116,7 @@ command ran against:
   - `filesCopied` and `bytesCopied`: the sources copied and their total size.
   - `filesChecked`: the sources checked against the PDB.
   The phases add up to `totalMs` except for the loop overhead; `captureMs` in the captured entry
-  also includes the gate.
+  also includes writing this breakdown entry.
   After a domain reload, the warm-up writes one `hot_reload_warm_up_complete` with the target
   assemblies, each item's `outcome` (`done`, `cancelled` or `failed`) and time, and `cancelledBy`
   (`run`, `beforeAssemblyReload`, `compilationStarted`, or null), or one
