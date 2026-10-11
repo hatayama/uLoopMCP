@@ -716,6 +716,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         public const string VibeLogSourceSnapshotSkipped = "hot_reload_source_snapshot_skipped";
         public const string SourceSnapshotSkipReasonToolsDisabled = "tools_disabled";
         public const string WarmUpSkipReasonToolDisabled = "tool_disabled";
+        public const string WarmUpItemSkipReasonCompilationListUnavailable = "compilation_list_unavailable";
 
         // Saving the compilation assembly list for the next domain: why a domain did not save it,
         // a save that threw, and a save that finished (its size and time).

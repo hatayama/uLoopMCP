@@ -5,8 +5,12 @@ using System.Threading.Tasks;
 
 using Newtonsoft.Json.Linq;
 
+using UnityEditor.Compilation;
+
 using io.github.hatayama.UnityCliLoop.FirstPartyTools;
 using io.github.hatayama.UnityCliLoop.ToolContracts;
+
+using UnityCompilationAssembly = UnityEditor.Compilation.Assembly;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
 {
@@ -26,7 +30,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 Array.Empty<IHotReloadWarmUpItem>());
         }
 
-        internal static HotReloadWarmUpCapture CreateReadyCapture()
+        internal static HotReloadWarmUpCapture CreateReadyCapture(bool compilationListKept)
         {
             return HotReloadWarmUpCapture.Ready(
                 new HotReloadWarmUpContext(
@@ -38,7 +42,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                             TargetAssemblyName + ".dll",
                             TargetAssemblyName + ".pdb",
                             Array.Empty<string>())
-                    }));
+                    },
+                    compilationListKept));
         }
 
         /// <summary>The context of the only entry of <paramref name="operation"/> in the in-memory vibe log.</summary>
@@ -95,6 +100,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
 
         public string Name { get; }
 
+        public bool NeedsCompilationList => false;
+
         public Task RunAsync(HotReloadWarmUpContext context, CancellationToken ct)
         {
             _ran.Add(Name);
@@ -114,6 +121,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         }
 
         public string Name { get; }
+
+        public bool NeedsCompilationList => false;
 
         internal TaskCompletionSource<bool> Release { get; } = new TaskCompletionSource<bool>();
 
@@ -141,6 +150,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
 
         public string Name { get; }
 
+        public bool NeedsCompilationList => false;
+
         internal TaskCompletionSource<bool> BetweenUnits { get; } = new TaskCompletionSource<bool>();
 
         public async Task RunAsync(HotReloadWarmUpContext context, CancellationToken ct)
@@ -149,6 +160,61 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             await BetweenUnits.Task;
             ct.ThrowIfCancellationRequested();
             _ran.Add(Name + "#2");
+        }
+    }
+
+    /// <summary>
+    /// An item that needs the compilation assembly list: it looks the target up through the given
+    /// lookup and appends its name when it runs.
+    /// </summary>
+    internal sealed class ListLookupWarmUpItem : IHotReloadWarmUpItem
+    {
+        private readonly List<string> _ran;
+        private readonly Func<string, UnityCompilationAssembly> _findByName;
+
+        internal ListLookupWarmUpItem(string name, List<string> ran, Func<string, UnityCompilationAssembly> findByName)
+        {
+            Name = name;
+            _ran = ran;
+            _findByName = findByName;
+        }
+
+        public string Name { get; }
+
+        public bool NeedsCompilationList => true;
+
+        public Task RunAsync(HotReloadWarmUpContext context, CancellationToken ct)
+        {
+            _findByName(HotReloadWarmUpTestDoubles.TargetAssemblyName);
+            _ran.Add(Name);
+            return Task.CompletedTask;
+        }
+    }
+
+    /// <summary>
+    /// The fetch of a compilation assembly cache, counting the times the cache asks Unity for the list.
+    /// </summary>
+    internal sealed class CountingCompilationListFetch
+    {
+        internal int Count { get; private set; }
+
+        internal HotReloadCompilationAssemblyCache CreateEmptyCache()
+        {
+            return new HotReloadCompilationAssemblyCache(Fetch);
+        }
+
+        /// <summary>A cache that already keeps Unity's list, as after a rebuild that was kept.</summary>
+        internal HotReloadCompilationAssemblyCache CreateFilledCache()
+        {
+            HotReloadCompilationAssemblyCache cache = CreateEmptyCache();
+            NUnit.Framework.Assert.That(cache.TryFill(CompilationPipeline.GetAssemblies(), cache.Generation), NUnit.Framework.Is.True);
+            return cache;
+        }
+
+        private UnityCompilationAssembly[] Fetch()
+        {
+            Count++;
+            return CompilationPipeline.GetAssemblies();
         }
     }
 
@@ -164,6 +230,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         }
 
         public string Name { get; }
+
+        public bool NeedsCompilationList => false;
 
         public Task RunAsync(HotReloadWarmUpContext context, CancellationToken ct)
         {

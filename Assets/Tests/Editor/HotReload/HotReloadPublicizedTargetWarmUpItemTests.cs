@@ -190,7 +190,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                         dllPath,
                         Path.ChangeExtension(dllPath, ".pdb"),
                         Array.Empty<string>())
-                });
+                },
+                true);
         }
 
         // The home a run uses for the target right after a reload.

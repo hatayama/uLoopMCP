@@ -86,6 +86,15 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             return Refill.RunAsync();
         }
 
+        /// <summary>
+        /// Whether a list is kept now, whether it was rebuilt at startup or asked of Unity by an
+        /// earlier caller, so a caller that must not wait for Unity can skip instead. Main thread only.
+        /// </summary>
+        internal static bool IsKept()
+        {
+            return Cache.IsFilled;
+        }
+
         // Main thread: the cache asks for the list from Current().
         private static UnityCompilationAssembly[] FetchAndSaveIfClean()
         {

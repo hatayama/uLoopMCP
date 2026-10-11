@@ -250,7 +250,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
 
         private HotReloadWarmUp CreateWarmUp(params IHotReloadWarmUpItem[] items)
         {
-            return new HotReloadWarmUp(new FixedContextSource(HotReloadWarmUpTestDoubles.CreateReadyCapture()), items);
+            return new HotReloadWarmUp(new FixedContextSource(HotReloadWarmUpTestDoubles.CreateReadyCapture(true)), items);
         }
 
         private static HotReloadWarmUpCapture CreateTestAssemblyCapture(string testDll)
@@ -266,7 +266,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                             testDll,
                             Path.ChangeExtension(testDll, ".pdb"),
                             HotReloadCallSiteScanner.CollectReferencingDllPaths(root, TestAssemblyName()))
-                    }));
+                    },
+                    true));
         }
 
         private static async Task<HotReloadOrchestratorResult> RunWithReadReturningAsync(int value)

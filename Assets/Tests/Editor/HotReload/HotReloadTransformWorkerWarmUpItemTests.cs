@@ -371,7 +371,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                     Array.Empty<string>()));
             }
 
-            return new HotReloadWarmUpContext(projectRoot, targets);
+            return new HotReloadWarmUpContext(projectRoot, targets, true);
         }
 
         // Records each request and its token, and answers it with what the test chose for its

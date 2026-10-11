@@ -58,6 +58,24 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             Assert.That(second, Is.SameAs(first));
         }
 
+        /// <summary>
+        /// Verifies IsKept answers whether a list is kept right now: true once a caller asked for
+        /// it, false after the list is dropped, so the warm-ups skip instead of asking Unity.
+        /// </summary>
+        [Test]
+        public void IsKept_FollowsWhetherAListIsKept()
+        {
+            Assert.That(HotReloadCompilationAssemblies.Current(), Is.Not.Empty);
+            Assert.That(HotReloadCompilationAssemblies.IsKept(), Is.True, "after the list was asked for");
+
+            HotReloadCompilationAssemblies.DropForScriptSetChange();
+            bool keptAfterDrop = HotReloadCompilationAssemblies.IsKept();
+            // Why ask again: later tests in this domain expect the shared list to be kept.
+            HotReloadCompilationAssemblies.Current();
+
+            Assert.That(keptAfterDrop, Is.False, "after the list was dropped");
+        }
+
         // Why: CompilationPipeline stores handlers on Delegate fields, but EditorApplication.projectChanged
         // lives on EventWithPerformanceTracker. A Delegate-only scan cannot see it.
         private static bool StaticEventHasHandler(Type eventOwner, Func<Delegate, bool> isMatch)

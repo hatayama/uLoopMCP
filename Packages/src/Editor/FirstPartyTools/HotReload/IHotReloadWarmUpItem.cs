@@ -13,6 +13,12 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         string Name { get; }
 
         /// <summary>
+        /// True for an item that looks assemblies up in the compilation assembly list. Such an item
+        /// is skipped when no list was kept, since the lookup would ask Unity on the main thread.
+        /// </summary>
+        bool NeedsCompilationList { get; }
+
+        /// <summary>
         /// Entered on the main thread. Throws OperationCanceledException before the next unit of work
         /// (one dll, one process start) once ct is cancelled, so an item that stopped early is never
         /// reported done; never observes ct in the middle of a unit.
