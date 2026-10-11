@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 
 using UnityEditor;
@@ -35,11 +36,15 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         private static readonly HotReloadCompilationAssemblyCache Cache =
             new HotReloadCompilationAssemblyCache(FetchAndSaveIfClean);
 
+        // Main thread only. Cancelled when the files it reads are about to change or the domain ends.
+        private static CancellationTokenSource RefillCancellation;
+
         static HotReloadCompilationAssemblies()
         {
             // Why: a compile that fails keeps the domain alive, so without this the list would keep
             // the asmdefs and source files from before that compile until the next reload.
             CompilationPipeline.compilationStarted += OnCompilationStarted;
+            AssemblyReloadEvents.beforeAssemblyReload += CancelRefill;
         }
 
         /// <summary>
@@ -67,6 +72,23 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             return Cache.FindByName(assemblyName);
         }
 
+        /// <summary>
+        /// Starts rebuilding the list from the one a previous domain saved and the compiled files,
+        /// off the main thread, and keeps it unless a caller asked Unity first or the script set
+        /// changed meanwhile. Completes with whether the list was kept; never faults. Main thread only.
+        /// </summary>
+        internal static Task<bool> RefillInBackground()
+        {
+            RefillCancellation?.Cancel();
+            RefillCancellation = new CancellationTokenSource();
+            HotReloadCompilationListRefill refill = new HotReloadCompilationListRefill(
+                Store,
+                Cache,
+                HotReloadSnapshotCaptureInputs.ReadOnMainThread,
+                rebuild => Task.Run(rebuild));
+            return refill.RunAsync(RefillCancellation.Token);
+        }
+
         // Main thread: the cache asks for the list from Current().
         private static UnityCompilationAssembly[] FetchAndSaveIfClean()
         {
@@ -86,7 +108,15 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
         private static void OnCompilationStarted(object context)
         {
+            CancelRefill();
             Cache.Invalidate();
+        }
+
+        // Why the rebuild stops here: a compile rewrites the dlls and PDBs it reads, and a reload
+        // ends the domain whose cache it would fill.
+        private static void CancelRefill()
+        {
+            RefillCancellation?.Cancel();
         }
 
         /// <summary>
