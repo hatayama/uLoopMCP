@@ -66,9 +66,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             Directory.CreateDirectory(staleDirectory);
 
             HotReloadSourceSnapshotter.CaptureAssemblies(
-                _projectRoot,
-                new[] { CreateAssembly("Fixture") },
-                HotReloadCompileStart.Unknown,
+                CreateInputs(_projectRoot, new[] { CreateAssembly("Fixture") }, HotReloadCompileStart.Unknown),
                 CreateDocumentIndex());
 
             Assert.That(File.Exists(SnapshotSourcePath("Fixture", mvid)), Is.True);
@@ -88,9 +86,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             File.WriteAllText(StampPath("Fixture"), stamp);
 
             HotReloadSourceSnapshotter.CaptureAssemblies(
-                _projectRoot,
-                new[] { CreateAssembly("Fixture") },
-                HotReloadCompileStart.Unknown,
+                CreateInputs(_projectRoot, new[] { CreateAssembly("Fixture") }, HotReloadCompileStart.Unknown),
                 CreateDocumentIndex());
 
             Assert.That(Directory.Exists(Path.Combine(_snapshotRoot, "Fixture-" + mvid)), Is.False);
@@ -112,9 +108,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             Directory.CreateDirectory(staleDirectory);
 
             HotReloadSourceSnapshotter.CaptureAssemblies(
-                _projectRoot,
-                new[] { CreateAssembly("Fixture") },
-                HotReloadCompileStart.Unknown,
+                CreateInputs(_projectRoot, new[] { CreateAssembly("Fixture") }, HotReloadCompileStart.Unknown),
                 CreateDocumentIndex());
 
             Assert.That(Directory.GetFiles(currentDirectory), Is.Empty);
@@ -154,9 +148,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             File.WriteAllText(StampPath("Fixture"), stamp);
 
             HotReloadSourceSnapshotter.CaptureAssemblies(
-                _projectRoot,
-                new[] { CreateAssembly("Fixture") },
-                HotReloadCompileStart.Unknown,
+                CreateInputs(_projectRoot, new[] { CreateAssembly("Fixture") }, HotReloadCompileStart.Unknown),
                 CreateDocumentIndex());
 
             Assert.That(Directory.Exists(HotReloadSourceSnapshotLayout.AssemblyDirectory(_projectRoot, "Fixture", mvid)), Is.True);
@@ -184,9 +176,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             Directory.CreateDirectory(nonMvid);
 
             HotReloadSourceSnapshotter.CaptureAssemblies(
-                _projectRoot,
-                new[] { CreateAssembly("Fixture") },
-                HotReloadCompileStart.Unknown,
+                CreateInputs(_projectRoot, new[] { CreateAssembly("Fixture") }, HotReloadCompileStart.Unknown),
                 CreateDocumentIndex());
 
             Assert.That(Directory.Exists(orphanTemporary), Is.False);
@@ -206,13 +196,34 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             string mvid = HotReloadAssemblyMvid.Read(dllPath);
 
             HotReloadSourceSnapshotter.CaptureAssemblies(
-                _projectRoot,
-                new[] { CreateAssemblyWithSources("NoSources", Array.Empty<string>()) },
-                HotReloadCompileStart.Unknown,
+                CreateInputs(_projectRoot, new[] { CreateAssemblyWithSources("NoSources", Array.Empty<string>()) }, HotReloadCompileStart.Unknown),
                 CreateDocumentIndex());
 
             Assert.That(Directory.Exists(HotReloadSourceSnapshotLayout.AssemblyDirectory(_projectRoot, "NoSources", mvid)), Is.False);
             Assert.That(File.Exists(StampPath("NoSources")), Is.False);
+        }
+
+        /// <summary>
+        /// Verifies an assembly the inputs classified as an immutable package's is counted and skipped
+        /// before anything is written, though its DLL and PDB are there: no snapshot directory and no stamp.
+        /// </summary>
+        [Test]
+        public void CaptureAssemblies_ImmutablePackageAssembly_CountsItAndWritesNothing()
+        {
+            PlantCompiledAssembly("Fixture");
+            HotReloadSnapshotCaptureInputs inputs = new HotReloadSnapshotCaptureInputs(
+                _projectRoot,
+                HotReloadCompileStart.Unknown,
+                Array.Empty<HotReloadSnapshotPackageRoot>(),
+                StringComparison.Ordinal,
+                new[] { new HotReloadCaptureAssembly("Fixture", new[] { SourceRelativePath }, true) },
+                0);
+
+            HotReloadSnapshotCaptureStats stats = HotReloadSourceSnapshotter.CaptureAssemblies(inputs, CreateDocumentIndex());
+
+            Assert.That(stats.AssembliesImmutable, Is.EqualTo(1), "immutable");
+            Assert.That(Directory.GetDirectories(_snapshotRoot, "Fixture-*"), Is.Empty);
+            Assert.That(File.Exists(StampPath("Fixture")), Is.False);
         }
 
         /// <summary>
@@ -226,9 +237,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             File.Delete(Path.ChangeExtension(dllPath, missingExtension));
 
             HotReloadSourceSnapshotter.CaptureAssemblies(
-                _projectRoot,
-                new[] { CreateAssembly("Fixture") },
-                HotReloadCompileStart.Unknown,
+                CreateInputs(_projectRoot, new[] { CreateAssembly("Fixture") }, HotReloadCompileStart.Unknown),
                 CreateDocumentIndex());
 
             Assert.That(Directory.GetDirectories(_snapshotRoot, "Fixture-*"), Is.Empty);
@@ -252,9 +261,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             File.WriteAllText(StampPath("Fixture"), stamp);
 
             HotReloadSourceSnapshotter.CaptureAssemblies(
-                _projectRoot,
-                new[] { CreateAssembly("Fixture") },
-                HotReloadCompileStart.Unknown,
+                CreateInputs(_projectRoot, new[] { CreateAssembly("Fixture") }, HotReloadCompileStart.Unknown),
                 CreateDocumentIndex());
 
             Assert.That(Directory.Exists(HotReloadSourceSnapshotLayout.AssemblyDirectory(_projectRoot, "Fixture", mvid)), Is.False);
@@ -280,9 +287,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             LogAssert.Expect(LogType.Warning, new Regex("Snapshot capture failed for assembly Broken"));
 
             HotReloadSourceSnapshotter.CaptureAssemblies(
-                _projectRoot,
-                new[] { CreateAssembly("Broken"), CreateAssembly("Fixture") },
-                HotReloadCompileStart.Unknown,
+                CreateInputs(_projectRoot, new[] { CreateAssembly("Broken"), CreateAssembly("Fixture") }, HotReloadCompileStart.Unknown),
                 CreateDocumentIndex());
 
             Assert.That(File.Exists(StampPath("Broken")), Is.False);
@@ -343,9 +348,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 string mvid = HotReloadAssemblyMvid.Read(dllPath);
 
                 HotReloadSourceSnapshotter.CaptureAssemblies(
-                    playerRoot,
-                    new[] { CreateAssembly("Fixture") },
-                    HotReloadCompileStart.Unknown,
+                    CreateInputs(playerRoot, new[] { CreateAssembly("Fixture") }, HotReloadCompileStart.Unknown),
                     CreateDocumentIndex());
 
                 string playerSnapshotSource = HotReloadSourceSnapshotLayout.SourcePath(
@@ -417,14 +420,10 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             };
 
             HotReloadSnapshotCaptureStats first = HotReloadSourceSnapshotter.CaptureAssemblies(
-                _projectRoot,
-                assemblies,
-                HotReloadCompileStart.Unknown,
+                CreateInputs(_projectRoot, assemblies, HotReloadCompileStart.Unknown),
                 CreateDocumentIndex());
             HotReloadSnapshotCaptureStats second = HotReloadSourceSnapshotter.CaptureAssemblies(
-                _projectRoot,
-                assemblies,
-                HotReloadCompileStart.Unknown,
+                CreateInputs(_projectRoot, assemblies, HotReloadCompileStart.Unknown),
                 CreateDocumentIndex());
 
             Assert.That(first.Assemblies, Is.EqualTo(1), "first: assemblies");
@@ -452,9 +451,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             string mvid = HotReloadAssemblyMvid.Read(dllPath);
 
             stats = HotReloadSourceSnapshotter.CaptureAssemblies(
-                _projectRoot,
-                new[] { CreateAssembly("Fixture") },
-                compileStart,
+                CreateInputs(_projectRoot, new[] { CreateAssembly("Fixture") }, compileStart),
                 CreateDocumentIndex());
 
             return Path.Combine(_snapshotRoot, "Fixture-" + mvid);
@@ -509,6 +506,31 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 Array.Empty<UnityCompilationAssembly>(),
                 Array.Empty<string>(),
                 AssemblyFlags.EditorAssembly);
+        }
+
+        // The capture's inputs for a temporary root: no package is registered there, so every
+        // assembly reads as editable.
+        private static HotReloadSnapshotCaptureInputs CreateInputs(
+            string projectRoot,
+            IEnumerable<UnityCompilationAssembly> assemblies,
+            HotReloadCompileStart compileStart)
+        {
+            List<HotReloadCaptureAssembly> captureAssemblies = new List<HotReloadCaptureAssembly>();
+            foreach (UnityCompilationAssembly assembly in assemblies)
+            {
+                captureAssemblies.Add(HotReloadSnapshotCaptureInputs.ToCaptureAssembly(
+                    assembly,
+                    Array.Empty<HotReloadSnapshotPackageRoot>(),
+                    StringComparison.Ordinal));
+            }
+
+            return new HotReloadSnapshotCaptureInputs(
+                projectRoot,
+                compileStart,
+                Array.Empty<HotReloadSnapshotPackageRoot>(),
+                StringComparison.Ordinal,
+                captureAssemblies,
+                0);
         }
 
         private string SnapshotSourcePath(string assemblyName, string mvid)

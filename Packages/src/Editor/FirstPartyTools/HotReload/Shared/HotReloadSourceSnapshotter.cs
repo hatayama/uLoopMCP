@@ -8,7 +8,6 @@ using UnityEditor.PackageManager;
 
 using UnityEngine;
 
-using UnityCompilationAssembly = UnityEditor.Compilation.Assembly;
 using PackageManagerPackageInfo = UnityEditor.PackageManager.PackageInfo;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
@@ -27,51 +26,47 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         /// selection, the sibling scan and the skip check treat that file as changed. The method-diff
         /// baseline checks every copy against the PDB when it uses one.
         /// Logs how long each phase took, even when the list is empty.
-        /// Returns false when Unity listed no compilation assembly (as while it compiles).
+        /// Returns false when the inputs list no compilation assembly (as while Unity compiles).
+        /// Asks Unity nothing beyond what <paramref name="inputs"/> carries.
         /// </summary>
-        internal static bool CaptureAfterDomainReload()
+        internal static bool CaptureAfterDomainReload(HotReloadSnapshotCaptureInputs inputs)
         {
-            System.Diagnostics.Stopwatch totalWatch = System.Diagnostics.Stopwatch.StartNew();
-            string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
-            System.Diagnostics.Stopwatch getAssembliesWatch = System.Diagnostics.Stopwatch.StartNew();
-            IReadOnlyList<UnityCompilationAssembly> assemblies = HotReloadCompilationAssemblies.Current();
-            getAssembliesWatch.Stop();
-            HotReloadSnapshotCaptureStats stats = CaptureAssemblies(
-                projectRoot,
-                assemblies,
-                HotReloadCompileStartRecord.Read(),
-                HotReloadPdbDocumentIndex.Shared);
-            totalWatch.Stop();
+            Debug.Assert(inputs != null, "inputs must not be null.");
+
+            System.Diagnostics.Stopwatch captureWatch = System.Diagnostics.Stopwatch.StartNew();
+            HotReloadSnapshotCaptureStats stats = CaptureAssemblies(inputs, HotReloadPdbDocumentIndex.Shared);
+            captureWatch.Stop();
+            // Why the listing time is added: the assemblies are now listed while the inputs are read,
+            // before this method runs, and totalMs has always included that listing.
             VibeLogger.LogInfo(
                 HotReloadConstants.VibeLogSourceSnapshotBreakdown,
                 "Hot reload source snapshot capture breakdown.",
-                stats.ToVibeLogContext(getAssembliesWatch.ElapsedMilliseconds, totalWatch.ElapsedMilliseconds));
-            return assemblies.Count > 0;
+                stats.ToVibeLogContext(
+                    inputs.AssemblyListingMs,
+                    inputs.AssemblyListingMs + captureWatch.ElapsedMilliseconds));
+            return inputs.Assemblies.Count > 0;
         }
 
-        // Why separate from CaptureAfterDomainReload: the project root and the compilation assemblies come
-        // from Unity, so taking them as arguments lets tests drive the per-assembly loop in a temporary root.
+        // Why separate from CaptureAfterDomainReload: taking the document index as an argument lets
+        // tests drive the per-assembly loop in a temporary root without writing the shared index.
         // Returns how long each phase took and how much the capture did.
         internal static HotReloadSnapshotCaptureStats CaptureAssemblies(
-            string projectRoot,
-            IEnumerable<UnityCompilationAssembly> assemblies,
-            HotReloadCompileStart compileStart,
+            HotReloadSnapshotCaptureInputs inputs,
             HotReloadPdbDocumentIndex documentIndex)
         {
-            Debug.Assert(!string.IsNullOrEmpty(projectRoot), "projectRoot must not be null or empty.");
-            Debug.Assert(assemblies != null, "assemblies must not be null.");
+            Debug.Assert(inputs != null, "inputs must not be null.");
             Debug.Assert(documentIndex != null, "documentIndex must not be null.");
 
-            string snapshotRoot = HotReloadSourceSnapshotLayout.Root(projectRoot);
+            string snapshotRoot = HotReloadSourceSnapshotLayout.Root(inputs.ProjectRoot);
             Directory.CreateDirectory(snapshotRoot);
 
             HotReloadSnapshotCaptureStats stats = new HotReloadSnapshotCaptureStats();
-            foreach (UnityCompilationAssembly assembly in assemblies)
+            foreach (HotReloadCaptureAssembly assembly in inputs.Assemblies)
             {
                 stats.Assemblies++;
                 try
                 {
-                    CaptureAssemblyIfNeeded(projectRoot, snapshotRoot, assembly, compileStart, documentIndex, stats);
+                    CaptureAssemblyIfNeeded(inputs, snapshotRoot, assembly, documentIndex, stats);
                 }
                 catch (Exception ex) when (IsSkippableAssemblyCaptureException(ex))
                 {
@@ -80,7 +75,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                     // Continuing preserves the fail-closed invariant because the method-diff baseline
                     // rejects missing snapshots by PDB checksum rather than using them for an incorrect diff.
                     UnityEngine.Debug.LogWarning(
-                        $"[UnityCliLoop] Snapshot capture failed for assembly {assembly.name}: {ex.Message}");
+                        $"[UnityCliLoop] Snapshot capture failed for assembly {assembly.Name}: {ex.Message}");
                 }
             }
 
@@ -97,21 +92,23 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         }
 
         private static void CaptureAssemblyIfNeeded(
-            string projectRoot,
+            HotReloadSnapshotCaptureInputs inputs,
             string snapshotRoot,
-            UnityCompilationAssembly assembly,
-            HotReloadCompileStart compileStart,
+            HotReloadCaptureAssembly assembly,
             HotReloadPdbDocumentIndex documentIndex,
             HotReloadSnapshotCaptureStats stats)
         {
-            string[] sourceFiles = assembly.sourceFiles;
-            if (sourceFiles == null || sourceFiles.Length == 0)
+            IReadOnlyList<string> sourceFiles = assembly.SourceAssetPaths;
+            if (sourceFiles.Count == 0)
             {
                 return;
             }
 
+            string projectRoot = inputs.ProjectRoot;
+            // Why only a read: the inputs classified the assembly from the package roots, so the
+            // capture no longer asks the Package Manager here.
             System.Diagnostics.Stopwatch packageLookupWatch = System.Diagnostics.Stopwatch.StartNew();
-            bool immutable = ShouldSkipImmutablePackageSources(sourceFiles);
+            bool immutable = assembly.IsImmutablePackageAssembly;
             stats.PackageLookupTicks += packageLookupWatch.Elapsed.Ticks;
             if (immutable)
             {
@@ -122,8 +119,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             // Why projectRoot stays the snapshot owner: only the compiled assemblies move to the main
             // project for a Virtual Player; its snapshots stay under its own root.
             CompiledAssemblyLayout layout = CompiledAssemblyLayout.Resolve(projectRoot);
-            string dllPath = layout.DllPath(assembly.name);
-            string pdbPath = layout.PdbPath(assembly.name);
+            string dllPath = layout.DllPath(assembly.Name);
+            string pdbPath = layout.PdbPath(assembly.Name);
             if (!File.Exists(dllPath) || !File.Exists(pdbPath))
             {
                 return;
@@ -132,7 +129,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             FileInfo dllInfo = new FileInfo(dllPath);
             long dllMtimeTicks = dllInfo.LastWriteTimeUtc.Ticks;
             long dllByteLength = dllInfo.Length;
-            string stampPath = StampPath(snapshotRoot, assembly.name);
+            string stampPath = StampPath(snapshotRoot, assembly.Name);
 
             // Why stamp short-circuits Cecil: a false stamp (identical mtime+length with different
             // bytes) is vanishingly rare, and even then LoadVerifiedSnapshotSource rejects via PDB
@@ -149,20 +146,22 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             System.Diagnostics.Stopwatch mvidWatch = System.Diagnostics.Stopwatch.StartNew();
             string mvid = HotReloadAssemblyMvid.Read(dllPath);
             stats.MvidTicks += mvidWatch.Elapsed.Ticks;
-            string assemblySnapshotDirectory = HotReloadSourceSnapshotLayout.AssemblyDirectory(projectRoot, assembly.name, mvid);
+            string assemblySnapshotDirectory = HotReloadSourceSnapshotLayout.AssemblyDirectory(projectRoot, assembly.Name, mvid);
             if (!Directory.Exists(assemblySnapshotDirectory))
             {
                 HotReloadSnapshotSourceCheck check = new HotReloadSnapshotSourceCheck(
-                    compileStart.SuspectWritesFrom(dllMtimeTicks),
+                    inputs.CompileStart.SuspectWritesFrom(dllMtimeTicks),
                     dllPath,
                     pdbPath,
                     mvid,
-                    documentIndex);
+                    documentIndex,
+                    inputs.PackageRoots,
+                    inputs.PathComparison);
                 System.Diagnostics.Stopwatch previousWatch = System.Diagnostics.Stopwatch.StartNew();
                 string previousSnapshotDirectory = FindReusablePreviousSnapshotDirectory(
                     projectRoot,
                     stampPath,
-                    assembly.name,
+                    assembly.Name,
                     assemblySnapshotDirectory);
                 stats.StampTicks += previousWatch.Elapsed.Ticks;
                 if (previousSnapshotDirectory == null)
@@ -171,7 +170,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                         projectRoot,
                         assemblySnapshotDirectory,
                         sourceFiles,
-                        assembly.name,
+                        assembly.Name,
                         check,
                         stats);
                 }
@@ -182,14 +181,14 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                         assemblySnapshotDirectory,
                         previousSnapshotDirectory,
                         sourceFiles,
-                        assembly.name,
+                        assembly.Name,
                         check,
                         stats);
                 }
 
                 stats.AssembliesCaptured++;
                 System.Diagnostics.Stopwatch cleanupWatch = System.Diagnostics.Stopwatch.StartNew();
-                DeleteStaleSnapshotDirectories(snapshotRoot, assembly.name, assemblySnapshotDirectory);
+                DeleteStaleSnapshotDirectories(snapshotRoot, assembly.Name, assemblySnapshotDirectory);
                 stats.CleanupTicks += cleanupWatch.Elapsed.Ticks;
             }
 

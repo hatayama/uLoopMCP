@@ -55,7 +55,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         [Test]
         public void Enable_PackageSourceGivenByItsAssetPath_ArmsTheStatementOnTheEditedFileBasis()
         {
-            HotReloadSourceSnapshotter.CaptureAfterDomainReload();
+            HotReloadSourceSnapshotter.CaptureAfterDomainReload(HotReloadSnapshotCaptureInputs.ReadOnMainThread());
 
             PausePointResponse response = Enable(FixtureAssetPath, SecondStatementLine);
 
@@ -69,7 +69,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         [Test]
         public void Enable_PackageSourceGivenByItsPhysicalPath_ArmsTheSameMarkerAsTheAssetPath()
         {
-            HotReloadSourceSnapshotter.CaptureAfterDomainReload();
+            HotReloadSourceSnapshotter.CaptureAfterDomainReload(HotReloadSnapshotCaptureInputs.ReadOnMainThread());
 
             PausePointResponse response = Enable(FixturePhysicalPath, SecondStatementLine);
 
@@ -82,7 +82,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         [Test]
         public void Enable_PackageSourceGivenByItsAbsolutePhysicalPath_ArmsTheSameMarkerAsTheAssetPath()
         {
-            HotReloadSourceSnapshotter.CaptureAfterDomainReload();
+            HotReloadSourceSnapshotter.CaptureAfterDomainReload(HotReloadSnapshotCaptureInputs.ReadOnMainThread());
 
             PausePointResponse response = Enable(ToAbsolutePath(FixturePhysicalPath), SecondStatementLine);
 
@@ -130,7 +130,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         [Test]
         public void Enable_AssetsSourceGivenByItsAbsolutePath_ArmsTheSameMarkerAsTheRelativePath()
         {
-            HotReloadSourceSnapshotter.CaptureAfterDomainReload();
+            HotReloadSourceSnapshotter.CaptureAfterDomainReload(HotReloadSnapshotCaptureInputs.ReadOnMainThread());
             int line = FindLineNumber(File.ReadAllText(ToAbsolutePath(AssetsFixturePath)), AssetsFixtureStatementText);
             Assert.That(line, Is.GreaterThan(0));
 

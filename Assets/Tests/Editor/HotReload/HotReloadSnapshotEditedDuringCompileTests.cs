@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -23,6 +24,12 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         // A file without method bodies, so the PDB has no document for it.
         private const string BodylessFixtureProjectRelativePath =
             "Assets/Tests/Editor/HotReload/HotReloadSnapshotBodylessFixture.cs";
+        private const string PausePointsRuntimeAssemblyName = "UnityCLILoop.PausePoints.Runtime";
+        // A file of this repository's embedded package, whose folder differs from its package name,
+        // so its asset path and the path its PDB records differ.
+        private const string PackageSourceAssetPath =
+            "Packages/io.github.hatayama.uloopmcp/Runtime/PausePoints/UloopPausePoint.cs";
+        private const string PackageSourcePhysicalPath = "Packages/src/Runtime/PausePoints/UloopPausePoint.cs";
 
         private static readonly long CompileStartUtcTicks = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc).Ticks;
         private static readonly DateTime SinceTheStartUtc = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
@@ -59,9 +66,32 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         {
             PlantSource(FixtureProjectRelativePath, RealBytes(FixtureProjectRelativePath), SinceTheStartUtc);
 
-            HotReloadSourceStampManifest manifest = Capture(FixtureProjectRelativePath);
+            HotReloadSourceStampManifest manifest = Capture(FixtureProjectRelativePath, TestAssemblyName, HotReloadSnapshotPackageRoots.ReadCurrent());
 
             string snapshotFileName = SnapshotFileName(FixtureProjectRelativePath);
+            Assert.That(manifest.IsEditedAfterCompile(snapshotFileName), Is.False);
+            Assert.That(manifest.TryGetStamp(snapshotFileName, out long _, out long _), Is.True);
+        }
+
+        /// <summary>
+        /// Verifies that a source of an embedded package written since the compile started whose bytes
+        /// match the PDB gets an unmarked stamp: the check names it by the folder behind the package
+        /// path, as the PDB records it, from the package roots it was given. The PDB records the
+        /// package's sources relative to the compiling project, so the package root is moved under
+        /// the temporary root, as the real one lies under the real project.
+        /// </summary>
+        [Test]
+        public void CaptureAtomically_APackageSourceWrittenSinceTheStartThatMatchesThePdb_RecordsAnUnmarkedStamp()
+        {
+            byte[] realBytes = File.ReadAllBytes(Path.Combine(_realProjectRoot, PackageSourcePhysicalPath));
+            PlantSource(PackageSourceAssetPath, realBytes, SinceTheStartUtc);
+
+            HotReloadSourceStampManifest manifest = Capture(
+                PackageSourceAssetPath,
+                PausePointsRuntimeAssemblyName,
+                PackageRootsMovedUnderTheTemporaryRoot());
+
+            string snapshotFileName = SnapshotFileName(PackageSourceAssetPath);
             Assert.That(manifest.IsEditedAfterCompile(snapshotFileName), Is.False);
             Assert.That(manifest.TryGetStamp(snapshotFileName, out long _, out long _), Is.True);
         }
@@ -76,7 +106,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             byte[] editedBytes = EditedBytes(FixtureProjectRelativePath);
             PlantSource(FixtureProjectRelativePath, editedBytes, SinceTheStartUtc);
 
-            HotReloadSourceStampManifest manifest = Capture(FixtureProjectRelativePath);
+            HotReloadSourceStampManifest manifest = Capture(FixtureProjectRelativePath, TestAssemblyName, HotReloadSnapshotPackageRoots.ReadCurrent());
 
             string snapshotFileName = SnapshotFileName(FixtureProjectRelativePath);
             string snapshotPath = Path.Combine(_snapshotDirectory, snapshotFileName);
@@ -94,7 +124,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         {
             PlantSource(FixtureProjectRelativePath, EditedBytes(FixtureProjectRelativePath), BeforeTheStartUtc);
 
-            HotReloadSourceStampManifest manifest = Capture(FixtureProjectRelativePath);
+            HotReloadSourceStampManifest manifest = Capture(FixtureProjectRelativePath, TestAssemblyName, HotReloadSnapshotPackageRoots.ReadCurrent());
 
             Assert.That(manifest.IsEditedAfterCompile(SnapshotFileName(FixtureProjectRelativePath)), Is.False);
         }
@@ -111,33 +141,58 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 RealBytes(BodylessFixtureProjectRelativePath),
                 SinceTheStartUtc);
 
-            HotReloadSourceStampManifest manifest = Capture(BodylessFixtureProjectRelativePath);
+            HotReloadSourceStampManifest manifest = Capture(BodylessFixtureProjectRelativePath, TestAssemblyName, HotReloadSnapshotPackageRoots.ReadCurrent());
 
             Assert.That(manifest.IsEditedAfterCompile(SnapshotFileName(BodylessFixtureProjectRelativePath)), Is.True);
         }
 
-        private HotReloadSourceStampManifest Capture(string projectRelativePath)
+        private HotReloadSourceStampManifest Capture(
+            string projectRelativePath,
+            string assemblyName,
+            IReadOnlyList<HotReloadSnapshotPackageRoot> packageRoots)
         {
             string dllPath = Path.Combine(
                 _realProjectRoot,
                 HotReloadConstants.ScriptAssembliesRelativeDirectory,
-                TestAssemblyName + HotReloadConstants.CompiledAssemblyExtension);
+                assemblyName + HotReloadConstants.CompiledAssemblyExtension);
             HotReloadSnapshotSourceCheck check = new HotReloadSnapshotSourceCheck(
                 CompileStartUtcTicks,
                 dllPath,
                 Path.ChangeExtension(dllPath, ".pdb"),
                 HotReloadAssemblyMvid.Read(dllPath),
-                new HotReloadPdbDocumentIndex(Path.Combine(_tempRoot, "PdbDocuments")));
+                new HotReloadPdbDocumentIndex(Path.Combine(_tempRoot, "PdbDocuments")),
+                packageRoots,
+                HotReloadSnapshotCaptureInputs.CurrentPathComparison());
 
             HotReloadSourceSnapshotCopier.CaptureAtomically(
                 _tempRoot,
                 _snapshotDirectory,
                 new[] { projectRelativePath },
-                TestAssemblyName,
+                assemblyName,
                 check,
                 new HotReloadSnapshotCaptureStats());
 
             return HotReloadSourceStampManifest.Load(_snapshotDirectory);
+        }
+
+        // The registered packages, with every folder under the real project moved to the same place
+        // under the temporary root.
+        private List<HotReloadSnapshotPackageRoot> PackageRootsMovedUnderTheTemporaryRoot()
+        {
+            string realRootPrefix = _realProjectRoot.Replace('\\', '/').TrimEnd('/') + "/";
+            List<HotReloadSnapshotPackageRoot> roots = new List<HotReloadSnapshotPackageRoot>();
+            foreach (HotReloadSnapshotPackageRoot root in HotReloadSnapshotPackageRoots.ReadCurrent())
+            {
+                string resolvedPath = root.ResolvedPath.Replace('\\', '/');
+                if (resolvedPath.StartsWith(realRootPrefix, StringComparison.Ordinal))
+                {
+                    resolvedPath = Path.Combine(_tempRoot, resolvedPath.Substring(realRootPrefix.Length));
+                }
+
+                roots.Add(new HotReloadSnapshotPackageRoot(resolvedPath, root.AssetPath, root.IsImmutable));
+            }
+
+            return roots;
         }
 
         private byte[] RealBytes(string projectRelativePath)

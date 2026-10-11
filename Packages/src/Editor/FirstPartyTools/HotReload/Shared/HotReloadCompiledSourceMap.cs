@@ -97,8 +97,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 pathComparison == StringComparison.Ordinal || pathComparison == StringComparison.OrdinalIgnoreCase,
                 "pathComparison must be Ordinal or OrdinalIgnoreCase.");
 
-            string compilingRoot = NormalizeRoot(compilingProjectRoot);
-            string ownRoot = NormalizeRoot(projectRoot);
+            string compilingRoot = HotReloadPackageFolderMatch.NormalizeFolder(compilingProjectRoot);
+            string ownRoot = HotReloadPackageFolderMatch.NormalizeFolder(projectRoot);
             List<NormalizedPackageRoot> packages = NormalizePackages(packageRoots, compilingRoot, ownRoot, pathComparison);
             List<string> assetPaths = new List<string>();
             HashSet<string> seen = new HashSet<string>(
@@ -177,8 +177,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             foreach (NormalizedPackageRoot package in packages)
             {
                 int length = Math.Max(
-                    PrefixLength(relativePath, package.RelativeToCompilingRoot, comparison),
-                    PrefixLength(relativePath, package.RelativeToOwnRoot, comparison));
+                    HotReloadPackageFolderMatch.PrefixLength(relativePath, package.RelativeToCompilingRoot, comparison),
+                    HotReloadPackageFolderMatch.PrefixLength(relativePath, package.RelativeToOwnRoot, comparison));
                 if (length > bestLength)
                 {
                     bestLength = length;
@@ -196,7 +196,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             StringComparison comparison,
             out MappedSource mapped)
         {
-            int rootLength = PrefixLength(absolutePath, compilingRoot, comparison);
+            int rootLength = HotReloadPackageFolderMatch.PrefixLength(absolutePath, compilingRoot, comparison);
             if (rootLength >= 0)
             {
                 return TryMapProjectRelative(absolutePath.Substring(rootLength + 1), packages, comparison, out mapped);
@@ -206,7 +206,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             NormalizedPackageRoot best = default(NormalizedPackageRoot);
             foreach (NormalizedPackageRoot package in packages)
             {
-                int length = PrefixLength(absolutePath, package.ResolvedPath, comparison);
+                int length = HotReloadPackageFolderMatch.PrefixLength(absolutePath, package.ResolvedPath, comparison);
                 if (length > bestLength)
                 {
                     bestLength = length;
@@ -232,23 +232,6 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
             mapped = new MappedSource(package.AssetPath + "/" + path.Substring(prefixLength + 1), package.IsImmutable);
             return true;
-        }
-
-        // The length of folder when path is inside it, so that the character after it is "/"; -1
-        // otherwise. Why the "/": "/a/LocalPkg2/x.cs" must not count as inside "/a/LocalPkg".
-        private static int PrefixLength(string path, string folder, StringComparison comparison)
-        {
-            if (folder == null || path.Length <= folder.Length + 1)
-            {
-                return -1;
-            }
-
-            if (path[folder.Length] != '/' || !path.StartsWith(folder, comparison))
-            {
-                return -1;
-            }
-
-            return folder.Length;
         }
 
         // Why not Path.IsPathRooted: on macOS and Linux it does not take "C:/proj/..." for rooted,
@@ -277,12 +260,12 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             List<NormalizedPackageRoot> packages = new List<NormalizedPackageRoot>(packageRoots.Count);
             foreach (HotReloadSnapshotPackageRoot root in packageRoots)
             {
-                string resolvedPath = NormalizeRoot(root.ResolvedPath);
+                string resolvedPath = HotReloadPackageFolderMatch.NormalizeFolder(root.ResolvedPath);
                 packages.Add(new NormalizedPackageRoot(
                     resolvedPath,
                     RelativeTo(resolvedPath, compilingRoot, comparison),
                     RelativeTo(resolvedPath, ownRoot, comparison),
-                    NormalizeRoot(root.AssetPath),
+                    HotReloadPackageFolderMatch.NormalizeFolder(root.AssetPath),
                     root.IsImmutable));
             }
 
@@ -292,13 +275,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         // The rest of path after root and "/", or null when path is not inside root.
         private static string RelativeTo(string path, string root, StringComparison comparison)
         {
-            int length = PrefixLength(path, root, comparison);
+            int length = HotReloadPackageFolderMatch.PrefixLength(path, root, comparison);
             return length < 0 ? null : path.Substring(length + 1);
-        }
-
-        private static string NormalizeRoot(string path)
-        {
-            return path.Replace('\\', '/').TrimEnd('/');
         }
     }
 }

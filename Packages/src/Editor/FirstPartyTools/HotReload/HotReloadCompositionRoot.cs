@@ -72,7 +72,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 TransformWorkerHost.Shared,
                 HotReloadGroupProcessorDependencies.CreateProduction,
                 new HotReloadApplicationPlayModeQuery(),
-                new HotReloadSourceSnapshotCapture(HotReloadSourceSnapshotter.CaptureAfterDomainReload),
+                new HotReloadSourceSnapshotCapture(
+                    () => HotReloadSourceSnapshotter.CaptureAfterDomainReload(HotReloadSnapshotCaptureInputs.ReadOnMainThread())),
                 warmUp,
                 compiledCallers);
         }
