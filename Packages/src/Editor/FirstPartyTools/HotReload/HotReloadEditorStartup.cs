@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading.Tasks;
 
 using UnityEditor;
 using UnityEngine;
@@ -20,6 +21,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             // the list's static constructor, which subscribes to compilationStarted, would otherwise
             // run for whichever caller touches the list first, which need not be on the main thread.
             HotReloadCompilationAssemblies.EnsureInitialized();
+            // Why at domain load: the rebuild then runs while the Editor finishes loading, so the
+            // first caller of the domain finds the list kept instead of asking Unity on the main thread.
+            _ = RefillCompilationListUnlessHotReloadIsDisabled(isToolEnabled, HotReloadCompilationAssemblies.RefillInBackground);
 
             // Why not EditorApplication.delayCall: a cold-start session that hits Unity's native
             // "Scripts have compiler errors" dialog never flushes delayCall again for the rest of
@@ -142,6 +146,30 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             // Why the task is not awaited: the domain load must not wait for the capture, and the
             // gate logs how it ended. A caller that needs the snapshot waits for it itself.
             _ = HotReloadCompositionRoot.Services.SourceSnapshotCapture.StartIfNeeded(trigger);
+        }
+
+        /// <summary>
+        /// Starts rebuilding the compilation assembly list unless the hot-reload tool is disabled in
+        /// the tool settings. Only hot reload reads the list, so the pause-point tool does not count.
+        /// Completes with whether the rebuilt list was kept.
+        /// </summary>
+        internal static Task<bool> RefillCompilationListUnlessHotReloadIsDisabled(
+            Func<string, bool> isToolEnabled,
+            Func<Task<bool>> startRefill)
+        {
+            Debug.Assert(isToolEnabled != null, "isToolEnabled must not be null.");
+            Debug.Assert(startRefill != null, "startRefill must not be null.");
+
+            if (!isToolEnabled(UnityCliLoopConstants.TOOL_NAME_HOT_RELOAD))
+            {
+                VibeLogger.LogInfo(
+                    HotReloadConstants.VibeLogCompilationListReconstructed,
+                    "Hot reload did not rebuild the compilation assembly list.",
+                    new { filled = false, reason = HotReloadConstants.CompilationListReasonToolDisabled });
+                return Task.FromResult(false);
+            }
+
+            return startRefill();
         }
 
         /// <summary>

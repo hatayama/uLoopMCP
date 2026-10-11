@@ -728,6 +728,20 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         public const string CompilationListReasonNoSavedList = "no_saved_list";
         public const string CompilationListReasonSavedListUnreadable = "saved_list_unreadable";
 
+        // Why a domain did not rebuild the list from the saved one and the compiled files, or did not
+        // keep the rebuilt list, as logged in hot_reload_compilation_list_reconstructed.
+        public const string VibeLogCompilationListReconstructed = "hot_reload_compilation_list_reconstructed";
+        public const string CompilationListReasonAssemblySetChanged = "assembly_set_changed";
+        public const string CompilationListReasonPdbMismatch = "pdb_mismatch";
+        public const string CompilationListReasonPdbDocumentsIncomplete = "pdb_documents_incomplete";
+        public const string CompilationListReasonCompilationFailed = "compilation_failed";
+        public const string CompilationListReasonUnresolvedReference = "unresolved_reference";
+        public const string CompilationListReasonReferenceMissing = "reference_missing";
+        public const string CompilationListReasonReferenceChanged = "reference_changed";
+        public const string CompilationListReasonSuperseded = "superseded";
+        public const string CompilationListReasonCancelled = "cancelled";
+        public const string CompilationListReasonToolDisabled = "tool_disabled";
+
         // What stopped a running warm-up or caller-note backfill, as named in the cancelledBy field
         // of hot_reload_warm_up_complete and hot_reload_caller_note_backfill_complete.
         public const string WarmUpCancelledByRun = "run";

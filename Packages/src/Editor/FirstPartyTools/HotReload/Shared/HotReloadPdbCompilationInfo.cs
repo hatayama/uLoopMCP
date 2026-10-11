@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Reflection.Metadata;
 using System.Text;
@@ -37,6 +38,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         private static readonly Guid CompilationOptionsKind = new Guid("B5FEEC05-8CD0-4A83-96DA-466284BB4BD8");
         private static readonly Guid MetadataReferencesKind = new Guid("7E4D4708-096E-4C5C-AEDA-CB10BA6A740D");
         private const string DefineKey = "define";
+        private const string SourceFileCountKey = "source-file-count";
         private const int MvidLength = 16;
         // Kind/flags byte, timestamp and image size that sit between the alias and the MVID.
         private const int BytesBeforeMvid = 1 + 4 + 4;
@@ -44,17 +46,34 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         public readonly IReadOnlyList<string> Defines;
         public readonly IReadOnlyList<HotReloadPdbReferencedAssembly> References;
 
+        // The GUID of the PDB id, which the dll's CodeView entry names when both come from one build.
+        public readonly Guid PdbGuid;
+
+        // How many syntax trees the compiler emitted, generator output included, or null when the
+        // PDB does not record it. The compiler writes one document per tree, and a tool that
+        // rewrites the PDB keeps this record but can drop documents.
+        public readonly int? SourceFileCount;
+
+        // The rows of the PDB's document table.
+        public readonly int DocumentCount;
+
         private HotReloadPdbCompilationInfo(
             IReadOnlyList<string> defines,
-            IReadOnlyList<HotReloadPdbReferencedAssembly> references)
+            IReadOnlyList<HotReloadPdbReferencedAssembly> references,
+            Guid pdbGuid,
+            int? sourceFileCount,
+            int documentCount)
         {
             Defines = defines;
             References = references;
+            PdbGuid = pdbGuid;
+            SourceFileCount = sourceFileCount;
+            DocumentCount = documentCount;
         }
 
         /// <summary>
-        /// Reads the defines, in the order the compiler was given them, and the metadata references
-        /// of the PDB. Throws InvalidOperationException when the PDB lacks either record or a record
+        /// Reads the defines, in the order the compiler was given them, the compiler's source count,
+        /// the document count, the metadata references and the id GUID of the PDB. Throws InvalidOperationException when the PDB lacks either record or a record
         /// is malformed.
         /// </summary>
         internal static HotReloadPdbCompilationInfo Read(string pdbPath)
@@ -67,7 +86,13 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
             byte[] options = ReadModuleRecord(reader, CompilationOptionsKind, pdbPath);
             byte[] references = ReadModuleRecord(reader, MetadataReferencesKind, pdbPath);
-            return new HotReloadPdbCompilationInfo(ParseDefines(options, pdbPath), ParseReferences(references, pdbPath));
+            Dictionary<string, string> optionValues = ParseOptions(options, pdbPath);
+            return new HotReloadPdbCompilationInfo(
+                ToDefines(optionValues),
+                ParseReferences(references, pdbPath),
+                new BlobContentId(reader.DebugMetadataHeader.Id).Guid,
+                ToSourceFileCount(optionValues),
+                reader.Documents.Count);
         }
 
         private static byte[] ReadModuleRecord(MetadataReader reader, Guid kind, string pdbPath)
@@ -90,20 +115,42 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         }
 
         // The options blob is a sequence of null-terminated UTF-8 key and value pairs.
-        private static IReadOnlyList<string> ParseDefines(byte[] blob, string pdbPath)
+        private static Dictionary<string, string> ParseOptions(byte[] blob, string pdbPath)
         {
+            Dictionary<string, string> values = new Dictionary<string, string>(StringComparer.Ordinal);
             int position = 0;
             while (position < blob.Length)
             {
                 string key = ReadNullTerminated(blob, ref position, pdbPath);
                 string value = ReadNullTerminated(blob, ref position, pdbPath);
-                if (key == DefineKey)
+                if (!values.ContainsKey(key))
                 {
-                    return value.Length == 0 ? Array.Empty<string>() : value.Split(',');
+                    values.Add(key, value);
                 }
             }
 
-            return Array.Empty<string>();
+            return values;
+        }
+
+        private static IReadOnlyList<string> ToDefines(Dictionary<string, string> optionValues)
+        {
+            if (!optionValues.TryGetValue(DefineKey, out string value) || value.Length == 0)
+            {
+                return Array.Empty<string>();
+            }
+
+            return value.Split(',');
+        }
+
+        private static int? ToSourceFileCount(Dictionary<string, string> optionValues)
+        {
+            if (!optionValues.TryGetValue(SourceFileCountKey, out string value)
+                || !int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out int count))
+            {
+                return null;
+            }
+
+            return count;
         }
 
         // Each reference is: file name and extern aliases (both null-terminated), a kind/flags

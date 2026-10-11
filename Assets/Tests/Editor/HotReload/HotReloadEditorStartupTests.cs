@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 using Newtonsoft.Json.Linq;
 
@@ -212,6 +213,50 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
 
             Assert.That(startCount, Is.EqualTo(1), "warm-up starts");
             Assert.That(CountVibeEntries(HotReloadConstants.VibeLogWarmUpSkipped), Is.EqualTo(0), "skipped entries");
+        }
+
+        /// <summary>
+        /// What: with the hot-reload tool disabled the list is not rebuilt even though the
+        /// pause-point tool is enabled, because only hot reload reads the list.
+        /// </summary>
+        [Test]
+        public void ReconstructAndFill_WhenHotReloadIsDisabled_DoesNotStartEvenIfPausePointIsEnabled()
+        {
+            VibeLogger.ClearMemoryLogs();
+            int startCount = 0;
+
+            Task<bool> refill = HotReloadEditorStartup.RefillCompilationListUnlessHotReloadIsDisabled(
+                name => name == UnityCliLoopConstants.SETTINGS_TOOL_NAME_PAUSE_POINT,
+                () =>
+                {
+                    startCount++;
+                    return Task.FromResult(true);
+                });
+
+            Assert.That(startCount, Is.EqualTo(0), "rebuilds started");
+            Assert.That(refill.Status, Is.EqualTo(TaskStatus.RanToCompletion), "refill status");
+            Assert.That(refill.Result, Is.False, "kept");
+            JObject logged = HotReloadWarmUpTestDoubles.ReadSingleVibeContext(HotReloadConstants.VibeLogCompilationListReconstructed);
+            Assert.That((string)logged["reason"], Is.EqualTo(HotReloadConstants.CompilationListReasonToolDisabled));
+        }
+
+        /// <summary>
+        /// What: with the hot-reload tool enabled the rebuild is started once.
+        /// </summary>
+        [Test]
+        public void ReconstructAndFill_WhenHotReloadIsEnabled_StartsOnce()
+        {
+            int startCount = 0;
+
+            HotReloadEditorStartup.RefillCompilationListUnlessHotReloadIsDisabled(
+                name => name == UnityCliLoopConstants.TOOL_NAME_HOT_RELOAD,
+                () =>
+                {
+                    startCount++;
+                    return Task.FromResult(true);
+                });
+
+            Assert.That(startCount, Is.EqualTo(1), "rebuilds started");
         }
 
         private static bool AllToolsEnabled(string toolName) => true;
