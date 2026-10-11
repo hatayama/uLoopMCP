@@ -163,8 +163,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             // Packages/<name> path. Why the Package Manager is asked rather than the package roots a
             // run captures: those live in the main hot-reload assembly, which this one cannot see, and
             // every caller already runs on the Unity main thread the Package Manager requires: a run's
-            // group step, the pause-point port, which the pause-point tools and a run's patch step call,
-            // and the snapshot capture after a domain reload.
+            // group step, and the pause-point port, which the pause-point tools and a run's patch step
+            // call. The snapshot capture names the source from package roots it was handed instead and
+            // calls the second stage directly, so that it asks the Package Manager nothing.
             // Why the root that compiled the assembly rather than the snapshot owner's: the PDB spells a
             // source inside the compiling project as a path relative to that project's root (behind a
             // leading "./"), which the lookup matches as the end of the url. A Multiplayer Play Mode
@@ -174,6 +175,32 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             // document ends with. For an ordinary project the two roots are the same.
             string compiledProjectRoot = CompiledAssemblyLayout.Resolve(projectRoot).MainProjectRoot;
             string pdbLookupPath = ScriptPackageRoots.ToPhysicalPath(compiledProjectRoot, slashNormalizedRelativePath);
+            return CompareWithCompiledDocumentAtLookupPath(
+                pdbLookupPath,
+                targetDllPath,
+                pdbPath,
+                moduleVersionId,
+                sourceBytes,
+                documentIndex);
+        }
+
+        /// <summary>
+        /// Answers the same as <see cref="CompareWithCompiledDocument"/> for a source already named
+        /// the way the PDB records it. Asks nothing of the Package Manager, so it can run off the
+        /// main thread.
+        /// </summary>
+        internal static HotReloadSnapshotMissReason CompareWithCompiledDocumentAtLookupPath(
+            string pdbLookupPath,
+            string targetDllPath,
+            string pdbPath,
+            string moduleVersionId,
+            byte[] sourceBytes,
+            HotReloadPdbDocumentIndex documentIndex)
+        {
+            Debug.Assert(!string.IsNullOrEmpty(pdbLookupPath), "pdbLookupPath must not be null or empty.");
+            Debug.Assert(sourceBytes != null, "sourceBytes must not be null.");
+            Debug.Assert(documentIndex != null, "documentIndex must not be null.");
+
             if (!documentIndex.TryFindDocument(
                     targetDllPath,
                     pdbPath,

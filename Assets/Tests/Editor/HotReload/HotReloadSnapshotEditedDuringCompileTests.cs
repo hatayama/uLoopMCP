@@ -127,7 +127,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 dllPath,
                 Path.ChangeExtension(dllPath, ".pdb"),
                 HotReloadAssemblyMvid.Read(dllPath),
-                new HotReloadPdbDocumentIndex(Path.Combine(_tempRoot, "PdbDocuments")));
+                new HotReloadPdbDocumentIndex(Path.Combine(_tempRoot, "PdbDocuments")),
+                HotReloadSnapshotPackageRoots.ReadCurrent(),
+                HotReloadSnapshotCaptureInputs.CurrentPathComparison());
 
             HotReloadSourceSnapshotCopier.CaptureAtomically(
                 _tempRoot,

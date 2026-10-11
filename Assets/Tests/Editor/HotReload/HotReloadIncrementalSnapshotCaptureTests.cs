@@ -535,10 +535,21 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 Array.Empty<UnityCompilationAssembly>(),
                 Array.Empty<string>(),
                 AssemblyFlags.EditorAssembly);
-            return HotReloadSourceSnapshotter.CaptureAssemblies(
+            HotReloadSnapshotCaptureInputs inputs = new HotReloadSnapshotCaptureInputs(
                 _root,
-                new[] { assembly },
                 HotReloadCompileStart.Unknown,
+                Array.Empty<HotReloadSnapshotPackageRoot>(),
+                StringComparison.Ordinal,
+                new[]
+                {
+                    HotReloadSnapshotCaptureInputs.ToCaptureAssembly(
+                        assembly,
+                        Array.Empty<HotReloadSnapshotPackageRoot>(),
+                        StringComparison.Ordinal)
+                },
+                0);
+            return HotReloadSourceSnapshotter.CaptureAssemblies(
+                inputs,
                 new HotReloadPdbDocumentIndex(Path.Combine(_root, "PdbDocuments")));
         }
 
@@ -550,7 +561,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 dllPath,
                 pdbPath,
                 HotReloadAssemblyMvid.Read(dllPath),
-                new HotReloadPdbDocumentIndex(Path.Combine(_root, "PdbDocuments")));
+                new HotReloadPdbDocumentIndex(Path.Combine(_root, "PdbDocuments")),
+                HotReloadSnapshotPackageRoots.ReadCurrent(),
+                HotReloadSnapshotCaptureInputs.CurrentPathComparison());
         }
 
         // A check whose suspect window never opens, so no copy is checked against a PDB.
@@ -561,7 +574,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 "unused.dll",
                 "unused.pdb",
                 "unused",
-                new HotReloadPdbDocumentIndex(Path.Combine(_root, "PdbDocuments")));
+                new HotReloadPdbDocumentIndex(Path.Combine(_root, "PdbDocuments")),
+                Array.Empty<HotReloadSnapshotPackageRoot>(),
+                StringComparison.Ordinal);
         }
 
         // Copies this test assembly's own DLL and PDB, so the fixture has a real image for Cecil to read.

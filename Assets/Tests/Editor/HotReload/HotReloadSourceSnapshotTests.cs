@@ -180,7 +180,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         [Test]
         public void LoadVerifiedSnapshotSource_PackageSourceGivenByItsAssetPath_ReturnsTheVerifiedSource()
         {
-            HotReloadSourceSnapshotter.CaptureAfterDomainReload();
+            HotReloadSourceSnapshotter.CaptureAfterDomainReload(HotReloadSnapshotCaptureInputs.ReadOnMainThread());
             string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
             string dllPath = Path.Combine(
                 projectRoot,
@@ -203,7 +203,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         {
             VibeLogger.ClearMemoryLogs();
 
-            HotReloadSourceSnapshotter.CaptureAfterDomainReload();
+            HotReloadSourceSnapshotter.CaptureAfterDomainReload(HotReloadSnapshotCaptureInputs.ReadOnMainThread());
 
             JObject context = HotReloadWarmUpTestDoubles.ReadSingleVibeContext(HotReloadConstants.VibeLogSourceSnapshotBreakdown);
             string[] fields =
@@ -509,7 +509,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 "unused.dll",
                 "unused.pdb",
                 "unused",
-                new HotReloadPdbDocumentIndex(Path.Combine(root, "PdbDocuments")));
+                new HotReloadPdbDocumentIndex(Path.Combine(root, "PdbDocuments")),
+                Array.Empty<HotReloadSnapshotPackageRoot>(),
+                StringComparison.Ordinal);
         }
 
         // Copies the fixture's real snapshot under a temporary root with its first byte flipped.

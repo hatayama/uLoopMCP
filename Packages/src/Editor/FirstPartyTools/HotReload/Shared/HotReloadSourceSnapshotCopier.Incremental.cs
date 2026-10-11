@@ -15,7 +15,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             string projectRoot,
             string assemblySnapshotDirectory,
             string previousSnapshotDirectory,
-            string[] sourceFiles,
+            IReadOnlyList<string> sourceFiles,
             string assemblyName,
             HotReloadSnapshotSourceCheck check,
             HotReloadSnapshotCaptureStats stats)
@@ -46,7 +46,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
             HashSet<string> listedNames = new HashSet<string>(StringComparer.Ordinal);
             SourceCopyTally tally = new SourceCopyTally();
-            List<string> manifestLines = new List<string>(sourceFiles.Length);
+            List<string> manifestLines = new List<string>(sourceFiles.Count);
             foreach (string projectRelativeSourcePath in sourceFiles)
             {
                 string normalizedRelativePath = projectRelativeSourcePath.Replace('\\', '/');
