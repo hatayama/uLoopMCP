@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 
+using io.github.hatayama.UnityCliLoop.ToolContracts;
+
 using UnityEngine;
 
 using UnityCompilationAssembly = UnityEditor.Compilation.Assembly;
@@ -43,8 +45,14 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 return _assemblies;
             }
 
+            System.Diagnostics.Stopwatch fetchWatch = System.Diagnostics.Stopwatch.StartNew();
             UnityCompilationAssembly[] fetched = _fetch();
+            fetchWatch.Stop();
             Debug.Assert(fetched != null, "fetch must not return null.");
+            VibeLogger.LogInfo(
+                HotReloadConstants.VibeLogCompilationAssembliesFetched,
+                "Hot reload asked Unity for the compilation assemblies.",
+                new { fetchMs = fetchWatch.ElapsedMilliseconds, assemblyCount = fetched.Length });
 
             // Why not memoize an empty result: GetAssemblies() answers nothing while a compile is in
             // flight, and keeping that would hide every assembly for the rest of the domain's life.

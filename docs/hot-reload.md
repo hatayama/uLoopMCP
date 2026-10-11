@@ -89,7 +89,10 @@ the next reader starts it again (`docs/adr/0014-capture-the-hot-reload-source-sn
 When both the hot-reload and pause-point tools are disabled in the tool settings, the capture
 after a domain reload is skipped; the first hot reload run or pause point after either tool is
 enabled captures it, and any source written since the compile started is then checked against
-the PDB),
+the PDB. The capture lists the assemblies from the compiled dlls that have a PDB beside them and
+reads an assembly's sources from its PDB only when its dll changed; a read-only package's
+assembly gets a `<assemblyName>.immutable` marker beside the snapshots instead, which skips its
+PDB until the dll changes),
 `Library/UloopHotReload/PdbDocuments/fmt1/<assemblyName>.txt` (the documents the PDB's sequence
 points refer to, stamped with the dll's and the PDB's length and write time and the MVID, so the
 first run after a domain reload does not walk the PDB again while they still match), and

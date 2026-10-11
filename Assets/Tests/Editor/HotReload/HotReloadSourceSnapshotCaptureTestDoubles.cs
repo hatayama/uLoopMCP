@@ -31,9 +31,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 "project-root",
                 HotReloadCompileStart.Unknown,
                 Array.Empty<HotReloadSnapshotPackageRoot>(),
-                StringComparison.Ordinal,
-                Array.Empty<HotReloadCaptureAssembly>(),
-                0);
+                StringComparison.Ordinal);
         }
 
         // Why the exception goes into the task: Task.Run does the same, and the gate must see a

@@ -681,6 +681,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         public const string VibeLogPublicizedCopyWritten = "hot_reload_publicized_copy_written";
         public const string VibeLogSourceSnapshotChecked = "hot_reload_source_snapshot_checked";
         public const string VibeLogSourceSnapshotBreakdown = "hot_reload_source_snapshot_breakdown";
+        public const string VibeLogCompilationAssembliesFetched = "hot_reload_compilation_assemblies_fetched";
         public const string VibeLogShimCompilerTiming = "hot_reload_shim_compiler_timing";
         public const string VibeLogShimCompileFailed = "hot_reload_shim_compile_failed";
         public const string VibeLogIsolationRetry = "hot_reload_isolation_retry";

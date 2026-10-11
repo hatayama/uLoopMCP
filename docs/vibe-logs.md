@@ -96,13 +96,13 @@ command ran against:
   handing the capture over). How it ended follows as one of these, with the same `trigger`:
   - `hot_reload_source_snapshot_captured`, once per domain, with `captureMs` (the time on the
     pool thread). `trigger` is `domain_load` normally; `first_update_tick`, `apply` or
-    `pause_point` when the capture at domain load failed, found no compiled assembly, or was
-    cancelled, or when the captures at startup were skipped and a hot reload run or a pause point
-    is the first to read the snapshot.
+    `pause_point` when the capture at domain load failed, found no compiled dll with a PDB,
+    or was cancelled, or when the captures at startup were skipped and a hot reload run or a
+    pause point is the first to read the snapshot.
   - `hot_reload_source_snapshot_capture_failed` (a warning) with `error` (the exception type) and
     `message`.
-  - `hot_reload_source_snapshot_capture_empty` when no compiled assembly was found, which is
-    normal while Unity compiles.
+  - `hot_reload_source_snapshot_capture_empty` when no compiled dll with a PDB beside it was
+    found.
   - `hot_reload_source_snapshot_capture_cancelled` when a domain reload or a compile start
     stopped it.
   After any of the last three, the next reader or the first update tick starts a new capture.
@@ -115,17 +115,18 @@ command ran against:
   `reason` `tools_disabled` instead, and the first hot reload run or pause point after either
   tool is enabled captures it.
   `hot_reload_source_snapshot_breakdown` appears once each time the capture runs to the end,
-  just before `hot_reload_source_snapshot_captured`. It also appears when Unity listed no
-  compilation assembly, in which case `hot_reload_source_snapshot_capture_empty` follows instead,
-  and it does not appear when the capture threw or was cancelled. It says where the capture spent
-  its time:
-  - `getAssembliesMs`: listing the compilation assemblies from Unity, which happens while the
-    capture's inputs are read on the main thread, before any copying starts.
-  - `packageLookupMs`: reading whether each assembly's sources are immutable. The inputs decide
-    that from the package roots they read from Package Manager once, so this is close to 0; it
-    no longer asks Package Manager for each assembly.
-  - `stampMs`: reading and writing the stamps beside the snapshots, and reading the previous
-    build's manifest.
+  just before `hot_reload_source_snapshot_captured`. It also appears when no compiled dll with a
+  PDB beside it was found, in which case `hot_reload_source_snapshot_capture_empty` follows
+  instead, and it does not appear when the capture threw or was cancelled. The capture lists the
+  compiled assemblies from the dlls and PDBs in the compiled assemblies folder and reads an
+  assembly's sources from its PDB, not from Unity's compilation assembly list. It says where the capture spent its time:
+  - `getAssembliesMs`: listing the compiled dlls that have a PDB beside them.
+  - `pdbSourcesMs`: reading the sources of each assembly whose dll changed from its PDB.
+  - `packageLookupMs`: reading whether each assembly's sources are immutable, which the PDB's
+    sources and the package roots read once from Package Manager decide, so this is close to 0;
+    it no longer asks Package Manager for each assembly.
+  - `stampMs`: reading and writing the stamps and the read-only markers beside the snapshots, and
+    reading the previous build's manifest.
   - `mvidMs`: reading the MVID of each compiled dll whose stamp did not match.
   - `statMs`: reading each source's length and write time before and after it is copied, and
     checking whether a source and its previous copy are unchanged.
@@ -136,17 +137,25 @@ command ran against:
     previous build's directory there, writing the manifest, and moving the directory into place.
   - `cleanupMs`: deleting the snapshot directories of earlier builds, and the copies of sources
     the assembly no longer lists.
-  - `totalMs`: listing the assemblies plus the whole per-assembly loop. Reading the compile start
-    and the package roots for the inputs is not counted here.
-  - `assemblies`: the compilation assemblies listed.
-  - `assembliesImmutable`: those skipped because their sources belong to an immutable package.
+  - `totalMs`: the whole capture. Reading the compile start and the package roots before it is
+    not counted here.
+  - `assemblies`: the compiled assemblies listed.
+  - `assembliesImmutable`: those skipped because their sources belong to an immutable package:
+    either their read-only marker matched the compiled dll, or their PDB showed it and the marker
+    was written.
   - `assembliesUnchanged`: those skipped because their stamp matched the compiled dll.
   - `assembliesCaptured`: those whose sources were copied into a new snapshot directory.
+  - `assembliesSkippedPdbMismatch`: those skipped because their PDB belonged to another build of
+    the dll, as while a compile replaces them; no stamp is written, so the next domain captures them.
   - `filesReused`: the sources whose previous copy was kept without reading them.
   - `filesCopied` and `bytesCopied`: the sources copied and their total size.
   - `filesChecked`: the sources checked against the PDB.
   The phases add up to `totalMs` except for the loop overhead; `captureMs` in the captured entry
   also includes reading the compile start and the package roots, and writing this breakdown entry.
+  `hot_reload_compilation_assemblies_fetched` appears each time hot reload asks Unity for the
+  compilation assembly list, with `fetchMs` and `assemblyCount`. The list is kept for the rest of
+  the domain once it is not empty, so this normally appears once per domain, from whichever of the
+  warm-up or the first hot reload run needs the list first.
   After a domain reload, the warm-up writes one `hot_reload_warm_up_complete` with the target
   assemblies, each item's `outcome` (`done`, `cancelled` or `failed`) and time, and `cancelledBy`
   (`run`, `beforeAssemblyReload`, `compilationStarted`, or null), or one

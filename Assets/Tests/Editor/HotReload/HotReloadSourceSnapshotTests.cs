@@ -209,9 +209,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             JObject context = HotReloadWarmUpTestDoubles.ReadSingleVibeContext(HotReloadConstants.VibeLogSourceSnapshotBreakdown);
             string[] fields =
             {
-                "getAssembliesMs", "packageLookupMs", "stampMs", "mvidMs", "statMs", "readWriteMs",
+                "getAssembliesMs", "pdbSourcesMs", "packageLookupMs", "stampMs", "mvidMs", "statMs", "readWriteMs",
                 "pdbCheckMs", "publishMs", "cleanupMs", "totalMs", "assemblies", "assembliesImmutable",
-                "assembliesUnchanged", "assembliesCaptured", "filesCopied", "bytesCopied", "filesChecked"
+                "assembliesUnchanged", "assembliesCaptured", "assembliesSkippedPdbMismatch", "filesCopied", "bytesCopied", "filesChecked"
             };
             foreach (string field in fields)
             {

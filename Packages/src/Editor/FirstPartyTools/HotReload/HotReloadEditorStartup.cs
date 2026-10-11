@@ -16,6 +16,11 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         {
             Debug.Assert(isToolEnabled != null, "isToolEnabled must not be null.");
 
+            // Why first: the snapshot capture no longer touches the compilation assembly list, so
+            // the list's static constructor, which subscribes to compilationStarted, would otherwise
+            // run for whichever caller touches the list first, which need not be on the main thread.
+            HotReloadCompilationAssemblies.EnsureInitialized();
+
             // Why not EditorApplication.delayCall: a cold-start session that hits Unity's native
             // "Scripts have compiler errors" dialog never flushes delayCall again for the rest of
             // that process's lifetime, even for later registrations — while
