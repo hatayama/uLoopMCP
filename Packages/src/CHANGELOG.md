@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.15.1](https://github.com/hatayama/unity-cli-loop/compare/v3.15.0...v3.15.1) (2026-10-11)
+
+
+### Performance Improvements
+
+* Hot reload's source snapshot capture after a compile rewrites only the changed sources, and is skipped when hot reload and pause point are both disabled ([#3278](https://github.com/hatayama/unity-cli-loop/issues/3278)) ([64c54e0](https://github.com/hatayama/unity-cli-loop/commit/64c54e0af4dd2f1cd221ebefc0bde29ea5ee023f))
+
 ## [3.15.0](https://github.com/hatayama/unity-cli-loop/compare/v3.14.0...v3.15.0) (2026-10-11)
 
 
