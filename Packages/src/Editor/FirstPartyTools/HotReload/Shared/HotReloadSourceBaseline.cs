@@ -59,30 +59,56 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         /// second lookup reuses the document list the first one kept, so it does not read the PDB
         /// again.
         /// </remarks>
+        /// <param name="compiledByTheLastBuild">
+        /// Whether Unity's compilation assemblies list the file, so the compiled assembly was built
+        /// from it. False for a file added since that compile.
+        /// </param>
         internal static HotReloadSnapshotMissReason DescribeSnapshotMiss(
             string projectRelativeSourcePath,
-            string targetDllPath)
+            string targetDllPath,
+            bool compiledByTheLastBuild)
         {
             string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
             return DescribeSnapshotMissAt(
                 projectRoot,
                 projectRelativeSourcePath,
                 targetDllPath,
-                HotReloadPdbDocumentIndex.Shared);
+                HotReloadPdbDocumentIndex.Shared,
+                compiledByTheLastBuild);
         }
 
         internal static HotReloadSnapshotMissReason DescribeSnapshotMissAt(
             string projectRoot,
             string projectRelativeSourcePath,
             string targetDllPath,
-            HotReloadPdbDocumentIndex documentIndex)
+            HotReloadPdbDocumentIndex documentIndex,
+            bool compiledByTheLastBuild)
         {
-            return TryLoadVerifiedSnapshotSource(
+            HotReloadSnapshotMissReason reason = TryLoadVerifiedSnapshotSource(
                 projectRoot,
                 projectRelativeSourcePath,
                 targetDllPath,
                 documentIndex,
                 out string _);
+            // Why a compiled file without a snapshot still asks the PDB: an IL post-processor that
+            // rewrites the PDB drops the documents no sequence point refers to, so the capture, which
+            // names the sources from the PDB, writes no snapshot for a file without a method body.
+            // Such a file must read as one no compile gives a baseline, as it does where the snapshot
+            // was written. Why not a file added since the compile: the PDB cannot list it either,
+            // yet the next compile does give it a baseline.
+            if (reason != HotReloadSnapshotMissReason.NoSnapshotFile || !compiledByTheLastBuild)
+            {
+                return reason;
+            }
+
+            return documentIndex.TryFindDocument(
+                    targetDllPath,
+                    Path.ChangeExtension(targetDllPath, ".pdb"),
+                    HotReloadAssemblyMvid.Read(targetDllPath),
+                    ToCompiledLookupPath(projectRoot, projectRelativeSourcePath.Replace('\\', '/')),
+                    out HotReloadPdbDocument _)
+                ? HotReloadSnapshotMissReason.NoSnapshotFile
+                : HotReloadSnapshotMissReason.NoDocumentInPdb;
         }
 
         private static HotReloadSnapshotMissReason TryLoadVerifiedSnapshotSource(
@@ -266,15 +292,20 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             // Library, so a package folder of the main project lies outside the player's root, and
             // relativizing against the player's root would hand the lookup an absolute path that no
             // document ends with. For an ordinary project the two roots are the same.
-            string compiledProjectRoot = CompiledAssemblyLayout.Resolve(projectRoot).MainProjectRoot;
-            string pdbLookupPath = ScriptPackageRoots.ToPhysicalPath(compiledProjectRoot, slashNormalizedRelativePath);
             return CompareWithCompiledDocumentAtLookupPath(
-                pdbLookupPath,
+                ToCompiledLookupPath(projectRoot, slashNormalizedRelativePath),
                 targetDllPath,
                 pdbPath,
                 moduleVersionId,
                 sourceBytes,
                 documentIndex);
+        }
+
+        // The path the compiled assembly's PDB records for the source; see CompareWithCompiledDocument.
+        private static string ToCompiledLookupPath(string projectRoot, string slashNormalizedRelativePath)
+        {
+            string compiledProjectRoot = CompiledAssemblyLayout.Resolve(projectRoot).MainProjectRoot;
+            return ScriptPackageRoots.ToPhysicalPath(compiledProjectRoot, slashNormalizedRelativePath);
         }
 
         /// <summary>

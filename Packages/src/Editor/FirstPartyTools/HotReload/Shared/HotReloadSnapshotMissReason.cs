@@ -16,8 +16,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         NoSnapshotFile,
 
         /// <summary>
-        /// The PDB has no document for the file because none of its code compiled to a method
-        /// body, so no compile can produce a baseline for it.
+        /// No sequence point of the PDB refers to the file because none of its code compiled to a
+        /// method body, so no compile can produce a baseline for it. Reported for a file the last
+        /// compile built whether or not a snapshot of it was written.
         /// </summary>
         NoDocumentInPdb,
 

@@ -122,8 +122,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         /// <summary>
         /// Why this file has no verified snapshot. A file declaring a type hot reload introduced
         /// gets its own kind: for it a missing baseline is the normal state rather than something
-        /// a compile has yet to establish. So does a file with no compiled method body, which the
-        /// PDB never lists and so no compile can give a baseline.
+        /// a compile has yet to establish. So does a file with no compiled method body, which no
+        /// sequence point of the PDB refers to and so no compile can give a baseline.
         /// </summary>
         private static HotReloadMissingBaselineKind ChooseMissingBaselineKind(
             HotReloadSnapshotMissReason snapshotMissReason,
@@ -170,7 +170,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             }
 
             // Why no other reason comes here: a file with a verified snapshot gets no warning, and
-            // one the PDB lists no document for gets the no-method-body kind.
+            // one no sequence point of the PDB refers to gets the no-method-body kind.
             Debug.Assert(
                 snapshotMissReason == HotReloadSnapshotMissReason.NoSnapshotFile,
                 "Only NoSnapshotFile, HashMismatch, or NoCompiledAssembly may reach the no-verified-snapshot wording.");

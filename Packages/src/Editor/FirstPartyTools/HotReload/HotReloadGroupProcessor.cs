@@ -635,7 +635,10 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                     file.ProjectRelativePath,
                     file.TargetDllPath);
                 file.SnapshotMissReason = file.SnapshotSource == null
-                    ? HotReloadSourceBaseline.DescribeSnapshotMiss(file.ProjectRelativePath, file.TargetDllPath)
+                    ? HotReloadSourceBaseline.DescribeSnapshotMiss(
+                        file.ProjectRelativePath,
+                        file.TargetDllPath,
+                        file.NewSourceMembershipEvidence == null)
                     : HotReloadSnapshotMissReason.None;
             }
         }

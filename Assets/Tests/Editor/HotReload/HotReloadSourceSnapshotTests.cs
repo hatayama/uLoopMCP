@@ -188,7 +188,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 PausePointsRuntimeAssemblyName + HotReloadConstants.CompiledAssemblyExtension);
 
             string loaded = HotReloadSourceBaseline.LoadVerifiedSnapshotSource(PackageSourceAssetPath, dllPath);
-            HotReloadSnapshotMissReason reason = HotReloadSourceBaseline.DescribeSnapshotMiss(PackageSourceAssetPath, dllPath);
+            HotReloadSnapshotMissReason reason = HotReloadSourceBaseline.DescribeSnapshotMiss(PackageSourceAssetPath, dllPath, true);
 
             Assert.That(reason, Is.EqualTo(HotReloadSnapshotMissReason.None));
             Assert.That(loaded, Is.EqualTo(File.ReadAllText(Path.Combine(projectRoot, PackageSourcePhysicalPath))));
@@ -262,7 +262,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                     playerRoot,
                     PackageSourceAssetPath,
                     dllPath,
-                    documentIndex);
+                    documentIndex,
+                    true);
                 string loaded = HotReloadSourceBaseline.LoadVerifiedSnapshotSourceAt(
                     playerRoot,
                     PackageSourceAssetPath,
@@ -358,7 +359,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 projectRoot,
                 BodylessFixtureProjectRelativePath,
                 TestAssemblyDllPath(projectRoot),
-                HotReloadPdbDocumentIndex.Shared);
+                HotReloadPdbDocumentIndex.Shared,
+                true);
 
             Assert.That(reason, Is.EqualTo(HotReloadSnapshotMissReason.NoDocumentInPdb));
         }
@@ -376,9 +378,90 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 emptyRoot,
                 FixtureProjectRelativePath,
                 TestAssemblyDllPath(projectRoot),
-                HotReloadPdbDocumentIndex.Shared);
+                HotReloadPdbDocumentIndex.Shared,
+                true);
 
             Assert.That(reason, Is.EqualTo(HotReloadSnapshotMissReason.NoSnapshotFile));
+        }
+
+        /// <summary>
+        /// What: a compiled file without method bodies whose snapshot was never written, as when an
+        /// IL post-processor dropped it from the PDB the capture reads, still reports that no compile
+        /// gives it a baseline rather than asking for a compile.
+        /// </summary>
+        [Test]
+        public void DescribeSnapshotMiss_CompiledFileWithoutMethodBodiesOrSnapshot_ReportsNoDocumentInPdb()
+        {
+            string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+            string emptyRoot = Path.Combine(Path.GetTempPath(), "uloop-hot-reload-snapshot-empty-" + Guid.NewGuid().ToString("N"));
+
+            HotReloadSnapshotMissReason reason = HotReloadSourceBaseline.DescribeSnapshotMissAt(
+                emptyRoot,
+                BodylessFixtureProjectRelativePath,
+                TestAssemblyDllPath(projectRoot),
+                HotReloadPdbDocumentIndex.Shared,
+                true);
+
+            Assert.That(reason, Is.EqualTo(HotReloadSnapshotMissReason.NoDocumentInPdb));
+        }
+
+        /// <summary>
+        /// What: a file added since the compile has no snapshot and no PDB document, and reports the
+        /// missing snapshot a compile will write, whether or not it has method bodies.
+        /// </summary>
+        [TestCase(BodylessFixtureProjectRelativePath)]
+        [TestCase("Assets/Tests/Editor/HotReload/HotReloadAddedSinceTheCompile.cs")]
+        public void DescribeSnapshotMiss_FileAddedSinceTheCompile_ReportsNoSnapshotFile(string projectRelativePath)
+        {
+            string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+            string emptyRoot = Path.Combine(Path.GetTempPath(), "uloop-hot-reload-snapshot-empty-" + Guid.NewGuid().ToString("N"));
+
+            HotReloadSnapshotMissReason reason = HotReloadSourceBaseline.DescribeSnapshotMissAt(
+                emptyRoot,
+                projectRelativePath,
+                TestAssemblyDllPath(projectRoot),
+                HotReloadPdbDocumentIndex.Shared,
+                false);
+
+            Assert.That(reason, Is.EqualTo(HotReloadSnapshotMissReason.NoSnapshotFile));
+        }
+
+        /// <summary>
+        /// What: a PDB of another build beside the dll is rejected the same way for a compiled file
+        /// without a snapshot as for one with a snapshot.
+        /// </summary>
+        [TestCase(true)]
+        [TestCase(false)]
+        public void DescribeSnapshotMiss_PdbOfAnotherBuild_ThrowsWithOrWithoutASnapshot(bool withSnapshot)
+        {
+            string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+            string realDllPath = TestAssemblyDllPath(projectRoot);
+            string fakeRoot = Path.Combine(Path.GetTempPath(), "uloop-hot-reload-snapshot-other-build-" + Guid.NewGuid().ToString("N"));
+            string dllPath = TestAssemblyDllPath(fakeRoot);
+            Directory.CreateDirectory(Path.GetDirectoryName(dllPath));
+            File.Copy(realDllPath, dllPath);
+            File.Copy(
+                Path.ChangeExtension(typeof(HotReloadSourceBaseline).Assembly.Location, ".pdb"),
+                Path.ChangeExtension(dllPath, ".pdb"));
+            if (withSnapshot)
+            {
+                CopyRealSnapshot(projectRoot, fakeRoot, realDllPath, FixtureProjectRelativePath);
+            }
+
+            HotReloadPdbDocumentIndex index = new HotReloadPdbDocumentIndex(Path.Combine(fakeRoot, "PdbDocuments"));
+            try
+            {
+                Assert.Throws<InvalidOperationException>(() => HotReloadSourceBaseline.DescribeSnapshotMissAt(
+                    fakeRoot,
+                    FixtureProjectRelativePath,
+                    dllPath,
+                    index,
+                    true));
+            }
+            finally
+            {
+                Directory.Delete(fakeRoot, recursive: true);
+            }
         }
 
         /// <summary>
@@ -397,7 +480,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                     fakeRoot,
                     FixtureProjectRelativePath,
                     dllPath,
-                    HotReloadPdbDocumentIndex.Shared);
+                    HotReloadPdbDocumentIndex.Shared,
+                    true);
                 Assert.That(reason, Is.EqualTo(HotReloadSnapshotMissReason.HashMismatch));
             }
             finally
@@ -418,7 +502,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 projectRoot,
                 FixtureProjectRelativePath,
                 TestAssemblyDllPath(projectRoot),
-                HotReloadPdbDocumentIndex.Shared);
+                HotReloadPdbDocumentIndex.Shared,
+                true);
 
             Assert.That(reason, Is.EqualTo(HotReloadSnapshotMissReason.None));
         }
@@ -478,7 +563,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                     projectRoot,
                     BodylessFixtureProjectRelativePath,
                     TestAssemblyDllPath(projectRoot),
-                    index);
+                    index,
+                    true);
 
                 Assert.That(loaded, Is.Null);
                 Assert.That(reason, Is.EqualTo(HotReloadSnapshotMissReason.NoDocumentInPdb));
@@ -512,6 +598,22 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 new HotReloadPdbDocumentIndex(Path.Combine(root, "PdbDocuments")),
                 Array.Empty<HotReloadSnapshotPackageRoot>(),
                 StringComparison.Ordinal);
+        }
+
+        // Copies the real snapshot of the file, unchanged, under another root for the same assembly build.
+        private static void CopyRealSnapshot(string projectRoot, string targetRoot, string dllPath, string projectRelativePath)
+        {
+            string mvid = HotReloadAssemblyMvid.Read(dllPath);
+            string realSnapshotPath = HotReloadSourceSnapshotLayout.SourcePath(
+                HotReloadSourceSnapshotLayout.AssemblyDirectory(projectRoot, TestAssemblyName, mvid),
+                projectRelativePath);
+            Assert.That(File.Exists(realSnapshotPath), Is.True, "Precondition: the real snapshot must exist.");
+
+            string targetPath = HotReloadSourceSnapshotLayout.SourcePath(
+                HotReloadSourceSnapshotLayout.AssemblyDirectory(targetRoot, TestAssemblyName, mvid),
+                projectRelativePath);
+            Directory.CreateDirectory(Path.GetDirectoryName(targetPath));
+            File.Copy(realSnapshotPath, targetPath);
         }
 
         // Copies the fixture's real snapshot under a temporary root with its first byte flipped.
