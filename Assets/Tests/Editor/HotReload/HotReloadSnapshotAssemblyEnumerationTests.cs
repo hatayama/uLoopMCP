@@ -204,6 +204,29 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         }
 
         /// <summary>
+        /// Verifies an assembly the inputs classified as an immutable package's is counted and skipped
+        /// before anything is written, though its DLL and PDB are there: no snapshot directory and no stamp.
+        /// </summary>
+        [Test]
+        public void CaptureAssemblies_ImmutablePackageAssembly_CountsItAndWritesNothing()
+        {
+            PlantCompiledAssembly("Fixture");
+            HotReloadSnapshotCaptureInputs inputs = new HotReloadSnapshotCaptureInputs(
+                _projectRoot,
+                HotReloadCompileStart.Unknown,
+                Array.Empty<HotReloadSnapshotPackageRoot>(),
+                StringComparison.Ordinal,
+                new[] { new HotReloadCaptureAssembly("Fixture", new[] { SourceRelativePath }, true) },
+                0);
+
+            HotReloadSnapshotCaptureStats stats = HotReloadSourceSnapshotter.CaptureAssemblies(inputs, CreateDocumentIndex());
+
+            Assert.That(stats.AssembliesImmutable, Is.EqualTo(1), "immutable");
+            Assert.That(Directory.GetDirectories(_snapshotRoot, "Fixture-*"), Is.Empty);
+            Assert.That(File.Exists(StampPath("Fixture")), Is.False);
+        }
+
+        /// <summary>
         /// Verifies an assembly whose compiled DLL or PDB is missing is skipped without a warning: no snapshot directory and no stamp.
         /// </summary>
         [TestCase(".dll")]
