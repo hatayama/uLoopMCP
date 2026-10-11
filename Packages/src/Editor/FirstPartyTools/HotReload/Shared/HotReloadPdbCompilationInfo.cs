@@ -72,12 +72,12 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
         private static byte[] ReadModuleRecord(MetadataReader reader, Guid kind, string pdbPath)
         {
-            foreach (CustomDebugInformationHandle handle in reader.CustomDebugInformation)
+            // Why only the module's rows: both records describe the whole compilation, so Roslyn
+            // attaches them to the module.
+            foreach (CustomDebugInformationHandle handle in reader.GetCustomDebugInformation(EntityHandle.ModuleDefinition))
             {
                 CustomDebugInformation information = reader.GetCustomDebugInformation(handle);
-                // Why the parent is checked: both records describe the whole compilation, so only
-                // the module's copy is the one Roslyn writes for them.
-                if (information.Parent != EntityHandle.ModuleDefinition || reader.GetGuid(information.Kind) != kind)
+                if (reader.GetGuid(information.Kind) != kind)
                 {
                     continue;
                 }

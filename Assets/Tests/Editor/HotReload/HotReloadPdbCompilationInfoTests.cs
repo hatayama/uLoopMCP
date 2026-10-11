@@ -48,13 +48,15 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         /// <summary>
         /// What: for every compiled assembly with a PDB, the PDB's defines equal Unity's defines in
         /// order, and its reference file names equal the file names of Unity's references, counting a
-        /// project assembly's X.ref.dll as X.dll.
+        /// project assembly's X.ref.dll as X.dll. Each precompiled reference also carries the MVID of
+        /// the dll Unity lists for it, which is what the PDB's MVID is later compared with.
         /// </summary>
         [Test]
         public void PdbCompilationInfo_MatchesGetAssembliesForEveryCompiledAssembly()
         {
             CompiledAssemblyLayout layout = CompiledAssemblyLayout.Resolve(ProjectRoot());
             List<string> mismatches = new List<string>();
+            Dictionary<string, string> mvidByReferencePath = new Dictionary<string, string>(StringComparer.Ordinal);
             int checkedAssemblies = 0;
 
             foreach (UnityCompilationAssembly assembly in HotReloadCompilationAssemblies.Current())
@@ -69,6 +71,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 checkedAssemblies++;
                 AddDefineMismatch(assembly, info, mismatches);
                 AddReferenceMismatch(assembly, info, mismatches);
+                AddMvidMismatches(assembly, info, mvidByReferencePath, mismatches);
             }
 
             Assert.That(checkedAssemblies, Is.GreaterThan(0), "No compiled assembly with a PDB was found.");
@@ -110,6 +113,48 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             }
 
             mismatches.Add(assembly.name + ": reference file names differ" + DescribeDifference(fromPdb, fromUnity));
+        }
+
+        private static void AddMvidMismatches(
+            UnityCompilationAssembly assembly,
+            HotReloadPdbCompilationInfo info,
+            Dictionary<string, string> mvidByReferencePath,
+            List<string> mismatches)
+        {
+            Dictionary<string, string> pathByFileName = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (string referencePath in assembly.compiledAssemblyReferences ?? Array.Empty<string>())
+            {
+                pathByFileName[Path.GetFileName(referencePath)] = referencePath;
+            }
+
+            List<string> wrong = new List<string>();
+            foreach (HotReloadPdbReferencedAssembly reference in info.References)
+            {
+                if (!pathByFileName.TryGetValue(reference.FileName, out string referencePath))
+                {
+                    continue;
+                }
+
+                if (!mvidByReferencePath.TryGetValue(referencePath, out string expected))
+                {
+                    expected = HotReloadAssemblyMvid.Read(Path.GetFullPath(Path.Combine(ProjectRoot(), referencePath)));
+                    mvidByReferencePath[referencePath] = expected;
+                }
+
+                if (reference.Mvid.ToString("N") != expected)
+                {
+                    wrong.Add(reference.FileName);
+                }
+            }
+
+            if (wrong.Count == 0)
+            {
+                return;
+            }
+
+            mismatches.Add(
+                assembly.name + ": " + wrong.Count + " reference MVIDs differ from the dll ("
+                + string.Join(", ", wrong.Take(MaxListedDifferences)) + ")");
         }
 
         private static string DescribeDifference(IEnumerable<string> fromPdb, IEnumerable<string> fromUnity)
