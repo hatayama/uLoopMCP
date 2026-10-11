@@ -112,7 +112,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         {
             VibeLogger.ClearMemoryLogs();
             int captureCount = 0;
-            HotReloadSourceSnapshotCapture capture = new HotReloadSourceSnapshotCapture(() =>
+            HotReloadSourceSnapshotCapture capture = HotReloadSourceSnapshotCaptureTestDoubles.CompletingSynchronously(() =>
             {
                 captureCount++;
                 return true;
@@ -213,7 +213,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 TransformWorkerHost.Shared,
                 HotReloadGroupProcessorDependencies.CreateProduction,
                 new HotReloadApplicationPlayModeQuery(),
-                new HotReloadSourceSnapshotCapture(() => true),
+                HotReloadSourceSnapshotCaptureTestDoubles.CompletingSynchronously(() => true),
                 installed.WarmUp,
                 installed.CompiledCallers);
         }
@@ -228,7 +228,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 TransformWorkerHost.Shared,
                 HotReloadGroupProcessorDependencies.CreateProduction,
                 new HotReloadApplicationPlayModeQuery(),
-                new HotReloadSourceSnapshotCapture(() => true),
+                HotReloadSourceSnapshotCaptureTestDoubles.CompletingSynchronously(() => true),
                 HotReloadWarmUpTestDoubles.CreateInert(),
                 HotReloadCompiledCallers.CreateProduction());
         }

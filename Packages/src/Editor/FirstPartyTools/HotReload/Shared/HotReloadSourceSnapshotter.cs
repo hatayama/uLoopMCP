@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 
 using io.github.hatayama.UnityCliLoop.ToolContracts;
 
@@ -27,11 +28,17 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         /// baseline checks every copy against the PDB when it uses one.
         /// Logs how long each phase took, even when the list is empty.
         /// Returns false when the inputs list no compilation assembly (as while Unity compiles).
-        /// Asks Unity nothing beyond what <paramref name="inputs"/> carries.
+        /// Asks Unity nothing beyond what <paramref name="inputs"/> carries, so it may run on a pool
+        /// thread. Throws <see cref="OperationCanceledException"/> once
+        /// <paramref name="cancellationToken"/> is cancelled.
         /// </summary>
-        internal static bool CaptureAfterDomainReload(HotReloadSnapshotCaptureInputs inputs)
+        internal static bool CaptureAfterDomainReload(
+            HotReloadSnapshotCaptureInputs inputs,
+            CancellationToken cancellationToken)
         {
             Debug.Assert(inputs != null, "inputs must not be null.");
+
+            cancellationToken.ThrowIfCancellationRequested();
 
             System.Diagnostics.Stopwatch captureWatch = System.Diagnostics.Stopwatch.StartNew();
             HotReloadSnapshotCaptureStats stats = CaptureAssemblies(inputs, HotReloadPdbDocumentIndex.Shared);

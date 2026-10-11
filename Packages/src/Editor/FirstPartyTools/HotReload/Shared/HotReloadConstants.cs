@@ -694,9 +694,16 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         public const string VibeLogWarmUpSkipped = "hot_reload_warm_up_skipped";
         public const string VibeLogCallerNoteBackfillComplete = "hot_reload_caller_note_backfill_complete";
         public const string VibeLogSourceSnapshotCaptured = "hot_reload_source_snapshot_captured";
+        // The other entries of a source snapshot capture that runs off the main thread: its start,
+        // the ways it can end without capturing, and the compile completion giving up on it.
+        public const string VibeLogSourceSnapshotCaptureStarted = "hot_reload_source_snapshot_capture_started";
+        public const string VibeLogSourceSnapshotCaptureCancelled = "hot_reload_source_snapshot_capture_cancelled";
+        public const string VibeLogSourceSnapshotCaptureFailed = "hot_reload_source_snapshot_capture_failed";
+        public const string VibeLogSourceSnapshotCaptureEmpty = "hot_reload_source_snapshot_capture_empty";
+        public const string VibeLogSourceSnapshotCaptureHoldCapExceeded = "hot_reload_source_snapshot_capture_hold_cap_exceeded";
 
         // What captured the source snapshot of a domain, as named in the trigger field of
-        // hot_reload_source_snapshot_captured.
+        // hot_reload_source_snapshot_captured and the other capture entries.
         public const string SourceSnapshotCaptureTriggerDomainLoad = "domain_load";
         public const string SourceSnapshotCaptureTriggerFirstUpdateTick = "first_update_tick";
         public const string SourceSnapshotCaptureTriggerApply = "apply";

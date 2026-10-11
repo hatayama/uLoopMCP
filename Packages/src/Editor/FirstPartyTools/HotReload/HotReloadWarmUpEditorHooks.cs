@@ -6,9 +6,10 @@ using UnityEditor.Compilation;
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     /// <summary>
-    /// Stops the installed warm-up and the background reads of the compiled-caller analysis when
-    /// the Editor is about to reload the domain or starts a compile: they would read dlls that are
-    /// being rewritten, or work for a domain that is going away.
+    /// Stops the installed warm-up, the background reads of the compiled-caller analysis, and the
+    /// running source snapshot capture when the Editor is about to reload the domain or starts a
+    /// compile: they would read dlls that are being rewritten, or work for a domain that is going
+    /// away.
     /// </summary>
     internal static class HotReloadWarmUpEditorHooks
     {
@@ -35,12 +36,14 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         {
             _ = GetServices().WarmUp.Shutdown(HotReloadConstants.WarmUpShutdownTriggerBeforeAssemblyReload);
             _ = GetServices().CompiledCallers.StopBackgroundReadsAsync(HotReloadConstants.WarmUpShutdownTriggerBeforeAssemblyReload);
+            GetServices().SourceSnapshotCapture.CancelInFlight();
         }
 
         internal static void ShutdownForCompile(object context)
         {
             _ = GetServices().WarmUp.Shutdown(HotReloadConstants.WarmUpShutdownTriggerCompilationStarted);
             _ = GetServices().CompiledCallers.StopBackgroundReadsAsync(HotReloadConstants.WarmUpShutdownTriggerCompilationStarted);
+            GetServices().SourceSnapshotCapture.CancelInFlight();
         }
     }
 }
