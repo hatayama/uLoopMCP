@@ -24,7 +24,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
         internal HotReloadWarmUpItemOutcomeKind Kind { get; }
 
-        /// <summary>The exception's type and message for a failed item; empty otherwise.</summary>
+        /// <summary>
+        /// The exception's type and message for a failed item, the reason for a skipped one; empty otherwise.
+        /// </summary>
         internal string Detail { get; }
 
         internal static HotReloadWarmUpItemOutcome Done(string name, long ms)
@@ -36,6 +38,13 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         internal static HotReloadWarmUpItemOutcome Cancelled(string name, long ms)
         {
             return new HotReloadWarmUpItemOutcome(name, ms, HotReloadWarmUpItemOutcomeKind.Cancelled, string.Empty);
+        }
+
+        /// <summary>An item that was not run because what it needs is unavailable.</summary>
+        internal static HotReloadWarmUpItemOutcome Skipped(string name, string reason)
+        {
+            Debug.Assert(!string.IsNullOrEmpty(reason), "reason must not be null or empty.");
+            return new HotReloadWarmUpItemOutcome(name, 0, HotReloadWarmUpItemOutcomeKind.Skipped, reason);
         }
 
         internal static HotReloadWarmUpItemOutcome Failed(string name, long ms, Exception exception)
@@ -53,6 +62,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
     {
         Done,
         Cancelled,
-        Failed
+        Failed,
+        Skipped
     }
 }

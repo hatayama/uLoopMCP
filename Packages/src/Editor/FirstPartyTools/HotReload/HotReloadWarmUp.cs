@@ -165,6 +165,15 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                         continue;
                     }
 
+                    // Why skip rather than look up: without a kept list the lookup asks Unity on the
+                    // main thread, which is the wait the rebuilt list exists to avoid.
+                    if (item.NeedsCompilationList && !capture.Context.CompilationListKept)
+                    {
+                        outcomes.Add(HotReloadWarmUpItemOutcome.Skipped(
+                            item.Name, HotReloadConstants.WarmUpItemSkipReasonCompilationListUnavailable));
+                        continue;
+                    }
+
                     // Why ConfigureAwait(false): the next item switches to the main thread itself,
                     // and the entry after the last item must not wait for a main thread that a
                     // reload may never give back.
@@ -280,6 +289,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                     return "cancelled";
                 case HotReloadWarmUpItemOutcomeKind.Failed:
                     return "failed";
+                case HotReloadWarmUpItemOutcomeKind.Skipped:
+                    return "skipped";
                 default:
                     throw new ArgumentOutOfRangeException(nameof(kind), kind, null);
             }

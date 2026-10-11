@@ -279,9 +279,64 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             Assert.That(_ran, Is.EqualTo(new[] { "a" }), "items run");
         }
 
+        /// <summary>
+        /// What: without a kept compilation assembly list, the items that look assemblies up in it
+        /// are reported skipped with compilation_list_unavailable and never ask Unity for the
+        /// list, while the other items still run.
+        /// </summary>
+        [Test]
+        public async Task WarmUp_WhenTheListIsUnavailable_SkipsTheItemsThatNeedItWithoutFetching()
+        {
+            CountingCompilationListFetch fetch = new CountingCompilationListFetch();
+            HotReloadCompilationAssemblyCache cache = fetch.CreateEmptyCache();
+            HotReloadWarmUp warmUp = new HotReloadWarmUp(
+                new FixedContextSource(HotReloadWarmUpTestDoubles.CreateReadyCapture(false)),
+                new IHotReloadWarmUpItem[]
+                {
+                    new ListLookupWarmUpItem("needs_list", _ran, cache.FindByName),
+                    new RecordingWarmUpItem("other", _ran)
+                });
+
+            warmUp.Start();
+            await warmUp.Completion;
+
+            Assert.That(_ran, Is.EqualTo(new[] { "other" }), "items run");
+            Assert.That(fetch.Count, Is.EqualTo(0), "asked Unity for the list");
+            Assert.That(
+                HotReloadWarmUpTestDoubles.ReadCompletedOutcomes(),
+                Is.EqualTo(new[] { "needs_list:skipped", "other:done" }));
+            JObject skipped = (JObject)HotReloadWarmUpTestDoubles.ReadSingleVibeContext(HotReloadConstants.VibeLogWarmUpComplete)["items"][0];
+            Assert.That(
+                (string)skipped["detail"],
+                Is.EqualTo(HotReloadConstants.WarmUpItemSkipReasonCompilationListUnavailable));
+        }
+
+        /// <summary>
+        /// What: with a kept compilation assembly list, every item runs, including those that look
+        /// assemblies up in it, and none asks Unity for the list.
+        /// </summary>
+        [Test]
+        public async Task WarmUp_AfterTheListIsFilled_RunsEveryItem()
+        {
+            CountingCompilationListFetch fetch = new CountingCompilationListFetch();
+            HotReloadCompilationAssemblyCache cache = fetch.CreateFilledCache();
+            HotReloadWarmUp warmUp = CreateReady(
+                new ListLookupWarmUpItem("needs_list", _ran, cache.FindByName),
+                new RecordingWarmUpItem("other", _ran));
+
+            warmUp.Start();
+            await warmUp.Completion;
+
+            Assert.That(_ran, Is.EqualTo(new[] { "needs_list", "other" }), "items run");
+            Assert.That(fetch.Count, Is.EqualTo(0), "asked Unity for the list");
+            Assert.That(
+                HotReloadWarmUpTestDoubles.ReadCompletedOutcomes(),
+                Is.EqualTo(new[] { "needs_list:done", "other:done" }));
+        }
+
         private static HotReloadWarmUp CreateReady(params IHotReloadWarmUpItem[] items)
         {
-            return new HotReloadWarmUp(new FixedContextSource(HotReloadWarmUpTestDoubles.CreateReadyCapture()), items);
+            return new HotReloadWarmUp(new FixedContextSource(HotReloadWarmUpTestDoubles.CreateReadyCapture(true)), items);
         }
     }
 }

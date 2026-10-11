@@ -263,6 +263,44 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
 
         private static bool NoToolEnabled(string toolName) => false;
 
+        /// <summary>
+        /// What: the warm-up does not start, so neither chooses its targets nor runs an item, until
+        /// the domain's attempt to rebuild the compilation assembly list has ended; then it starts once.
+        /// </summary>
+        [Test]
+        public async Task StartWarmUpOnceTheCompilationListIsReady_StartsOnlyAfterTheRebuildEnded()
+        {
+            TaskCompletionSource<bool> ready = new TaskCompletionSource<bool>();
+            int startCount = 0;
+
+            Task started = HotReloadEditorStartup.StartWarmUpOnceTheCompilationListIsReady(ready.Task, () => startCount++);
+
+            Assert.That(startCount, Is.EqualTo(0), "started before the rebuild ended");
+            Assert.That(started.IsCompleted, Is.False, "completed before the rebuild ended");
+            ready.SetResult(false);
+            await started;
+            Assert.That(started.Status, Is.EqualTo(TaskStatus.RanToCompletion));
+            Assert.That(startCount, Is.EqualTo(1));
+        }
+
+        /// <summary>
+        /// What: when the rebuild ends on a pool thread, as a cancelled one does, the warm-up still
+        /// starts on the main thread, where it reads Unity state and the kept list.
+        /// </summary>
+        [Test]
+        public async Task StartWarmUpOnceTheCompilationListIsReady_WhenTheRebuildEndsOnAPoolThread_StartsOnTheMainThread()
+        {
+            List<bool> startedOnMainThread = new List<bool>();
+
+            // Why a delay: its completion runs on a timer thread, so a missing switch would start there.
+            Task started = HotReloadEditorStartup.StartWarmUpOnceTheCompilationListIsReady(
+                Task.Delay(1), () => startedOnMainThread.Add(MainThreadSwitcher.IsMainThread));
+            await started;
+
+            Assert.That(started.Status, Is.EqualTo(TaskStatus.RanToCompletion));
+            Assert.That(startedOnMainThread, Is.EqualTo(new[] { true }));
+        }
+
         private static HotReloadSourceSnapshotCapture CountingCapture(Action onCapture)
         {
             return HotReloadSourceSnapshotCaptureTestDoubles.CompletingSynchronously(() =>

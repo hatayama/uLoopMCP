@@ -8,7 +8,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     /// <summary>
     /// Chooses what the warm-up loads: the most recent assemblies in the project's ledger whose
-    /// compiled dll and PDB exist, with the dlls that reference each of them.
+    /// compiled dll and PDB exist, with the dlls that reference each of them. The referencing dlls
+    /// are read only from a kept compilation assembly list; without one each target has none.
     /// </summary>
     internal sealed class HotReloadWarmUpContextSource : IHotReloadWarmUpContextSource
     {
@@ -19,18 +20,22 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         private readonly string _projectRoot;
         private readonly IHotReloadEditorStateSnapshotCapture _editorState;
         private readonly Func<string, IReadOnlyList<string>> _collectReferencingDllPaths;
+        private readonly Func<bool> _isCompilationListKept;
 
         internal HotReloadWarmUpContextSource(
             string projectRoot,
             IHotReloadEditorStateSnapshotCapture editorState,
-            Func<string, IReadOnlyList<string>> collectReferencingDllPaths)
+            Func<string, IReadOnlyList<string>> collectReferencingDllPaths,
+            Func<bool> isCompilationListKept)
         {
             Debug.Assert(!string.IsNullOrEmpty(projectRoot), "projectRoot must not be null or empty.");
             Debug.Assert(editorState != null, "editorState must not be null.");
             Debug.Assert(collectReferencingDllPaths != null, "collectReferencingDllPaths must not be null.");
+            Debug.Assert(isCompilationListKept != null, "isCompilationListKept must not be null.");
             _projectRoot = projectRoot;
             _editorState = editorState;
             _collectReferencingDllPaths = collectReferencingDllPaths;
+            _isCompilationListKept = isCompilationListKept;
         }
 
         /// <summary>
@@ -57,16 +62,18 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 return HotReloadWarmUpCapture.Skipped(HotReloadWarmUpCapture.SkipReasonNoTargets);
             }
 
-            List<HotReloadWarmUpTarget> targets = CollectTargets(names);
+            // Read once: the items decide from the same answer the referencing dlls came from.
+            bool compilationListKept = _isCompilationListKept();
+            List<HotReloadWarmUpTarget> targets = CollectTargets(names, compilationListKept);
             if (targets.Count == 0)
             {
                 return HotReloadWarmUpCapture.Skipped(HotReloadWarmUpCapture.SkipReasonNoCompiledAssembly);
             }
 
-            return HotReloadWarmUpCapture.Ready(new HotReloadWarmUpContext(_projectRoot, targets));
+            return HotReloadWarmUpCapture.Ready(new HotReloadWarmUpContext(_projectRoot, targets, compilationListKept));
         }
 
-        private List<HotReloadWarmUpTarget> CollectTargets(IReadOnlyList<string> names)
+        private List<HotReloadWarmUpTarget> CollectTargets(IReadOnlyList<string> names, bool compilationListKept)
         {
             CompiledAssemblyLayout layout = CompiledAssemblyLayout.Resolve(_projectRoot);
             List<HotReloadWarmUpTarget> targets = new List<HotReloadWarmUpTarget>();
@@ -83,7 +90,12 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                     continue;
                 }
 
-                targets.Add(new HotReloadWarmUpTarget(name, dllPath, pdbPath, _collectReferencingDllPaths(name)));
+                // Why not collected without a kept list: the referencing assemblies come from the
+                // list, and asking Unity for it here would stop the main thread.
+                IReadOnlyList<string> referencingDllPaths = compilationListKept
+                    ? _collectReferencingDllPaths(name)
+                    : Array.Empty<string>();
+                targets.Add(new HotReloadWarmUpTarget(name, dllPath, pdbPath, referencingDllPaths));
             }
 
             return targets;

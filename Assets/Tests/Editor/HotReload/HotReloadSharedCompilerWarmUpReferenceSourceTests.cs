@@ -94,7 +94,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             HotReloadSharedCompilerWarmUpReferenceSource source = new HotReloadSharedCompilerWarmUpReferenceSource(
                 projectRoot,
                 _ => new[] { TestAssemblyName },
-                HotReloadCompilationAssemblies.FindByName);
+                HotReloadCompilationAssemblies.FindByName,
+                Task.CompletedTask,
+                () => true);
 
             IReadOnlyList<string> listed = await source.CollectAsync(CancellationToken.None);
 
@@ -150,7 +152,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                     }
 
                     return HotReloadCompilationAssemblies.FindByName(name);
-                });
+                },
+                Task.CompletedTask,
+                () => true);
 
             IReadOnlyList<string> listed = await source.CollectAsync(CancellationToken.None);
 
@@ -168,7 +172,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             HotReloadSharedCompilerWarmUpReferenceSource source = new HotReloadSharedCompilerWarmUpReferenceSource(
                 ProjectRoot(),
                 _ => new[] { TestAssemblyName },
-                _ => null);
+                _ => null,
+                Task.CompletedTask,
+                () => true);
 
             IReadOnlyList<string> listed = await source.CollectAsync(CancellationToken.None);
 
@@ -189,7 +195,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 {
                     finderCalls++;
                     return HotReloadCompilationAssemblies.FindByName(name);
-                });
+                },
+                Task.CompletedTask,
+                () => true);
 
             IReadOnlyList<string> listed = await source.CollectAsync(CancellationToken.None);
 
@@ -236,11 +244,101 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 {
                     askedOnMainThread.Add(MainThreadSwitcher.IsMainThread);
                     return HotReloadCompilationAssemblies.FindByName(name);
-                });
+                },
+                Task.CompletedTask,
+                () => true);
 
             await Task.Run(() => source.CollectAsync(CancellationToken.None));
 
             Assert.That(askedOnMainThread, Is.EqualTo(new[] { true }));
+        }
+
+        /// <summary>
+        /// Verifies nothing is looked up until the domain's attempt to rebuild the compilation
+        /// assembly list has ended, and the kept list is used after it.
+        /// </summary>
+        [Test]
+        public async Task CollectAsync_WaitsForTheCompilationListRebuildToEnd()
+        {
+            CountingCompilationListFetch fetch = new CountingCompilationListFetch();
+            HotReloadCompilationAssemblyCache cache = fetch.CreateFilledCache();
+            TaskCompletionSource<bool> ready = new TaskCompletionSource<bool>();
+            int keptChecks = 0;
+            int ledgerReads = 0;
+            HotReloadSharedCompilerWarmUpReferenceSource source = new HotReloadSharedCompilerWarmUpReferenceSource(
+                ProjectRoot(),
+                _ =>
+                {
+                    ledgerReads++;
+                    return new[] { TestAssemblyName };
+                },
+                cache.FindByName,
+                ready.Task,
+                () =>
+                {
+                    keptChecks++;
+                    return cache.IsFilled;
+                });
+
+            Task<IReadOnlyList<string>> collect = source.CollectAsync(CancellationToken.None);
+
+            Assert.That(collect.IsCompleted, Is.False, "completed before the rebuild ended");
+            Assert.That(keptChecks + ledgerReads, Is.EqualTo(0), "looked at the list or the ledger before the rebuild ended");
+            ready.SetResult(true);
+            IReadOnlyList<string> listed = await collect;
+            Assert.That(collect.Status, Is.EqualTo(TaskStatus.RanToCompletion));
+            Assert.That(listed, Is.EqualTo(await CollectFor(new[] { TestAssemblyName })));
+            Assert.That(fetch.Count, Is.EqualTo(0), "asked Unity for the list");
+        }
+
+        /// <summary>
+        /// Verifies that without a kept list nothing is listed and Unity is not asked for the list.
+        /// </summary>
+        [Test]
+        public async Task CollectAsync_WithoutAKeptList_ReturnsEmptyWithoutAskingUnity()
+        {
+            CountingCompilationListFetch fetch = new CountingCompilationListFetch();
+            HotReloadCompilationAssemblyCache cache = fetch.CreateEmptyCache();
+            HotReloadSharedCompilerWarmUpReferenceSource source = new HotReloadSharedCompilerWarmUpReferenceSource(
+                ProjectRoot(),
+                _ => new[] { TestAssemblyName },
+                cache.FindByName,
+                Task.CompletedTask,
+                () => cache.IsFilled);
+
+            Task<IReadOnlyList<string>> collect = source.CollectAsync(CancellationToken.None);
+            IReadOnlyList<string> listed = await collect;
+
+            Assert.That(collect.Status, Is.EqualTo(TaskStatus.RanToCompletion));
+            Assert.That(listed, Is.Empty);
+            Assert.That(fetch.Count, Is.EqualTo(0), "asked Unity for the list");
+        }
+
+        /// <summary>
+        /// Verifies the list is checked on the main thread when the rebuild ends on a pool thread, as
+        /// a cancelled one does.
+        /// </summary>
+        [Test]
+        public async Task CollectAsync_WhenTheRebuildEndsOnAPoolThread_ChecksTheListOnTheMainThread()
+        {
+            List<bool> checkedOnMainThread = new List<bool>();
+            // Why a delay: its completion runs on a timer thread, so a missing switch would check off it.
+            HotReloadSharedCompilerWarmUpReferenceSource source = new HotReloadSharedCompilerWarmUpReferenceSource(
+                ProjectRoot(),
+                _ => new[] { TestAssemblyName },
+                _ => null,
+                Task.Delay(1),
+                () =>
+                {
+                    checkedOnMainThread.Add(MainThreadSwitcher.IsMainThread);
+                    return false;
+                });
+
+            Task<IReadOnlyList<string>> collect = source.CollectAsync(CancellationToken.None);
+            await collect;
+
+            Assert.That(collect.Status, Is.EqualTo(TaskStatus.RanToCompletion));
+            Assert.That(checkedOnMainThread, Is.EqualTo(new[] { true }));
         }
 
         /// <summary>
@@ -257,7 +355,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             HotReloadSharedCompilerWarmUpReferenceSource source = new HotReloadSharedCompilerWarmUpReferenceSource(
                 ProjectRoot(),
                 _ => ledger,
-                HotReloadCompilationAssemblies.FindByName);
+                HotReloadCompilationAssemblies.FindByName,
+                Task.CompletedTask,
+                () => true);
             return source.CollectAsync(CancellationToken.None);
         }
 

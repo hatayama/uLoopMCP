@@ -130,13 +130,42 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             HotReloadWarmUpContextSource source = new HotReloadWarmUpContextSource(
                 _projectRoot,
                 new HotReloadStubEditorStateSnapshotCapture(() => _state),
-                name => name == "A" ? referencing : Array.Empty<string>());
+                name => name == "A" ? referencing : Array.Empty<string>(),
+                () => true);
 
-            HotReloadWarmUpTarget target = source.Capture().Context.Targets[0];
+            HotReloadWarmUpContext context = source.Capture().Context;
+            HotReloadWarmUpTarget target = context.Targets[0];
+            Assert.That(context.CompilationListKept, Is.True, "kept");
 
             Assert.That(target.DllPath, Is.EqualTo(CompiledPath("A.dll")), "dll");
             Assert.That(target.PdbPath, Is.EqualTo(CompiledPath("A.pdb")), "pdb");
             Assert.That(target.ReferencingDllPaths, Is.EqualTo(referencing), "referencing");
+        }
+
+        /// <summary>
+        /// What: without a kept compilation assembly list the referencing dlls are not collected,
+        /// since collecting them asks Unity for the list, and the context says no list was kept.
+        /// </summary>
+        [Test]
+        public void Capture_WithoutAKeptList_CollectsNoReferencingDlls()
+        {
+            RecordCompiled("A");
+            int collected = 0;
+            HotReloadWarmUpContextSource source = new HotReloadWarmUpContextSource(
+                _projectRoot,
+                new HotReloadStubEditorStateSnapshotCapture(() => _state),
+                name =>
+                {
+                    collected++;
+                    return new[] { "referencing.dll" };
+                },
+                () => false);
+
+            HotReloadWarmUpContext context = source.Capture().Context;
+
+            Assert.That(collected, Is.EqualTo(0), "collector calls");
+            Assert.That(context.Targets[0].ReferencingDllPaths, Is.Empty, "referencing");
+            Assert.That(context.CompilationListKept, Is.False, "kept");
         }
 
         /// <summary>
@@ -156,7 +185,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             HotReloadWarmUpContextSource source = new HotReloadWarmUpContextSource(
                 _projectRoot,
                 new HotReloadStubEditorStateSnapshotCapture(() => _state),
-                name => Array.Empty<string>());
+                name => Array.Empty<string>(),
+                () => true);
             return source.Capture();
         }
 

@@ -22,6 +22,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
         public string Name => "call_sites";
 
+        public bool NeedsCompilationList => false;
+
         public Task RunAsync(HotReloadWarmUpContext context, CancellationToken ct)
         {
             List<string> dllPaths = new List<string>();

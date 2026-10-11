@@ -23,7 +23,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             HotReloadCompilationAssemblies.EnsureInitialized();
             // Why at domain load: the rebuild then runs while the Editor finishes loading, so the
             // first caller of the domain finds the list kept instead of asking Unity on the main thread.
-            _ = RefillCompilationListUnlessHotReloadIsDisabled(isToolEnabled, HotReloadCompilationAssemblies.RefillInBackground);
+            // The warm-ups wait for it, and then skip what needs a list when none was kept.
+            Task compilationListReady = RefillCompilationListUnlessHotReloadIsDisabled(
+                isToolEnabled, HotReloadCompilationAssemblies.RefillInBackground);
 
             // Why not EditorApplication.delayCall: a cold-start session that hits Unity's native
             // "Scripts have compiler errors" dialog never flushes delayCall again for the rest of
@@ -55,8 +57,10 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             void StartWarmUpOnFirstUpdateTick()
             {
                 EditorApplication.update -= StartWarmUpOnFirstUpdateTick;
-                StartWarmUpUnlessHotReloadIsDisabled(
-                    isToolEnabled, () => HotReloadCompositionRoot.Services.WarmUp.Start());
+                _ = StartWarmUpOnceTheCompilationListIsReady(
+                    compilationListReady,
+                    () => StartWarmUpUnlessHotReloadIsDisabled(
+                        isToolEnabled, () => HotReloadCompositionRoot.Services.WarmUp.Start()));
             }
 
             // The services are rebuilt here rather than on first use because the introduced type
@@ -82,7 +86,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             HotReloadSharedCompilerWarmUpReferenceSource warmUpReferences = new HotReloadSharedCompilerWarmUpReferenceSource(
                 warmUpProjectRoot,
                 HotReloadWarmUpTargetLedger.Read,
-                HotReloadCompilationAssemblies.FindByName);
+                HotReloadCompilationAssemblies.FindByName,
+                compilationListReady,
+                HotReloadCompilationAssemblies.IsKept);
             SharedCompilerWarmUpCoordination.CollectWarmUpReferencePaths = warmUpReferences.CollectAsync;
             // Why the same shape for these two: both run from Editor callbacks that take no
             // argument, so they have to read whichever services are installed when they fire.
@@ -170,6 +176,23 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             }
 
             return startRefill();
+        }
+
+        /// <summary>
+        /// Starts the warm-up on the main thread once the domain's attempt to rebuild the compilation
+        /// assembly list has ended, kept or not, so the warm-up sees the list the rebuild kept
+        /// instead of asking Unity for it. Never faults.
+        /// </summary>
+        internal static async Task StartWarmUpOnceTheCompilationListIsReady(Task compilationListReady, Action startWarmUp)
+        {
+            Debug.Assert(compilationListReady != null, "compilationListReady must not be null.");
+            Debug.Assert(startWarmUp != null, "startWarmUp must not be null.");
+
+            // Why ConfigureAwait(false) and then a switch: a rebuild cancelled while it runs ends on a
+            // pool thread, and the warm-up reads Unity state when it starts.
+            await compilationListReady.ConfigureAwait(false);
+            await MainThreadSwitcher.SwitchToMainThread();
+            startWarmUp();
         }
 
         /// <summary>

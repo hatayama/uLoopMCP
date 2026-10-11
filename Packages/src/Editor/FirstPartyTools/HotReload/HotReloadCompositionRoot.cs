@@ -96,7 +96,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 new HotReloadWarmUpContextSource(
                     projectRoot,
                     new HotReloadEditorStateSnapshotCapture(),
-                    assemblyName => compiledCallers.CollectReferencingDllPaths(projectRoot, assemblyName)),
+                    assemblyName => compiledCallers.CollectReferencingDllPaths(projectRoot, assemblyName),
+                    HotReloadCompilationAssemblies.IsKept),
                 HotReloadWarmUpItems.CreateProduction(compiledCallers));
         }
 

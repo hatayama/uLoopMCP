@@ -29,5 +29,26 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 names,
                 Is.EqualTo(new[] { "publicized_targets", "call_sites", "referenced_method_sets", "transform_worker", "pdb_documents" }));
         }
+
+        /// <summary>
+        /// What: exactly the items that read the compilation assembly list say they need it: the
+        /// publicized copies and the transform worker look their target up in it, and the
+        /// referenced-method sets read the referencing dlls only it names. These are the items
+        /// skipped when no list was kept.
+        /// </summary>
+        [Test]
+        public void CreateProduction_MarksTheItemsThatReadTheCompilationList()
+        {
+            List<string> needing = new List<string>();
+            foreach (IHotReloadWarmUpItem item in HotReloadWarmUpItems.CreateProduction(HotReloadCompiledCallers.CreateProduction()))
+            {
+                if (item.NeedsCompilationList)
+                {
+                    needing.Add(item.Name);
+                }
+            }
+
+            Assert.That(needing, Is.EqualTo(new[] { "publicized_targets", "referenced_method_sets", "transform_worker" }));
+        }
     }
 }
