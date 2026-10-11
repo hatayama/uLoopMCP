@@ -53,7 +53,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 snapshotDirectory,
                 sourceFiles,
                 "Fixture",
-                SuspectsNothing(_tempRoot));
+                SuspectsNothing(_tempRoot),
+                new HotReloadSnapshotCaptureStats());
 
             string firstSnapshot = Path.Combine(
                 snapshotDirectory,
@@ -89,7 +90,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 snapshotDirectory,
                 sourceFiles,
                 "Fixture",
-                SuspectsNothing(_tempRoot));
+                SuspectsNothing(_tempRoot),
+                new HotReloadSnapshotCaptureStats());
 
             string expected = HotReloadConstants.SourceStampManifestHeader + "\n"
                 + HotReloadSourceSnapshotLayout.SourceFileName("Sources/First.cs") + "\t7\t"
@@ -121,7 +123,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 snapshotDirectory,
                 new[] { "Sources/Fresh.cs" },
                 "Fixture",
-                SuspectsNothing(_tempRoot));
+                SuspectsNothing(_tempRoot),
+                new HotReloadSnapshotCaptureStats());
 
             string[] publishedNames = Directory.GetFiles(snapshotDirectory).Select(Path.GetFileName).ToArray();
             // Why EquivalentTo: the order GetFiles lists files in depends on the file system.

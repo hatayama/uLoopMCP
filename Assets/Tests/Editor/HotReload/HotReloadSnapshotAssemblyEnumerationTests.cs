@@ -392,6 +392,43 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             Assert.That(manifest.TryGetStamp(SnapshotFileName(), out long _, out long _), Is.True);
         }
 
+        /// <summary>
+        /// Verifies a capture reports how many assemblies it captured or found unchanged and how many
+        /// files and bytes it copied: the first capture copies the two sources that exist and skips the
+        /// missing one, and a second capture of the same build copies nothing.
+        /// </summary>
+        [Test]
+        public void CaptureAssemblies_ReturnsWhatItCopiedAndWhatItSkipped()
+        {
+            PlantCompiledAssembly("Fixture");
+            WriteSourceWrittenBeforeTheCompile("Assets/Three.cs", "abc");
+            WriteSourceWrittenBeforeTheCompile("Assets/Five.cs", "abcde");
+            UnityCompilationAssembly[] assemblies =
+            {
+                CreateAssemblyWithSources("Fixture", new[] { "Assets/Three.cs", "Assets/Five.cs", "Assets/Missing.cs" })
+            };
+
+            HotReloadSnapshotCaptureStats first = HotReloadSourceSnapshotter.CaptureAssemblies(
+                _projectRoot,
+                assemblies,
+                HotReloadCompileStart.Unknown,
+                CreateDocumentIndex());
+            HotReloadSnapshotCaptureStats second = HotReloadSourceSnapshotter.CaptureAssemblies(
+                _projectRoot,
+                assemblies,
+                HotReloadCompileStart.Unknown,
+                CreateDocumentIndex());
+
+            Assert.That(first.Assemblies, Is.EqualTo(1), "first: assemblies");
+            Assert.That(first.AssembliesCaptured, Is.EqualTo(1), "first: captured");
+            Assert.That(first.AssembliesUnchanged, Is.EqualTo(0), "first: unchanged");
+            Assert.That(first.FilesCopied, Is.EqualTo(2), "first: files copied");
+            Assert.That(first.BytesCopied, Is.EqualTo(8), "first: bytes copied");
+            Assert.That(second.AssembliesCaptured, Is.EqualTo(0), "second: captured");
+            Assert.That(second.AssembliesUnchanged, Is.EqualTo(1), "second: unchanged");
+            Assert.That(second.FilesCopied, Is.EqualTo(0), "second: files copied");
+        }
+
         // Plants the compiled assembly and orders the write times as compile start < source < DLL.
         // The fixture source has no document in the planted PDB, so a check cannot confirm it.
         private string CaptureWithSourceSavedBetweenStartAndDll(HotReloadCompileStart compileStart)
@@ -410,6 +447,15 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 CreateDocumentIndex());
 
             return Path.Combine(_snapshotRoot, "Fixture-" + mvid);
+        }
+
+        // Writes the source as ASCII with a write time before the planted compile, so the capture
+        // copies it without a PDB check.
+        private void WriteSourceWrittenBeforeTheCompile(string projectRelativePath, string text)
+        {
+            string path = Path.Combine(_projectRoot, projectRelativePath.Replace('/', Path.DirectorySeparatorChar));
+            File.WriteAllBytes(path, System.Text.Encoding.ASCII.GetBytes(text));
+            File.SetLastWriteTimeUtc(path, new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc));
         }
 
         private static string SnapshotFileName()
