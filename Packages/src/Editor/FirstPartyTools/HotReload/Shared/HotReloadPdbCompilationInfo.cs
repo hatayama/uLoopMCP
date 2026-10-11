@@ -44,17 +44,22 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         public readonly IReadOnlyList<string> Defines;
         public readonly IReadOnlyList<HotReloadPdbReferencedAssembly> References;
 
+        // The GUID of the PDB id, which the dll's CodeView entry names when both come from one build.
+        public readonly Guid PdbGuid;
+
         private HotReloadPdbCompilationInfo(
             IReadOnlyList<string> defines,
-            IReadOnlyList<HotReloadPdbReferencedAssembly> references)
+            IReadOnlyList<HotReloadPdbReferencedAssembly> references,
+            Guid pdbGuid)
         {
             Defines = defines;
             References = references;
+            PdbGuid = pdbGuid;
         }
 
         /// <summary>
-        /// Reads the defines, in the order the compiler was given them, and the metadata references
-        /// of the PDB. Throws InvalidOperationException when the PDB lacks either record or a record
+        /// Reads the defines, in the order the compiler was given them, the metadata references and
+        /// the id GUID of the PDB. Throws InvalidOperationException when the PDB lacks either record or a record
         /// is malformed.
         /// </summary>
         internal static HotReloadPdbCompilationInfo Read(string pdbPath)
@@ -67,7 +72,10 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
             byte[] options = ReadModuleRecord(reader, CompilationOptionsKind, pdbPath);
             byte[] references = ReadModuleRecord(reader, MetadataReferencesKind, pdbPath);
-            return new HotReloadPdbCompilationInfo(ParseDefines(options, pdbPath), ParseReferences(references, pdbPath));
+            return new HotReloadPdbCompilationInfo(
+                ParseDefines(options, pdbPath),
+                ParseReferences(references, pdbPath),
+                new BlobContentId(reader.DebugMetadataHeader.Id).Guid);
         }
 
         private static byte[] ReadModuleRecord(MetadataReader reader, Guid kind, string pdbPath)

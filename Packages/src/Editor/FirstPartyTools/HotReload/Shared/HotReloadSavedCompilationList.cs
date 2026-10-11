@@ -258,6 +258,15 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
             return new HotReloadSavedFileStamp { length = file.Length, lastWriteTicks = file.LastWriteTimeUtc.Ticks };
         }
+
+        /// <summary>
+        /// True when the other stamp has the same length and last write time. False for null, which
+        /// stands for a file that does not exist.
+        /// </summary>
+        internal bool SameAs(HotReloadSavedFileStamp other)
+        {
+            return other != null && other.length == length && other.lastWriteTicks == lastWriteTicks;
+        }
     }
 
     /// <summary>
