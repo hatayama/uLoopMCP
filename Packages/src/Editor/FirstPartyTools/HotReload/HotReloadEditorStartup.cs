@@ -20,9 +20,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             // "Scripts have compiler errors" dialog never flushes delayCall again for the rest of
             // that process's lifetime, even for later registrations — while
             // EditorApplication.update keeps ticking (see SetupWizardWindow.cs:56-70). The
-            // snapshot is captured at the end of the domain load; this tick retries only when that
-            // capture threw or Unity listed no compilation assembly yet, and the gate does nothing
-            // when it already succeeded.
+            // capture starts at the end of the domain load; this tick starts another only when that
+            // one failed, found no compiled assembly, or was cancelled, and the gate does nothing
+            // when it is still running or already succeeded.
             void CaptureOnFirstUpdateTick()
             {
                 EditorApplication.update -= CaptureOnFirstUpdateTick;
@@ -63,6 +63,10 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             // null delegate as "nothing to lose".
             HotReloadRuntimeChangeCoordination.GetActiveRuntimeChangeCount =
                 () => HotReloadCompositionRoot.Services.Domain.CountActiveChanges().RuntimeChangeTotal;
+            // Why here, like the count above: get-compile-status reads it on every poll, which can
+            // come before anything in this assembly is touched.
+            HotReloadSnapshotCaptureCoordination.IsHoldingCompileCompletion =
+                () => HotReloadCompositionRoot.Services.SourceSnapshotCapture.IsHoldingCompileCompletion;
             // Why here, like the count above: the dynamic-code tool reads it after each server
             // reset, which can come before anything in this assembly is touched.
             string warmUpProjectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
@@ -128,7 +132,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 return;
             }
 
-            HotReloadCompositionRoot.Services.SourceSnapshotCapture.EnsureCaptured(trigger);
+            // Why the task is not awaited: the domain load must not wait for the capture, and the
+            // gate logs how it ended. A caller that needs the snapshot waits for it itself.
+            _ = HotReloadCompositionRoot.Services.SourceSnapshotCapture.StartIfNeeded(trigger);
         }
 
         /// <summary>

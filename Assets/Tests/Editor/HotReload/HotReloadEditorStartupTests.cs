@@ -24,7 +24,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         {
             VibeLogger.ClearMemoryLogs();
             int captureCount = 0;
-            HotReloadSourceSnapshotCapture capture = new HotReloadSourceSnapshotCapture(() =>
+            HotReloadSourceSnapshotCapture capture = HotReloadSourceSnapshotCaptureTestDoubles.CompletingSynchronously(() =>
             {
                 captureCount++;
                 return true;
@@ -41,15 +41,16 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         }
 
         /// <summary>
-        /// What: a capture that throws before serving commands passes the exception on and stays
-        /// undone, so the first update tick's capture runs it again.
+        /// What: a capture that fails before serving commands does not throw into the domain load,
+        /// which never waits for it; it logs one failed entry and stays undone, so the first update
+        /// tick's capture runs it again.
         /// </summary>
         [Test]
-        public void CaptureSourceSnapshotBeforeServingCommands_WhenTheCaptureThrows_ThrowsAndLeavesItForTheNextCall()
+        public void CaptureSourceSnapshotBeforeServingCommands_WhenTheCaptureFails_LogsFailedAndLeavesItForTheNextCall()
         {
             VibeLogger.ClearMemoryLogs();
             int captureCount = 0;
-            HotReloadSourceSnapshotCapture capture = new HotReloadSourceSnapshotCapture(() =>
+            HotReloadSourceSnapshotCapture capture = HotReloadSourceSnapshotCaptureTestDoubles.CompletingSynchronously(() =>
             {
                 captureCount++;
                 if (captureCount == 1)
@@ -62,14 +63,18 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
 
             using (HotReloadServicesTestScope.BeginWithSourceSnapshotCapture(capture))
             {
-                Assert.Throws<InvalidOperationException>(
+                Assert.DoesNotThrow(
                     () => HotReloadEditorStartup.CaptureSourceSnapshotBeforeServingCommands(AllToolsEnabled));
+                JObject failed = HotReloadWarmUpTestDoubles.ReadSingleVibeContext(
+                    HotReloadConstants.VibeLogSourceSnapshotCaptureFailed);
+                Assert.That((string)failed["trigger"], Is.EqualTo(HotReloadConstants.SourceSnapshotCaptureTriggerDomainLoad));
 
-                HotReloadCompositionRoot.Services.SourceSnapshotCapture.EnsureCaptured(
-                    HotReloadConstants.SourceSnapshotCaptureTriggerFirstUpdateTick);
+                HotReloadEditorStartup.CaptureAtStartupUnlessReadersAreDisabled(
+                    HotReloadConstants.SourceSnapshotCaptureTriggerFirstUpdateTick, AllToolsEnabled);
             }
 
             Assert.That(captureCount, Is.EqualTo(2), "captures");
+            Assert.That(CountVibeEntries(HotReloadConstants.VibeLogSourceSnapshotCaptured), Is.EqualTo(1), "captured entries");
         }
 
         /// <summary>
@@ -94,7 +99,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 Assert.That((string)skipped["reason"], Is.EqualTo(HotReloadConstants.SourceSnapshotSkipReasonToolsDisabled));
                 Assert.That(CountVibeEntries(HotReloadConstants.VibeLogSourceSnapshotCaptured), Is.EqualTo(0), "captured entries");
 
-                HotReloadCompositionRoot.Services.SourceSnapshotCapture.EnsureCaptured(
+                HotReloadCompositionRoot.Services.SourceSnapshotCapture.EnsureCapturedBlocking(
                     HotReloadConstants.SourceSnapshotCaptureTriggerApply);
             }
 
@@ -215,7 +220,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
 
         private static HotReloadSourceSnapshotCapture CountingCapture(Action onCapture)
         {
-            return new HotReloadSourceSnapshotCapture(() =>
+            return HotReloadSourceSnapshotCaptureTestDoubles.CompletingSynchronously(() =>
             {
                 onCapture();
                 return true;
