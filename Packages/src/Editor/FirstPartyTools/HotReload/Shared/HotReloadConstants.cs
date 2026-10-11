@@ -695,6 +695,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         public const string SourceSnapshotCaptureTriggerDomainLoad = "domain_load";
         public const string SourceSnapshotCaptureTriggerFirstUpdateTick = "first_update_tick";
         public const string SourceSnapshotCaptureTriggerApply = "apply";
+        public const string SourceSnapshotCaptureTriggerPausePoint = "pause_point";
 
         // What stopped a running warm-up or caller-note backfill, as named in the cancelledBy field
         // of hot_reload_warm_up_complete and hot_reload_caller_note_backfill_complete.

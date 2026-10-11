@@ -271,7 +271,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             HotReloadPausePointCoordination.HotReloadSide =
                 new HotReloadPausePointPort(
                     domain,
-                    path => new HotReloadSourceContentHasher().TryComputeContentHashOfFileOrNull(path));
+                    path => new HotReloadSourceContentHasher().TryComputeContentHashOfFileOrNull(path),
+                    () => services.SourceSnapshotCapture.EnsureCaptured(
+                        HotReloadConstants.SourceSnapshotCaptureTriggerPausePoint));
             // Attaching last keeps the invariant across the gap: the resolver only starts
             // answering binds once every gateway already points at the domain behind it.
             domain.IntroducedTypeResolver.Resume();

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Reflection;
 using System.Reflection.Emit;
 
@@ -16,13 +17,22 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
     {
         private readonly HotReloadDomain _domain;
         private readonly Func<string, string> _readSourceContentHashOrNull;
+        private readonly Action _ensureSnapshotCaptured;
 
         // Why the hash reader is passed in: the hasher lives in the apply pipeline's assembly,
         // which this one may not reference, and the check must hash the way the worker did.
-        public HotReloadPausePointPort(HotReloadDomain domain, Func<string, string> readSourceContentHashOrNull)
+        // Why the capture is passed in: the gate that captures the source snapshot belongs to the
+        // services the composition root installs, which this assembly does not reference.
+        public HotReloadPausePointPort(
+            HotReloadDomain domain,
+            Func<string, string> readSourceContentHashOrNull,
+            Action ensureSnapshotCaptured)
         {
+            Debug.Assert(ensureSnapshotCaptured != null, "ensureSnapshotCaptured must not be null.");
+
             _domain = domain;
             _readSourceContentHashOrNull = readSourceContentHashOrNull;
+            _ensureSnapshotCaptured = ensureSnapshotCaptured;
         }
 
         public MethodBase GetActiveShimForMethod(MethodBase method)
@@ -54,6 +64,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 return null;
             }
 
+            // Why: with both tools disabled at domain load nothing was captured, and a pause point
+            // is the first reader once the pause-point tool is enabled.
+            _ensureSnapshotCaptured();
             return HotReloadSourceBaseline.LoadVerifiedSnapshotSource(projectRelativeFile, dllPath);
         }
 

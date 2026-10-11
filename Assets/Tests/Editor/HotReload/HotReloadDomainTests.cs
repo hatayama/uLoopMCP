@@ -1004,6 +1004,52 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             Assert.That(row.Label, Is.EqualTo(workerLabel));
         }
 
+        /// <summary>
+        /// What: reading a verified snapshot source asks the gate to capture the snapshot first, so
+        /// a pause point set after both tools were disabled at domain load still has one to read.
+        /// </summary>
+        [Test]
+        public void GetVerifiedSnapshotSource_EnsuresTheSnapshotIsCaptured()
+        {
+            int ensureCount = 0;
+            HotReloadPausePointPort port = CreatePortWithSnapshotCapture(() => ensureCount++);
+
+            port.GetVerifiedSnapshotSource(FileOne, typeof(HotReloadDomainTests).Assembly.Location);
+
+            Assert.That(ensureCount, Is.EqualTo(1));
+        }
+
+        /// <summary>
+        /// What: an empty path is answered with no source before the gate is asked to capture.
+        /// </summary>
+        [Test]
+        public void GetVerifiedSnapshotSource_WithAnEmptyPath_DoesNotEnsureTheCapture()
+        {
+            int ensureCount = 0;
+            HotReloadPausePointPort port = CreatePortWithSnapshotCapture(() => ensureCount++);
+
+            string source = port.GetVerifiedSnapshotSource(string.Empty, typeof(HotReloadDomainTests).Assembly.Location);
+
+            Assert.That(source, Is.Null);
+            Assert.That(ensureCount, Is.EqualTo(0));
+        }
+
+        /// <summary>
+        /// What: a capture that throws reaches the pause point command instead of being turned into
+        /// a missing snapshot.
+        /// </summary>
+        [Test]
+        public void GetVerifiedSnapshotSource_WhenTheCaptureThrows_PassesTheExceptionOn()
+        {
+            InvalidOperationException captureFailure = new InvalidOperationException("The capture failed.");
+            HotReloadPausePointPort port = CreatePortWithSnapshotCapture(() => throw captureFailure);
+
+            InvalidOperationException thrown = Assert.Throws<InvalidOperationException>(
+                () => port.GetVerifiedSnapshotSource(FileOne, typeof(HotReloadDomainTests).Assembly.Location));
+
+            Assert.That(thrown, Is.SameAs(captureFailure));
+        }
+
         // Why a generated name: an artifact assembly is compiled under a name of its own, so a
         // fixture that reused a project assembly's name would not resolve the way production does.
         private static Assembly CreateIntroducedTypeAssembly()
@@ -1025,7 +1071,12 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
 
         private HotReloadPausePointPort CreatePort(Func<string, string> readSourceContentHashOrNull)
         {
-            return new HotReloadPausePointPort(_access.Domain, readSourceContentHashOrNull);
+            return new HotReloadPausePointPort(_access.Domain, readSourceContentHashOrNull, () => { });
+        }
+
+        private HotReloadPausePointPort CreatePortWithSnapshotCapture(Action ensureSnapshotCaptured)
+        {
+            return new HotReloadPausePointPort(_access.Domain, _ => RecordedSourceHash, ensureSnapshotCaptured);
         }
 
         // Records a partially applied reload of FileOne that read RecordedWorkerSourcePath.
