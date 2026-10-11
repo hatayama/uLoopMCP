@@ -1,23 +1,15 @@
 package automation
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
-	"strings"
 )
 
-const (
-	planUnityPackageReleaseCommandName = "plan-unity-package-release"
-	// unityPackageReleaseCheckScript is run from the repository root; it prints the release commit
-	// when the release is due and nothing when it is not.
-	unityPackageReleaseCheckScript = "scripts/check-unity-package-release.sh"
-)
+const planUnityPackageReleaseCommandName = "plan-unity-package-release"
 
 // unityPackageReleasePlanOptions selects the repository and the root holding the release-please
 // manifest, whose Unity package version is the release that is planned. DryRun signs without
@@ -31,7 +23,7 @@ type unityPackageReleasePlanOptions struct {
 
 type unityPackageReleasePlanDeps struct {
 	runOutput    func(context.Context, string, ...string) (string, error)
-	checkRelease func(context.Context) (string, error)
+	checkRelease func(ctx context.Context, log io.Writer, version string) (unityPackageReleaseReadiness, error)
 }
 
 // unityPackageReleasePlan says whether the release is signed and whether it is then created.
@@ -61,8 +53,12 @@ func RunPlanUnityPackageRelease(ctx context.Context, stdout io.Writer, stderr io
 	}
 	deps := unityPackageReleasePlanDeps{
 		runOutput: runCommandOutput,
-		checkRelease: func(ctx context.Context) (string, error) {
-			return runUnityPackageReleaseCheck(ctx, stderr, options.RepoRoot)
+		checkRelease: func(ctx context.Context, log io.Writer, version string) (unityPackageReleaseReadiness, error) {
+			return runUnityPackageReleaseReadinessCheck(ctx, log, unityPackageReleaseReadinessInput{
+				Repository: options.Repository,
+				RepoRoot:   options.RepoRoot,
+				Version:    version,
+			})
 		},
 	}
 	return runPlanUnityPackageReleaseWithDeps(ctx, stdout, stderr, options, deps)
@@ -110,7 +106,8 @@ func unityPackageReleasePlanFlagSet(flags *flag.FlagSet, name string) bool {
 }
 
 func runPlanUnityPackageReleaseWithDeps(ctx context.Context, stdout io.Writer, stderr io.Writer, options unityPackageReleasePlanOptions, deps unityPackageReleasePlanDeps) int {
-	plan, err := planUnityPackageRelease(ctx, options, deps)
+	// What the readiness check reports goes to stderr, the job log, because stdout is GITHUB_OUTPUT.
+	plan, err := planUnityPackageRelease(ctx, stderr, options, deps)
 	if err != nil {
 		_, _ = fmt.Fprintln(stderr, planUnityPackageReleaseCommandName+":", err)
 		return 1
@@ -127,7 +124,7 @@ func runPlanUnityPackageReleaseWithDeps(ctx context.Context, stdout io.Writer, s
 	return 0
 }
 
-func planUnityPackageRelease(ctx context.Context, options unityPackageReleasePlanOptions, deps unityPackageReleasePlanDeps) (unityPackageReleasePlan, error) {
+func planUnityPackageRelease(ctx context.Context, log io.Writer, options unityPackageReleasePlanOptions, deps unityPackageReleasePlanDeps) (unityPackageReleasePlan, error) {
 	version, err := readUnityPackageManifestVersion(options.RepoRoot)
 	if err != nil {
 		return unityPackageReleasePlan{}, err
@@ -145,7 +142,7 @@ func planUnityPackageRelease(ctx context.Context, options unityPackageReleasePla
 	if published {
 		return planPublishedUnityPackageRelease(plan, release, options.DryRun), nil
 	}
-	return planDueUnityPackageRelease(ctx, plan, options.DryRun, deps)
+	return planDueUnityPackageRelease(ctx, log, plan, options.DryRun, deps)
 }
 
 // planPublishedUnityPackageRelease never creates anything: a published release is immutable. A
@@ -166,22 +163,25 @@ func planPublishedUnityPackageRelease(plan unityPackageReleasePlan, release publ
 	return plan
 }
 
-// planDueUnityPackageRelease asks the readiness check whether the release can be created now. An
-// empty answer means a release it depends on is not published yet; the check has said which on
-// stderr, and the publish workflow of that release starts this workflow again when it completes.
-func planDueUnityPackageRelease(ctx context.Context, plan unityPackageReleasePlan, dryRun bool, deps unityPackageReleasePlanDeps) (unityPackageReleasePlan, error) {
-	output, err := deps.checkRelease(ctx)
+// planDueUnityPackageRelease asks the readiness check whether the release can be created now. A
+// release that waits for another release is skipped with a notice that names it; the publish
+// workflow of that release starts this workflow again when it completes.
+func planDueUnityPackageRelease(ctx context.Context, log io.Writer, plan unityPackageReleasePlan, dryRun bool, deps unityPackageReleasePlanDeps) (unityPackageReleasePlan, error) {
+	readiness, err := deps.checkRelease(ctx, log, plan.Version)
 	if err != nil {
 		return unityPackageReleasePlan{}, fmt.Errorf("readiness check for release %s failed: %w", plan.Tag, err)
 	}
-	commit := strings.TrimSpace(strings.ReplaceAll(output, "\r", ""))
-	if commit == "" {
+	if (readiness.ReleaseCommit == "") == (readiness.WaitingFor == "") {
+		return unityPackageReleasePlan{}, fmt.Errorf("readiness check for release %s answered %+v, not either a release commit or what it waits for", plan.Tag, readiness)
+	}
+	if readiness.WaitingFor != "" {
 		plan.Annotation = "notice"
-		plan.Reason = fmt.Sprintf("Release %s cannot be created yet; the readiness check above says what it waits for.", plan.Tag)
+		plan.Reason = readiness.WaitingFor
 		return plan, nil
 	}
+	commit := readiness.ReleaseCommit
 	if !releaseCommitPattern.MatchString(commit) {
-		return unityPackageReleasePlan{}, fmt.Errorf("readiness check for release %s printed %q, not a release commit SHA", plan.Tag, commit)
+		return unityPackageReleasePlan{}, fmt.Errorf("readiness check for release %s named %q, not a release commit SHA", plan.Tag, commit)
 	}
 	plan.Sign = true
 	plan.Publish = !dryRun
@@ -192,19 +192,4 @@ func planDueUnityPackageRelease(ctx context.Context, plan unityPackageReleasePla
 	}
 	plan.Reason = fmt.Sprintf("Release %s is due; signing release commit %s, then creating the release with %s.", plan.Tag, commit, plan.AssetName)
 	return plan, nil
-}
-
-// runUnityPackageReleaseCheck runs the readiness check from the repository root and returns its
-// stdout. Its stderr goes straight to the job log, because on success runCommandOutput would drop
-// it, and it is the only record of why a release is not due yet.
-func runUnityPackageReleaseCheck(ctx context.Context, stderr io.Writer, repoRoot string) (string, error) {
-	command := exec.CommandContext(ctx, "sh", unityPackageReleaseCheckScript)
-	command.Dir = repoRoot
-	stdout := bytes.Buffer{}
-	command.Stdout = &stdout
-	command.Stderr = stderr
-	if err := command.Run(); err != nil {
-		return "", fmt.Errorf("%s failed: %w", unityPackageReleaseCheckScript, err)
-	}
-	return stdout.String(), nil
 }

@@ -3,6 +3,8 @@ package automation
 import (
 	"context"
 	"errors"
+	"fmt"
+	"io"
 	"strings"
 	"testing"
 	"time"
@@ -30,17 +32,17 @@ type fakeUnityPackageReleaseResponse struct {
 // fakeUnityPackageReleaseCommands answers the gh and git calls of the Unity package release
 // commands by the kind of call, in the order the responses are queued (the last one repeats), and
 // records every call so a test can assert which writes happened. It also stands in for the
-// readiness check script.
+// readiness check.
 type fakeUnityPackageReleaseCommands struct {
-	t           *testing.T
-	tag         string
-	responses   map[string][]fakeUnityPackageReleaseResponse
-	calls       []string
-	commands    [][]string
-	sleeps      int
-	checkOutput string
-	checkErr    error
-	checkCalls  int
+	t             *testing.T
+	tag           string
+	responses     map[string][]fakeUnityPackageReleaseResponse
+	calls         []string
+	commands      [][]string
+	sleeps        int
+	readiness     unityPackageReleaseReadiness
+	checkErr      error
+	checkVersions []string
 }
 
 func newFakeUnityPackageReleaseCommands(t *testing.T, responses map[string][]fakeUnityPackageReleaseResponse) *fakeUnityPackageReleaseCommands {
@@ -69,9 +71,13 @@ func (fake *fakeUnityPackageReleaseCommands) sleep(time.Duration) {
 	fake.sleeps++
 }
 
-func (fake *fakeUnityPackageReleaseCommands) checkRelease(context.Context) (string, error) {
-	fake.checkCalls++
-	return fake.checkOutput, fake.checkErr
+// unityPackageReleaseTestCheckLog is what the fake readiness check reports along the way.
+const unityPackageReleaseTestCheckLog = "readiness check progress"
+
+func (fake *fakeUnityPackageReleaseCommands) checkRelease(_ context.Context, log io.Writer, version string) (unityPackageReleaseReadiness, error) {
+	fake.checkVersions = append(fake.checkVersions, version)
+	_, _ = fmt.Fprintln(log, unityPackageReleaseTestCheckLog)
+	return fake.readiness, fake.checkErr
 }
 
 // writes returns the kinds of the calls that changed the repository, in call order.

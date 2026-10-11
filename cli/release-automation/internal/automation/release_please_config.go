@@ -1,6 +1,7 @@
 package automation
 
 import (
+	"fmt"
 	"path"
 	"strings"
 )
@@ -28,4 +29,20 @@ func releasePleaseChangelogPath(packagePath string, changelogPath string) string
 		return strings.TrimPrefix(changelogPath, "/")
 	}
 	return path.Join(packagePath, changelogPath)
+}
+
+// releasePleaseReleaseTag returns the tag release-please gives the package's release of the
+// version: the component and a "v" in front of the version when the config asks for them.
+func releasePleaseReleaseTag(packagePath string, config releasePleasePackageConfig, version string) (string, error) {
+	tag := ""
+	if config.IncludeComponentInTag {
+		if config.Component == "" {
+			return "", fmt.Errorf("release-please package %s has include-component-in-tag=true without a component", packagePath)
+		}
+		tag = config.Component + "-"
+	}
+	if config.IncludeVInTag {
+		tag += "v"
+	}
+	return tag + version, nil
 }
