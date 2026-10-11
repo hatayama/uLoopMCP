@@ -214,7 +214,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         {
             // Why the exception is read on every path that has one: the domain load and the first
             // update tick never await the task, and an exception nobody reads is reported later as
-            // an unobserved task exception.
+            // an unobserved task exception. Why here and not in a log argument: the VibeLogger
+            // calls are conditional on ULOOP_DEBUG, so an ordinary build drops them with their
+            // arguments, and a read inside one would never run.
             Exception failure = task.IsFaulted ? task.Exception.GetBaseException() : null;
             bool cancelled = task.IsCanceled
                 || (failure is OperationCanceledException && cancellation.IsCancellationRequested);
