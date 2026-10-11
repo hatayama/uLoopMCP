@@ -95,8 +95,9 @@ command ran against:
   `apply` only when the capture at domain load threw or Unity listed no compilation assembly
   yet) and `captureMs`.
   `hot_reload_source_snapshot_breakdown` appears once each time the capture runs to the end,
-  just before `hot_reload_source_snapshot_captured` (also when Unity listed no compilation
-  assembly, but not when the capture threw). It says where the capture spent its time:
+  just before `hot_reload_source_snapshot_captured`. It also appears when Unity listed no
+  compilation assembly, in which case no captured entry follows, and it does not appear when the
+  capture threw. It says where the capture spent its time:
   - `getAssembliesMs`: listing the compilation assemblies from Unity.
   - `packageLookupMs`: asking Package Manager whether each assembly's sources are immutable.
   - `stampMs`: reading and writing the stamps beside the snapshots.
