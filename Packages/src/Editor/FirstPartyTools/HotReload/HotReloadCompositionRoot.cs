@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
 
 using HarmonyLib;
 
@@ -72,10 +73,20 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 TransformWorkerHost.Shared,
                 HotReloadGroupProcessorDependencies.CreateProduction,
                 new HotReloadApplicationPlayModeQuery(),
-                new HotReloadSourceSnapshotCapture(
-                    () => HotReloadSourceSnapshotter.CaptureAfterDomainReload(HotReloadSnapshotCaptureInputs.ReadOnMainThread())),
+                CreateProductionSourceSnapshotCapture(),
                 warmUp,
                 compiledCallers);
+        }
+
+        // Why only the inputs are read before the pool: they are the capture's only Unity calls, and
+        // Unity allows them on the main thread alone. The capture itself reads files and PDBs.
+        private static HotReloadSourceSnapshotCapture CreateProductionSourceSnapshotCapture()
+        {
+            return new HotReloadSourceSnapshotCapture(
+                HotReloadSnapshotCaptureInputs.ReadOnMainThread,
+                HotReloadSourceSnapshotter.CaptureAfterDomainReload,
+                work => Task.Run(work),
+                () => DateTime.UtcNow.Ticks);
         }
 
         private static HotReloadWarmUp CreateProductionWarmUp(HotReloadCompiledCallers compiledCallers)
@@ -273,11 +284,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 new HotReloadPausePointPort(
                     domain,
                     path => new HotReloadSourceContentHasher().TryComputeContentHashOfFileOrNull(path),
-                    () => services.SourceSnapshotCapture.EnsureCaptured(
+                    () => services.SourceSnapshotCapture.EnsureCapturedBlocking(
                         HotReloadConstants.SourceSnapshotCaptureTriggerPausePoint),
-                    // The capture still runs synchronously inside EnsureCaptured, so none is ever in
-                    // flight when a pause point asks.
-                    () => false);
+                    () => services.SourceSnapshotCapture.IsInFlight);
             // Attaching last keeps the invariant across the gap: the resolver only starts
             // answering binds once every gateway already points at the domain behind it.
             domain.IntroducedTypeResolver.Resume();

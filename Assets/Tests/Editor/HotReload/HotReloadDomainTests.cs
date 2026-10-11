@@ -1078,7 +1078,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         /// makes the port wait for the capture once and read the snapshot instead.
         /// </summary>
         [Test]
-        public void GetVerifiedSnapshotSource_WhileCaptureRuns_WaitsWhenTheLiveFileDiffersFromThePdb()
+        public void GetVerifiedSnapshotSource_WhileCaptureRuns_WaitsWhenThePdbCannotConfirmTheLiveFile()
         {
             int ensureCount = 0;
             HotReloadPausePointPort port = new HotReloadPausePointPort(

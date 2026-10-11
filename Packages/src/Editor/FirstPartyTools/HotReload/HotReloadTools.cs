@@ -332,9 +332,14 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             // selection and response rows, and PackageInfo is main-thread only, which this path is.
             services.PackageRootCapture.CaptureCurrent();
             // Why here: both the default selection below and the run read the snapshot of the compile
-            // the last reload loaded. The gate does nothing when the domain load captured it; it
-            // captures here when that capture threw or Unity listed no compilation assembly yet.
-            services.SourceSnapshotCapture.EnsureCaptured(HotReloadConstants.SourceSnapshotCaptureTriggerApply);
+            // the last reload loaded. This waits for the capture the domain load started, or starts
+            // one when that capture failed, found no compiled assembly, or was cancelled.
+            await services.SourceSnapshotCapture.EnsureCapturedAsync(HotReloadConstants.SourceSnapshotCaptureTriggerApply)
+                .ConfigureAwait(false);
+            // Why switch explicitly: the capture finishes on a pool thread and the wait does not return
+            // through the synchronization context, while the selection below reads Unity's compilation
+            // assemblies, which only the main thread may.
+            await MainThreadSwitcher.SwitchToMainThread(ct);
             HotReloadDefaultFileSelection selection = HotReloadDefaultFileSelector.Resolve(
                 parameters.Files,
                 services.ChangeDetector.Detect,

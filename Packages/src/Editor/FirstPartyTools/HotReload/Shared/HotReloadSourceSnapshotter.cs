@@ -29,18 +29,24 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         /// baseline checks every copy against the PDB when it uses one.
         /// Logs how long each phase took, even when nothing is listed.
         /// Returns false when no compiled dll with a PDB was listed.
-        /// Asks Unity nothing beyond what <paramref name="inputs"/> carries.
+        /// Asks Unity nothing beyond what <paramref name="inputs"/> carries, so it may run on a pool
+        /// thread. Throws <see cref="OperationCanceledException"/> once
+        /// <paramref name="cancellationToken"/> is cancelled.
         /// </summary>
-        internal static bool CaptureAfterDomainReload(HotReloadSnapshotCaptureInputs inputs)
+        internal static bool CaptureAfterDomainReload(
+            HotReloadSnapshotCaptureInputs inputs,
+            CancellationToken cancellationToken)
         {
             Debug.Assert(inputs != null, "inputs must not be null.");
+
+            cancellationToken.ThrowIfCancellationRequested();
 
             System.Diagnostics.Stopwatch totalWatch = System.Diagnostics.Stopwatch.StartNew();
             HotReloadSnapshotCaptureStats stats = CaptureAssemblies(
                 inputs,
                 HotReloadPdbDocumentIndex.Shared,
                 HotReloadCaptureAssemblyEnumerator.ReadSources,
-                CancellationToken.None);
+                cancellationToken);
             totalWatch.Stop();
             VibeLogger.LogInfo(
                 HotReloadConstants.VibeLogSourceSnapshotBreakdown,
