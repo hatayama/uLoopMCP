@@ -46,7 +46,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 inputs,
                 HotReloadPdbDocumentIndex.Shared,
                 HotReloadCaptureAssemblyEnumerator.ReadSources,
-                CancellationToken.None);
+                cancellationToken);
             totalWatch.Stop();
             VibeLogger.LogInfo(
                 HotReloadConstants.VibeLogSourceSnapshotBreakdown,
