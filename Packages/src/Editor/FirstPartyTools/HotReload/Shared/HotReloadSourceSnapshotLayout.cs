@@ -16,9 +16,21 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         // The suffix of an assembly directory that is still being written; only a Move makes it complete.
         internal const string IncompleteDirectorySuffix = ".tmp";
 
+        private const string ImmutableMarkerExtension = ".immutable";
+
         internal static string Root(string projectRoot)
         {
             return Path.Combine(projectRoot, HotReloadConstants.SourceSnapshotRelativeDirectory);
+        }
+
+        /// <summary>
+        /// The file that records the compiled dll of a read-only package's assembly, in the stamp's
+        /// form, so a later capture skips that dll without reading its PDB. A file rather than a
+        /// directory, so the cleanup of earlier builds' directories leaves it alone.
+        /// </summary>
+        internal static string ImmutableMarkerPath(string projectRoot, string assemblyName)
+        {
+            return Path.Combine(Root(projectRoot), assemblyName + ImmutableMarkerExtension);
         }
 
         internal static string AssemblyDirectoryName(string assemblyName, string mvid)

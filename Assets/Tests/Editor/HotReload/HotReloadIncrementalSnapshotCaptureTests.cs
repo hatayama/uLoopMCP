@@ -4,17 +4,14 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 
 using NUnit.Framework;
-
-using UnityEditor.Compilation;
 
 using UnityEngine;
 using UnityEngine.TestTools;
 
 using io.github.hatayama.UnityCliLoop.FirstPartyTools;
-
-using UnityCompilationAssembly = UnityEditor.Compilation.Assembly;
 
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
 {
@@ -525,32 +522,20 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             return stats;
         }
 
+        // Why a reader that names the sources: the planted PDB is this test assembly's, whose sources
+        // live under the real project, so none of them maps to an asset path under the temporary root.
         private HotReloadSnapshotCaptureStats CaptureAssemblies(params string[] sources)
         {
-            UnityCompilationAssembly assembly = new UnityCompilationAssembly(
-                AssemblyName,
-                HotReloadConstants.ScriptAssembliesRelativeDirectory + "/" + AssemblyName + HotReloadConstants.CompiledAssemblyExtension,
-                sources,
-                Array.Empty<string>(),
-                Array.Empty<UnityCompilationAssembly>(),
-                Array.Empty<string>(),
-                AssemblyFlags.EditorAssembly);
             HotReloadSnapshotCaptureInputs inputs = new HotReloadSnapshotCaptureInputs(
                 _root,
                 HotReloadCompileStart.Unknown,
                 Array.Empty<HotReloadSnapshotPackageRoot>(),
-                StringComparison.Ordinal,
-                new[]
-                {
-                    HotReloadSnapshotCaptureInputs.ToCaptureAssembly(
-                        assembly,
-                        Array.Empty<HotReloadSnapshotPackageRoot>(),
-                        StringComparison.Ordinal)
-                },
-                0);
+                StringComparison.Ordinal);
             return HotReloadSourceSnapshotter.CaptureAssemblies(
                 inputs,
-                new HotReloadPdbDocumentIndex(Path.Combine(_root, "PdbDocuments")));
+                new HotReloadPdbDocumentIndex(Path.Combine(_root, "PdbDocuments")),
+                (candidate, capturedInputs) => new HotReloadCaptureAssembly(candidate.Name, sources, false),
+                CancellationToken.None);
         }
 
         // A check whose suspect window starts at the planted compile start, against the given build.

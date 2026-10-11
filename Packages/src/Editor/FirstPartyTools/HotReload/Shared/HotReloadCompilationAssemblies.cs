@@ -16,8 +16,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
     /// Why: on a project with several hundred assemblies one CompilationPipeline.GetAssemblies() call
     /// takes 340-620 ms, while the list only changes through a compile, or through an import that
     /// changes the script set without compiling (see HotReloadCompilationAssemblyListPostprocessor).
-    /// The startup snapshot capture is the first caller after a domain reload, so runs find the list
-    /// already kept.
+    /// Whichever caller first needs the list after a domain reload asks Unity for it; later callers
+    /// in the domain find it kept.
     /// A list rebuilt at startup from the saved list holds only the fields hot reload reads: name,
     /// outputPath, sourceFiles, defines, assemblyReferences and compiledAssemblyReferences.
     /// compilerOptions, flags and rootNamespace keep their defaults, so code that needs them reads
@@ -40,6 +40,15 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             // Why: a compile that fails keeps the domain alive, so without this the list would keep
             // the asmdefs and source files from before that compile until the next reload.
             CompilationPipeline.compilationStarted += OnCompilationStarted;
+        }
+
+        /// <summary>
+        /// Does nothing but make sure the static constructor has run, so the subscription to
+        /// compilationStarted is made on the main thread when the domain loads rather than by
+        /// whichever caller first asks for the list.
+        /// </summary>
+        internal static void EnsureInitialized()
+        {
         }
 
         /// <summary>
