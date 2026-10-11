@@ -17,8 +17,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
         /// <summary>
         /// No sequence point of the PDB refers to the file because none of its code compiled to a
-        /// method body, so no compile can produce a baseline for it. Reported for a file the last
-        /// compile built whether or not a snapshot of it was written.
+        /// method body, so no compile can produce a baseline for it. Reported when a snapshot of the
+        /// file was written, and, without one, for a file the compilation assemblies list in an
+        /// assembly whose PDB a tool rewrote and dropped such documents from.
         /// </summary>
         NoDocumentInPdb,
 

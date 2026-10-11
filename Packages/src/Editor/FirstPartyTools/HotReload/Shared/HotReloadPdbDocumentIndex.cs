@@ -38,6 +38,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
     /// list of urls and checksums, and there is at most one entry per assembly of the project.
     /// Each list is also written to a file under the persistence directory with the same five
     /// values, so a new index in the next domain reads it from there instead of walking the PDB.
+    /// With the list it keeps whether a tool that rewrote the PDB dropped documents from it.
     /// </summary>
     internal sealed class HotReloadPdbDocumentIndex
     {
@@ -86,8 +87,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             }
         }
 
-        private const string PersistedFormatHeader = "uloop-pdb-documents 1";
-        private const int PersistedStampFieldCount = 6;
+        private const string PersistedFormatHeader = "uloop-pdb-documents 2";
+        private const int PersistedStampFieldCount = 7;
         private const int PersistedDocumentFieldCount = 3;
 
         // Hash algorithm GUIDs a portable PDB records for its documents.
@@ -99,11 +100,13 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         {
             public readonly FileStamp Stamp;
             public readonly List<HotReloadPdbDocument> Documents;
+            public readonly bool DropsDocuments;
 
-            public Entry(FileStamp stamp, List<HotReloadPdbDocument> documents)
+            public Entry(FileStamp stamp, List<HotReloadPdbDocument> documents, bool dropsDocuments)
             {
                 Stamp = stamp;
                 Documents = documents;
+                DropsDocuments = dropsDocuments;
             }
         }
 
@@ -183,6 +186,28 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         }
 
         /// <summary>
+        /// Whether the PDB's document table has fewer rows than the sources the compiler recorded
+        /// it emitted. The compiler writes one row per source, so fewer rows means a tool that
+        /// rewrote the PDB after the compile, as an IL post-processor does, dropped the documents
+        /// no sequence point refers to. More rows is not a drop: #line directives add documents.
+        /// False when the PDB does not record the count. Takes the same paths and MVID as
+        /// TryFindDocument, and reads the files only when TryFindDocument would.
+        /// </summary>
+        internal bool DropsDocuments(string dllPath, string pdbPath, string moduleVersionId)
+        {
+            Debug.Assert(!string.IsNullOrEmpty(dllPath), "dllPath must not be null or empty.");
+            Debug.Assert(!string.IsNullOrEmpty(pdbPath), "pdbPath must not be null or empty.");
+            Debug.Assert(!string.IsNullOrEmpty(moduleVersionId), "moduleVersionId must not be null or empty.");
+
+            string fullDllPath = Path.GetFullPath(dllPath);
+            FileStamp stamp = ReadStamp(fullDllPath, pdbPath, moduleVersionId);
+            lock (_gate)
+            {
+                return EnsureEntryLocked(fullDllPath, pdbPath, stamp).DropsDocuments;
+            }
+        }
+
+        /// <summary>
         /// Reads the dll's document list now so that a later TryFindDocument in this domain reads
         /// nothing. Takes the same paths and MVID as TryFindDocument.
         /// </summary>
@@ -208,7 +233,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             }
 
             string persistedPath = PersistedListPath(fullDllPath);
-            List<HotReloadPdbDocument> documents = TryReadPersistedList(persistedPath, stamp);
+            List<HotReloadPdbDocument> documents = TryReadPersistedList(persistedPath, stamp, out bool dropsDocuments);
             if (documents != null)
             {
                 _persistedLoadCount++;
@@ -218,15 +243,15 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 // Why the walk before any write: a walk that throws leaves no entry and no
                 // file, so the next lookup reads the files again instead of answering from
                 // a list of other files.
-                documents = ReadDocuments(fullDllPath, pdbPath);
+                documents = ReadDocumentsNotingDrops(fullDllPath, pdbPath, out dropsDocuments);
                 _loadCount++;
-                WritePersistedList(persistedPath, stamp, documents);
+                WritePersistedList(persistedPath, stamp, documents, dropsDocuments);
             }
 
             // Why stored under the stamp read before the walk: if a file is replaced while
             // it is being read, the next lookup sees another stamp and reads again, so a
             // list is never served for files it was not read from.
-            entry = new Entry(stamp, documents);
+            entry = new Entry(stamp, documents, dropsDocuments);
             _entries[fullDllPath] = entry;
             return entry;
         }
@@ -239,13 +264,15 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         // File format: UTF-8 without a BOM, every line ends with "\n", fields are TAB-separated and
         // numbers are invariant.
         //   line 1: the format header
-        //   line 2: dll length, dll write time ticks, MVID, PDB length, PDB write time ticks, count
+        //   line 2: dll length, dll write time ticks, MVID, PDB length, PDB write time ticks,
+        //           1 when the PDB dropped documents and 0 when not, count
         //   then count lines: (int)HashAlgorithm, the hash in hex ("" for none), url
         // Null for a missing file, another stamp, or any malformed part: a file cut short or edited
         // by hand must not answer with part of a list. Why the url last: it is the only field that
         // can hold anything, so splitting into three keeps a TAB in a url intact.
-        private static List<HotReloadPdbDocument> TryReadPersistedList(string path, FileStamp stamp)
+        private static List<HotReloadPdbDocument> TryReadPersistedList(string path, FileStamp stamp, out bool dropsDocuments)
         {
+            dropsDocuments = false;
             if (!File.Exists(path))
             {
                 return null;
@@ -262,7 +289,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 return null;
             }
 
-            if (!TryParseStampLine(lines[1], out FileStamp persistedStamp, out int count)
+            if (!TryParseStampLine(lines[1], out FileStamp persistedStamp, out bool persistedDrops, out int count)
                 || !persistedStamp.Equals(stamp))
             {
                 return null;
@@ -285,12 +312,14 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 documents.Add(document);
             }
 
+            dropsDocuments = persistedDrops;
             return documents;
         }
 
-        private static bool TryParseStampLine(string line, out FileStamp stamp, out int count)
+        private static bool TryParseStampLine(string line, out FileStamp stamp, out bool dropsDocuments, out int count)
         {
             stamp = default(FileStamp);
+            dropsDocuments = false;
             count = 0;
             string[] fields = line.Split('\t');
             if (fields.Length != PersistedStampFieldCount
@@ -299,13 +328,20 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 || fields[2].Length == 0
                 || !TryParseLong(fields[3], out long pdbLength)
                 || !TryParseLong(fields[4], out long pdbTicks)
-                || !int.TryParse(fields[5], NumberStyles.None, CultureInfo.InvariantCulture, out count))
+                || !TryParseFlag(fields[5], out dropsDocuments)
+                || !int.TryParse(fields[6], NumberStyles.None, CultureInfo.InvariantCulture, out count))
             {
                 return false;
             }
 
             stamp = new FileStamp(dllLength, dllTicks, fields[2], pdbLength, pdbTicks);
             return true;
+        }
+
+        private static bool TryParseFlag(string text, out bool value)
+        {
+            value = string.Equals(text, "1", StringComparison.Ordinal);
+            return value || string.Equals(text, "0", StringComparison.Ordinal);
         }
 
         private static bool TryParseDocumentLine(string line, out HotReloadPdbDocument document)
@@ -369,7 +405,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             return true;
         }
 
-        private void WritePersistedList(string path, FileStamp stamp, List<HotReloadPdbDocument> documents)
+        private void WritePersistedList(string path, FileStamp stamp, List<HotReloadPdbDocument> documents, bool dropsDocuments)
         {
             Directory.CreateDirectory(_persistenceDirectory);
             StringBuilder text = new StringBuilder();
@@ -379,6 +415,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 .Append(stamp.ModuleVersionId).Append('\t')
                 .Append(stamp.PdbLength.ToString(CultureInfo.InvariantCulture)).Append('\t')
                 .Append(stamp.PdbLastWriteTimeUtcTicks.ToString(CultureInfo.InvariantCulture)).Append('\t')
+                .Append(dropsDocuments ? '1' : '0').Append('\t')
                 .Append(documents.Count.ToString(CultureInfo.InvariantCulture)).Append('\n');
             foreach (HotReloadPdbDocument document in documents)
             {
@@ -450,6 +487,14 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         // before any document is read.
         internal static List<HotReloadPdbDocument> ReadDocuments(string dllPath, string pdbPath)
         {
+            return ReadDocumentsNotingDrops(dllPath, pdbPath, out bool _);
+        }
+
+        // ReadDocuments, also answering whether the PDB dropped documents; see DropsDocuments.
+        // Why from the reader the walk already opened: the source count is one more record of
+        // the same PDB, so the answer costs no second read of the file.
+        private static List<HotReloadPdbDocument> ReadDocumentsNotingDrops(string dllPath, string pdbPath, out bool dropsDocuments)
+        {
             Guid codeViewGuid = ReadCodeViewGuid(dllPath);
             using FileStream pdbStream = File.Open(pdbPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
             using MetadataReaderProvider provider = MetadataReaderProvider.FromPortablePdbStream(pdbStream);
@@ -475,6 +520,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                     reader.GetBlobBytes(document.Hash)));
             }
 
+            int? sourceFileCount = HotReloadPdbCompilationInfo.ReadSourceFileCount(reader, pdbPath);
+            dropsDocuments = sourceFileCount.HasValue && reader.Documents.Count < sourceFileCount.Value;
             return documents;
         }
 

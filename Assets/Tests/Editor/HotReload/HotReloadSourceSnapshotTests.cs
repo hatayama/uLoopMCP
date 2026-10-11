@@ -189,7 +189,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 PausePointsRuntimeAssemblyName + HotReloadConstants.CompiledAssemblyExtension);
 
             string loaded = HotReloadSourceBaseline.LoadVerifiedSnapshotSource(PackageSourceAssetPath, dllPath);
-            HotReloadSnapshotMissReason reason = HotReloadSourceBaseline.DescribeSnapshotMiss(PackageSourceAssetPath, dllPath, true);
+            HotReloadSnapshotMissReason reason = HotReloadSourceBaseline.DescribeSnapshotMiss(PackageSourceAssetPath, dllPath, null);
 
             Assert.That(reason, Is.EqualTo(HotReloadSnapshotMissReason.None));
             Assert.That(loaded, Is.EqualTo(File.ReadAllText(Path.Combine(projectRoot, PackageSourcePhysicalPath))));
@@ -264,7 +264,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                     PackageSourceAssetPath,
                     dllPath,
                     documentIndex,
-                    true);
+                    null);
                 string loaded = HotReloadSourceBaseline.LoadVerifiedSnapshotSourceAt(
                     playerRoot,
                     PackageSourceAssetPath,
@@ -361,7 +361,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 BodylessFixtureProjectRelativePath,
                 TestAssemblyDllPath(projectRoot),
                 HotReloadPdbDocumentIndex.Shared,
-                true);
+                null);
 
             Assert.That(reason, Is.EqualTo(HotReloadSnapshotMissReason.NoDocumentInPdb));
         }
@@ -380,55 +380,109 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 FixtureProjectRelativePath,
                 TestAssemblyDllPath(projectRoot),
                 HotReloadPdbDocumentIndex.Shared,
-                true);
+                null);
 
             Assert.That(reason, Is.EqualTo(HotReloadSnapshotMissReason.NoSnapshotFile));
         }
 
         /// <summary>
-        /// What: a compiled file without method bodies whose snapshot was never written, as when an
-        /// IL post-processor dropped it from the PDB the capture reads, still reports that no compile
-        /// gives it a baseline rather than asking for a compile.
+        /// What: a listed file without a snapshot in an assembly whose PDB dropped nothing reports
+        /// the missing snapshot a compile will write, even when no sequence point refers to it: such
+        /// a file is one the last compile did not build yet, as after a rename the compile has not
+        /// caught up with.
         /// </summary>
         [Test]
-        public void DescribeSnapshotMiss_CompiledFileWithoutMethodBodiesOrSnapshot_ReportsNoDocumentInPdb()
+        public void DescribeSnapshotMiss_ListedFileWithoutASnapshotInAPdbThatDroppedNothing_ReportsNoSnapshotFile()
         {
             string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
             string emptyRoot = Path.Combine(Path.GetTempPath(), "uloop-hot-reload-snapshot-empty-" + Guid.NewGuid().ToString("N"));
+            string dllPath = TestAssemblyDllPath(projectRoot);
+            HotReloadPdbCompilationInfo compiled = HotReloadPdbCompilationInfo.Read(Path.ChangeExtension(dllPath, ".pdb"));
+            Assert.That(compiled.SourceFileCount, Is.Not.Null, "Precondition: the compiler's PDB must record its source count.");
+            Assert.That(compiled.DocumentCount, Is.GreaterThanOrEqualTo(compiled.SourceFileCount.Value), "Precondition: the compiler's PDB must drop nothing.");
 
             HotReloadSnapshotMissReason reason = HotReloadSourceBaseline.DescribeSnapshotMissAt(
                 emptyRoot,
                 BodylessFixtureProjectRelativePath,
-                TestAssemblyDllPath(projectRoot),
+                dllPath,
                 HotReloadPdbDocumentIndex.Shared,
-                true);
+                null);
+
+            Assert.That(reason, Is.EqualTo(HotReloadSnapshotMissReason.NoSnapshotFile));
+        }
+
+        /// <summary>
+        /// What: in an assembly whose PDB an IL post-processor rewrote and dropped documents from, a
+        /// listed file without a snapshot that no sequence point refers to, which the capture could
+        /// not name from that PDB, reports that no compile gives it a baseline.
+        /// </summary>
+        [Test]
+        public void DescribeSnapshotMiss_ListedBodylessFileWithoutASnapshotInAPdbThatDroppedDocuments_ReportsNoDocumentInPdb()
+        {
+            HotReloadSnapshotMissReason reason = DescribeMissInARewrittenTestAssembly(
+                BodylessFixtureProjectRelativePath,
+                withNewSourceEvidence: false);
 
             Assert.That(reason, Is.EqualTo(HotReloadSnapshotMissReason.NoDocumentInPdb));
         }
 
         /// <summary>
-        /// What: a file added since the compile has no snapshot and no PDB document, and reports the
-        /// missing snapshot a compile will write, whether or not it has method bodies.
+        /// What: in an assembly whose PDB dropped documents, a listed file with method bodies and no
+        /// snapshot still reports the missing snapshot a compile will write.
         /// </summary>
-        [TestCase(BodylessFixtureProjectRelativePath)]
-        [TestCase("Assets/Tests/Editor/HotReload/HotReloadAddedSinceTheCompile.cs")]
-        public void DescribeSnapshotMiss_FileAddedSinceTheCompile_ReportsNoSnapshotFile(string projectRelativePath)
+        [Test]
+        public void DescribeSnapshotMiss_ListedFileWithBodiesWithoutASnapshotInAPdbThatDroppedDocuments_ReportsNoSnapshotFile()
         {
-            string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
-            string emptyRoot = Path.Combine(Path.GetTempPath(), "uloop-hot-reload-snapshot-empty-" + Guid.NewGuid().ToString("N"));
-
-            HotReloadSnapshotMissReason reason = HotReloadSourceBaseline.DescribeSnapshotMissAt(
-                emptyRoot,
-                projectRelativePath,
-                TestAssemblyDllPath(projectRoot),
-                HotReloadPdbDocumentIndex.Shared,
-                false);
+            HotReloadSnapshotMissReason reason = DescribeMissInARewrittenTestAssembly(
+                FixtureProjectRelativePath,
+                withNewSourceEvidence: false);
 
             Assert.That(reason, Is.EqualTo(HotReloadSnapshotMissReason.NoSnapshotFile));
         }
 
         /// <summary>
-        /// What: a PDB of another build beside the dll is rejected the same way for a compiled file
+        /// What: a file the compilation assemblies do not list yet, placed in the assembly by new
+        /// source evidence, reports the missing snapshot a compile will write even in an assembly
+        /// whose PDB dropped documents, whether or not it has method bodies.
+        /// </summary>
+        [TestCase(BodylessFixtureProjectRelativePath)]
+        [TestCase("Assets/Tests/Editor/HotReload/HotReloadAddedSinceTheCompile.cs")]
+        public void DescribeSnapshotMiss_FileWithNewSourceEvidenceInAPdbThatDroppedDocuments_ReportsNoSnapshotFile(
+            string projectRelativePath)
+        {
+            HotReloadSnapshotMissReason reason = DescribeMissInARewrittenTestAssembly(
+                projectRelativePath,
+                withNewSourceEvidence: true);
+
+            Assert.That(reason, Is.EqualTo(HotReloadSnapshotMissReason.NoSnapshotFile));
+        }
+
+        // Asks why a file has no snapshot in a copy of this test assembly whose PDB a Cecil round
+        // trip rewrote and dropped documents from, under a root with no snapshot tree.
+        private static HotReloadSnapshotMissReason DescribeMissInARewrittenTestAssembly(
+            string projectRelativePath,
+            bool withNewSourceEvidence)
+        {
+            string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+            string dllPath = CecilPdbRewrite.RewriteIntoNewDirectoryLosingDocuments(projectRoot, TestAssemblyName);
+            string rewriteRoot = RewriteRoot(dllPath);
+            try
+            {
+                return HotReloadSourceBaseline.DescribeSnapshotMissAt(
+                    rewriteRoot,
+                    projectRelativePath,
+                    dllPath,
+                    new HotReloadPdbDocumentIndex(Path.Combine(rewriteRoot, "PdbDocuments")),
+                    withNewSourceEvidence ? NewSourceEvidence(projectRelativePath, dllPath) : null);
+            }
+            finally
+            {
+                Directory.Delete(rewriteRoot, recursive: true);
+            }
+        }
+
+        /// <summary>
+        /// What: a PDB of another build beside the dll is rejected the same way for a listed file
         /// without a snapshot as for one with a snapshot.
         /// </summary>
         [TestCase(true)]
@@ -457,7 +511,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                     FixtureProjectRelativePath,
                     dllPath,
                     index,
-                    true));
+                    null));
             }
             finally
             {
@@ -482,7 +536,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                     FixtureProjectRelativePath,
                     dllPath,
                     HotReloadPdbDocumentIndex.Shared,
-                    true);
+                    null);
                 Assert.That(reason, Is.EqualTo(HotReloadSnapshotMissReason.HashMismatch));
             }
             finally
@@ -504,7 +558,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 FixtureProjectRelativePath,
                 TestAssemblyDllPath(projectRoot),
                 HotReloadPdbDocumentIndex.Shared,
-                true);
+                null);
 
             Assert.That(reason, Is.EqualTo(HotReloadSnapshotMissReason.None));
         }
@@ -565,7 +619,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                     BodylessFixtureProjectRelativePath,
                     TestAssemblyDllPath(projectRoot),
                     index,
-                    true);
+                    null);
 
                 Assert.That(loaded, Is.Null);
                 Assert.That(reason, Is.EqualTo(HotReloadSnapshotMissReason.NoDocumentInPdb));
@@ -586,6 +640,24 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 projectRoot,
                 HotReloadConstants.ScriptAssembliesRelativeDirectory,
                 TestAssemblyName + HotReloadConstants.CompiledAssemblyExtension);
+        }
+
+        // The temporary directory RewriteIntoNewDirectoryLosingDocuments created for the dll.
+        private static string RewriteRoot(string dllPath)
+        {
+            return Path.GetDirectoryName(Path.GetDirectoryName(Path.GetDirectoryName(dllPath)));
+        }
+
+        // Evidence of the kind a run carries for a file Unity's compilation assemblies do not list.
+        private static HotReloadNewSourceMembershipEvidence NewSourceEvidence(string projectRelativePath, string dllPath)
+        {
+            return new HotReloadNewSourceMembershipEvidence(
+                projectRelativePath,
+                TestAssemblyName,
+                dllPath,
+                HotReloadAssemblyMvid.Read(dllPath),
+                "Assets/Tests/Editor/HotReload/UnityCLILoop.Tests.Editor.HotReload.asmdef",
+                Array.Empty<HotReloadNewSourceMembershipBoundary>());
         }
 
         // No source is written at or after the end of time, so the capture never reads a compiled assembly.

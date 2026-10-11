@@ -95,7 +95,32 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 reader.Documents.Count);
         }
 
+        /// <summary>
+        /// Reads the compiler's source count from an open PDB, or null when the PDB has no
+        /// compilation options record or the record does not hold the count. Throws
+        /// InvalidOperationException when the record is malformed.
+        /// </summary>
+        internal static int? ReadSourceFileCount(MetadataReader reader, string pdbPath)
+        {
+            Debug.Assert(reader != null, "reader must not be null.");
+
+            byte[] options = TryReadModuleRecord(reader, CompilationOptionsKind);
+            return options == null ? null : ToSourceFileCount(ParseOptions(options, pdbPath));
+        }
+
         private static byte[] ReadModuleRecord(MetadataReader reader, Guid kind, string pdbPath)
+        {
+            byte[] record = TryReadModuleRecord(reader, kind);
+            if (record == null)
+            {
+                throw new InvalidOperationException(
+                    "The PDB " + Path.GetFileName(pdbPath) + " has no compilation record of kind " + kind + ".");
+            }
+
+            return record;
+        }
+
+        private static byte[] TryReadModuleRecord(MetadataReader reader, Guid kind)
         {
             // Why only the module's rows: both records describe the whole compilation, so Roslyn
             // attaches them to the module.
@@ -110,8 +135,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 return reader.GetBlobBytes(information.Value);
             }
 
-            throw new InvalidOperationException(
-                "The PDB " + Path.GetFileName(pdbPath) + " has no compilation record of kind " + kind + ".");
+            return null;
         }
 
         // The options blob is a sequence of null-terminated UTF-8 key and value pairs.
