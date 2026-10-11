@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -55,12 +54,6 @@ type unityPackageReleaseListing struct {
 	ID      int64  `json:"id"`
 	TagName string `json:"tag_name"`
 	Draft   bool   `json:"draft"`
-}
-
-type unityPackageReleaseConfig struct {
-	Packages map[string]struct {
-		ChangelogPath string `json:"changelog-path"`
-	} `json:"packages"`
 }
 
 // unityPackageReleaseState is what the creation learned before its first write.
@@ -334,11 +327,11 @@ func listUnityPackageReleaseDrafts(ctx context.Context, deps unityPackageRelease
 // recorded it, read from that commit rather than the checkout so a later changelog edit cannot
 // change what the release says.
 func readUnityPackageReleaseNotes(ctx context.Context, deps unityPackageReleaseCreateDeps, options unityPackageReleaseCreateOptions) (string, error) {
-	configContent, err := deps.runOutput(ctx, "git", "-C", options.RepoRoot, "show", options.Commit+":release-please-config.json")
+	configContent, err := deps.runOutput(ctx, "git", "-C", options.RepoRoot, "show", options.Commit+":"+releasePleaseConfigRelativePath)
 	if err != nil {
 		return "", err
 	}
-	var config unityPackageReleaseConfig
+	var config releasePleaseConfig
 	if err := json.Unmarshal([]byte(configContent), &config); err != nil {
 		return "", fmt.Errorf("parse release-please config at %s: %w", options.Commit, err)
 	}
@@ -346,14 +339,7 @@ func readUnityPackageReleaseNotes(ctx context.Context, deps unityPackageReleaseC
 	if changelogPath == "" {
 		return "", fmt.Errorf("release-please config at %s has no changelog-path for %s", options.Commit, unityPackageManifestKey)
 	}
-	// release-please resolves a changelog path that starts with "/" from the repository root and
-	// any other from the package directory.
-	if strings.HasPrefix(changelogPath, "/") {
-		changelogPath = strings.TrimPrefix(changelogPath, "/")
-	} else {
-		changelogPath = path.Join(unityPackageManifestKey, changelogPath)
-	}
-	changelog, err := deps.runOutput(ctx, "git", "-C", options.RepoRoot, "show", options.Commit+":"+changelogPath)
+	changelog, err := deps.runOutput(ctx, "git", "-C", options.RepoRoot, "show", options.Commit+":"+releasePleaseChangelogPath(unityPackageManifestKey, changelogPath))
 	if err != nil {
 		return "", err
 	}

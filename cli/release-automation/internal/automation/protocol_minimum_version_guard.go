@@ -94,39 +94,43 @@ func RunMinimumCliReleaseProtocolCheck(ctx context.Context, stdout io.Writer, st
 		return 1
 	}
 
-	constantsContent, err := minimumCliReleaseFile(ctx, repoRoot, ref, protocolMinimumVersionFile)
-	if err != nil {
-		writeProtocolMinimumVersionLine(stderr, fmt.Sprintf("failed to read %s: %v", protocolMinimumVersionFile, err))
-		return 1
-	}
-	pinContent, err := minimumCliReleaseFile(ctx, repoRoot, ref, unityPackageCliPinFile)
-	if err != nil {
-		writeProtocolMinimumVersionLine(stderr, fmt.Sprintf("failed to read %s: %v", unityPackageCliPinFile, err))
-		return 1
-	}
-	values, err := ParseProtocolMinimumVersionValues(constantsContent, pinContent)
+	message, err := checkMinimumCliReleaseProtocol(ctx, repoRoot, ref)
 	if err != nil {
 		writeProtocolMinimumVersionLine(stderr, err)
 		return 1
 	}
+	writeProtocolMinimumVersionLine(stdout, message)
+	return 0
+}
+
+// checkMinimumCliReleaseProtocol returns what it confirmed when the minimum project runner release
+// that ref's pin names is published and advertises the protocol ref requires, and why not otherwise.
+// An empty ref reads the working tree.
+func checkMinimumCliReleaseProtocol(ctx context.Context, repoRoot string, ref string) (string, error) {
+	constantsContent, err := minimumCliReleaseFile(ctx, repoRoot, ref, protocolMinimumVersionFile)
+	if err != nil {
+		return "", fmt.Errorf("failed to read %s: %w", protocolMinimumVersionFile, err)
+	}
+	pinContent, err := minimumCliReleaseFile(ctx, repoRoot, ref, unityPackageCliPinFile)
+	if err != nil {
+		return "", fmt.Errorf("failed to read %s: %w", unityPackageCliPinFile, err)
+	}
+	values, err := ParseProtocolMinimumVersionValues(constantsContent, pinContent)
+	if err != nil {
+		return "", err
+	}
 	if !values.HasRequiredProtocol {
-		writeProtocolMinimumVersionLine(stderr, protocolMinimumVersionFile+" does not define REQUIRED_CLI_PROTOCOL_VERSION")
-		return 1
+		return "", errors.New(protocolMinimumVersionFile + " does not define REQUIRED_CLI_PROTOCOL_VERSION")
 	}
 
 	releaseTag, err := verifyMinimumCliReleaseProtocolAtRef(ctx, repoRoot, values)
 	if err != nil {
-		writeProtocolMinimumVersionLine(stderr, err)
-		return 1
+		return "", err
 	}
-
-	writeProtocolMinimumVersionLine(
-		stdout,
-		fmt.Sprintf(
-			"Minimum project runner release %s advertises protocol %d.",
-			releaseTag,
-			values.RequiredProtocolVersion))
-	return 0
+	return fmt.Sprintf(
+		"Minimum project runner release %s advertises protocol %d.",
+		releaseTag,
+		values.RequiredProtocolVersion), nil
 }
 
 func AnalyzeProtocolMinimumVersionGuardForRefs(
