@@ -219,7 +219,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         public async Task EnsureCapturedAsync_WhileInFlight_CompletesOnlyAfterTheCapture()
         {
             HotReloadSourceSnapshotCapture gate = CreateGate();
-            gate.StartIfNeeded(Trigger);
+            _ = gate.StartIfNeeded(Trigger);
 
             Task ensured = gate.EnsureCapturedAsync(HotReloadConstants.SourceSnapshotCaptureTriggerApply);
             Assert.That(ensured.IsCompleted, Is.False);
@@ -255,7 +255,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             }
 
             Assert.That(thrown, Is.SameAs(failure));
-            gate.StartIfNeeded(Trigger);
+            _ = gate.StartIfNeeded(Trigger);
             Assert.That(_background.StartCount, Is.EqualTo(2));
             _background.RunHeldWork();
         }
