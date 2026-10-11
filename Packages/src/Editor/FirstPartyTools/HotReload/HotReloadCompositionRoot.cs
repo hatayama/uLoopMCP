@@ -273,7 +273,10 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                     domain,
                     path => new HotReloadSourceContentHasher().TryComputeContentHashOfFileOrNull(path),
                     () => services.SourceSnapshotCapture.EnsureCaptured(
-                        HotReloadConstants.SourceSnapshotCaptureTriggerPausePoint));
+                        HotReloadConstants.SourceSnapshotCaptureTriggerPausePoint),
+                    // The capture still runs synchronously inside EnsureCaptured, so none is ever in
+                    // flight when a pause point asks.
+                    () => false);
             // Attaching last keeps the invariant across the gap: the resolver only starts
             // answering binds once every gateway already points at the domain behind it.
             domain.IntroducedTypeResolver.Resume();

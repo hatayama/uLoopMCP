@@ -18,21 +18,26 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         private readonly HotReloadDomain _domain;
         private readonly Func<string, string> _readSourceContentHashOrNull;
         private readonly Action _ensureSnapshotCaptured;
+        private readonly Func<bool> _isCaptureInFlight;
 
         // Why the hash reader is passed in: the hasher lives in the apply pipeline's assembly,
         // which this one may not reference, and the check must hash the way the worker did.
         // Why the capture is passed in: the gate that captures the source snapshot belongs to the
-        // services the composition root installs, which this assembly does not reference.
+        // services the composition root installs, which this assembly does not reference, and the
+        // in-flight check is passed in for the same reason.
         public HotReloadPausePointPort(
             HotReloadDomain domain,
             Func<string, string> readSourceContentHashOrNull,
-            Action ensureSnapshotCaptured)
+            Action ensureSnapshotCaptured,
+            Func<bool> isCaptureInFlight)
         {
             Debug.Assert(ensureSnapshotCaptured != null, "ensureSnapshotCaptured must not be null.");
+            Debug.Assert(isCaptureInFlight != null, "isCaptureInFlight must not be null.");
 
             _domain = domain;
             _readSourceContentHashOrNull = readSourceContentHashOrNull;
             _ensureSnapshotCaptured = ensureSnapshotCaptured;
+            _isCaptureInFlight = isCaptureInFlight;
         }
 
         public MethodBase GetActiveShimForMethod(MethodBase method)
@@ -62,6 +67,21 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             if (string.IsNullOrEmpty(projectRelativeFile) || string.IsNullOrEmpty(dllPath))
             {
                 return null;
+            }
+
+            // Why the live file is tried while a capture runs: a pause point re-armed on the first
+            // update tick after a reload would otherwise wait for the whole capture. A live file the
+            // PDB confirms holds the bytes the compiler read, which is what the snapshot will hold.
+            // Why only while a capture runs: otherwise the snapshot is ready or about to be captured
+            // here, and reading it keeps the answer unchanged from before the capture moved off the
+            // main thread.
+            if (_isCaptureInFlight())
+            {
+                string liveSource = HotReloadSourceBaseline.LoadVerifiedLiveSourceOrNull(projectRelativeFile, dllPath);
+                if (liveSource != null)
+                {
+                    return liveSource;
+                }
             }
 
             // Why: with both tools disabled at domain load nothing was captured, and a pause point
