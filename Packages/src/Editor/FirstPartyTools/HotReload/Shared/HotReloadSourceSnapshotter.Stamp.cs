@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
@@ -39,6 +40,54 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             }
 
             return stampedMtimeTicks == dllMtimeTicks && stampedByteLength == dllByteLength;
+        }
+
+        // The complete snapshot directory of the build the stamp names, when it has a manifest to reuse;
+        // null when there is none, so the capture copies every source.
+        private static string FindReusablePreviousSnapshotDirectory(
+            string projectRoot,
+            string stampPath,
+            string assemblyName,
+            string currentSnapshotDirectory)
+        {
+            if (!File.Exists(stampPath))
+            {
+                return null;
+            }
+
+            string[] parts = File.ReadAllText(stampPath).Trim().Split(',');
+            if (parts.Length != 3)
+            {
+                return null;
+            }
+
+            // Why the same check as the stale-directory cleanup: only an MVID names a snapshot directory.
+            if (!Guid.TryParseExact(parts[0], "N", out Guid _))
+            {
+                return null;
+            }
+
+            string previousSnapshotDirectory = HotReloadSourceSnapshotLayout.AssemblyDirectory(projectRoot, assemblyName, parts[0]);
+            if (string.Equals(
+                    Path.GetFullPath(previousSnapshotDirectory),
+                    Path.GetFullPath(currentSnapshotDirectory),
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
+            if (!Directory.Exists(previousSnapshotDirectory))
+            {
+                return null;
+            }
+
+            // A missing, malformed or older-format manifest answers no line, so nothing could be reused.
+            if (HotReloadSourceStampManifest.Load(previousSnapshotDirectory).Count == 0)
+            {
+                return null;
+            }
+
+            return previousSnapshotDirectory;
         }
 
         private static void WriteStamp(string stampPath, string mvid, long dllMtimeTicks, long dllByteLength)

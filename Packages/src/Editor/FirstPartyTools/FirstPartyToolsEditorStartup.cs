@@ -1,3 +1,5 @@
+using System;
+
 using UnityEditor;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
@@ -8,14 +10,18 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
     /// </summary>
     public static class FirstPartyToolsEditorStartup
     {
-        public static void Initialize()
+        /// <summary>
+        /// Initializes every first-party tool's Editor startup work. <paramref name="isToolEnabled"/>
+        /// answers whether the user enabled a tool in the tool settings, by its settings name.
+        /// </summary>
+        public static void Initialize(Func<string, bool> isToolEnabled)
         {
             DomainReloadDisableScopeRecovery.RestoreForEditorStartup();
             ExternalSceneChangeTracker.Initialize();
             ControlPlayModeEditorStartup.Initialize();
             PausePointEditorStartup.Initialize();
             CompileEditorStartup.Initialize();
-            HotReloadEditorStartup.Initialize();
+            HotReloadEditorStartup.Initialize(isToolEnabled);
             WatchEditorStartup.Initialize();
             ExecuteDynamicCodeEditorStartup.Initialize();
             GetLogsEditorStartup.Initialize();
@@ -35,9 +41,10 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
         /// <summary>
         /// Runs the first-party tool work that has to finish before this domain answers its first
-        /// uloop command. Called once, at the end of the Editor startup.
+        /// uloop command. Called once, at the end of the Editor startup. <paramref name="isToolEnabled"/>
+        /// answers whether the user enabled a tool in the tool settings, by its settings name.
         /// </summary>
-        public static void PrepareBeforeServingCommands()
+        public static void PrepareBeforeServingCommands(Func<string, bool> isToolEnabled)
         {
             // Why not in an import worker: it never serves commands (the server does not start
             // there) and it shares Library with the main Editor, so a capture there would only
@@ -47,7 +54,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 return;
             }
 
-            HotReloadEditorStartup.CaptureSourceSnapshotBeforeServingCommands();
+            HotReloadEditorStartup.CaptureSourceSnapshotBeforeServingCommands(isToolEnabled);
         }
 
         public static void ResetServerScopedServices()

@@ -4,6 +4,8 @@ using System.Reflection;
 
 using HarmonyLib;
 
+using Newtonsoft.Json.Linq;
+
 using NUnit.Framework;
 
 using io.github.hatayama.UnityCliLoop.FirstPartyTools;
@@ -99,6 +101,35 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
 
             Assert.That(HotReloadPausePointCoordination.HotReloadSide, Is.Not.Null);
             Assert.That(HotReloadPausePointCoordination.HotReloadSide, Is.Not.SameAs(installedPort));
+        }
+
+        /// <summary>
+        /// The pause point side the composition root installs captures the source snapshot
+        /// through the installed gate, under the pause_point trigger, before it reads the snapshot.
+        /// </summary>
+        [Test]
+        public void Install_PausePointSide_CapturesThroughTheInstalledGateWithThePausePointTrigger()
+        {
+            VibeLogger.ClearMemoryLogs();
+            int captureCount = 0;
+            HotReloadSourceSnapshotCapture capture = new HotReloadSourceSnapshotCapture(() =>
+            {
+                captureCount++;
+                return true;
+            });
+            string source;
+
+            using (HotReloadServicesTestScope.BeginWithSourceSnapshotCapture(capture))
+            {
+                source = HotReloadPausePointCoordination.HotReloadSide.GetVerifiedSnapshotSource(
+                    "Assets/NoSuchSource.cs",
+                    "Library/ScriptAssemblies/NoSuchAssembly.dll");
+            }
+
+            Assert.That(captureCount, Is.EqualTo(1), "captures");
+            JObject context = HotReloadWarmUpTestDoubles.ReadSingleVibeContext(HotReloadConstants.VibeLogSourceSnapshotCaptured);
+            Assert.That((string)context["trigger"], Is.EqualTo(HotReloadConstants.SourceSnapshotCaptureTriggerPausePoint));
+            Assert.That(source, Is.Null, "no snapshot exists for a dll that does not exist");
         }
 
         /// <summary>
