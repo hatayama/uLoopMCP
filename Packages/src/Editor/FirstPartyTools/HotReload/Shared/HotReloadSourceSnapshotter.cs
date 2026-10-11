@@ -158,13 +158,35 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                     pdbPath,
                     mvid,
                     documentIndex);
-                HotReloadSourceSnapshotCopier.CaptureAtomically(
+                System.Diagnostics.Stopwatch previousWatch = System.Diagnostics.Stopwatch.StartNew();
+                string previousSnapshotDirectory = FindReusablePreviousSnapshotDirectory(
                     projectRoot,
-                    assemblySnapshotDirectory,
-                    sourceFiles,
+                    stampPath,
                     assembly.name,
-                    check,
-                    stats);
+                    assemblySnapshotDirectory);
+                stats.StampTicks += previousWatch.Elapsed.Ticks;
+                if (previousSnapshotDirectory == null)
+                {
+                    HotReloadSourceSnapshotCopier.CaptureAtomically(
+                        projectRoot,
+                        assemblySnapshotDirectory,
+                        sourceFiles,
+                        assembly.name,
+                        check,
+                        stats);
+                }
+                else
+                {
+                    HotReloadSourceSnapshotCopier.CaptureIncrementally(
+                        projectRoot,
+                        assemblySnapshotDirectory,
+                        previousSnapshotDirectory,
+                        sourceFiles,
+                        assembly.name,
+                        check,
+                        stats);
+                }
+
                 stats.AssembliesCaptured++;
                 System.Diagnostics.Stopwatch cleanupWatch = System.Diagnostics.Stopwatch.StartNew();
                 DeleteStaleSnapshotDirectories(snapshotRoot, assembly.name, assemblySnapshotDirectory);
