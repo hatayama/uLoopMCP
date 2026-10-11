@@ -81,6 +81,11 @@ and the default selection, the sibling scan and the skip check treat a marked so
 changed; a capture moves the previous build's directory to the new MVID's and rewrites only the
 sources whose length or write time changed, that carry no unmarked manifest line, or that were
 written since the compile started; it deletes the copies of sources no longer in the assembly.
+The capture runs on a pool thread after the domain load reads its inputs on the main thread, one
+capture at a time; `uloop compile` returns only after it finishes (or after 30 seconds), a hot
+reload run waits for it, and a pause point waits for it unless the file on disk matches the PDB
+checksum, in which case it reads that file. A domain reload or a compile start cancels it, and
+the next reader starts it again (`docs/adr/0014-capture-the-hot-reload-source-snapshot-off-the-main-thread.md`).
 When both the hot-reload and pause-point tools are disabled in the tool settings, the capture
 after a domain reload is skipped; the first hot reload run or pause point after either tool is
 enabled captures it, and any source written since the compile started is then checked against

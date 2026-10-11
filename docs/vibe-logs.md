@@ -90,19 +90,35 @@ command ran against:
   sent), `start_failed` or `request_failed` (with `failureReason`; the worker is stopped and the
   next compile starts it again), or `failed` (an exception, with `failureReason` set to its type
   and `exceptionMessage`, logged as a warning).
-  `hot_reload_source_snapshot_captured` appears once per domain when the source snapshot
-  capture ran to completion, with its `trigger` (`domain_load` normally; `first_update_tick` or
-  `apply` only when the capture at domain load threw or Unity listed no compilation assembly
-  yet; `apply` or `pause_point` when the captures at startup were skipped and a hot reload run
-  or a pause point is the first to read the snapshot) and `captureMs`. When both the hot-reload
-  and pause-point tools are disabled in the tool settings, the captures at `domain_load` and
+  The source snapshot capture reads its inputs on the main thread and then runs on a pool
+  thread, one capture at a time. Each start writes `hot_reload_source_snapshot_capture_started`
+  with its `trigger` and `mainThreadMs` (the time the main thread spent reading the inputs and
+  handing the capture over). How it ended follows as one of these, with the same `trigger`:
+  - `hot_reload_source_snapshot_captured`, once per domain, with `captureMs` (the time on the
+    pool thread). `trigger` is `domain_load` normally; `first_update_tick`, `apply` or
+    `pause_point` when the capture at domain load failed, found no compiled assembly, or was
+    cancelled, or when the captures at startup were skipped and a hot reload run or a pause point
+    is the first to read the snapshot.
+  - `hot_reload_source_snapshot_capture_failed` (a warning) with `error` (the exception type) and
+    `message`.
+  - `hot_reload_source_snapshot_capture_empty` when no compiled assembly was found, which is
+    normal while Unity compiles.
+  - `hot_reload_source_snapshot_capture_cancelled` when a domain reload or a compile start
+    stopped it.
+  After any of the last three, the next reader or the first update tick starts a new capture.
+  While a capture runs, `get-compile-status` reports not ready, so `uloop compile` returns only
+  after it. That hold gives up after 30 seconds and writes one
+  `hot_reload_source_snapshot_capture_hold_cap_exceeded` (a warning). Readers keep waiting for
+  the capture. `compile_status_query_received` carries `is_snapshot_capture_holding`. When both
+  the hot-reload and pause-point tools are disabled in the tool settings, the captures at `domain_load` and
   `first_update_tick` each write `hot_reload_source_snapshot_skipped` with that `trigger` and
   `reason` `tools_disabled` instead, and the first hot reload run or pause point after either
   tool is enabled captures it.
   `hot_reload_source_snapshot_breakdown` appears once each time the capture runs to the end,
   just before `hot_reload_source_snapshot_captured`. It also appears when Unity listed no
-  compilation assembly, in which case no captured entry follows, and it does not appear when the
-  capture threw. It says where the capture spent its time:
+  compilation assembly, in which case `hot_reload_source_snapshot_capture_empty` follows instead,
+  and it does not appear when the capture threw or was cancelled. It says where the capture spent
+  its time:
   - `getAssembliesMs`: listing the compilation assemblies from Unity, which happens while the
     capture's inputs are read on the main thread, before any copying starts.
   - `packageLookupMs`: reading whether each assembly's sources are immutable. The inputs decide
