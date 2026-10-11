@@ -4,6 +4,9 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
+using Mono.Cecil;
+using Mono.Cecil.Cil;
+
 using NUnit.Framework;
 
 using UnityEngine;
@@ -76,6 +79,40 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
 
             Assert.That(checkedAssemblies, Is.GreaterThan(0), "No compiled assembly with a PDB was found.");
             Assert.That(mismatches, Is.Empty, string.Join("\n", mismatches));
+        }
+
+        /// <summary>
+        /// What: a portable PDB written without Roslyn's compilation records (here by Cecil) is
+        /// refused, instead of reading as an assembly with no defines and no references.
+        /// </summary>
+        [Test]
+        public void Read_WhenThePdbHasNoCompilationRecords_Throws()
+        {
+            string directory = Path.Combine(
+                Path.GetTempPath(),
+                "uloop-pdb-compilation-info-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(directory);
+            try
+            {
+                string dllPath = Path.Combine(directory, "NoRecords.dll");
+                using (ModuleDefinition module = ModuleDefinition.CreateModule("NoRecords", ModuleKind.Dll))
+                {
+                    module.Write(dllPath, new WriterParameters
+                    {
+                        WriteSymbols = true,
+                        SymbolWriterProvider = new PortablePdbWriterProvider(),
+                    });
+                }
+
+                string pdbPath = Path.ChangeExtension(dllPath, ".pdb");
+                Assert.That(File.Exists(pdbPath), Is.True, "Cecil did not write the portable PDB.");
+
+                Assert.Throws<InvalidOperationException>(() => HotReloadPdbCompilationInfo.Read(pdbPath));
+            }
+            finally
+            {
+                Directory.Delete(directory, true);
+            }
         }
 
         private static void AddDefineMismatch(
