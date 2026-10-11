@@ -103,8 +103,11 @@ command ran against:
   just before `hot_reload_source_snapshot_captured`. It also appears when Unity listed no
   compilation assembly, in which case no captured entry follows, and it does not appear when the
   capture threw. It says where the capture spent its time:
-  - `getAssembliesMs`: listing the compilation assemblies from Unity.
-  - `packageLookupMs`: asking Package Manager whether each assembly's sources are immutable.
+  - `getAssembliesMs`: listing the compilation assemblies from Unity, which happens while the
+    capture's inputs are read on the main thread, before any copying starts.
+  - `packageLookupMs`: reading whether each assembly's sources are immutable. The inputs decide
+    that from the package roots they read from Package Manager once, so this is close to 0; it
+    no longer asks Package Manager for each assembly.
   - `stampMs`: reading and writing the stamps beside the snapshots, and reading the previous
     build's manifest.
   - `mvidMs`: reading the MVID of each compiled dll whose stamp did not match.
@@ -117,7 +120,8 @@ command ran against:
     previous build's directory there, writing the manifest, and moving the directory into place.
   - `cleanupMs`: deleting the snapshot directories of earlier builds, and the copies of sources
     the assembly no longer lists.
-  - `totalMs`: the whole capture.
+  - `totalMs`: listing the assemblies plus the whole per-assembly loop. Reading the compile start
+    and the package roots for the inputs is not counted here.
   - `assemblies`: the compilation assemblies listed.
   - `assembliesImmutable`: those skipped because their sources belong to an immutable package.
   - `assembliesUnchanged`: those skipped because their stamp matched the compiled dll.
@@ -126,7 +130,7 @@ command ran against:
   - `filesCopied` and `bytesCopied`: the sources copied and their total size.
   - `filesChecked`: the sources checked against the PDB.
   The phases add up to `totalMs` except for the loop overhead; `captureMs` in the captured entry
-  also includes writing this breakdown entry.
+  also includes reading the compile start and the package roots, and writing this breakdown entry.
   After a domain reload, the warm-up writes one `hot_reload_warm_up_complete` with the target
   assemblies, each item's `outcome` (`done`, `cancelled` or `failed`) and time, and `cancelledBy`
   (`run`, `beforeAssemblyReload`, `compilationStarted`, or null), or one
