@@ -727,6 +727,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         public const string CompilationListReasonAssemblySetChanged = "assembly_set_changed";
         public const string CompilationListReasonPdbMismatch = "pdb_mismatch";
         public const string CompilationListReasonPdbDocumentsIncomplete = "pdb_documents_incomplete";
+        public const string CompilationListReasonCompilationFailed = "compilation_failed";
         public const string CompilationListReasonUnresolvedReference = "unresolved_reference";
         public const string CompilationListReasonReferenceMissing = "reference_missing";
         public const string CompilationListReasonReferenceChanged = "reference_changed";

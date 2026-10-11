@@ -19,6 +19,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         private readonly HotReloadCompilationAssemblyListStore _store;
         private readonly HotReloadCompilationAssemblyCache _cache;
         private readonly Func<HotReloadSnapshotCaptureInputs> _readInputs;
+        private readonly Func<bool> _isCompilationFailed;
         private readonly Func<Func<HotReloadCompilationListReconstruction>, Task<HotReloadCompilationListReconstruction>> _runInBackground;
 
         // Main thread only. Replaced by each run, so cancelling stops only the latest one.
@@ -28,15 +29,18 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             HotReloadCompilationAssemblyListStore store,
             HotReloadCompilationAssemblyCache cache,
             Func<HotReloadSnapshotCaptureInputs> readInputs,
+            Func<bool> isCompilationFailed,
             Func<Func<HotReloadCompilationListReconstruction>, Task<HotReloadCompilationListReconstruction>> runInBackground)
         {
             Debug.Assert(store != null, "store must not be null.");
             Debug.Assert(cache != null, "cache must not be null.");
             Debug.Assert(readInputs != null, "readInputs must not be null.");
+            Debug.Assert(isCompilationFailed != null, "isCompilationFailed must not be null.");
             Debug.Assert(runInBackground != null, "runInBackground must not be null.");
             _store = store;
             _cache = cache;
             _readInputs = readInputs;
+            _isCompilationFailed = isCompilationFailed;
             _runInBackground = runInBackground;
         }
 
@@ -74,6 +78,15 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
                 // Why the main thread: the cache has no lock and is kept on the main thread only.
                 await MainThreadSwitcher.SwitchToMainThread(ct);
+                // Why not kept after a failed compile: the dlls are then older than the sources, so
+                // every stamp still matches the saved list while Unity's list already names the
+                // added and removed files.
+                if (reconstruction.Assemblies != null && _isCompilationFailed())
+                {
+                    LogReconstructed(false, HotReloadConstants.CompilationListReasonCompilationFailed, watch.ElapsedMilliseconds);
+                    return false;
+                }
+
                 bool filled = reconstruction.Assemblies != null && _cache.TryFill(reconstruction.Assemblies, generation);
                 if (filled)
                 {

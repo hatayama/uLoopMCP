@@ -64,8 +64,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
 
         /// <summary>
         /// What: rebuilding every compiled assembly from its PDB gives Unity's fields, in order, for
-        /// every assembly whose PDB lists all of Unity's sources, and pdb_documents_incomplete for
-        /// exactly the assemblies whose PDB lost some; the type check never flags a PDB that lost none.
+        /// every assembly whose PDB lists as many sources as the compiler was given, and
+        /// pdb_documents_incomplete for every assembly whose PDB lost some of Unity's sources.
         /// </summary>
         [Test]
         public void EveryAssemblyRebuiltFromItsPdb_MatchesGetAssemblies_OrIsRefusedWhenThePdbLostSources()
@@ -83,7 +83,6 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             List<string> mismatches = new List<string>();
             List<string> refused = new List<string>();
             List<string> lostSources = new List<string>();
-            List<string> typeCheckFlagged = new List<string>();
             int rebuilt = 0;
             foreach (HotReloadCaptureAssemblyCandidate candidate in HotReloadCaptureAssemblyEnumerator.ListCompiled(inputs.ProjectRoot))
             {
@@ -99,11 +98,6 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                     lostSources.Add(candidate.Name);
                 }
 
-                if (HotReloadPdbTypeDocumentCoverage.HasTypeWithoutDocument(candidate.DllPath, candidate.PdbPath))
-                {
-                    typeCheckFlagged.Add(candidate.Name);
-                }
-
                 if (reason == HotReloadConstants.CompilationListReasonPdbDocumentsIncomplete)
                 {
                     refused.Add(candidate.Name);
@@ -115,15 +109,12 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 AddEntryMismatches(mismatches, want, entry);
             }
 
-            Debug.Log("[cross-check] rebuilt " + rebuilt + ", refused " + refused.Count + ", lost sources "
-                + lostSources.Count + ", type check flagged " + typeCheckFlagged.Count);
+            Debug.Log("[cross-check] rebuilt " + rebuilt + ", refused " + refused.Count + ", lost sources " + lostSources.Count);
             Assert.That(rebuilt, Is.GreaterThan(0), "Precondition: some assembly must be rebuilt.");
             Assert.That(mismatches, Is.Empty, "rebuilt entries");
-            Assert.That(refused, Is.EquivalentTo(lostSources), "refused assemblies");
-            // Why only a subset: a PDB that lost nothing but AssemblyInfo.cs has no type without a
-            // document, which is no fault of the type check. What must hold is that it never flags a
-            // PDB that lost nothing; that it finds a type-only file is HotReloadPdbTypeDocumentCoverageTests'.
-            Assert.That(typeCheckFlagged, Is.SubsetOf(lostSources), "type check false positives");
+            // Why only a superset: a PDB may also be refused for another shortfall against the
+            // compiler's count, which the sources Unity lists need not show.
+            Assert.That(refused, Is.SupersetOf(lostSources), "refused assemblies");
         }
 
         private HotReloadCompilationAssemblyListStore SaveClean(UnityCompilationAssembly[] fetched)

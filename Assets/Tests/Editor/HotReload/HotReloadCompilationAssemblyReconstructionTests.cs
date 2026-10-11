@@ -4,6 +4,9 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Mono.Cecil;
+using Mono.Cecil.Cil;
+
 using Newtonsoft.Json;
 
 using NUnit.Framework;
@@ -37,6 +40,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         private string _filePath;
         private string _projectRoot;
         private int _backgroundRuns;
+        private bool _isCompilationFailed;
 
         [SetUp]
         public void SetUp()
@@ -46,6 +50,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             _filePath = Path.Combine(_directory, "CompilationAssemblies.json");
             _projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
             _backgroundRuns = 0;
+            _isCompilationFailed = false;
         }
 
         [TearDown]
@@ -179,23 +184,32 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         }
 
         /// <summary>
-        /// What: a recompiled assembly whose PDB lacks a saved source that is still on disk gives no
-        /// list, because such a PDB cannot tell that the file left the assembly.
+        /// What: a recompiled assembly whose PDB was rewritten after the compile and lost the
+        /// documents no sequence point refers to (here by a Cecil round trip, as an IL
+        /// post-processor does) is refused, instead of being rebuilt with fewer sources.
         /// </summary>
         [Test]
-        public void Reconstruct_PdbLackingASavedSourceStillOnDisk_ReturnsNull()
+        public void TryFromPdb_PdbThatLostSourcesInARewrite_IsRefused()
         {
-            string otherSource = SourceOfAnotherAssemblyUnderAssets();
-            HotReloadCompilationAssemblyListStore store = SaveCleanThenEdit(saved =>
-            {
-                HotReloadSavedCompilationAssembly target = MarkRecompiled(saved);
-                target.sourceFiles = Append(target.sourceFiles, otherSource);
-            });
+            HotReloadSavedCompilationList saved = SaveCleanThenEdit(edit => { }).Load().List;
+            string scriptAssemblies = Path.Combine(_directory, "Project", HotReloadConstants.ScriptAssembliesRelativeDirectory);
+            Directory.CreateDirectory(scriptAssemblies);
+            string dllPath = Path.Combine(scriptAssemblies, TargetAssemblyName + ".dll");
+            string pdbPath = Path.ChangeExtension(dllPath, ".pdb");
+            RewriteWithCecil(dllPath);
+            HotReloadPdbCompilationInfo rewritten = HotReloadPdbCompilationInfo.Read(pdbPath);
+            Assert.That(rewritten.SourceFileCount, Is.Not.Null, "Precondition: the rewritten PDB must keep the compiler's source count.");
+            Assert.That(rewritten.DocumentCount, Is.LessThan(rewritten.SourceFileCount.Value), "Precondition: the rewrite must drop some document.");
+            HotReloadCompilationAssemblyRebuilder rebuilder =
+                new HotReloadCompilationAssemblyRebuilder(saved, HotReloadSnapshotCaptureInputs.ReadOnMainThread());
 
-            HotReloadCompilationListReconstruction result = Reconstruct(store);
+            string reason = rebuilder.TryFromPdb(
+                Target(saved),
+                new HotReloadCaptureAssemblyCandidate(TargetAssemblyName, dllPath, pdbPath),
+                out HotReloadRebuiltAssemblyEntry entry);
 
-            Assert.That(result.Assemblies, Is.Null, "list");
-            Assert.That(result.FailureReason, Is.EqualTo(HotReloadConstants.CompilationListReasonPdbDocumentsIncomplete));
+            Assert.That(reason, Is.EqualTo(HotReloadConstants.CompilationListReasonPdbDocumentsIncomplete));
+            Assert.That(entry, Is.Null, "entry");
         }
 
         /// <summary>
@@ -305,6 +319,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 store,
                 cache,
                 HotReloadSnapshotCaptureInputs.ReadOnMainThread,
+                () => _isCompilationFailed,
                 work =>
                 {
                     rebuild = work;
@@ -327,6 +342,30 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             Assert.That(
                 (string)HotReloadWarmUpTestDoubles.ReadSingleVibeContext(HotReloadConstants.VibeLogCompilationListReconstructed)["reason"],
                 Is.EqualTo(HotReloadConstants.CompilationListReasonCancelled));
+        }
+
+        /// <summary>
+        /// What: after a failed compile the rebuilt list is neither kept nor saved, because the dlls
+        /// are older than the sources Unity now lists.
+        /// </summary>
+        [Test]
+        public void ReconstructAndFill_WhileCompilationFailed_KeepsAndSavesNothing()
+        {
+            HotReloadCompilationAssemblyListStore store = SaveCleanThenEdit(saved => { });
+            int savesBefore = _backgroundRuns;
+            HotReloadCompilationAssemblyCache cache = new HotReloadCompilationAssemblyCache(Array.Empty<UnityCompilationAssembly>);
+            _isCompilationFailed = true;
+            VibeLogger.ClearMemoryLogs();
+
+            Task<bool> refill = CreateRefill(store, cache).RunAsync();
+
+            Assert.That(refill.Status, Is.EqualTo(TaskStatus.RanToCompletion), "refill status");
+            Assert.That(refill.Result, Is.False, "kept");
+            Assert.That(cache.IsFilled, Is.False, "cache filled");
+            Assert.That(_backgroundRuns, Is.EqualTo(savesBefore), "saves");
+            Assert.That(
+                (string)HotReloadWarmUpTestDoubles.ReadSingleVibeContext(HotReloadConstants.VibeLogCompilationListReconstructed)["reason"],
+                Is.EqualTo(HotReloadConstants.CompilationListReasonCompilationFailed));
         }
 
         private void AssertRecompiledTargetGives(string reason, Action<HotReloadSavedReference> editTargetReference)
@@ -360,6 +399,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 store,
                 cache,
                 HotReloadSnapshotCaptureInputs.ReadOnMainThread,
+                () => _isCompilationFailed,
                 rebuild => Task.FromResult(rebuild()));
         }
 
@@ -421,26 +461,30 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             return found;
         }
 
-        private static string SourceOfAnotherAssemblyUnderAssets()
+        // Reads the target assembly with its symbols and writes both again, as an IL post-processor
+        // does. Cecil keeps only the documents a method refers to.
+        private void RewriteWithCecil(string outputDllPath)
         {
-            foreach (UnityCompilationAssembly assembly in CompilationPipeline.GetAssemblies())
+            CompiledAssemblyLayout real = CompiledAssemblyLayout.Resolve(_projectRoot);
+            string sourceDll = Path.Combine(_directory, "Source", TargetAssemblyName + ".dll");
+            Directory.CreateDirectory(Path.GetDirectoryName(sourceDll));
+            File.Copy(real.DllPath(TargetAssemblyName), sourceDll);
+            File.Copy(real.PdbPath(TargetAssemblyName), Path.ChangeExtension(sourceDll, ".pdb"));
+            using (DefaultAssemblyResolver resolver = new DefaultAssemblyResolver())
             {
-                if (assembly.name == TargetAssemblyName)
+                resolver.AddSearchDirectory(real.CompiledAssembliesDirectory);
+                resolver.AddSearchDirectory(Path.GetDirectoryName(typeof(object).Assembly.Location));
+                using (ModuleDefinition module = ModuleDefinition.ReadModule(
+                    sourceDll,
+                    new ReaderParameters { ReadSymbols = true, AssemblyResolver = resolver }))
                 {
-                    continue;
-                }
-
-                foreach (string source in assembly.sourceFiles)
-                {
-                    if (source.StartsWith("Assets/", StringComparison.Ordinal))
+                    module.Write(outputDllPath, new WriterParameters
                     {
-                        return source;
-                    }
+                        WriteSymbols = true,
+                        SymbolWriterProvider = new PortablePdbWriterProvider(),
+                    });
                 }
             }
-
-            Assert.Fail("Precondition: another assembly must have a source under Assets.");
-            return null;
         }
 
         private static int IndexOf(string assemblyName)

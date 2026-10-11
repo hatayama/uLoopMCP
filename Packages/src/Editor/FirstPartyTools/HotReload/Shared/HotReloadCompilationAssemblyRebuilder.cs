@@ -97,7 +97,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         /// <summary>
         /// Makes the entry of a compiled-again assembly from its PDB. Returns null and the entry, or
         /// the reason no entry can be trusted: a PDB of another build, a reference that does not
-        /// resolve to a file of the recorded MVID, or a PDB that cannot account for every source.
+        /// resolve to a file of the recorded MVID, or a PDB whose documents are not one per syntax
+        /// tree the compiler emitted.
         /// </summary>
         internal string TryFromPdb(
             HotReloadSavedCompilationAssembly assembly,
@@ -114,6 +115,15 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             if (info.PdbGuid != HotReloadPdbDocumentIndex.ReadCodeViewGuid(candidate.DllPath))
             {
                 return HotReloadConstants.CompilationListReasonPdbMismatch;
+            }
+
+            // Why the compiler's count: the compiler writes one document per syntax tree, while a
+            // PDB rewritten after the compile (an IL post-processor does this) can drop the
+            // documents no sequence point refers to and keeps the count. A PDB without the count
+            // cannot show it is whole, and extra #line documents are refused as well.
+            if (info.SourceFileCount != info.DocumentCount)
+            {
+                return HotReloadConstants.CompilationListReasonPdbDocumentsIncomplete;
             }
 
             List<string> projectReferences = new List<string>();
@@ -137,11 +147,6 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             }
 
             IReadOnlyList<string> sources = HotReloadCaptureAssemblyEnumerator.ReadSources(candidate, _inputs).SourceAssetPaths;
-            if (LostSavedSource(assembly.sourceFiles, sources)
-                || HotReloadPdbTypeDocumentCoverage.HasTypeWithoutDocument(candidate.DllPath, candidate.PdbPath))
-            {
-                return HotReloadConstants.CompilationListReasonPdbDocumentsIncomplete;
-            }
 
             entry = new HotReloadRebuiltAssemblyEntry(
                 assembly.name,
@@ -151,30 +156,6 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 InSavedOrder(assembly.assemblyReferences, projectReferences, StringComparer.Ordinal),
                 CompiledReferencesInSavedOrder(assembly, compiledPathByFileName));
             return null;
-        }
-
-        // Why a source still on disk but missing from the PDB stops the rebuild: a PDB rewritten
-        // after the compile drops the files no sequence point refers to, so it cannot tell such a
-        // file was removed from the assembly.
-        private bool LostSavedSource(string[] savedSources, IReadOnlyList<string> pdbSources)
-        {
-            HashSet<string> inPdb = new HashSet<string>(pdbSources, _pathComparer);
-            foreach (string source in savedSources)
-            {
-                if (inPdb.Contains(source))
-                {
-                    continue;
-                }
-
-                string lookupPath = HotReloadSnapshotLookupPath.ToPdbLookupPath(
-                    _inputs.ProjectRoot, source, _inputs.PackageRoots, _inputs.PathComparison);
-                if (File.Exists(Path.Combine(_inputs.ProjectRoot, lookupPath)))
-                {
-                    return true;
-                }
-            }
-
-            return false;
         }
 
         // Unity lists a precompiled reference once per path, sometimes the same path twice and

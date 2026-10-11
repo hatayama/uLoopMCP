@@ -40,6 +40,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 Store,
                 Cache,
                 HotReloadSnapshotCaptureInputs.ReadOnMainThread,
+                () => EditorUtility.scriptCompilationFailed,
                 rebuild => Task.Run(rebuild));
 
         static HotReloadCompilationAssemblies()
