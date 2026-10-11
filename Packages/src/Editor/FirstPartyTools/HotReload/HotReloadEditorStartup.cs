@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 
 using UnityEditor;
@@ -11,8 +12,10 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
     // root only depends on the bundled-tool facade.
     internal static class HotReloadEditorStartup
     {
-        public static void Initialize()
+        public static void Initialize(Func<string, bool> isToolEnabled)
         {
+            Debug.Assert(isToolEnabled != null, "isToolEnabled must not be null.");
+
             // Why not EditorApplication.delayCall: a cold-start session that hits Unity's native
             // "Scripts have compiler errors" dialog never flushes delayCall again for the rest of
             // that process's lifetime, even for later registrations — while
@@ -23,7 +26,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             void CaptureOnFirstUpdateTick()
             {
                 EditorApplication.update -= CaptureOnFirstUpdateTick;
-                HotReloadCompositionRoot.Services.SourceSnapshotCapture.EnsureCaptured(HotReloadConstants.SourceSnapshotCaptureTriggerFirstUpdateTick);
+                CaptureAtStartupUnlessReadersAreDisabled(
+                    HotReloadConstants.SourceSnapshotCaptureTriggerFirstUpdateTick, isToolEnabled);
             }
 
             // Why a callback of its own rather than a line in the capture above: an exception in
@@ -42,7 +46,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             void StartWarmUpOnFirstUpdateTick()
             {
                 EditorApplication.update -= StartWarmUpOnFirstUpdateTick;
-                HotReloadCompositionRoot.Services.WarmUp.Start();
+                StartWarmUpUnlessHotReloadIsDisabled(
+                    isToolEnabled, () => HotReloadCompositionRoot.Services.WarmUp.Start());
             }
 
             // The services are rebuilt here rather than on first use because the introduced type
@@ -91,10 +96,59 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         /// Captures the source snapshot of the current compile before this domain answers any uloop
         /// command, so an edit made after the compile returned is never captured as compiled source.
         /// </summary>
-        internal static void CaptureSourceSnapshotBeforeServingCommands()
+        internal static void CaptureSourceSnapshotBeforeServingCommands(Func<string, bool> isToolEnabled)
         {
-            HotReloadCompositionRoot.Services.SourceSnapshotCapture.EnsureCaptured(
-                HotReloadConstants.SourceSnapshotCaptureTriggerDomainLoad);
+            CaptureAtStartupUnlessReadersAreDisabled(
+                HotReloadConstants.SourceSnapshotCaptureTriggerDomainLoad, isToolEnabled);
+        }
+
+        /// <summary>
+        /// Captures the source snapshot at a startup trigger unless both tools that read it are
+        /// disabled in the tool settings.
+        /// </summary>
+        internal static void CaptureAtStartupUnlessReadersAreDisabled(string trigger, Func<string, bool> isToolEnabled)
+        {
+            Debug.Assert(!string.IsNullOrEmpty(trigger), "trigger must not be null or empty.");
+            Debug.Assert(isToolEnabled != null, "isToolEnabled must not be null.");
+
+            // Why only the startup triggers ask: a reader that runs (a hot reload run, a pause point)
+            // belongs to an enabled tool and captures through the gate itself. A capture that comes
+            // late stays correct, because a source written after the compile started is checked
+            // against the PDB.
+            bool anyReaderEnabled = isToolEnabled(UnityCliLoopConstants.TOOL_NAME_HOT_RELOAD)
+                || isToolEnabled(UnityCliLoopConstants.SETTINGS_TOOL_NAME_PAUSE_POINT);
+            if (!anyReaderEnabled)
+            {
+                // Why the gate is not marked: a tool enabled later in this domain must still
+                // capture through it before its first read.
+                VibeLogger.LogInfo(
+                    HotReloadConstants.VibeLogSourceSnapshotSkipped,
+                    "Hot reload source snapshot capture skipped.",
+                    new { trigger, reason = HotReloadConstants.SourceSnapshotSkipReasonToolsDisabled });
+                return;
+            }
+
+            HotReloadCompositionRoot.Services.SourceSnapshotCapture.EnsureCaptured(trigger);
+        }
+
+        /// <summary>
+        /// Starts the warm-up unless the hot-reload tool is disabled in the tool settings.
+        /// </summary>
+        internal static void StartWarmUpUnlessHotReloadIsDisabled(Func<string, bool> isToolEnabled, Action startWarmUp)
+        {
+            Debug.Assert(isToolEnabled != null, "isToolEnabled must not be null.");
+            Debug.Assert(startWarmUp != null, "startWarmUp must not be null.");
+
+            if (!isToolEnabled(UnityCliLoopConstants.TOOL_NAME_HOT_RELOAD))
+            {
+                VibeLogger.LogInfo(
+                    HotReloadConstants.VibeLogWarmUpSkipped,
+                    "Hot reload warm-up skipped.",
+                    new { reason = HotReloadConstants.WarmUpSkipReasonToolDisabled });
+                return;
+            }
+
+            startWarmUp();
         }
     }
 }

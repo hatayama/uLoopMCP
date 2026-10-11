@@ -1,3 +1,5 @@
+using System;
+
 using io.github.hatayama.UnityCliLoop.Application;
 using io.github.hatayama.UnityCliLoop.FirstPartyTools;
 using io.github.hatayama.UnityCliLoop.Infrastructure;
@@ -27,7 +29,8 @@ namespace io.github.hatayama.UnityCliLoop.CompositionRoot
             UnityCliLoopApplicationServices applicationServices = _applicationRegistration.Register();
             ApplicationEditorStartup.Initialize(applicationServices.DomainReloadDetectionService);
             EditorRuntimeStateSnapshotSubscriber.InitializeForEditorStartup();
-            FirstPartyToolsEditorStartup.Initialize();
+            Func<string, bool> isToolEnabled = applicationServices.ToolSettingsUseCase.IsToolEnabled;
+            FirstPartyToolsEditorStartup.Initialize(isToolEnabled);
             InfrastructureEditorStartup.Initialize(applicationServices.EditorSettingsPort);
             PresentationEditorStartup.Initialize(
                 applicationServices.EditorSettingsPort,
@@ -45,8 +48,9 @@ namespace io.github.hatayama.UnityCliLoop.CompositionRoot
             // afterAssemblyReload, and every command except get-editor-status runs on the main
             // thread's update or tick, so no command of this domain is answered before this
             // returns — an edit made after `uloop compile` returns can no longer be captured as
-            // compiled source.
-            FirstPartyToolsEditorStartup.PrepareBeforeServingCommands();
+            // compiled source. When both the hot-reload and pause-point tools are disabled, the
+            // capture is skipped here and runs on the first use of either tool instead.
+            FirstPartyToolsEditorStartup.PrepareBeforeServingCommands(isToolEnabled);
         }
     }
 }

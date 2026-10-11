@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 using Newtonsoft.Json.Linq;
 
@@ -31,7 +32,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
 
             using (HotReloadServicesTestScope.BeginWithSourceSnapshotCapture(capture))
             {
-                HotReloadEditorStartup.CaptureSourceSnapshotBeforeServingCommands();
+                HotReloadEditorStartup.CaptureSourceSnapshotBeforeServingCommands(AllToolsEnabled);
             }
 
             Assert.That(captureCount, Is.EqualTo(1), "captures");
@@ -62,13 +63,168 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             using (HotReloadServicesTestScope.BeginWithSourceSnapshotCapture(capture))
             {
                 Assert.Throws<InvalidOperationException>(
-                    () => HotReloadEditorStartup.CaptureSourceSnapshotBeforeServingCommands());
+                    () => HotReloadEditorStartup.CaptureSourceSnapshotBeforeServingCommands(AllToolsEnabled));
 
                 HotReloadCompositionRoot.Services.SourceSnapshotCapture.EnsureCaptured(
                     HotReloadConstants.SourceSnapshotCaptureTriggerFirstUpdateTick);
             }
 
             Assert.That(captureCount, Is.EqualTo(2), "captures");
+        }
+
+        /// <summary>
+        /// What: with both tools that read the snapshot disabled, the capture before serving
+        /// commands is skipped and logged, and the skip leaves the capture undone, so the first
+        /// reader that runs later captures through the gate.
+        /// </summary>
+        [Test]
+        public void CaptureSourceSnapshotBeforeServingCommands_WhenNeitherReaderToolIsEnabled_SkipsAndLeavesTheCaptureForAReader()
+        {
+            VibeLogger.ClearMemoryLogs();
+            int captureCount = 0;
+            HotReloadSourceSnapshotCapture capture = CountingCapture(() => captureCount++);
+
+            using (HotReloadServicesTestScope.BeginWithSourceSnapshotCapture(capture))
+            {
+                HotReloadEditorStartup.CaptureSourceSnapshotBeforeServingCommands(NoToolEnabled);
+
+                Assert.That(captureCount, Is.EqualTo(0), "captures while both readers are disabled");
+                JObject skipped = HotReloadWarmUpTestDoubles.ReadSingleVibeContext(HotReloadConstants.VibeLogSourceSnapshotSkipped);
+                Assert.That((string)skipped["trigger"], Is.EqualTo(HotReloadConstants.SourceSnapshotCaptureTriggerDomainLoad));
+                Assert.That((string)skipped["reason"], Is.EqualTo(HotReloadConstants.SourceSnapshotSkipReasonToolsDisabled));
+                Assert.That(CountVibeEntries(HotReloadConstants.VibeLogSourceSnapshotCaptured), Is.EqualTo(0), "captured entries");
+
+                HotReloadCompositionRoot.Services.SourceSnapshotCapture.EnsureCaptured(
+                    HotReloadConstants.SourceSnapshotCaptureTriggerApply);
+            }
+
+            Assert.That(captureCount, Is.EqualTo(1), "captures once a reader asks the gate");
+        }
+
+        /// <summary>
+        /// What: one enabled tool that reads the snapshot is enough for the capture before serving
+        /// commands to run.
+        /// </summary>
+        [TestCase(UnityCliLoopConstants.TOOL_NAME_HOT_RELOAD)]
+        [TestCase(UnityCliLoopConstants.SETTINGS_TOOL_NAME_PAUSE_POINT)]
+        public void CaptureSourceSnapshotBeforeServingCommands_WhenOnlyOneReaderToolIsEnabled_Captures(string enabledTool)
+        {
+            VibeLogger.ClearMemoryLogs();
+            int captureCount = 0;
+            HotReloadSourceSnapshotCapture capture = CountingCapture(() => captureCount++);
+
+            using (HotReloadServicesTestScope.BeginWithSourceSnapshotCapture(capture))
+            {
+                HotReloadEditorStartup.CaptureSourceSnapshotBeforeServingCommands(name => name == enabledTool);
+            }
+
+            Assert.That(captureCount, Is.EqualTo(1), "captures");
+            JObject context = HotReloadWarmUpTestDoubles.ReadSingleVibeContext(HotReloadConstants.VibeLogSourceSnapshotCaptured);
+            Assert.That((string)context["trigger"], Is.EqualTo(HotReloadConstants.SourceSnapshotCaptureTriggerDomainLoad));
+        }
+
+        /// <summary>
+        /// What: the startup capture asks about both reader tools by the names the tool settings
+        /// store them under, hot-reload first.
+        /// </summary>
+        [Test]
+        public void CaptureAtStartupUnlessReadersAreDisabled_WhenNeitherIsEnabled_AsksBothReaderToolsBySettingsName()
+        {
+            VibeLogger.ClearMemoryLogs();
+            List<string> askedNames = new List<string>();
+            HotReloadSourceSnapshotCapture capture = CountingCapture(() => { });
+
+            using (HotReloadServicesTestScope.BeginWithSourceSnapshotCapture(capture))
+            {
+                HotReloadEditorStartup.CaptureAtStartupUnlessReadersAreDisabled(
+                    HotReloadConstants.SourceSnapshotCaptureTriggerDomainLoad,
+                    name =>
+                    {
+                        askedNames.Add(name);
+                        return false;
+                    });
+            }
+
+            Assert.That(
+                askedNames,
+                Is.EqualTo(new[] { UnityCliLoopConstants.TOOL_NAME_HOT_RELOAD, UnityCliLoopConstants.SETTINGS_TOOL_NAME_PAUSE_POINT }));
+        }
+
+        /// <summary>
+        /// What: the first update tick's capture is skipped the same way when both reader tools are
+        /// disabled, and the skip names that trigger.
+        /// </summary>
+        [Test]
+        public void CaptureAtStartupUnlessReadersAreDisabled_AtTheFirstUpdateTick_WhenNeitherIsEnabled_SkipsWithThatTrigger()
+        {
+            VibeLogger.ClearMemoryLogs();
+            int captureCount = 0;
+            HotReloadSourceSnapshotCapture capture = CountingCapture(() => captureCount++);
+
+            using (HotReloadServicesTestScope.BeginWithSourceSnapshotCapture(capture))
+            {
+                HotReloadEditorStartup.CaptureAtStartupUnlessReadersAreDisabled(
+                    HotReloadConstants.SourceSnapshotCaptureTriggerFirstUpdateTick,
+                    NoToolEnabled);
+            }
+
+            Assert.That(captureCount, Is.EqualTo(0), "captures");
+            JObject skipped = HotReloadWarmUpTestDoubles.ReadSingleVibeContext(HotReloadConstants.VibeLogSourceSnapshotSkipped);
+            Assert.That((string)skipped["trigger"], Is.EqualTo(HotReloadConstants.SourceSnapshotCaptureTriggerFirstUpdateTick));
+        }
+
+        /// <summary>
+        /// What: with the hot-reload tool disabled the warm-up is not started, and the skip is logged
+        /// with its reason.
+        /// </summary>
+        [Test]
+        public void StartWarmUpUnlessHotReloadIsDisabled_WhenHotReloadIsDisabled_DoesNotStartAndLogsTheReason()
+        {
+            VibeLogger.ClearMemoryLogs();
+            int startCount = 0;
+
+            HotReloadEditorStartup.StartWarmUpUnlessHotReloadIsDisabled(
+                name => name != UnityCliLoopConstants.TOOL_NAME_HOT_RELOAD,
+                () => startCount++);
+
+            Assert.That(startCount, Is.EqualTo(0), "warm-up starts");
+            JObject skipped = HotReloadWarmUpTestDoubles.ReadSingleVibeContext(HotReloadConstants.VibeLogWarmUpSkipped);
+            Assert.That((string)skipped["reason"], Is.EqualTo(HotReloadConstants.WarmUpSkipReasonToolDisabled));
+        }
+
+        /// <summary>
+        /// What: with the hot-reload tool enabled the warm-up is started once and no skip is logged.
+        /// </summary>
+        [Test]
+        public void StartWarmUpUnlessHotReloadIsDisabled_WhenHotReloadIsEnabled_StartsOnce()
+        {
+            VibeLogger.ClearMemoryLogs();
+            int startCount = 0;
+
+            HotReloadEditorStartup.StartWarmUpUnlessHotReloadIsDisabled(
+                name => name == UnityCliLoopConstants.TOOL_NAME_HOT_RELOAD,
+                () => startCount++);
+
+            Assert.That(startCount, Is.EqualTo(1), "warm-up starts");
+            Assert.That(CountVibeEntries(HotReloadConstants.VibeLogWarmUpSkipped), Is.EqualTo(0), "skipped entries");
+        }
+
+        private static bool AllToolsEnabled(string toolName) => true;
+
+        private static bool NoToolEnabled(string toolName) => false;
+
+        private static HotReloadSourceSnapshotCapture CountingCapture(Action onCapture)
+        {
+            return new HotReloadSourceSnapshotCapture(() =>
+            {
+                onCapture();
+                return true;
+            });
+        }
+
+        private static int CountVibeEntries(string operation)
+        {
+            return JArray.Parse(VibeLogger.GetLogsForAi(operation)).Count;
         }
     }
 }

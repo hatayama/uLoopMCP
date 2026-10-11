@@ -697,6 +697,13 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         public const string SourceSnapshotCaptureTriggerApply = "apply";
         public const string SourceSnapshotCaptureTriggerPausePoint = "pause_point";
 
+        // Why the capture at a startup trigger did not run, as logged in
+        // hot_reload_source_snapshot_skipped; and the warm-up's matching reason in
+        // hot_reload_warm_up_skipped.
+        public const string VibeLogSourceSnapshotSkipped = "hot_reload_source_snapshot_skipped";
+        public const string SourceSnapshotSkipReasonToolsDisabled = "tools_disabled";
+        public const string WarmUpSkipReasonToolDisabled = "tool_disabled";
+
         // What stopped a running warm-up or caller-note backfill, as named in the cancelledBy field
         // of hot_reload_warm_up_complete and hot_reload_caller_note_backfill_complete.
         public const string WarmUpCancelledByRun = "run";
