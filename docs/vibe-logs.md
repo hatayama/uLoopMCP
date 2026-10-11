@@ -99,6 +99,29 @@ command ran against:
   `first_update_tick` each write `hot_reload_source_snapshot_skipped` with that `trigger` and
   `reason` `tools_disabled` instead, and the first hot reload run or pause point after either
   tool is enabled captures it.
+  `hot_reload_source_snapshot_breakdown` appears once each time the capture runs to the end,
+  just before `hot_reload_source_snapshot_captured`. It also appears when Unity listed no
+  compilation assembly, in which case no captured entry follows, and it does not appear when the
+  capture threw. It says where the capture spent its time:
+  - `getAssembliesMs`: listing the compilation assemblies from Unity.
+  - `packageLookupMs`: asking Package Manager whether each assembly's sources are immutable.
+  - `stampMs`: reading and writing the stamps beside the snapshots.
+  - `mvidMs`: reading the MVID of each compiled dll whose stamp did not match.
+  - `statMs`: reading each source's length and write time before and after it is copied.
+  - `readWriteMs`: reading each source and writing its copy.
+  - `pdbCheckMs`: checking the sources written since the compile started against the PDB.
+  - `publishMs`: deleting a leftover temporary directory and creating a new one, writing the
+    manifest, and moving the directory into place.
+  - `cleanupMs`: deleting the snapshot directories of earlier builds.
+  - `totalMs`: the whole capture.
+  - `assemblies`: the compilation assemblies listed.
+  - `assembliesImmutable`: those skipped because their sources belong to an immutable package.
+  - `assembliesUnchanged`: those skipped because their stamp matched the compiled dll.
+  - `assembliesCaptured`: those whose sources were copied into a new snapshot directory.
+  - `filesCopied` and `bytesCopied`: the sources copied and their total size.
+  - `filesChecked`: the sources checked against the PDB.
+  The phases add up to `totalMs` except for the loop overhead; `captureMs` in the captured entry
+  also includes writing this breakdown entry.
   After a domain reload, the warm-up writes one `hot_reload_warm_up_complete` with the target
   assemblies, each item's `outcome` (`done`, `cancelled` or `failed`) and time, and `cancelledBy`
   (`run`, `beforeAssemblyReload`, `compilationStarted`, or null), or one

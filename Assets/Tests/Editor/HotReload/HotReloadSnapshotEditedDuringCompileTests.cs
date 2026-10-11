@@ -134,7 +134,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 _snapshotDirectory,
                 new[] { projectRelativePath },
                 TestAssemblyName,
-                check);
+                check,
+                new HotReloadSnapshotCaptureStats());
 
             return HotReloadSourceStampManifest.Load(_snapshotDirectory);
         }
