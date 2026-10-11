@@ -23,10 +23,11 @@ later tell which methods were edited. That capture now runs on a pool thread:
 
 ## Context
 
-Issue #3222: on a large project the capture blocked the Editor's main thread after every
-compile. After the incremental copy, users still waited a median of 975 ms after a method-body
-edit, 784 ms of it listing the compilation assemblies from Unity. After adding or deleting a
-file they waited 1435 ms. The request was to make the wait vanish or nearly so.
+Issue #3222: on a large project the capture ran synchronously on the main thread after every
+script compile and took about 1.9–2.3 s, writing 781 files (3.3 MB) for each compile, even when
+hot reload was not used. Copying only the changed sources and skipping the capture when both
+readers are disabled shortened it, but the main thread still waited on it, most of all on
+listing the compilation assemblies from Unity.
 
 What the capture calls on Unity must stay on the main thread: `CompilationPipeline.GetAssemblies`,
 `SessionState`, and the Package Manager. Everything else it does is file IO and PDB reads, which
@@ -38,15 +39,27 @@ command listener opened. Holding `get-compile-status` keeps that guarantee. A so
 after the compile started is still checked against the PDB, so a capture that ends after the
 30-second cap stays correct; only the timing guarantee of the compile response is lost.
 
-## Rejected Alternatives
+## Considered Options
 
-- **Waiting for the capture in the tool execution path.** `get-compile-status` is an internal
-  bridge command that never enters it, so the compile response would not wait.
-- **Making the pause point wait for the capture in every case.** A pause point re-armed on the
-  first update tick after a reload would then block the main thread for the whole capture,
-  which is the stall this change removes.
-- **Re-arming pause points after the capture instead.** The re-arm might then not finish before
-  Play Mode starts.
+- **1. Keep `GetAssemblies` on the main thread and stop at the incremental copy.** Rejected: the
+  main thread still stalls.
+- **2. Build only the capture's assembly list from the dlls and PDBs.** Not enough alone: the
+  cost of `GetAssemblies` only moves to the warm-up or the first run. Adopted together with 4.
+- **3. Move the capture, the warm-up's reference graph, the default file selection, and the
+  patch target resolution all to lists built from dlls and PDBs.** Too large. Only the part that
+  keeps the warm-up from calling `GetAssemblies` at startup (rebuilding the list from a saved
+  one and the PDBs) was adopted.
+- **4. Run the capture on a pool thread.** Not possible alone: `GetAssemblies` is main-thread
+  only, and while the capture moves the previous snapshot directory nothing is published, so
+  every reader has to wait on the capture. Adopted together with 2, with the gate below.
+- **Waiting for the capture in the tool execution path.** Rejected: `get-compile-status` is an
+  internal bridge command that never enters it, so the compile response would not wait. The
+  hold is in its `Ready` instead.
+- **Making the pause point wait for the capture in every case.** Rejected: a pause point
+  re-armed on the first update tick after a reload would block the main thread for the whole
+  capture, which is the stall this change removes.
+- **Re-arming pause points after the capture instead.** Rejected: the re-arm might not finish
+  before Play Mode starts.
 
 ## Revisit When
 

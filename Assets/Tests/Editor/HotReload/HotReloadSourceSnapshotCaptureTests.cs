@@ -261,13 +261,11 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         }
 
         /// <summary>
-        /// What: a pause point that blocks on a capture another caller started waits on that same
-        /// capture instead of starting a second one. EditMode cannot finish a capture while the
-        /// main thread blocks, so the capture finishes first and the call must still not start
-        /// another or read the inputs again.
+        /// What: a pause point that blocks after the capture finished returns without starting
+        /// another capture or reading the inputs again.
         /// </summary>
         [Test]
-        public void EnsureCapturedBlocking_WhileInFlight_ReturnsAfterTheCaptureCompletes()
+        public void EnsureCapturedBlocking_AfterTheCaptureFinished_ReturnsWithoutStartingAnother()
         {
             HotReloadSourceSnapshotCapture gate = CreateGate();
             gate.StartIfNeeded(Trigger);
@@ -300,19 +298,33 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         }
 
         /// <summary>
-        /// What: a blocking reader gets the exception of a capture that failed.
+        /// What: a blocking reader waits for the capture it starts and gets its exception; the
+        /// capture ran once and left the gate unmarked, so the next caller runs it again.
         /// </summary>
         [Test]
-        public void EnsureCapturedBlocking_WhenTheCaptureThrows_PassesTheExceptionOn()
+        public void EnsureCapturedBlocking_WhenTheCaptureThrows_RethrowsAndLeavesItUnmarked()
         {
             InvalidOperationException failure = new InvalidOperationException("The capture failed.");
-            HotReloadSourceSnapshotCapture gate = HotReloadSourceSnapshotCaptureTestDoubles.CompletingSynchronously(
-                () => throw failure);
+            int captureRuns = 0;
+            HotReloadSourceSnapshotCapture gate = HotReloadSourceSnapshotCaptureTestDoubles.CompletingSynchronously(() =>
+            {
+                captureRuns++;
+                if (captureRuns == 1)
+                {
+                    throw failure;
+                }
+
+                return true;
+            });
 
             InvalidOperationException thrown = Assert.Throws<InvalidOperationException>(
                 () => gate.EnsureCapturedBlocking(HotReloadConstants.SourceSnapshotCaptureTriggerPausePoint));
 
             Assert.That(thrown, Is.SameAs(failure));
+            Assert.That(captureRuns, Is.EqualTo(1), "captures run by the blocking call");
+            Assert.That(CountEntries(HotReloadConstants.VibeLogSourceSnapshotCaptured), Is.EqualTo(0));
+            gate.EnsureCapturedBlocking(HotReloadConstants.SourceSnapshotCaptureTriggerPausePoint);
+            Assert.That(captureRuns, Is.EqualTo(2), "captures after the failure");
         }
 
         /// <summary>
@@ -404,8 +416,11 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             _background.RunHeldWork();
 
             Assert.That(seenToken.IsCancellationRequested, Is.True);
-            Assert.That(task.IsCompleted, Is.True);
-            Assert.That(task.Status, Is.Not.EqualTo(TaskStatus.RanToCompletion));
+            // Faulted, not Canceled: the background runner is given no token, as Task.Run is not,
+            // so the token's exception faults the task the way it does in production.
+            Assert.That(task.IsFaulted, Is.True);
+            Assert.That(task.Exception.GetBaseException(), Is.InstanceOf<OperationCanceledException>());
+            Assert.That(CountEntries(HotReloadConstants.VibeLogSourceSnapshotCaptureCancelled), Is.EqualTo(1));
             Assert.That(gate.IsInFlight, Is.False);
             Assert.That(CountEntries(HotReloadConstants.VibeLogSourceSnapshotCaptured), Is.EqualTo(0));
         }
