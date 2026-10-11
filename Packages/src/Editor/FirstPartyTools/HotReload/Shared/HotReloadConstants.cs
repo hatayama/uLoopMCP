@@ -49,6 +49,10 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         // affect the on-disk layout. Adoption is decided at use time by PDB document checksum.
         public const string SourceSnapshotRelativeDirectory = "Library/UloopHotReload/SourceSnapshot";
 
+        // The compilation assembly list saved by a clean domain, from which the next domain
+        // rebuilds the list without asking Unity on the main thread.
+        public const string CompilationAssemblyListRelativePath = "Library/UloopHotReload/CompilationAssemblies.json";
+
         // The file inside a snapshot directory that records each copied source's length and last
         // write time (UTC ticks), so a later domain tells an unchanged source by its stat alone.
         public const string SourceStampManifestFileName = "source-stamps.txt";
@@ -704,6 +708,17 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         public const string VibeLogSourceSnapshotSkipped = "hot_reload_source_snapshot_skipped";
         public const string SourceSnapshotSkipReasonToolsDisabled = "tools_disabled";
         public const string WarmUpSkipReasonToolDisabled = "tool_disabled";
+
+        // Saving the compilation assembly list for the next domain: why a domain did not save it,
+        // a save that threw, and a save that finished (its size and time).
+        public const string VibeLogCompilationListSaveSkipped = "hot_reload_compilation_list_save_skipped";
+        public const string VibeLogCompilationListSaveFailed = "hot_reload_compilation_list_save_failed";
+        public const string VibeLogCompilationListSaved = "hot_reload_compilation_list_saved";
+
+        // Why a domain found no saved compilation assembly list to rebuild from: none was saved, or
+        // the saved file is torn, of another format version or missing a required field.
+        public const string CompilationListReasonNoSavedList = "no_saved_list";
+        public const string CompilationListReasonSavedListUnreadable = "saved_list_unreadable";
 
         // What stopped a running warm-up or caller-note backfill, as named in the cancelledBy field
         // of hot_reload_warm_up_complete and hot_reload_caller_note_backfill_complete.
