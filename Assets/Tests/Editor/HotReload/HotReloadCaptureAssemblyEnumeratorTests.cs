@@ -47,7 +47,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         [Test]
         public void ListCompiled_DllWithoutPdb_IsNotListed()
         {
-            string directory = Path.Combine(_projectRoot, HotReloadConstants.ScriptAssembliesRelativeDirectory);
+            // Why not Path.Combine with the "Library/ScriptAssemblies" constant: on Windows that keeps
+            // the "/" inside the constant, while the listing returns paths with "\" throughout.
+            string directory = CompiledAssemblyLayout.Resolve(_projectRoot).CompiledAssembliesDirectory;
             Directory.CreateDirectory(directory);
             WriteEmptyFiles(directory, "b.dll", "b.pdb", "A.dll", "A.pdb", "NoPdb.dll", "notes.txt");
 
