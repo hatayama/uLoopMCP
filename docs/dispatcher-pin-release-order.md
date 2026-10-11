@@ -80,7 +80,7 @@ request and re-dispatches its checks.
 
 `check-package-pin-consistency` enforces the rule rather than trusting it. It
 runs as the `check-package-release-pin` job on the unity-package release branch,
-and again in `scripts/check-unity-package-release.sh` before the package is
+and again in the readiness check of `plan-unity-package-release` before the package is
 signed and its release created; a release commit whose pin and manifest name
 different dispatchers fails instead of releasing. The job is scoped to that one
 branch on purpose: between the dispatcher merge and the stamp, `main`'s manifest
