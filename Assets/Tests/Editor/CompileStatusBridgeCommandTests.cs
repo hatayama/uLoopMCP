@@ -52,6 +52,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
                 isCompiling: false,
                 isUpdating: false,
                 isDomainReloadInProgress: false,
+                isSnapshotCaptureHolding: false,
                 _compileSessionLifecycleService,
                 _compileResultSessionRepository,
                 _pendingCompileSessionRepository);
@@ -77,6 +78,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
                 isCompiling: true,
                 isUpdating: false,
                 isDomainReloadInProgress: false,
+                isSnapshotCaptureHolding: false,
                 _compileSessionLifecycleService,
                 _compileResultSessionRepository,
                 _pendingCompileSessionRepository);
@@ -101,6 +103,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
                 isCompiling: false,
                 isUpdating: false,
                 isDomainReloadInProgress: false,
+                isSnapshotCaptureHolding: false,
                 _compileSessionLifecycleService,
                 _compileResultSessionRepository,
                 _pendingCompileSessionRepository);
@@ -124,6 +127,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
                 isCompiling: false,
                 isUpdating: false,
                 isDomainReloadInProgress: false,
+                isSnapshotCaptureHolding: false,
                 _compileSessionLifecycleService,
                 _compileResultSessionRepository,
                 _pendingCompileSessionRepository);
@@ -152,6 +156,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
                 isCompiling: false,
                 isUpdating: false,
                 isDomainReloadInProgress: false,
+                isSnapshotCaptureHolding: false,
                 _compileSessionLifecycleService,
                 _compileResultSessionRepository,
                 _pendingCompileSessionRepository);
@@ -182,6 +187,37 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
                 isCompiling: true,
                 isUpdating: false,
                 isDomainReloadInProgress: false,
+                isSnapshotCaptureHolding: false,
+                _compileSessionLifecycleService,
+                _compileResultSessionRepository,
+                _pendingCompileSessionRepository);
+
+            Assert.That(response.Ready, Is.False);
+            Assert.That(response.HasResult, Is.False);
+            Assert.That(response.Result, Is.Null);
+            Assert.That(
+                UnityCliLoopEditorSessionStateTestFactory.GetSinglePendingCompileRequest(
+                    _pendingCompileSessionRepository).HasRequest,
+                Is.True);
+        }
+
+        [Test]
+        public void BuildResponse_WhileTheSnapshotCaptureHolds_IsNotReadyAndDoesNotRecoverAPendingResult()
+        {
+            // Verifies an idle Unity still withholds the compile completion, and leaves the pending
+            // request for a later poll, while the hot reload source snapshot capture is running.
+            _compileSessionLifecycleService.MarkPendingCompileRequest(
+                "compile_test_request",
+                forceRecompile: false,
+                markedAtUtc: System.DateTime.UtcNow);
+            _pendingCompileSessionRepository.MarkPendingCompileRequestReloadObserved();
+
+            GetCompileStatusResponse response = CompileStatusBridgeCommand.BuildResponse(
+                "compile_test_request",
+                isCompiling: false,
+                isUpdating: false,
+                isDomainReloadInProgress: false,
+                isSnapshotCaptureHolding: true,
                 _compileSessionLifecycleService,
                 _compileResultSessionRepository,
                 _pendingCompileSessionRepository);
@@ -210,6 +246,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
                 isCompiling: false,
                 isUpdating: false,
                 isDomainReloadInProgress: false,
+                isSnapshotCaptureHolding: false,
                 _compileSessionLifecycleService,
                 _compileResultSessionRepository,
                 _pendingCompileSessionRepository);

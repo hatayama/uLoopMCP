@@ -22,6 +22,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
     public class HotReloadDomainTests
     {
         private const string FileOne = "Assets/Tests/Editor/HotReload/DomainFileOne.cs";
+        // Real sources of this test assembly: one its PDB has a document for, one it has none for.
+        private const string CompiledFixtureFile = "Assets/Tests/Editor/HotReload/HotReloadLiveSourceBomFixture.cs";
+        private const string BodylessFixtureFile = "Assets/Tests/Editor/HotReload/HotReloadSnapshotBodylessFixture.cs";
         private const string FileTwo = "Assets/Tests/Editor/HotReload/DomainFileTwo.cs";
         private const string AddedMethodKey = "DomainHost.AddedPing(System.Int32)";
         private const string OtherAddedMethodKey = "DomainHost.AddedPong()";
@@ -1050,6 +1053,74 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             Assert.That(thrown, Is.SameAs(captureFailure));
         }
 
+        /// <summary>
+        /// What: while a capture runs, a live file the PDB confirms is returned without waiting for
+        /// the capture, so a pause point re-armed on the first update tick does not stall on it.
+        /// </summary>
+        [Test]
+        public void GetVerifiedSnapshotSource_WhileCaptureRuns_ReturnsTheLiveFileWhenItMatchesThePdbWithoutWaiting()
+        {
+            int ensureCount = 0;
+            HotReloadPausePointPort port = new HotReloadPausePointPort(
+                _access.Domain,
+                _ => RecordedSourceHash,
+                () => ensureCount++,
+                () => true);
+
+            string source = port.GetVerifiedSnapshotSource(CompiledFixtureFile, TestAssemblyDllPath());
+
+            Assert.That(source, Is.EqualTo(File.ReadAllText(Path.Combine(ProjectRoot(), CompiledFixtureFile))));
+            Assert.That(ensureCount, Is.EqualTo(0));
+        }
+
+        /// <summary>
+        /// What: while a capture runs, a live file the PDB cannot confirm (here it has no document)
+        /// makes the port wait for the capture once and read the snapshot instead.
+        /// </summary>
+        [Test]
+        public void GetVerifiedSnapshotSource_WhileCaptureRuns_WaitsWhenTheLiveFileDiffersFromThePdb()
+        {
+            int ensureCount = 0;
+            HotReloadPausePointPort port = new HotReloadPausePointPort(
+                _access.Domain,
+                _ => RecordedSourceHash,
+                () => ensureCount++,
+                () => true);
+
+            port.GetVerifiedSnapshotSource(BodylessFixtureFile, TestAssemblyDllPath());
+
+            Assert.That(ensureCount, Is.EqualTo(1));
+        }
+
+        /// <summary>
+        /// What: with no capture running, the port waits for the capture and reads the snapshot even
+        /// when the live file matches the PDB, so the answer is the one it gave before captures ran
+        /// in the background.
+        /// </summary>
+        [Test]
+        public void GetVerifiedSnapshotSource_WhenNoCaptureRuns_EnsuresTheCaptureEvenIfTheLiveFileMatches()
+        {
+            int ensureCount = 0;
+            HotReloadPausePointPort port = CreatePortWithSnapshotCapture(() => ensureCount++);
+
+            port.GetVerifiedSnapshotSource(CompiledFixtureFile, TestAssemblyDllPath());
+
+            Assert.That(ensureCount, Is.EqualTo(1));
+        }
+
+        private static string ProjectRoot()
+        {
+            return Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+        }
+
+        private static string TestAssemblyDllPath()
+        {
+            return Path.Combine(
+                ProjectRoot(),
+                HotReloadConstants.ScriptAssembliesRelativeDirectory,
+                typeof(HotReloadDomainTests).Assembly.GetName().Name + HotReloadConstants.CompiledAssemblyExtension);
+        }
+
         // Why a generated name: an artifact assembly is compiled under a name of its own, so a
         // fixture that reused a project assembly's name would not resolve the way production does.
         private static Assembly CreateIntroducedTypeAssembly()
@@ -1071,12 +1142,12 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
 
         private HotReloadPausePointPort CreatePort(Func<string, string> readSourceContentHashOrNull)
         {
-            return new HotReloadPausePointPort(_access.Domain, readSourceContentHashOrNull, () => { });
+            return new HotReloadPausePointPort(_access.Domain, readSourceContentHashOrNull, () => { }, () => false);
         }
 
         private HotReloadPausePointPort CreatePortWithSnapshotCapture(Action ensureSnapshotCaptured)
         {
-            return new HotReloadPausePointPort(_access.Domain, _ => RecordedSourceHash, ensureSnapshotCaptured);
+            return new HotReloadPausePointPort(_access.Domain, _ => RecordedSourceHash, ensureSnapshotCaptured, () => false);
         }
 
         // Records a partially applied reload of FileOne that read RecordedWorkerSourcePath.

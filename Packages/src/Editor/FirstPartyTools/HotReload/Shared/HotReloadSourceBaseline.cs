@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -130,10 +131,102 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 return comparison;
             }
 
-            using MemoryStream memoryStream = new MemoryStream(snapshotBytes, writable: false);
-            using StreamReader reader = new StreamReader(memoryStream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
-            source = reader.ReadToEnd();
+            source = DecodeVerifiedSource(snapshotBytes);
             return HotReloadSnapshotMissReason.None;
+        }
+
+        /// <summary>
+        /// Returns the text of the file on disk when its bytes match the checksum the compiled
+        /// assembly's PDB recorded for it, or null when the file is missing or unreadable, the PDB has
+        /// no document for it, or the checksums differ. Matching bytes are the bytes the compiler read,
+        /// so the text equals what the snapshot holds for the same assembly. Main thread only, because
+        /// the checksum lookup asks the Package Manager for the source's physical path.
+        /// </summary>
+        public static string LoadVerifiedLiveSourceOrNull(string projectRelativeSourcePath, string targetDllPath)
+        {
+            Debug.Assert(!string.IsNullOrEmpty(projectRelativeSourcePath), "projectRelativeSourcePath must not be null or empty.");
+            Debug.Assert(!string.IsNullOrEmpty(targetDllPath), "targetDllPath must not be null or empty.");
+
+            string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+            return LoadVerifiedLiveSourceAt(
+                projectRoot,
+                projectRelativeSourcePath,
+                targetDllPath,
+                HotReloadPdbDocumentIndex.Shared);
+        }
+
+        // projectRoot is injectable so EditMode tests can point at a copy of a source under a
+        // temporary root, the same way they do for the snapshot.
+        internal static string LoadVerifiedLiveSourceAt(
+            string projectRoot,
+            string projectRelativeSourcePath,
+            string targetDllPath,
+            HotReloadPdbDocumentIndex documentIndex)
+        {
+            Debug.Assert(!string.IsNullOrEmpty(projectRoot), "projectRoot must not be null or empty.");
+            Debug.Assert(!string.IsNullOrEmpty(projectRelativeSourcePath), "projectRelativeSourcePath must not be null or empty.");
+            Debug.Assert(!string.IsNullOrEmpty(targetDllPath), "targetDllPath must not be null or empty.");
+            Debug.Assert(documentIndex != null, "documentIndex must not be null.");
+
+            string pdbPath = Path.ChangeExtension(targetDllPath, ".pdb");
+            if (!File.Exists(targetDllPath) || !File.Exists(pdbPath))
+            {
+                return null;
+            }
+
+            // Why the same path the snapshot capture reads: the live file must be the file the
+            // capture would have copied, so a match here means the snapshot would hold these bytes.
+            string slashNormalizedRelativePath = projectRelativeSourcePath.Replace('\\', '/');
+            string absoluteSourcePath = Path.Combine(
+                projectRoot,
+                slashNormalizedRelativePath.Replace('/', Path.DirectorySeparatorChar));
+            byte[] liveBytes = ReadAllBytesOrNull(HotReloadFileSystemPath.GetFileSystemPath(absoluteSourcePath));
+            if (liveBytes == null)
+            {
+                return null;
+            }
+
+            HotReloadSnapshotMissReason comparison = CompareWithCompiledDocument(
+                projectRoot,
+                slashNormalizedRelativePath,
+                targetDllPath,
+                pdbPath,
+                HotReloadAssemblyMvid.Read(targetDllPath),
+                liveBytes,
+                documentIndex);
+            return comparison == HotReloadSnapshotMissReason.None ? DecodeVerifiedSource(liveBytes) : null;
+        }
+
+        // Why an unreadable file is a miss rather than an error: the caller falls back to waiting for
+        // the snapshot, which answers for that file the same way it does today.
+        private static byte[] ReadAllBytesOrNull(string fileSystemPath)
+        {
+            if (!File.Exists(fileSystemPath))
+            {
+                return null;
+            }
+
+            try
+            {
+                return File.ReadAllBytes(fileSystemPath);
+            }
+            catch (IOException)
+            {
+                return null;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return null;
+            }
+        }
+
+        // Why one decoder for the snapshot and the live file: a pause point maps lines in whichever
+        // text it gets, so both must treat a byte order mark the same way.
+        private static string DecodeVerifiedSource(byte[] verifiedBytes)
+        {
+            using MemoryStream memoryStream = new MemoryStream(verifiedBytes, writable: false);
+            using StreamReader reader = new StreamReader(memoryStream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+            return reader.ReadToEnd();
         }
 
         /// <summary>
