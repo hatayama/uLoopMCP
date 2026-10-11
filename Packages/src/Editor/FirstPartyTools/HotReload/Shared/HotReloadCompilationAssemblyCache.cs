@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 
 using UnityEngine;
 
@@ -9,12 +10,13 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     /// <summary>
     /// Keeps the last non-empty compilation assembly list so repeated lookups ask Unity only once
-    /// until the owner invalidates it. Main thread only, like the Unity call it wraps.
+    /// until the owner invalidates it. Main thread only, like the Unity call it wraps, except Generation.
     /// </summary>
     internal sealed class HotReloadCompilationAssemblyCache
     {
         private readonly Func<UnityCompilationAssembly[]> _fetch;
         private UnityCompilationAssembly[] _assemblies;
+        private int _generation;
 
         internal HotReloadCompilationAssemblyCache(Func<UnityCompilationAssembly[]> fetch)
         {
@@ -23,6 +25,13 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         }
 
         internal bool IsFilled => _assemblies != null;
+
+        /// <summary>
+        /// Counts the invalidations of this domain, so a list built off the main thread can tell
+        /// whether the script set changed while it was being built. The only member readable off the
+        /// main thread.
+        /// </summary>
+        internal int Generation => Volatile.Read(ref _generation);
 
         /// <summary>
         /// Returns the memoized list, asking Unity when nothing is kept. The list is shared; callers only read it.
@@ -66,9 +75,28 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             return null;
         }
 
+        /// <summary>
+        /// Keeps a list built without asking Unity, when nothing is kept yet and no invalidation
+        /// happened since the builder read the generation. Returns whether the list was kept.
+        /// </summary>
+        internal bool TryFill(UnityCompilationAssembly[] assemblies, int expectedGeneration)
+        {
+            Debug.Assert(assemblies != null && assemblies.Length > 0, "assemblies must not be null or empty.");
+
+            // Why a kept list wins: a list Unity answered is the truth the rebuilt one only approximates.
+            if (_assemblies != null || Generation != expectedGeneration)
+            {
+                return false;
+            }
+
+            _assemblies = assemblies;
+            return true;
+        }
+
         internal void Invalidate()
         {
             _assemblies = null;
+            Interlocked.Increment(ref _generation);
         }
     }
 }
