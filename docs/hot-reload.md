@@ -78,7 +78,10 @@ records each copied source's length and write time, so a run after a domain relo
 unchanged sibling by a stat instead of reading it; a source written since the compile started
 whose bytes do not match the PDB checksum carries a mark that it was edited after the compile,
 and the default selection, the sibling scan and the skip check treat a marked source as
-changed),
+changed. When both the hot-reload and pause-point tools are disabled in the tool settings, the
+capture after a domain reload is skipped; the first hot reload run or pause point after either
+tool is enabled captures it, and any source written since the compile started is then checked
+against the PDB),
 `Library/UloopHotReload/PdbDocuments/fmt1/<assemblyName>.txt` (the documents the PDB's sequence
 points refer to, stamped with the dll's and the PDB's length and write time and the MVID, so the
 first run after a domain reload does not walk the PDB again while they still match), and
