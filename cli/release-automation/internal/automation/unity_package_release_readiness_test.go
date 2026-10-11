@@ -117,7 +117,10 @@ type fakeReadinessGitHub struct {
 	tagCommit     string
 	attestations  string
 	emptyDownload string
-	commands      []string
+	// failures makes the tag commit lookup ("commit"), the asset download ("download"), or the
+	// attestation verification ("verify") fail with the error.
+	failures map[string]error
+	commands []string
 }
 
 func newFakeReadinessGitHub(t *testing.T) *fakeReadinessGitHub {
@@ -145,14 +148,17 @@ func (fake *fakeReadinessGitHub) runOutput(_ context.Context, name string, args 
 		}
 		return response.output, response.err
 	case command == "gh api "+repository+"/commits/"+readinessTestRunnerTag+" --jq .sha":
-		return fake.tagCommit + "\n", nil
+		return fake.tagCommit + "\n", fake.failures["commit"]
 	case strings.HasPrefix(command, "gh release download "+readinessTestRunnerTag+" --repo "+unityPackageReleaseTestRepository+" "):
+		if err := fake.failures["download"]; err != nil {
+			return "", err
+		}
 		fake.download(args)
 		return "", nil
 	case strings.HasPrefix(command, "gh attestation verify ") &&
 		strings.Contains(command, " --repo "+unityPackageReleaseTestRepository+" ") &&
 		strings.HasSuffix(command, " --signer-workflow "+unityPackageReleaseTestRepository+"/.github/workflows/native-cli-publish.yml --format json"):
-		return fake.attestations, nil
+		return fake.attestations, fake.failures["verify"]
 	}
 	fake.t.Fatalf("unexpected command %s", command)
 	return "", nil
@@ -435,6 +441,26 @@ func TestCheckUnityPackageReleaseReadinessFailsOnAnInvalidRunnerAttestation(t *t
 	}
 }
 
+// Verifies a gh call of the attestation verification that fails fails the check with gh's error,
+// rather than letting the release through or reading as a release that is not published yet.
+func TestCheckUnityPackageReleaseReadinessFailsWhenAnAttestationCallFails(t *testing.T) {
+	repo := newReadinessTestRepo(t)
+	for _, call := range []string{"commit", "download", "verify"} {
+		t.Run(call, func(t *testing.T) {
+			run := newReadinessTestRun(t)
+			run.github.failures = map[string]error{call: errors.New("gh " + call + " failed: HTTP 503")}
+
+			readiness, err := run.check(repo.root, readinessTestVersion)
+			if err == nil || !strings.Contains(err.Error(), "gh "+call+" failed") {
+				t.Fatalf("readiness = %+v, err = %v; want the failed gh %s call", readiness, err, call)
+			}
+			if len(run.protocolRefs) != 0 {
+				t.Fatalf("protocol refs = %v, want no release commit check", run.protocolRefs)
+			}
+		})
+	}
+}
+
 // Verifies a release commit whose protocol or pin check fails fails the readiness check, and that
 // the pin is not checked once the protocol check has failed.
 func TestCheckUnityPackageReleaseReadinessFailsWhenTheReleaseCommitFailsItsChecks(t *testing.T) {
@@ -703,5 +729,57 @@ func TestReleaseRequiredAssetsFollowTheReleaseGeneration(t *testing.T) {
 	writeReadinessTestFile(t, root, dispatcherReleaseAssetsScript, "#!/bin/sh\nexit 1\n")
 	if assets, err := releaseRequiredAssets(context.Background(), root, dispatcherReleaseAssetsScript, "dispatcher-v3.1.0"); err == nil {
 		t.Fatalf("assets = %v, want the failed --list reported", assets)
+	}
+}
+
+// Verifies release tags are fetched from origin over local tags of the same name, so a tag that
+// moved on origin is read at its new commit, and that a checkout without origin is left as it is.
+func TestFetchReleaseTagsOverwritesLocalTagsFromOrigin(t *testing.T) {
+	origin := t.TempDir()
+	runGitInRepo(t, origin, "init", "-q", "-b", "main")
+	writeReadinessTestFile(t, origin, "release.txt", "origin\n")
+	commitReadinessTestRepo(t, origin, "chore: release on origin")
+	runGitInRepo(t, origin, "tag", readinessTestDispatcherTag)
+	originCommit := strings.TrimSpace(runGitInRepoOutput(t, origin, "rev-parse", "HEAD"))
+
+	local := t.TempDir()
+	runGitInRepo(t, local, "init", "-q", "-b", "main")
+	writeReadinessTestFile(t, local, "release.txt", "local\n")
+	commitReadinessTestRepo(t, local, "chore: release locally")
+	runGitInRepo(t, local, "tag", readinessTestDispatcherTag)
+	localCommit := strings.TrimSpace(runGitInRepoOutput(t, local, "rev-parse", "HEAD"))
+
+	if err := fetchReleaseTags(context.Background(), local, "+refs/tags/*:refs/tags/*"); err != nil {
+		t.Fatalf("fetch without origin: %v", err)
+	}
+	if tagged := strings.TrimSpace(runGitInRepoOutput(t, local, "rev-parse", readinessTestDispatcherTag+"^{commit}")); tagged != localCommit {
+		t.Fatalf("tag after a fetch without origin = %s, want the local commit %s", tagged, localCommit)
+	}
+
+	runGitInRepo(t, local, "remote", "add", "origin", origin)
+	if err := fetchReleaseTags(context.Background(), local, "+refs/tags/*:refs/tags/*"); err != nil {
+		t.Fatalf("fetch from origin: %v", err)
+	}
+	if tagged := strings.TrimSpace(runGitInRepoOutput(t, local, "rev-parse", readinessTestDispatcherTag+"^{commit}")); tagged != originCommit {
+		t.Fatalf("tag after the fetch = %s, want origin's commit %s", tagged, originCommit)
+	}
+}
+
+// Verifies the readiness check the plan runs checks the release commit with the real protocol
+// check: a release commit without the protocol constants fails it, naming the file at that commit. The release depends on
+// no runner or dispatcher release here, so nothing is looked up on GitHub.
+func TestRunUnityPackageReleaseReadinessCheckChecksTheReleaseCommit(t *testing.T) {
+	repo := newReadinessTestRepo(t)
+	writeReadinessTestFile(t, repo.root, releasePleaseConfigRelativePath, `{"packages": {"Packages/src": {"changelog-path": "CHANGELOG.md"}}}`)
+	writeReadinessTestFile(t, repo.root, unityPackageCliPinFile, `{"projectRunnerVersion": "3.0.0-beta.6"}`)
+	var log bytes.Buffer
+
+	readiness, err := runUnityPackageReleaseReadinessCheck(context.Background(), &log, unityPackageReleaseReadinessInput{
+		Repository: unityPackageReleaseTestRepository,
+		RepoRoot:   repo.root,
+		Version:    readinessTestVersion,
+	})
+	if err == nil || !strings.Contains(err.Error(), repo.releaseCommit+":"+protocolMinimumVersionFile) {
+		t.Fatalf("readiness = %+v, err = %v; want the protocol check to fail reading %s at the release commit %s", readiness, err, protocolMinimumVersionFile, repo.releaseCommit)
 	}
 }
