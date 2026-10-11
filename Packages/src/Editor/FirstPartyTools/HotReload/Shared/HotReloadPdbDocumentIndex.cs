@@ -509,7 +509,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         }
 
         // Reads only the PE headers and the debug directory; the type and method tables stay unread.
-        private static Guid ReadCodeViewGuid(string dllPath)
+        internal static Guid ReadCodeViewGuid(string dllPath)
         {
             using FileStream dllStream = File.Open(dllPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
             using PEReader peReader = new PEReader(dllStream);
@@ -528,7 +528,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         }
 
         // The same mapping Cecil's portable PDB reader applies to a document's hash algorithm GUID.
-        private static DocumentHashAlgorithm ToHashAlgorithm(Guid algorithm)
+        internal static DocumentHashAlgorithm ToHashAlgorithm(Guid algorithm)
         {
             if (algorithm == Sha1HashAlgorithmGuid)
             {
