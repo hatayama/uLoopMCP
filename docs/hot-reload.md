@@ -78,7 +78,9 @@ records each copied source's length and write time, so a run after a domain relo
 unchanged sibling by a stat instead of reading it; a source written since the compile started
 whose bytes do not match the PDB checksum carries a mark that it was edited after the compile,
 and the default selection, the sibling scan and the skip check treat a marked source as
-changed),
+changed; a capture moves the previous build's directory to the new MVID's and rewrites only the
+sources whose length or write time changed, that carry no unmarked manifest line, or that were
+written since the compile started; it deletes the copies of sources no longer in the assembly),
 `Library/UloopHotReload/PdbDocuments/fmt1/<assemblyName>.txt` (the documents the PDB's sequence
 points refer to, stamped with the dll's and the PDB's length and write time and the MVID, so the
 first run after a domain reload does not walk the PDB again while they still match), and

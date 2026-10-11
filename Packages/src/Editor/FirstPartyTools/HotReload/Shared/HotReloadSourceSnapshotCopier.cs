@@ -13,7 +13,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
     /// into a temporary directory first and publishing it with one Move, and decides what the
     /// manifest records for each copy.
     /// </summary>
-    internal static class HotReloadSourceSnapshotCopier
+    internal static partial class HotReloadSourceSnapshotCopier
     {
         internal static void CaptureAtomically(
             string projectRoot,
@@ -38,11 +38,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
             Directory.CreateDirectory(temporaryDirectory);
             stats.PublishTicks += prepareWatch.Elapsed.Ticks;
-            int skippedSourceCount = 0;
-            string firstSkippedSourcePath = null;
-            int suspectSourceCount = 0;
-            int editedAfterCompileCount = 0;
-            long checkTicks = 0;
+            SourceCopyTally tally = new SourceCopyTally();
             List<string> manifestLines = new List<string>(sourceFiles.Length);
             foreach (string projectRelativeSourcePath in sourceFiles)
             {
@@ -53,49 +49,14 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                     check,
                     manifestLines,
                     stats);
-                if (outcome.Kind == SourceCopyKind.Unreadable)
-                {
-                    skippedSourceCount++;
-                    firstSkippedSourcePath ??= projectRelativeSourcePath;
-                    continue;
-                }
-
-                if (outcome.Kind == SourceCopyKind.Checked || outcome.Kind == SourceCopyKind.CheckedEditedAfterCompile)
-                {
-                    suspectSourceCount++;
-                    checkTicks += outcome.CheckTicks;
-                }
-
-                if (outcome.Kind == SourceCopyKind.CheckedEditedAfterCompile)
-                {
-                    editedAfterCompileCount++;
-                }
+                tally.Count(outcome, projectRelativeSourcePath);
             }
 
             System.Diagnostics.Stopwatch publishWatch = System.Diagnostics.Stopwatch.StartNew();
             HotReloadSourceStampManifest.Write(temporaryDirectory, manifestLines);
             Directory.Move(temporaryDirectory, assemblySnapshotDirectory);
             stats.PublishTicks += publishWatch.Elapsed.Ticks;
-            if (suspectSourceCount > 0)
-            {
-                VibeLogger.LogInfo(
-                    HotReloadConstants.VibeLogSourceSnapshotChecked,
-                    "Hot reload checked the sources written since the compile started against the PDB.",
-                    new
-                    {
-                        assemblyName,
-                        suspect = suspectSourceCount,
-                        editedAfterCompile = editedAfterCompileCount,
-                        checkMs = (long)TimeSpan.FromTicks(checkTicks).TotalMilliseconds
-                    });
-            }
-
-            if (skippedSourceCount > 0)
-            {
-                UnityEngine.Debug.LogWarning(
-                    $"[UnityCliLoop] Skipped {skippedSourceCount} unreadable source(s) while snapshotting " +
-                    $"{assemblyName}: {firstSkippedSourcePath}");
-            }
+            tally.LogAndWarn(assemblyName);
         }
 
         private static SourceCopyOutcome CopySourceFileByteExact(
@@ -276,6 +237,62 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             {
                 Kind = kind;
                 CheckTicks = checkTicks;
+            }
+        }
+
+        // Counts the outcomes of one assembly's copies, then logs the PDB checks and warns about the
+        // sources that could not be read.
+        private sealed class SourceCopyTally
+        {
+            private int _skippedSourceCount;
+            private string _firstSkippedSourcePath;
+            private int _suspectSourceCount;
+            private int _editedAfterCompileCount;
+            private long _checkTicks;
+
+            internal void Count(SourceCopyOutcome outcome, string projectRelativeSourcePath)
+            {
+                if (outcome.Kind == SourceCopyKind.Unreadable)
+                {
+                    _skippedSourceCount++;
+                    _firstSkippedSourcePath ??= projectRelativeSourcePath;
+                    return;
+                }
+
+                if (outcome.Kind == SourceCopyKind.Checked || outcome.Kind == SourceCopyKind.CheckedEditedAfterCompile)
+                {
+                    _suspectSourceCount++;
+                    _checkTicks += outcome.CheckTicks;
+                }
+
+                if (outcome.Kind == SourceCopyKind.CheckedEditedAfterCompile)
+                {
+                    _editedAfterCompileCount++;
+                }
+            }
+
+            internal void LogAndWarn(string assemblyName)
+            {
+                if (_suspectSourceCount > 0)
+                {
+                    VibeLogger.LogInfo(
+                        HotReloadConstants.VibeLogSourceSnapshotChecked,
+                        "Hot reload checked the sources written since the compile started against the PDB.",
+                        new
+                        {
+                            assemblyName,
+                            suspect = _suspectSourceCount,
+                            editedAfterCompile = _editedAfterCompileCount,
+                            checkMs = (long)TimeSpan.FromTicks(_checkTicks).TotalMilliseconds
+                        });
+                }
+
+                if (_skippedSourceCount > 0)
+                {
+                    UnityEngine.Debug.LogWarning(
+                        $"[UnityCliLoop] Skipped {_skippedSourceCount} unreadable source(s) while snapshotting " +
+                        $"{assemblyName}: {_firstSkippedSourcePath}");
+                }
             }
         }
     }

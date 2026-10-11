@@ -22,6 +22,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         internal int AssembliesImmutable;
         internal int AssembliesUnchanged;
         internal int AssembliesCaptured;
+        internal int FilesReused;
         internal int FilesCopied;
         internal long BytesCopied;
         internal int FilesChecked;
@@ -44,6 +45,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 assembliesImmutable = AssembliesImmutable,
                 assembliesUnchanged = AssembliesUnchanged,
                 assembliesCaptured = AssembliesCaptured,
+                filesReused = FilesReused,
                 filesCopied = FilesCopied,
                 bytesCopied = BytesCopied,
                 filesChecked = FilesChecked
