@@ -17,12 +17,18 @@ func runUnityPackageReleaseReadinessCheck(ctx context.Context, log io.Writer, in
 	if err := fetchReleaseTags(ctx, input.RepoRoot, "+refs/tags/*:refs/tags/*"); err != nil {
 		return unityPackageReleaseReadiness{}, err
 	}
-	deps := unityPackageReleaseReadinessDeps{
+	return checkUnityPackageReleaseReadiness(ctx, newUnityPackageReleaseReadinessDeps(input.RepoRoot, log), input)
+}
+
+// newUnityPackageReleaseReadinessDeps returns the real calls of the readiness check: gh, git
+// against the checkout at repoRoot, the verify scripts, and the protocol and pin checks.
+func newUnityPackageReleaseReadinessDeps(repoRoot string, log io.Writer) unityPackageReleaseReadinessDeps {
+	return unityPackageReleaseReadinessDeps{
 		runOutput:      runCommandOutput,
 		requiredAssets: releaseRequiredAssets,
-		// The runner release may have been published after the fetch above.
+		// The runner release may have been published after the fetch of every tag.
 		fetchReleaseTag: func(ctx context.Context, tag string) error {
-			return fetchReleaseTags(ctx, input.RepoRoot, "refs/tags/"+tag+":refs/tags/"+tag)
+			return fetchReleaseTags(ctx, repoRoot, "refs/tags/"+tag+":refs/tags/"+tag)
 		},
 		verifyProtocol: checkMinimumCliReleaseProtocol,
 		verifyPin: func(ctx context.Context, repoRoot string, ref string) (string, error) {
@@ -30,7 +36,6 @@ func runUnityPackageReleaseReadinessCheck(ctx context.Context, log io.Writer, in
 		},
 		log: log,
 	}
-	return checkUnityPackageReleaseReadiness(ctx, deps, input)
 }
 
 // fetchReleaseTags fetches the refspec from origin, overwriting local tags, and does nothing in a

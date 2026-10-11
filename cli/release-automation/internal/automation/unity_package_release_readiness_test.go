@@ -783,3 +783,60 @@ func TestRunUnityPackageReleaseReadinessCheckChecksTheReleaseCommit(t *testing.T
 		t.Fatalf("readiness = %+v, err = %v; want the protocol check to fail reading %s at the release commit %s", readiness, err, protocolMinimumVersionFile, repo.releaseCommit)
 	}
 }
+
+// Verifies the calls the plan's readiness check makes are the real ones: the pin check refuses a
+// release commit whose pin names another dispatcher than its manifest and accepts a matching one,
+// the runner tag is fetched from origin over the local tag, the asset list comes from the verify
+// script, commands run for real, and the check reports into the log it was given.
+func TestNewUnityPackageReleaseReadinessDepsUseTheRealChecks(t *testing.T) {
+	if _, err := exec.LookPath("sh"); err != nil {
+		t.Skip("sh is not available")
+	}
+	ctx := context.Background()
+	origin := t.TempDir()
+	runGitInRepo(t, origin, "init", "-q", "-b", "main")
+	writeReadinessTestFile(t, origin, "release.txt", "origin\n")
+	commitReadinessTestRepo(t, origin, "chore: release on origin")
+	runGitInRepo(t, origin, "tag", readinessTestRunnerTag)
+	originCommit := strings.TrimSpace(runGitInRepoOutput(t, origin, "rev-parse", "HEAD"))
+
+	root := t.TempDir()
+	runGitInRepo(t, root, "init", "-q", "-b", "main")
+	writeReadinessTestFile(t, root, releasePleaseManifestRelativePath, `{"cli/dispatcher": "3.0.1"}`)
+	writeReadinessTestFile(t, root, unityPackageCliPinFile, `{"dispatcherReleaseTag": "dispatcher-v3.0.0"}`)
+	writeReadinessTestFile(t, root, dispatcherReleaseAssetsScript, readinessTestListScript("install.sh", "install.sh.sha256"))
+	commitReadinessTestRepo(t, root, "chore: release with a stale pin")
+	runGitInRepo(t, root, "tag", readinessTestRunnerTag)
+	staleCommit := strings.TrimSpace(runGitInRepoOutput(t, root, "rev-parse", "HEAD"))
+	writeReadinessTestFile(t, root, unityPackageCliPinFile, `{"dispatcherReleaseTag": "dispatcher-v3.0.1"}`)
+	commitReadinessTestRepo(t, root, "chore: stamp the pin")
+	stampedCommit := strings.TrimSpace(runGitInRepoOutput(t, root, "rev-parse", "HEAD"))
+	runGitInRepo(t, root, "remote", "add", "origin", origin)
+	var log bytes.Buffer
+
+	deps := newUnityPackageReleaseReadinessDeps(root, &log)
+
+	if _, err := deps.verifyPin(ctx, root, staleCommit); err == nil || !strings.Contains(err.Error(), "pin dispatcher-v3.0.0") {
+		t.Fatalf("pin check of the stale commit: err = %v, want the mismatch", err)
+	}
+	if message, err := deps.verifyPin(ctx, root, stampedCommit); err != nil || !strings.Contains(message, "dispatcher-v3.0.1") {
+		t.Fatalf("pin check of the stamped commit = %q, %v; want it to pass", message, err)
+	}
+	if err := deps.fetchReleaseTag(ctx, readinessTestRunnerTag); err != nil {
+		t.Fatalf("fetch the runner tag: %v", err)
+	}
+	if tagged := strings.TrimSpace(runGitInRepoOutput(t, root, "rev-parse", readinessTestRunnerTag+"^{commit}")); tagged != originCommit {
+		t.Fatalf("runner tag after the fetch = %s, want origin's commit %s", tagged, originCommit)
+	}
+	assets, err := deps.requiredAssets(ctx, root, dispatcherReleaseAssetsScript, "dispatcher-v3.0.1")
+	if err != nil || strings.Join(assets, ",") != "install.sh,install.sh.sha256" {
+		t.Fatalf("assets = %v, %v; want the verify script's list", assets, err)
+	}
+	if head, err := deps.runOutput(ctx, "git", "-C", root, "rev-parse", "HEAD"); err != nil || strings.TrimSpace(head) != stampedCommit {
+		t.Fatalf("run git rev-parse = %q, %v; want the commit %s", head, err, stampedCommit)
+	}
+	writeReadinessLine(deps.log, "reported")
+	if log.String() != "reported\n" {
+		t.Fatalf("log = %q, want what the check reported", log.String())
+	}
+}
