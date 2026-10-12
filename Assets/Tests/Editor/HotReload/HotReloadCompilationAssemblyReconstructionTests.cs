@@ -466,6 +466,43 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         }
 
         /// <summary>
+        /// What: a rebuild cancelled while the background work runs logs neither time as a number,
+        /// because the work threw before its time was taken.
+        /// </summary>
+        [Test]
+        public async Task ReconstructAndFill_CancelledDuringTheRebuild_LogsNeitherTime()
+        {
+            HotReloadCompilationAssemblyListStore store = SaveCleanThenEdit(saved => { });
+            HotReloadCompilationAssemblyCache cache = new HotReloadCompilationAssemblyCache(Array.Empty<UnityCompilationAssembly>);
+            TaskCompletionSource<HotReloadCompilationListReconstruction> held =
+                new TaskCompletionSource<HotReloadCompilationListReconstruction>();
+            Func<HotReloadCompilationListReconstruction> rebuild = null;
+            HotReloadCompilationListRefill refill = new HotReloadCompilationListRefill(
+                store,
+                cache,
+                HotReloadSnapshotCaptureInputs.ReadOnMainThread,
+                () => _isCompilationFailed,
+                work =>
+                {
+                    rebuild = work;
+                    return held.Task;
+                });
+            VibeLogger.ClearMemoryLogs();
+
+            Task<bool> run = refill.RunAsync();
+            refill.Cancel();
+            OperationCanceledException thrown = Assert.Throws<OperationCanceledException>(() => rebuild());
+            held.SetException(thrown);
+            // Why awaited: the rest of the run resumes off this thread after the held rebuild completes.
+            await run;
+
+            JObject context = HotReloadWarmUpTestDoubles.ReadSingleVibeContext(HotReloadConstants.VibeLogCompilationListReconstructed);
+            Assert.That((string)context["reason"], Is.EqualTo(HotReloadConstants.CompilationListReasonCancelled), "reason");
+            Assert.That(context["backgroundMs"].Type, Is.EqualTo(JTokenType.Null), "backgroundMs");
+            Assert.That(context["mainThreadWaitMs"].Type, Is.EqualTo(JTokenType.Null), "mainThreadWaitMs");
+        }
+
+        /// <summary>
         /// What: a rebuild whose background work does not finish logs neither time as a number, so a
         /// step that never ran is not reported as taking 0 ms.
         /// </summary>
