@@ -153,9 +153,51 @@ command ran against:
   The phases add up to `totalMs` except for the loop overhead; `captureMs` in the captured entry
   also includes reading the compile start and the package roots, and writing this breakdown entry.
   `hot_reload_compilation_assemblies_fetched` appears each time hot reload asks Unity for the
-  compilation assembly list, with `fetchMs` and `assemblyCount`. The list is kept for the rest of
-  the domain once it is not empty, so this normally appears once per domain, from whichever of the
-  warm-up or the first hot reload run needs the list first.
+  compilation assembly list, with `fetchMs` and `assemblyCount`. After a domain reload the list is
+  normally rebuilt off the main thread from the list a previous domain saved
+  (`hot_reload_compilation_list_reconstructed` below), so this appears only when that rebuild kept
+  no list or the cache was invalidated in the domain, from the first hot reload run that needs the
+  list. The list is then kept for the rest of the domain once it is not empty.
+  `hot_reload_compilation_list_reconstructed` appears once per domain reload. `filled` says whether
+  the rebuilt list filled the cache, and `reason` says why it did not:
+  - `no_saved_list`: no list has been saved yet.
+  - `saved_list_unreadable`: the saved list is torn, of another format version, or missing a
+    required field.
+  - `assembly_set_changed`: an assembly definition was added or removed after the list was saved.
+  - `pdb_mismatch`: the PDB beside a compiled-again dll belongs to another build, as while a
+    compile replaces the files.
+  - `pdb_documents_incomplete`: the PDB of a compiled-again assembly does not name every source
+    the compile was given.
+  - `unresolved_reference`: a reference has a file name the saved list does not know, or a project
+    reference is not in the list.
+  - `reference_missing`: every path saved for a reference's file name is gone, as when a package
+    update renames its folder.
+  - `reference_changed`: a saved path exists, but not with the dll of the recorded MVID.
+  - `compilation_failed`: the last compile failed, so the dlls are older than the sources.
+  - `superseded`: the cache was filled or invalidated meanwhile.
+  - `cancelled`: a compile started or the domain is ending.
+  - `tool_disabled`: the hot-reload tool is disabled in the tool settings.
+  - Any other value is the type name of the exception that stopped the rebuild.
+  `reconstructMs` is the time from the start of the rebuild to the entry, including the wait for
+  the main thread. `backgroundMs` is the time spent rebuilding on a pool thread, without the wait
+  for that thread, and `mainThreadWaitMs` the time it then waited for the main thread to run again.
+  Either is null when the rebuild did not get through that step. A `tool_disabled` entry has only
+  `filled` and `reason`, because no rebuild started.
+  When the cache was not filled, the first hot reload run that needs the list asks Unity for it
+  (`hot_reload_compilation_assemblies_fetched`) and saves it when the cache was not invalidated
+  in the domain and the last compile did not fail, so a reason that comes from an old saved list
+  (`no_saved_list`, `saved_list_unreadable`, `assembly_set_changed`, `unresolved_reference`,
+  `reference_missing`, `reference_changed`) does not repeat after that. Without a list, the
+  warm-up skips `publicized_targets`, `referenced_method_sets` and `transform_worker` with
+  `compilation_list_unavailable`.
+  `hot_reload_compilation_list_saved` appears when a list was written for the next domain, with
+  its size in `bytes`, `saveMs`, and the counts of `assemblies` and `references`. It is written on
+  a pool thread after a list is asked of Unity and after a rebuilt list fills the cache, only when
+  the cache was not invalidated in the domain and the last compile did not fail.
+  `hot_reload_compilation_list_save_skipped` names why a list was not saved in `reason`:
+  `generation` (the cache was invalidated in the domain), `compilation_failed`, or `superseded`
+  (a compile started while it was written). `hot_reload_compilation_list_save_failed` is a warning
+  with the exception type name in `error`.
   After a domain reload, the warm-up writes one `hot_reload_warm_up_complete` with the target
   assemblies, each item's `outcome` (`done`, `cancelled` or `failed`) and time, and `cancelledBy`
   (`run`, `beforeAssemblyReload`, `compilationStarted`, or null), or one
