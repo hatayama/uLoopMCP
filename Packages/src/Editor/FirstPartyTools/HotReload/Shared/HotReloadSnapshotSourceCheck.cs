@@ -64,8 +64,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 slashNormalizedRelativePath,
                 _packageRoots,
                 _pathComparison);
-            // Why NoDocumentInPdb counts as not compiled: a file without method bodies has no document,
-            // and a copy that cannot be confirmed is safer treated as edited than trusted.
+            // Why NoDocumentInPdb counts as not compiled: no sequence point refers to a file without
+            // method bodies, and a copy that cannot be confirmed is safer treated as edited than trusted.
             return HotReloadSourceBaseline.CompareWithCompiledDocumentAtLookupPath(
                     pdbLookupPath,
                     _dllPath,

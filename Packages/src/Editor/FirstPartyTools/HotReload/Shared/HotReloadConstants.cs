@@ -482,10 +482,11 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             "No verified source snapshot for {0} (assembly {1}): the compiled assembly or its PDB is "
             + "missing; patching all methods. Run 'uloop compile'.";
 
-        // Format: file name, assembly name. Used instead of the warnings above when the compiled
-        // PDB lists no document for the file: a file whose code compiles to no method body (an
-        // enum, an interface, fields only) is never recorded there, so no compile can produce the
-        // baseline the other wording asks the reader to establish.
+        // Format: file name, assembly name. Used instead of the warnings above when no sequence
+        // point of the compiled PDB refers to the file: a file whose code compiles to no method
+        // body (an enum, an interface, fields only) has none, so no compile can produce the
+        // baseline the other wording asks the reader to establish. The compiler still records such
+        // a file as a document, but an IL post-processor that rewrites the PDB drops it.
         public const string NoCompiledMethodBodyBaselineWarningFormat =
             "{0} (assembly {1}) has no compiled method body, so there is no baseline for "
             + "edited-method detection; patching all methods. This is expected for files that only "

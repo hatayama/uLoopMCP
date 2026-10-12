@@ -59,30 +59,66 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         /// second lookup reuses the document list the first one kept, so it does not read the PDB
         /// again.
         /// </remarks>
+        /// <param name="newSourceMembershipEvidence">
+        /// The evidence that placed a file Unity's compilation assemblies do not list in the
+        /// assembly, or null for a file they list. Null does not mean the last compile built the
+        /// file: the list also changes on an import that compiles nothing yet, so a file moved,
+        /// renamed or split off into a partial since the compile is listed too.
+        /// </param>
         internal static HotReloadSnapshotMissReason DescribeSnapshotMiss(
             string projectRelativeSourcePath,
-            string targetDllPath)
+            string targetDllPath,
+            HotReloadNewSourceMembershipEvidence newSourceMembershipEvidence)
         {
             string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
             return DescribeSnapshotMissAt(
                 projectRoot,
                 projectRelativeSourcePath,
                 targetDllPath,
-                HotReloadPdbDocumentIndex.Shared);
+                HotReloadPdbDocumentIndex.Shared,
+                newSourceMembershipEvidence);
         }
 
         internal static HotReloadSnapshotMissReason DescribeSnapshotMissAt(
             string projectRoot,
             string projectRelativeSourcePath,
             string targetDllPath,
-            HotReloadPdbDocumentIndex documentIndex)
+            HotReloadPdbDocumentIndex documentIndex,
+            HotReloadNewSourceMembershipEvidence newSourceMembershipEvidence)
         {
-            return TryLoadVerifiedSnapshotSource(
+            HotReloadSnapshotMissReason reason = TryLoadVerifiedSnapshotSource(
                 projectRoot,
                 projectRelativeSourcePath,
                 targetDllPath,
                 documentIndex,
                 out string _);
+            // Why a listed file without a snapshot still asks the PDB: an IL post-processor that
+            // rewrites the PDB drops the documents no sequence point refers to, so the capture, which
+            // names the sources from the PDB, writes no snapshot for a file without a method body.
+            // Such a file must read as one no compile gives a baseline, as it does where the snapshot
+            // was written. Why only when the PDB dropped documents: elsewhere a listed file without a
+            // snapshot is one the last compile did not build yet, and the next compile does give it
+            // a baseline. A file with evidence is not in the list at all, so it is such a file too.
+            if (reason != HotReloadSnapshotMissReason.NoSnapshotFile || newSourceMembershipEvidence != null)
+            {
+                return reason;
+            }
+
+            string pdbPath = Path.ChangeExtension(targetDllPath, ".pdb");
+            string mvid = HotReloadAssemblyMvid.Read(targetDllPath);
+            if (!documentIndex.DropsDocuments(targetDllPath, pdbPath, mvid))
+            {
+                return reason;
+            }
+
+            return documentIndex.TryFindDocument(
+                    targetDllPath,
+                    pdbPath,
+                    mvid,
+                    ToCompiledLookupPath(projectRoot, projectRelativeSourcePath.Replace('\\', '/')),
+                    out HotReloadPdbDocument _)
+                ? HotReloadSnapshotMissReason.NoSnapshotFile
+                : HotReloadSnapshotMissReason.NoDocumentInPdb;
         }
 
         private static HotReloadSnapshotMissReason TryLoadVerifiedSnapshotSource(
@@ -266,15 +302,20 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             // Library, so a package folder of the main project lies outside the player's root, and
             // relativizing against the player's root would hand the lookup an absolute path that no
             // document ends with. For an ordinary project the two roots are the same.
-            string compiledProjectRoot = CompiledAssemblyLayout.Resolve(projectRoot).MainProjectRoot;
-            string pdbLookupPath = ScriptPackageRoots.ToPhysicalPath(compiledProjectRoot, slashNormalizedRelativePath);
             return CompareWithCompiledDocumentAtLookupPath(
-                pdbLookupPath,
+                ToCompiledLookupPath(projectRoot, slashNormalizedRelativePath),
                 targetDllPath,
                 pdbPath,
                 moduleVersionId,
                 sourceBytes,
                 documentIndex);
+        }
+
+        // The path the compiled assembly's PDB records for the source; see CompareWithCompiledDocument.
+        private static string ToCompiledLookupPath(string projectRoot, string slashNormalizedRelativePath)
+        {
+            string compiledProjectRoot = CompiledAssemblyLayout.Resolve(projectRoot).MainProjectRoot;
+            return ScriptPackageRoots.ToPhysicalPath(compiledProjectRoot, slashNormalizedRelativePath);
         }
 
         /// <summary>
