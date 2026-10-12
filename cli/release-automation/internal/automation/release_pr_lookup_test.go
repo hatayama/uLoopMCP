@@ -9,7 +9,7 @@ import (
 )
 
 // Verifies which titles count as release-please release titles: plain and scoped "release" titles match, while other prefixes and a scope that never closes do not.
-func TestReleasePRCheckTitleMatches(t *testing.T) {
+func TestReleasePleaseReleaseTitleMatches(t *testing.T) {
 	cases := map[string]bool{
 		"chore: release":                  true,
 		"chore: release 3.6.0":            true,
@@ -21,8 +21,8 @@ func TestReleasePRCheckTitleMatches(t *testing.T) {
 		"feat(main): release 3.6.0":       false,
 	}
 	for title, want := range cases {
-		if got := releasePRCheckTitleMatches(title); got != want {
-			t.Fatalf("releasePRCheckTitleMatches(%q) = %t, want %t", title, got, want)
+		if got := releasePleaseReleaseTitleMatches(title); got != want {
+			t.Fatalf("releasePleaseReleaseTitleMatches(%q) = %t, want %t", title, got, want)
 		}
 	}
 }

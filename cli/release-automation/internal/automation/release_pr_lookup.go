@@ -72,7 +72,7 @@ func releasePRCheckMatches(releasePR releasePullRequest, targetBranch string) bo
 	if releasePR.HeadRefName != releasePRBranch && !strings.HasPrefix(releasePR.HeadRefName, releasePRBranch+"--components--") {
 		return false
 	}
-	return releasePRCheckTitleMatches(releasePR.Title)
+	return releasePleaseReleaseTitleMatches(releasePR.Title)
 }
 
 // releasePRCheckComponentFromHeadRef reads the release-please component out of
@@ -85,7 +85,10 @@ func releasePRCheckComponentFromHeadRef(headRefName string, targetBranch string)
 	return strings.TrimPrefix(headRefName, componentPrefix)
 }
 
-func releasePRCheckTitleMatches(title string) bool {
+// releasePleaseReleaseTitleMatches says whether a title is a release-please release title. A
+// release pull request carries one, and so does the commit that squash-merges it, with the pull
+// request number appended.
+func releasePleaseReleaseTitleMatches(title string) bool {
 	if title == "chore: release" || strings.HasPrefix(title, "chore: release ") {
 		return true
 	}

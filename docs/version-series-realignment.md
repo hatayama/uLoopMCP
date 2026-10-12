@@ -44,13 +44,13 @@ had pushed the dispatcher onto a `3.1.0-beta` series, and it was rewound to
 
 Two automations react differently to the realignment commit:
 
-- `scripts/check-unity-package-release.sh`, which decides whether
+- The readiness check of `plan-unity-package-release`, which decides whether
   `unity-package-release.yml` may create the Unity package release, only
-  recognizes release commits whose subject passes
-  `scripts/is-release-please-release-commit.sh` (`chore: release *` /
-  `chore(...): release *`). A `fix:`-titled realignment commit is invisible to
-  it, so the missing release is not created from it, and the workflow may fail
-  with "No release-please commit ... was found" until the release exists.
+  recognizes release commits whose subject is a release-please release title
+  (`chore: release ...` / `chore(...): release ...`). A `fix:`-titled
+  realignment commit is invisible to it, so the missing release is not created
+  from it, and the workflow may fail with "no release-please commit ... was
+  found" until the release exists.
 - `.github/workflows/dispatcher-publish.yml`
   (`scripts/resolve-dispatcher-release-target.sh`) ignores commit subjects
   entirely, but on push it only evaluates when HEAD's diff actually stamps

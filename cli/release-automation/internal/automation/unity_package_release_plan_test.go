@@ -12,6 +12,7 @@ import (
 )
 
 const (
+	unityPackageReleaseTestWaitingFor  = "Project runner release uloop-project-runner-v3.10.0 is not published with complete assets yet; the Unity package release v3.14.0 waits for it."
 	unityPackageReleaseTestTagRef      = "refs/tags/v3.14.0"
 	unityPackageReleaseTestPublished   = `{"tag_name": "v3.14.0", "draft": false, "assets": [{"name": "io.github.hatayama.uloopmcp-3.14.0.tgz", "size": 2048}]}`
 	unityPackageReleaseTestUnsigned    = `{"tag_name": "v3.14.0", "draft": false, "assets": [{"name": "notes.txt", "size": 10}]}`
@@ -41,12 +42,13 @@ func runPlanUnityPackageReleaseForTest(fake *fakeUnityPackageReleaseCommands, re
 
 // Verifies the plan creates a release only when none is published and the readiness check names
 // its release commit, never touches a published release except to dry-run sign it from its tag,
-// and runs the check only for a release that is not published yet.
+// runs the check only for a release that is not published yet, reports what a release that is
+// not due waits for in its notice, and keeps what the check reports out of GITHUB_OUTPUT.
 func TestPlanUnityPackageReleaseDecidesFromReleaseState(t *testing.T) {
 	tests := []struct {
 		name           string
 		release        fakeUnityPackageReleaseResponse
-		checkOutput    string
+		readiness      unityPackageReleaseReadiness
 		dryRun         bool
 		wantSign       bool
 		wantPublish    bool
@@ -88,7 +90,7 @@ func TestPlanUnityPackageReleaseDecidesFromReleaseState(t *testing.T) {
 		{
 			name:           "due release is signed and published from its release commit",
 			release:        unityPackageReleaseTestNotFound,
-			checkOutput:    unityPackageReleaseTestCommit + "\n",
+			readiness:      unityPackageReleaseReadiness{ReleaseCommit: unityPackageReleaseTestCommit},
 			wantSign:       true,
 			wantPublish:    true,
 			wantSourceRef:  unityPackageReleaseTestCommit,
@@ -97,7 +99,7 @@ func TestPlanUnityPackageReleaseDecidesFromReleaseState(t *testing.T) {
 		{
 			name:           "dry run signs a due release without publishing",
 			release:        unityPackageReleaseTestNotFound,
-			checkOutput:    unityPackageReleaseTestCommit + "\n",
+			readiness:      unityPackageReleaseReadiness{ReleaseCommit: unityPackageReleaseTestCommit},
 			dryRun:         true,
 			wantSign:       true,
 			wantSourceRef:  unityPackageReleaseTestCommit,
@@ -106,12 +108,14 @@ func TestPlanUnityPackageReleaseDecidesFromReleaseState(t *testing.T) {
 		{
 			name:           "release that is not due yet is skipped",
 			release:        unityPackageReleaseTestNotFound,
+			readiness:      unityPackageReleaseReadiness{WaitingFor: unityPackageReleaseTestWaitingFor},
 			wantAnnotation: "::notice::",
 			wantCheckCalls: 1,
 		},
 		{
 			name:           "dry run skips a release that is not due yet",
 			release:        unityPackageReleaseTestNotFound,
+			readiness:      unityPackageReleaseReadiness{WaitingFor: unityPackageReleaseTestWaitingFor},
 			dryRun:         true,
 			wantAnnotation: "::notice::",
 			wantCheckCalls: 1,
@@ -121,7 +125,7 @@ func TestPlanUnityPackageReleaseDecidesFromReleaseState(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			fake := newFakeUnityPackageReleaseCommands(t, map[string][]fakeUnityPackageReleaseResponse{"release": {test.release}})
-			fake.checkOutput = test.checkOutput
+			fake.readiness = test.readiness
 			code, stdout, stderr := runPlanUnityPackageReleaseForTest(fake, writeUnityPackageReleaseManifest(t, unityPackageReleaseTestPlanVersion), test.dryRun)
 			if code != 0 {
 				t.Fatalf("exit code = %d, stderr = %s", code, stderr)
@@ -137,17 +141,29 @@ func TestPlanUnityPackageReleaseDecidesFromReleaseState(t *testing.T) {
 			if strings.TrimSpace(stderr) == "" {
 				t.Fatal("stderr has no reason for the decision")
 			}
+			// The decision is the last line; what the readiness check reported comes before it.
+			lines := strings.Split(strings.TrimSuffix(stderr, "\n"), "\n")
+			decision := lines[len(lines)-1]
 			annotation := ""
 			for _, prefix := range []string{"::warning::", "::notice::"} {
-				if strings.HasPrefix(stderr, prefix) {
+				if strings.HasPrefix(decision, prefix) {
 					annotation = prefix
 				}
 			}
 			if annotation != test.wantAnnotation {
 				t.Fatalf("stderr = %q, want annotation %q", stderr, test.wantAnnotation)
 			}
-			if fake.checkCalls != test.wantCheckCalls {
-				t.Fatalf("check calls = %d, want %d", fake.checkCalls, test.wantCheckCalls)
+			if test.readiness.WaitingFor != "" && !strings.HasSuffix(stderr, "\n::notice::"+test.readiness.WaitingFor+"\n") {
+				t.Fatalf("stderr = %q, want a notice of what the release waits for", stderr)
+			}
+			if test.wantCheckCalls > 0 && !strings.HasPrefix(stderr, unityPackageReleaseTestCheckLog+"\n") {
+				t.Fatalf("stderr = %q, want what the check reported in the job log", stderr)
+			}
+			if len(fake.checkVersions) != test.wantCheckCalls {
+				t.Fatalf("check calls = %v, want %d", fake.checkVersions, test.wantCheckCalls)
+			}
+			if test.wantCheckCalls > 0 && fake.checkVersions[0] != "3.14.0" {
+				t.Fatalf("checked version = %q, want the manifest version 3.14.0", fake.checkVersions[0])
 			}
 		})
 	}
@@ -161,7 +177,7 @@ func TestPlanUnityPackageReleaseFailsWithoutOutput(t *testing.T) {
 		name           string
 		manifest       string
 		release        []fakeUnityPackageReleaseResponse
-		checkOutput    string
+		readiness      unityPackageReleaseReadiness
 		checkErr       error
 		wantCheckCalls int
 	}{
@@ -172,15 +188,20 @@ func TestPlanUnityPackageReleaseFailsWithoutOutput(t *testing.T) {
 			wantCheckCalls: 1,
 		},
 		{
-			name:           "malformed check output fails the plan",
+			name:           "release commit that is not a full SHA fails the plan",
 			release:        []fakeUnityPackageReleaseResponse{unityPackageReleaseTestNotFound},
-			checkOutput:    "0123456\n",
+			readiness:      unityPackageReleaseReadiness{ReleaseCommit: "0123456"},
 			wantCheckCalls: 1,
 		},
 		{
-			name:           "check output with more than the commit fails the plan",
+			name:           "check that answers neither a commit nor a wait fails the plan",
 			release:        []fakeUnityPackageReleaseResponse{unityPackageReleaseTestNotFound},
-			checkOutput:    unityPackageReleaseTestCommit + "\nverified\n",
+			wantCheckCalls: 1,
+		},
+		{
+			name:           "check that answers both a commit and a wait fails the plan",
+			release:        []fakeUnityPackageReleaseResponse{unityPackageReleaseTestNotFound},
+			readiness:      unityPackageReleaseReadiness{ReleaseCommit: unityPackageReleaseTestCommit, WaitingFor: unityPackageReleaseTestWaitingFor},
 			wantCheckCalls: 1,
 		},
 		{
@@ -215,64 +236,19 @@ func TestPlanUnityPackageReleaseFailsWithoutOutput(t *testing.T) {
 				repoRoot = writeUnityPackageReleaseManifest(t, test.manifest)
 			}
 			fake := newFakeUnityPackageReleaseCommands(t, map[string][]fakeUnityPackageReleaseResponse{"release": test.release})
-			fake.checkOutput = test.checkOutput
+			fake.readiness = test.readiness
 			fake.checkErr = test.checkErr
 			code, stdout, _ := runPlanUnityPackageReleaseForTest(fake, repoRoot, false)
 			if code == 0 || stdout != "" {
 				t.Fatalf("exit code = %d, stdout = %q; want a failure without GITHUB_OUTPUT lines", code, stdout)
 			}
-			if fake.checkCalls != test.wantCheckCalls {
-				t.Fatalf("check calls = %d, want %d", fake.checkCalls, test.wantCheckCalls)
+			if len(fake.checkVersions) != test.wantCheckCalls {
+				t.Fatalf("check calls = %v, want %d", fake.checkVersions, test.wantCheckCalls)
 			}
 			if test.release == nil && len(fake.calls) != 0 {
 				t.Fatalf("calls = %v, want none before the manifest names a release", fake.calls)
 			}
 		})
-	}
-}
-
-// Verifies the readiness check runs from the repository root, hands back only its stdout, and
-// streams its stderr into the job log, because that stderr is the only place that says why a
-// release is not due yet.
-func TestRunUnityPackageReleaseCheckStreamsStderr(t *testing.T) {
-	repoRoot := t.TempDir()
-	scriptPath := filepath.Join(repoRoot, filepath.FromSlash(unityPackageReleaseCheckScript))
-	if err := os.MkdirAll(filepath.Dir(scriptPath), 0o700); err != nil {
-		t.Fatalf("create scripts directory: %v", err)
-	}
-	script := "#!/bin/sh\necho '::notice::runner release is not published yet' >&2\n" +
-		"[ -f .release-please-manifest.json ] || exit 3\n" +
-		"printf '%s\\n' " + unityPackageReleaseTestCommit + "\n"
-	if err := os.WriteFile(scriptPath, []byte(script), 0o600); err != nil {
-		t.Fatalf("write check script: %v", err)
-	}
-
-	var stderr bytes.Buffer
-	if _, err := runUnityPackageReleaseCheck(context.Background(), &stderr, repoRoot); err == nil {
-		t.Fatal("check succeeded without the manifest in its working directory, want the script's failure")
-	}
-	if !strings.Contains(stderr.String(), "::notice::runner release is not published yet") {
-		t.Fatalf("stderr of the failed check = %q, want the script's stderr", stderr.String())
-	}
-
-	writeUnityPackageReleaseManifestInRoot(t, repoRoot)
-	stderr.Reset()
-	output, err := runUnityPackageReleaseCheck(context.Background(), &stderr, repoRoot)
-	if err != nil {
-		t.Fatalf("check failed: %v", err)
-	}
-	if output != unityPackageReleaseTestCommit+"\n" {
-		t.Fatalf("output = %q, want only the commit the script printed to stdout", output)
-	}
-	if !strings.Contains(stderr.String(), "::notice::runner release is not published yet") {
-		t.Fatalf("stderr = %q, want the script's stderr", stderr.String())
-	}
-}
-
-func writeUnityPackageReleaseManifestInRoot(t *testing.T, repoRoot string) {
-	t.Helper()
-	if err := os.WriteFile(filepath.Join(repoRoot, ".release-please-manifest.json"), []byte(unityPackageReleaseTestPlanVersion), 0o600); err != nil {
-		t.Fatalf("write manifest: %v", err)
 	}
 }
 

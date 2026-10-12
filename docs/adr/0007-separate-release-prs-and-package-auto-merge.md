@@ -165,7 +165,7 @@ signed, because a published release is immutable
 (`docs/adr/0013-create-the-unity-package-release-after-signing.md`,
 `docs/unity-package-release.md`). Where this ADR says the pin check runs inside
 the sync "before the package release is created or published", it now runs in
-that workflow's readiness check, `scripts/check-unity-package-release.sh`,
-before the package is signed. The tag and the release are created at the
+that workflow's readiness check, part of `plan-unity-package-release`, before
+the package is signed. The tag and the release are created at the
 release commit that check names, so the pin the release ships is still the one
 that commit records.

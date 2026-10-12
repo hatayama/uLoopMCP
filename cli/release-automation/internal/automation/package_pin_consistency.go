@@ -36,29 +36,35 @@ func RunPackagePinConsistencyCheck(ctx context.Context, stdout io.Writer, stderr
 		return 1
 	}
 
-	dispatcherVersion, err := packagePinConsistencyDispatcherVersion(ctx, config)
+	message, err := checkPackagePinConsistency(ctx, config)
 	if err != nil {
 		writePackagePinConsistencyLine(stderr, err)
 		return 1
 	}
+	writePackagePinConsistencyLine(stdout, message)
+	return 0
+}
+
+// checkPackagePinConsistency returns what it confirmed when the ref's pin records the dispatcher
+// its manifest releases, and the mismatch or unreadable input otherwise.
+func checkPackagePinConsistency(ctx context.Context, config packagePinConsistencyConfig) (string, error) {
+	dispatcherVersion, err := packagePinConsistencyDispatcherVersion(ctx, config)
+	if err != nil {
+		return "", err
+	}
 	pinnedTag, err := packagePinConsistencyPinnedTag(ctx, config)
 	if err != nil {
-		writePackagePinConsistencyLine(stderr, err)
-		return 1
+		return "", err
 	}
 
 	expectedTag := dispatcherReleaseTagPrefix + dispatcherVersion
 	if pinnedTag != expectedTag {
-		writePackagePinConsistencyLine(stderr, fmt.Errorf(
+		return "", fmt.Errorf(
 			"%s: %s would release the Unity package with pin %s, but its manifest releases dispatcher %s. "+
 				"Merge the dispatcher release pull request first and wait for the pin stamp (docs/dispatcher-pin-release-order.md)",
-			packagePinConsistencyCommandName, config.ref, pinnedTag, expectedTag))
-		return 1
+			packagePinConsistencyCommandName, config.ref, pinnedTag, expectedTag)
 	}
-
-	writePackagePinConsistencyLine(stdout, fmt.Sprintf(
-		"Package pin records %s, matching the dispatcher version released from %s.", pinnedTag, config.ref))
-	return 0
+	return fmt.Sprintf("Package pin records %s, matching the dispatcher version released from %s.", pinnedTag, config.ref), nil
 }
 
 func parsePackagePinConsistencyFlags(ctx context.Context, args []string) (packagePinConsistencyConfig, error) {

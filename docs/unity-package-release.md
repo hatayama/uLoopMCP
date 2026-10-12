@@ -27,15 +27,14 @@ after the tarball is signed. The decision and the alternatives it replaced are r
    - A published `v<version>` release is never changed. One that carries
      `io.github.hatayama.uloopmcp-<version>.tgz` needs nothing; one without it gets a warning,
      because no run can attach the tarball any more. Most runs end here.
-   - Otherwise the plan runs `scripts/check-unity-package-release.sh`. It requires the
-     project runner release of the manifest and the dispatcher release of the pin's
-     `minimumDispatcherVersion` to be published with every asset, verifies the runner's
-     attestations, finds the release-please release commit of the package version, and runs
-     the protocol and pin checks at that commit. It prints that commit when the release is due,
-     and nothing when a release it needs is not published yet; the plan then ends with a notice
-     that names what it waits for, and the publish workflow of that release starts this
-     workflow again. A failed check, a failed lookup, or an unreadable manifest, config, or pin
-     fails the run.
+   - Otherwise the plan runs its readiness check. It requires the project runner release of
+     the manifest and the dispatcher release of the pin's `minimumDispatcherVersion` to be
+     published with every asset, verifies the runner's attestations, finds the release-please
+     release commit of the package version, and runs the protocol and pin checks at that
+     commit. It names that commit when the release is due. When a release it needs is not
+     published yet, the plan ends with a notice that names that release, and the publish
+     workflow of that release starts this workflow again. A failed check, a failed lookup, or
+     an unreadable manifest, config, or pin fails the run.
 3. **`sign`** (environment `upm-signing`, `contents: read`) checks out the release commit, or
    the tag of a published release in a dry run, installs the pinned UPM CLI, runs `upm pack`,
    and runs `cmd/stage-signed-unity-package`. Staging rejects a tarball without
