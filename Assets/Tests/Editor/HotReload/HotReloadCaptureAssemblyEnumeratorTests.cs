@@ -77,7 +77,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         /// <summary>
         /// Verifies, on this project, that the listed assemblies are the compilation assemblies Unity
         /// lists with a PDB beside their dll, that each read-only classification is the Package
-        /// Manager's, and that for each editable one the sources read from the PDB are Unity's source files.
+        /// Manager's, and that for every one, read-only or not, the sources read are Unity's source
+        /// files, including where a rewrite left the PDB beside the dll without some documents and
+        /// the compiler's own PDB is read instead.
         /// </summary>
         [Test]
         public void CompiledAssemblyEnumeration_ListsTheSameAssembliesAndSourcesAsGetAssemblies()
@@ -98,7 +100,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             IReadOnlyList<HotReloadCaptureAssemblyCandidate> candidates = HotReloadCaptureAssemblyEnumerator.ListCompiled(projectRoot);
             List<string> mismatches = new List<string>();
             int immutableAssemblies = 0;
-            int editableSources = 0;
+            int comparedSources = 0;
+            int lostDocuments = 0;
+            int fromCompilerPdb = 0;
             foreach (HotReloadCaptureAssemblyCandidate candidate in candidates)
             {
                 if (!fromUnity.TryGetValue(candidate.Name, out UnityCompilationAssembly unityAssembly))
@@ -107,7 +111,10 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                     continue;
                 }
 
+                HotReloadPdbCompilationInfo beside = HotReloadPdbCompilationInfo.Read(candidate.PdbPath);
+                lostDocuments += beside.DocumentCount < beside.SourceFileCount ? 1 : 0;
                 HotReloadCaptureAssembly assembly = HotReloadCaptureAssemblyEnumerator.ReadSources(candidate, inputs);
+                fromCompilerPdb += assembly.SourcesFromCompilerOutput ? 1 : 0;
                 string[] sourceFiles = unityAssembly.sourceFiles;
                 bool expectedImmutable = sourceFiles.Length > 0
                     && HotReloadSourceSnapshotter.ShouldSkipImmutablePackageSources(sourceFiles);
@@ -119,14 +126,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                     continue;
                 }
 
-                // Why the sources of a read-only package's assembly are not compared: the capture
-                // copies none of them, and some such packages list files their PDB does not.
-                if (expectedImmutable)
-                {
-                    continue;
-                }
-
-                editableSources += assembly.SourceAssetPaths.Count;
+                comparedSources += assembly.SourceAssetPaths.Count;
                 HashSet<string> fromPdb = new HashSet<string>(assembly.SourceAssetPaths, comparer);
                 if (!fromPdb.SetEquals(sourceFiles.Select(HotReloadSourcePathNormalizer.ToForwardSlashes)))
                 {
@@ -143,8 +143,11 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             }
 
             string summary = "Listed " + candidates.Count + " assemblies (Unity: " + fromUnity.Count + "), "
-                + immutableAssemblies + " read-only, " + editableSources + " sources of editable ones; " + mismatches.Count + " mismatches";
+                + immutableAssemblies + " read-only, " + comparedSources + " sources, " + fromCompilerPdb + " from the compiler's PDB of "
+                + lostDocuments + " whose PDB lost documents; " + mismatches.Count + " mismatches";
             TestContext.WriteLine(summary + ".");
+            Debug.Log("[cross-check] " + summary);
+            Assert.That(lostDocuments, Is.GreaterThan(0), "Precondition: some assembly's PDB must have lost sources, so the compiler's PDB is read.");
             Assert.That(candidates.Count, Is.GreaterThan(0), "No compiled assembly with a PDB was listed.");
             Assert.That(immutableAssemblies, Is.GreaterThan(0), "No read-only package assembly was found to compare.");
             Assert.That(
