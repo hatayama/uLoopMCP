@@ -534,7 +534,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             return HotReloadSourceSnapshotter.CaptureAssemblies(
                 inputs,
                 new HotReloadPdbDocumentIndex(Path.Combine(_root, "PdbDocuments")),
-                (candidate, capturedInputs) => new HotReloadCaptureAssembly(candidate.Name, sources, false),
+                (candidate, capturedInputs) => new HotReloadCaptureAssembly(candidate.Name, sources, false, hasEverySource: true, sourcesFromCompilerOutput: false),
                 CancellationToken.None);
         }
 

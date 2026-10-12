@@ -211,7 +211,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             {
                 "getAssembliesMs", "pdbSourcesMs", "packageLookupMs", "stampMs", "mvidMs", "statMs", "readWriteMs",
                 "pdbCheckMs", "publishMs", "cleanupMs", "totalMs", "assemblies", "assembliesImmutable",
-                "assembliesUnchanged", "assembliesCaptured", "assembliesSkippedPdbMismatch", "filesCopied", "bytesCopied", "filesChecked"
+                "assembliesUnchanged", "assembliesCaptured", "assembliesSkippedPdbMismatch", "assembliesFromCompilerPdb", "filesCopied", "bytesCopied", "filesChecked"
             };
             foreach (string field in fields)
             {

@@ -306,7 +306,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 (candidate, inputs) =>
                 {
                     HotReloadPdbDocumentTable.Read(candidate.DllPath, candidate.PdbPath, out int? _);
-                    return new HotReloadCaptureAssembly(candidate.Name, new[] { SourceRelativePath }, false);
+                    return new HotReloadCaptureAssembly(candidate.Name, new[] { SourceRelativePath }, false, hasEverySource: true, sourcesFromCompilerOutput: false);
                 });
 
             Assert.That(stats.AssembliesSkippedPdbMismatch, Is.EqualTo(1), "skipped for another build's PDB");
@@ -603,7 +603,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         private static Func<HotReloadCaptureAssemblyCandidate, HotReloadSnapshotCaptureInputs, HotReloadCaptureAssembly> ReadsSources(
             params string[] sources)
         {
-            return (candidate, inputs) => new HotReloadCaptureAssembly(candidate.Name, sources, false);
+            return (candidate, inputs) => new HotReloadCaptureAssembly(candidate.Name, sources, false, hasEverySource: true, sourcesFromCompilerOutput: false);
         }
 
         // A PDB source reader that counts its calls and names the fixture source, with the read-only
@@ -615,7 +615,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             return (candidate, inputs) =>
             {
                 onRead();
-                return new HotReloadCaptureAssembly(candidate.Name, new[] { SourceRelativePath }, isImmutablePackageAssembly);
+                return new HotReloadCaptureAssembly(candidate.Name, new[] { SourceRelativePath }, isImmutablePackageAssembly, hasEverySource: true, sourcesFromCompilerOutput: false);
             };
         }
 
