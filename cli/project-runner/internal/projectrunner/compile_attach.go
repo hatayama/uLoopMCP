@@ -219,7 +219,7 @@ func attachWaitForPendingCompile(
 			spinner.Stop()
 			return false, compileExecutionResult{}
 		}
-		return true, completeCompileResult(result, stderr, spinner, startedAt, unityipc.UnitySendOutcome{})
+		return true, completeCompileResult(addEarlierCompileResultWarning(result), stderr, spinner, startedAt, unityipc.UnitySendOutcome{})
 	default:
 		spinner.Stop()
 		logCompileAttachResult(connection, record.RequestID, "error", false)
@@ -299,7 +299,7 @@ func returnAttachedStoredCompileResult(
 	spinner := clicore.NewToolSpinner(stderr, clicore.CompileCommandName)
 	clearCompilePendingRecord(connection.ProjectRoot)
 	logCompileAttachResult(connection, record.RequestID, "stored_result", true)
-	return completeCompileResult(result, stderr, spinner, startedAt, unityipc.UnitySendOutcome{})
+	return completeCompileResult(addEarlierCompileResultWarning(result), stderr, spinner, startedAt, unityipc.UnitySendOutcome{})
 }
 
 // completeCompileResult turns the compile answer into the command's result.

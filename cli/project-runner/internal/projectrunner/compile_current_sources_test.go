@@ -51,6 +51,9 @@ func TestCompilesOfCurrentSourcesIgnoreStoredResultOfEarlierCompile(t *testing.T
 			result := compile(context.Background(), connection, &stderr, deps)
 
 			assertCurrentCompileResult(t, result)
+			if strings.Contains(string(result.result), expectedEarlierCompileResultWarning) {
+				t.Fatalf("a compile of the current sources must not carry the earlier-result warning: %s", result.result)
+			}
 			assertPendingRecordCleared(t, projectRoot)
 			logContent := readOnlyCliVibeLog(t, projectRoot)
 			if !strings.Contains(logContent, `"operation":"cli_compile_request_prepared"`) {
