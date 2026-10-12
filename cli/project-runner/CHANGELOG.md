@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.9.1](https://github.com/hatayama/unity-cli-loop/compare/uloop-project-runner-v3.9.0...uloop-project-runner-v3.9.1) (2026-10-12)
+
+
+### Bug Fixes
+
+* A compile re-run after a timeout warns that the result it returns predates later script edits ([#3295](https://github.com/hatayama/unity-cli-loop/issues/3295)) ([2ce77ac](https://github.com/hatayama/unity-cli-loop/commit/2ce77ac1caaaa68a3bbcfb81f1dc37fea62732dc))
+
 ## [3.9.0](https://github.com/hatayama/unity-cli-loop/compare/uloop-project-runner-v3.8.0...uloop-project-runner-v3.9.0) (2026-10-11)
 
 
