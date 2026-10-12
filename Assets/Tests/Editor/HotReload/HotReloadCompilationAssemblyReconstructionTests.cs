@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 using NUnit.Framework;
 
@@ -400,6 +401,132 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             Assert.That(
                 (string)HotReloadWarmUpTestDoubles.ReadSingleVibeContext(HotReloadConstants.VibeLogCompilationListReconstructed)["reason"],
                 Is.EqualTo(HotReloadConstants.CompilationListReasonCompilationFailed));
+        }
+
+        /// <summary>
+        /// What: a rebuild that fills the cache logs both the background time and the main thread
+        /// wait, and together they fit within the whole time.
+        /// </summary>
+        [Test]
+        public void ReconstructAndFill_WhenFilled_LogsTheBackgroundAndMainThreadWaitTimes()
+        {
+            HotReloadCompilationAssemblyListStore store = SaveCleanThenEdit(saved => { });
+            HotReloadCompilationAssemblyCache cache = new HotReloadCompilationAssemblyCache(Array.Empty<UnityCompilationAssembly>);
+            VibeLogger.ClearMemoryLogs();
+
+            Task<bool> refill = CreateRefill(store, cache).RunAsync();
+
+            Assert.That(refill.Status, Is.EqualTo(TaskStatus.RanToCompletion), "refill status");
+            JObject context = HotReloadWarmUpTestDoubles.ReadSingleVibeContext(HotReloadConstants.VibeLogCompilationListReconstructed);
+            Assert.That((bool)context["filled"], Is.True, "filled");
+            Assert.That(context["backgroundMs"].Type, Is.EqualTo(JTokenType.Integer), "backgroundMs");
+            Assert.That(context["mainThreadWaitMs"].Type, Is.EqualTo(JTokenType.Integer), "mainThreadWaitMs");
+            long backgroundMs = (long)context["backgroundMs"];
+            long mainThreadWaitMs = (long)context["mainThreadWaitMs"];
+            Assert.That(backgroundMs, Is.GreaterThanOrEqualTo(0), "backgroundMs");
+            Assert.That(mainThreadWaitMs, Is.GreaterThanOrEqualTo(0), "mainThreadWaitMs");
+            Assert.That(backgroundMs + mainThreadWaitMs, Is.LessThanOrEqualTo((long)context["reconstructMs"]), "sum");
+        }
+
+        /// <summary>
+        /// What: a rebuild cancelled after the background work finished logs the background time and
+        /// leaves the main thread wait null, because the switch to the main thread never completed.
+        /// </summary>
+        [Test]
+        public async Task ReconstructAndFill_CancelledBeforeTheMainThread_LogsOnlyTheBackgroundTime()
+        {
+            HotReloadCompilationAssemblyListStore store = SaveCleanThenEdit(saved => { });
+            HotReloadCompilationAssemblyCache cache = new HotReloadCompilationAssemblyCache(Array.Empty<UnityCompilationAssembly>);
+            TaskCompletionSource<HotReloadCompilationListReconstruction> held =
+                new TaskCompletionSource<HotReloadCompilationListReconstruction>();
+            Func<HotReloadCompilationListReconstruction> rebuild = null;
+            HotReloadCompilationListRefill refill = new HotReloadCompilationListRefill(
+                store,
+                cache,
+                HotReloadSnapshotCaptureInputs.ReadOnMainThread,
+                () => _isCompilationFailed,
+                work =>
+                {
+                    rebuild = work;
+                    return held.Task;
+                });
+            VibeLogger.ClearMemoryLogs();
+
+            Task<bool> run = refill.RunAsync();
+            HotReloadCompilationListReconstruction rebuilt = rebuild();
+            refill.Cancel();
+            held.SetResult(rebuilt);
+            // Why awaited: the rest of the run resumes off this thread after the held rebuild completes.
+            await run;
+
+            JObject context = HotReloadWarmUpTestDoubles.ReadSingleVibeContext(HotReloadConstants.VibeLogCompilationListReconstructed);
+            Assert.That((string)context["reason"], Is.EqualTo(HotReloadConstants.CompilationListReasonCancelled), "reason");
+            Assert.That(context["backgroundMs"].Type, Is.EqualTo(JTokenType.Integer), "backgroundMs");
+            Assert.That(context["mainThreadWaitMs"].Type, Is.EqualTo(JTokenType.Null), "mainThreadWaitMs");
+        }
+
+        /// <summary>
+        /// What: a rebuild cancelled while the background work runs logs neither time as a number,
+        /// because the work threw before its time was taken.
+        /// </summary>
+        [Test]
+        public async Task ReconstructAndFill_CancelledDuringTheRebuild_LogsNeitherTime()
+        {
+            HotReloadCompilationAssemblyListStore store = SaveCleanThenEdit(saved => { });
+            HotReloadCompilationAssemblyCache cache = new HotReloadCompilationAssemblyCache(Array.Empty<UnityCompilationAssembly>);
+            TaskCompletionSource<HotReloadCompilationListReconstruction> held =
+                new TaskCompletionSource<HotReloadCompilationListReconstruction>();
+            Func<HotReloadCompilationListReconstruction> rebuild = null;
+            HotReloadCompilationListRefill refill = new HotReloadCompilationListRefill(
+                store,
+                cache,
+                HotReloadSnapshotCaptureInputs.ReadOnMainThread,
+                () => _isCompilationFailed,
+                work =>
+                {
+                    rebuild = work;
+                    return held.Task;
+                });
+            VibeLogger.ClearMemoryLogs();
+
+            Task<bool> run = refill.RunAsync();
+            refill.Cancel();
+            OperationCanceledException thrown = Assert.Throws<OperationCanceledException>(() => rebuild());
+            held.SetException(thrown);
+            // Why awaited: the rest of the run resumes off this thread after the held rebuild completes.
+            await run;
+
+            JObject context = HotReloadWarmUpTestDoubles.ReadSingleVibeContext(HotReloadConstants.VibeLogCompilationListReconstructed);
+            Assert.That((string)context["reason"], Is.EqualTo(HotReloadConstants.CompilationListReasonCancelled), "reason");
+            Assert.That(context["backgroundMs"].Type, Is.EqualTo(JTokenType.Null), "backgroundMs");
+            Assert.That(context["mainThreadWaitMs"].Type, Is.EqualTo(JTokenType.Null), "mainThreadWaitMs");
+        }
+
+        /// <summary>
+        /// What: a rebuild whose background work does not finish logs neither time as a number, so a
+        /// step that never ran is not reported as taking 0 ms.
+        /// </summary>
+        [Test]
+        public void ReconstructAndFill_WhenTheRebuildFails_LogsNeitherTime()
+        {
+            HotReloadCompilationAssemblyListStore store = SaveCleanThenEdit(saved => { });
+            HotReloadCompilationAssemblyCache cache = new HotReloadCompilationAssemblyCache(Array.Empty<UnityCompilationAssembly>);
+            HotReloadCompilationListRefill refill = new HotReloadCompilationListRefill(
+                store,
+                cache,
+                HotReloadSnapshotCaptureInputs.ReadOnMainThread,
+                () => _isCompilationFailed,
+                work => Task.FromException<HotReloadCompilationListReconstruction>(new InvalidOperationException("test")));
+            VibeLogger.ClearMemoryLogs();
+
+            Task<bool> run = refill.RunAsync();
+
+            Assert.That(run.Status, Is.EqualTo(TaskStatus.RanToCompletion), "refill status");
+            Assert.That(run.Result, Is.False, "kept");
+            JObject context = HotReloadWarmUpTestDoubles.ReadSingleVibeContext(HotReloadConstants.VibeLogCompilationListReconstructed);
+            Assert.That((string)context["reason"], Is.EqualTo(nameof(InvalidOperationException)), "reason");
+            Assert.That(context["backgroundMs"].Type, Is.EqualTo(JTokenType.Null), "backgroundMs");
+            Assert.That(context["mainThreadWaitMs"].Type, Is.EqualTo(JTokenType.Null), "mainThreadWaitMs");
         }
 
         private void AssertRecompiledTargetGives(string reason, Action<HotReloadSavedReference> editTargetReference)
