@@ -234,7 +234,7 @@ func (run *readinessTestRun) check(repoRoot string, version string) (unityPackag
 		requiredAssets: func(_ context.Context, _ string, verifyScript string, _ string) ([]string, error) {
 			assets, found := run.assetLists[verifyScript]
 			if !found {
-				return nil, errors.New(verifyScript + " --list failed")
+				return nil, errors.New("asset list failed")
 			}
 			return assets, nil
 		},
