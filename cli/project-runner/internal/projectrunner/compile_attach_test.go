@@ -692,6 +692,7 @@ func TestRunCompileAttachWarnsWhenForceRecompileIgnoredDuringWait(t *testing.T) 
 	if !strings.Contains(stdout.String(), `"ErrorCount"`) || !strings.Contains(stdout.String(), "11") {
 		t.Fatalf("attach should still return the in-flight result: %s", stdout.String())
 	}
+	assertResultWarning(t, stdout.Bytes(), expectedEarlierCompileResultWarning)
 	logContent := readOnlyCliVibeLog(t, projectRoot)
 	if strings.Contains(logContent, `"operation":"cli_compile_request_prepared"`) {
 		t.Fatalf("force during attach wait must not send a new compile request:\n%s", logContent)
