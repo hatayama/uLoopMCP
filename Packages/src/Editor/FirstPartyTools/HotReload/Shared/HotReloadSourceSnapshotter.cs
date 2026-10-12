@@ -180,7 +180,13 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             System.Diagnostics.Stopwatch readWatch = System.Diagnostics.Stopwatch.StartNew();
             try
             {
-                return readSources(candidate, inputs);
+                HotReloadCaptureAssembly assembly = readSources(candidate, inputs);
+                if (assembly.SourcesFromCompilerOutput)
+                {
+                    stats.AssembliesFromCompilerPdb++;
+                }
+
+                return assembly;
             }
             catch (InvalidOperationException)
             {

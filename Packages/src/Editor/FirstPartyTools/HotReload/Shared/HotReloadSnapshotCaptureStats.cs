@@ -25,6 +25,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         internal int AssembliesUnchanged;
         internal int AssembliesCaptured;
         internal int AssembliesSkippedPdbMismatch;
+        internal int AssembliesFromCompilerPdb;
         internal int FilesReused;
         internal int FilesCopied;
         internal long BytesCopied;
@@ -34,7 +35,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         {
             return new
             {
-                getAssembliesMs = ToMilliseconds(ListingTicks),
+                listingMs = ToMilliseconds(ListingTicks),
                 pdbSourcesMs = ToMilliseconds(PdbSourcesTicks),
                 packageLookupMs = ToMilliseconds(PackageLookupTicks),
                 stampMs = ToMilliseconds(StampTicks),
@@ -50,6 +51,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 assembliesUnchanged = AssembliesUnchanged,
                 assembliesCaptured = AssembliesCaptured,
                 assembliesSkippedPdbMismatch = AssembliesSkippedPdbMismatch,
+                assembliesFromCompilerPdb = AssembliesFromCompilerPdb,
                 filesReused = FilesReused,
                 filesCopied = FilesCopied,
                 bytesCopied = BytesCopied,

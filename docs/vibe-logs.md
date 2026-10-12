@@ -120,7 +120,7 @@ command ran against:
   instead, and it does not appear when the capture threw or was cancelled. The capture lists the
   compiled assemblies from the dlls and PDBs in the compiled assemblies folder and reads an
   assembly's sources from its PDB, not from Unity's compilation assembly list. It says where the capture spent its time:
-  - `getAssembliesMs`: listing the compiled dlls that have a PDB beside them.
+  - `listingMs`: listing the compiled dlls that have a PDB beside them.
   - `pdbSourcesMs`: reading the sources of each assembly whose dll changed from its PDB.
   - `packageLookupMs`: reading whether each assembly's sources are immutable, which the PDB's
     sources and the package roots read once from Package Manager decide, so this is close to 0;
@@ -147,6 +147,8 @@ command ran against:
   - `assembliesCaptured`: those whose sources were copied into a new snapshot directory.
   - `assembliesSkippedPdbMismatch`: those skipped because their PDB belonged to another build of
     the dll, as while a compile replaces them; no stamp is written, so the next domain captures them.
+  - `assembliesFromCompilerPdb`: assemblies whose sources were read from the compiler's own PDB
+    under `Library/Bee` because the PDB beside the dll had lost documents.
   - `filesReused`: the sources whose previous copy was kept without reading them.
   - `filesCopied` and `bytesCopied`: the sources copied and their total size.
   - `filesChecked`: the sources checked against the PDB.
