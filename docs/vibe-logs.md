@@ -198,8 +198,8 @@ command ran against:
   the cache was not invalidated in the domain and the last compile did not fail.
   `hot_reload_compilation_list_save_skipped` names why a list was not saved in `reason`:
   `generation` (the cache was invalidated in the domain), `compilation_failed`, or `superseded`
-  (a compile started while it was written). `hot_reload_compilation_list_save_failed` is a warning
-  with the exception type name in `error`.
+  (the cache was invalidated while it was written, as when a compile started).
+  `hot_reload_compilation_list_save_failed` is a warning with the exception type name in `error`.
   After a domain reload, the warm-up writes one `hot_reload_warm_up_complete` with the target
   assemblies, each item's `outcome` (`done`, `cancelled` or `failed`) and time, and `cancelledBy`
   (`run`, `beforeAssemblyReload`, `compilationStarted`, or null), or one

@@ -12,12 +12,14 @@ using UnityCompilationAssembly = UnityEditor.Compilation.Assembly;
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     /// <summary>
-    /// The compilation assembly list for hot reload, asked of Unity once per domain.
+    /// The compilation assembly list for hot reload, kept for the rest of the domain.
     /// Why: on a project with several hundred assemblies one CompilationPipeline.GetAssemblies() call
     /// takes 340-620 ms, while the list only changes through a compile, or through an import that
     /// changes the script set without compiling (see HotReloadCompilationAssemblyListPostprocessor).
-    /// Whichever caller first needs the list after a domain reload asks Unity for it; later callers
-    /// in the domain find it kept.
+    /// After a domain reload the list is normally rebuilt on a pool thread from the list a previous
+    /// domain saved (RefillInBackground). Unity is asked only when that rebuild kept nothing or the
+    /// list was dropped in the domain, by the first caller that then needs it; later callers in the
+    /// domain find it kept.
     /// A list rebuilt at startup from the saved list holds only the fields hot reload reads: name,
     /// outputPath, sourceFiles, defines, assemblyReferences and compiledAssemblyReferences.
     /// compilerOptions, flags and rootNamespace keep their defaults, so code that needs them reads
