@@ -69,21 +69,31 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         private async Task<bool> RunUntilCancelledAsync(CancellationToken ct)
         {
             Stopwatch watch = Stopwatch.StartNew();
+            long? backgroundMs = null;
+            long? mainThreadWaitMs = null;
             try
             {
                 int generation = _cache.Generation;
                 HotReloadSnapshotCaptureInputs inputs = _readInputs();
-                HotReloadCompilationListReconstruction reconstruction = await _runInBackground(
-                    () => HotReloadCompilationAssemblyReconstruction.Reconstruct(_store, inputs, ct)).ConfigureAwait(false);
+                HotReloadCompilationListReconstruction reconstruction = await _runInBackground(() =>
+                {
+                    // Why measured inside the work: the time it waited for a pool thread is not rebuilding.
+                    Stopwatch backgroundWatch = Stopwatch.StartNew();
+                    HotReloadCompilationListReconstruction rebuilt = HotReloadCompilationAssemblyReconstruction.Reconstruct(_store, inputs, ct);
+                    backgroundMs = backgroundWatch.ElapsedMilliseconds;
+                    return rebuilt;
+                }).ConfigureAwait(false);
 
                 // Why the main thread: the cache has no lock and is kept on the main thread only.
+                Stopwatch waitWatch = Stopwatch.StartNew();
                 await MainThreadSwitcher.SwitchToMainThread(ct);
+                mainThreadWaitMs = waitWatch.ElapsedMilliseconds;
                 // Why not kept after a failed compile: the dlls are then older than the sources, so
                 // every stamp still matches the saved list while Unity's list already names the
                 // added and removed files.
                 if (reconstruction.Assemblies != null && _isCompilationFailed())
                 {
-                    LogReconstructed(false, HotReloadConstants.CompilationListReasonCompilationFailed, watch.ElapsedMilliseconds);
+                    LogReconstructed(false, HotReloadConstants.CompilationListReasonCompilationFailed, watch.ElapsedMilliseconds, backgroundMs, mainThreadWaitMs);
                     return false;
                 }
 
@@ -98,12 +108,12 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 string reason = filled
                     ? null
                     : reconstruction.FailureReason ?? HotReloadConstants.CompilationListReasonSuperseded;
-                LogReconstructed(filled, reason, watch.ElapsedMilliseconds);
+                LogReconstructed(filled, reason, watch.ElapsedMilliseconds, backgroundMs, mainThreadWaitMs);
                 return filled;
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
-                LogReconstructed(false, HotReloadConstants.CompilationListReasonCancelled, watch.ElapsedMilliseconds);
+                LogReconstructed(false, HotReloadConstants.CompilationListReasonCancelled, watch.ElapsedMilliseconds, backgroundMs, mainThreadWaitMs);
                 return false;
             }
             catch (Exception ex)
@@ -111,17 +121,18 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 // Approved deviation: this is the boundary of work that started at Editor startup,
                 // and a list that cannot be rebuilt only leaves the cache to ask Unity as before.
                 string reason = ex.GetType().Name;
-                LogReconstructed(false, reason, watch.ElapsedMilliseconds);
+                LogReconstructed(false, reason, watch.ElapsedMilliseconds, backgroundMs, mainThreadWaitMs);
                 return false;
             }
         }
 
-        private static void LogReconstructed(bool filled, string reason, long reconstructMs)
+        // backgroundMs and mainThreadWaitMs stay null when the run did not get through that step.
+        private static void LogReconstructed(bool filled, string reason, long reconstructMs, long? backgroundMs, long? mainThreadWaitMs)
         {
             VibeLogger.LogInfo(
                 HotReloadConstants.VibeLogCompilationListReconstructed,
                 "Hot reload rebuilt the compilation assembly list at startup.",
-                new { filled, reason, reconstructMs });
+                new { filled, reason, reconstructMs, backgroundMs, mainThreadWaitMs });
         }
     }
 }
