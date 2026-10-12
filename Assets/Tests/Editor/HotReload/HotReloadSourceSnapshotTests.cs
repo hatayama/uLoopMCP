@@ -401,14 +401,26 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             Assert.That(compiled.SourceFileCount, Is.Not.Null, "Precondition: the compiler's PDB must record its source count.");
             Assert.That(compiled.DocumentCount, Is.GreaterThanOrEqualTo(compiled.SourceFileCount.Value), "Precondition: the compiler's PDB must drop nothing.");
 
-            HotReloadSnapshotMissReason reason = HotReloadSourceBaseline.DescribeSnapshotMissAt(
-                emptyRoot,
-                BodylessFixtureProjectRelativePath,
-                dllPath,
-                HotReloadPdbDocumentIndex.Shared,
-                null);
+            try
+            {
+                // Why a new index: the shared one answers from a list persisted by an earlier domain,
+                // which would hide a change to how the drop is worked out.
+                HotReloadSnapshotMissReason reason = HotReloadSourceBaseline.DescribeSnapshotMissAt(
+                    emptyRoot,
+                    BodylessFixtureProjectRelativePath,
+                    dllPath,
+                    new HotReloadPdbDocumentIndex(Path.Combine(emptyRoot, "PdbDocuments")),
+                    null);
 
-            Assert.That(reason, Is.EqualTo(HotReloadSnapshotMissReason.NoSnapshotFile));
+                Assert.That(reason, Is.EqualTo(HotReloadSnapshotMissReason.NoSnapshotFile));
+            }
+            finally
+            {
+                if (Directory.Exists(emptyRoot))
+                {
+                    Directory.Delete(emptyRoot, recursive: true);
+                }
+            }
         }
 
         /// <summary>
