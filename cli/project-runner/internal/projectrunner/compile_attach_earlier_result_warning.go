@@ -36,7 +36,7 @@ func addEarlierCompileResultWarning(result json.RawMessage) json.RawMessage {
 	var buffer bytes.Buffer
 	encoder := json.NewEncoder(&buffer)
 	// Why not json.Marshal: it escapes < > & inside the raw values too, and compiler messages such
-	// as "List<int>" would then reach the reader as < escapes on this path only.
+	// as "List<int>" would then reach the reader as \u003c escapes on this path only.
 	encoder.SetEscapeHTML(false)
 	if encoder.Encode(fields) != nil {
 		return result
