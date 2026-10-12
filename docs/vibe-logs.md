@@ -168,8 +168,8 @@ command ran against:
   - `assembly_set_changed`: an assembly definition was added or removed after the list was saved.
   - `pdb_mismatch`: the PDB beside a compiled-again dll belongs to another build, as while a
     compile replaces the files.
-  - `pdb_documents_incomplete`: the PDB of a compiled-again assembly does not name every source
-    the compile was given.
+  - `pdb_documents_incomplete`: neither the PDB of a compiled-again assembly nor the compiler's
+    own PDB of the same build shows that it names every source the compile was given.
   - `unresolved_reference`: a reference has a file name the saved list does not know, or a project
     reference is not in the list.
   - `reference_missing`: every path saved for a reference's file name is gone, as when a package
