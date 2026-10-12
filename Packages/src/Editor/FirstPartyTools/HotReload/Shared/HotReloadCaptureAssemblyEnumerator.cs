@@ -84,7 +84,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             Debug.Assert(candidate != null, "candidate must not be null.");
             Debug.Assert(inputs != null, "inputs must not be null.");
 
-            List<HotReloadPdbDocument> documents = HotReloadPdbDocumentTable.Read(candidate.DllPath, candidate.PdbPath);
+            List<HotReloadPdbDocument> documents = HotReloadPdbDocumentTable.Read(candidate.DllPath, candidate.PdbPath, out int? _);
             // Why the main project's root: a Virtual Player reads the main project's assemblies,
             // whose PDB names sources from the main project's compile.
             HotReloadCompiledSources sources = HotReloadCompiledSourceMap.FromDocuments(

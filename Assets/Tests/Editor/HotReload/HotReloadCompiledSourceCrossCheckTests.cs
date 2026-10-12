@@ -50,7 +50,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 }
 
                 readTime.Start();
-                List<HotReloadPdbDocument> documents = HotReloadPdbDocumentTable.Read(dllPath, pdbPath);
+                List<HotReloadPdbDocument> documents = HotReloadPdbDocumentTable.Read(dllPath, pdbPath, out int? _);
                 readTime.Stop();
                 HotReloadCompiledSources sources = HotReloadCompiledSourceMap.FromDocuments(
                     documents,
@@ -100,7 +100,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             CompiledAssemblyLayout layout = CompiledAssemblyLayout.Resolve(ProjectRoot());
             List<HotReloadPdbDocument> documents = HotReloadPdbDocumentTable.Read(
                 layout.DllPath(TestAssemblyName),
-                layout.PdbPath(TestAssemblyName));
+                layout.PdbPath(TestAssemblyName),
+                out int? _);
 
             HotReloadCompiledSources sources = HotReloadCompiledSourceMap.FromDocuments(
                 documents,

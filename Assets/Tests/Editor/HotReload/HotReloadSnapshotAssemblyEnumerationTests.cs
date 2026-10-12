@@ -305,7 +305,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 HotReloadCompileStart.Unknown,
                 (candidate, inputs) =>
                 {
-                    HotReloadPdbDocumentTable.Read(candidate.DllPath, candidate.PdbPath);
+                    HotReloadPdbDocumentTable.Read(candidate.DllPath, candidate.PdbPath, out int? _);
                     return new HotReloadCaptureAssembly(candidate.Name, new[] { SourceRelativePath }, false);
                 });
 
