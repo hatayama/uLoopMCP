@@ -15,14 +15,32 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
     internal static class HotReloadPdbDocumentTable
     {
         /// <summary>
-        /// Returns the documents of the PDB in table order, after checking that the PDB belongs to
-        /// the build of the dll. Throws InvalidOperationException for a PDB of another build.
+        /// Returns the documents of the PDB in table order and, in sourceFileCount, the number of
+        /// sources the compiler recorded (null when it did not), after checking that the PDB belongs
+        /// to the build of the dll. Throws InvalidOperationException for a PDB of another build.
         /// </summary>
-        internal static List<HotReloadPdbDocument> Read(string dllPath, string pdbPath)
+        internal static List<HotReloadPdbDocument> Read(string dllPath, string pdbPath, out int? sourceFileCount)
+        {
+            List<HotReloadPdbDocument> documents = TryRead(dllPath, pdbPath, out sourceFileCount);
+            if (documents == null)
+            {
+                throw new InvalidOperationException(
+                    "The PDB beside " + Path.GetFileName(dllPath) + " belongs to another build of it.");
+            }
+
+            return documents;
+        }
+
+        /// <summary>
+        /// Same as Read, but returns null instead of throwing when the PDB belongs to another build
+        /// of the dll.
+        /// </summary>
+        internal static List<HotReloadPdbDocument> TryRead(string dllPath, string pdbPath, out int? sourceFileCount)
         {
             Debug.Assert(!string.IsNullOrEmpty(dllPath), "dllPath must not be null or empty.");
             Debug.Assert(!string.IsNullOrEmpty(pdbPath), "pdbPath must not be null or empty.");
 
+            sourceFileCount = null;
             Guid codeViewGuid = HotReloadPdbDocumentIndex.ReadCodeViewGuid(dllPath);
             using FileStream pdbStream = File.Open(pdbPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
             using MetadataReaderProvider provider = MetadataReaderProvider.FromPortablePdbStream(pdbStream);
@@ -32,8 +50,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             BlobContentId pdbId = new BlobContentId(reader.DebugMetadataHeader.Id);
             if (pdbId.Guid != codeViewGuid)
             {
-                throw new InvalidOperationException(
-                    "The PDB beside " + Path.GetFileName(dllPath) + " belongs to another build of it.");
+                return null;
             }
 
             List<HotReloadPdbDocument> documents = new List<HotReloadPdbDocument>(reader.Documents.Count);
@@ -46,6 +63,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                     reader.GetBlobBytes(document.Hash)));
             }
 
+            // Why from the same reader: the PDB is then opened once for both.
+            sourceFileCount = HotReloadPdbCompilationInfo.ReadSourceFileCount(reader, pdbPath);
             return documents;
         }
     }

@@ -74,8 +74,13 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
         /// <summary>
         /// Reads the sources of one compiled assembly from its PDB's document table, named by their
-        /// asset paths, and whether it is a read-only package's. Throws InvalidOperationException when
-        /// the PDB belongs to another build of the dll, as while a compile replaces them.
+        /// asset paths, and whether it is a read-only package's. When the PDB beside the dll has
+        /// fewer documents than the sources the compiler recorded, as after a tool rewrote it, the
+        /// documents are read from the compiler's own PDB under Library/Bee if one of the same build
+        /// lists every source. The result tells whether it has every source and whether it came from
+        /// the compiler's PDB. Throws InvalidOperationException when the PDB beside the dll belongs to
+        /// another build of it, as while a compile replaces them, or its compilation options record
+        /// cannot be read.
         /// </summary>
         internal static HotReloadCaptureAssembly ReadSources(
             HotReloadCaptureAssemblyCandidate candidate,
@@ -84,7 +89,26 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             Debug.Assert(candidate != null, "candidate must not be null.");
             Debug.Assert(inputs != null, "inputs must not be null.");
 
-            List<HotReloadPdbDocument> documents = HotReloadPdbDocumentTable.Read(candidate.DllPath, candidate.PdbPath);
+            List<HotReloadPdbDocument> documents = HotReloadPdbDocumentTable.Read(
+                candidate.DllPath, candidate.PdbPath, out int? sourceFileCount);
+            bool hasEverySource = sourceFileCount == documents.Count;
+            bool fromCompilerOutput = false;
+            // Why the compiler's own output: a tool that rewrites the PDB drops the documents no
+            // sequence point refers to but keeps the count, and the readers that compare a source
+            // with its snapshot byte for byte take a file without a snapshot as unchanged, so a
+            // file without a method body needs a snapshot too. A PDB without the count, or with more
+            // documents than the count (#line), does not come here and keeps what it lists.
+            if (sourceFileCount.HasValue && documents.Count < sourceFileCount.Value)
+            {
+                List<HotReloadPdbDocument> compiled = HotReloadCompilerOutputDocuments.TryReadEveryDocument(candidate.DllPath);
+                if (compiled != null)
+                {
+                    documents = compiled;
+                    hasEverySource = true;
+                    fromCompilerOutput = true;
+                }
+            }
+
             // Why the main project's root: a Virtual Player reads the main project's assemblies,
             // whose PDB names sources from the main project's compile.
             HotReloadCompiledSources sources = HotReloadCompiledSourceMap.FromDocuments(
@@ -93,7 +117,12 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 inputs.ProjectRoot,
                 inputs.PackageRoots,
                 inputs.PathComparison);
-            return new HotReloadCaptureAssembly(candidate.Name, sources.AssetPaths, sources.IsImmutablePackageAssembly);
+            return new HotReloadCaptureAssembly(
+                candidate.Name,
+                sources.AssetPaths,
+                sources.IsImmutablePackageAssembly,
+                hasEverySource,
+                fromCompilerOutput);
         }
     }
 }

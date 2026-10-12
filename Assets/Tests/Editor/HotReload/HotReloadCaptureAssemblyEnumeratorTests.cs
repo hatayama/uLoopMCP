@@ -21,6 +21,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
     public sealed class HotReloadCaptureAssemblyEnumeratorTests
     {
         private const int MaxListedMismatches = 5;
+        private const string RewrittenAssemblyName = "UnityCLILoop.Tests.Editor.HotReload";
 
         private string _projectRoot;
 
@@ -76,7 +77,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         /// <summary>
         /// Verifies, on this project, that the listed assemblies are the compilation assemblies Unity
         /// lists with a PDB beside their dll, that each read-only classification is the Package
-        /// Manager's, and that for each editable one the sources read from the PDB are Unity's source files.
+        /// Manager's, and that for every one, read-only or not, the sources read are Unity's source
+        /// files, including where a rewrite left the PDB beside the dll without some documents and
+        /// the compiler's own PDB is read instead.
         /// </summary>
         [Test]
         public void CompiledAssemblyEnumeration_ListsTheSameAssembliesAndSourcesAsGetAssemblies()
@@ -97,7 +100,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             IReadOnlyList<HotReloadCaptureAssemblyCandidate> candidates = HotReloadCaptureAssemblyEnumerator.ListCompiled(projectRoot);
             List<string> mismatches = new List<string>();
             int immutableAssemblies = 0;
-            int editableSources = 0;
+            int comparedSources = 0;
+            int lostDocuments = 0;
+            int fromCompilerPdb = 0;
             foreach (HotReloadCaptureAssemblyCandidate candidate in candidates)
             {
                 if (!fromUnity.TryGetValue(candidate.Name, out UnityCompilationAssembly unityAssembly))
@@ -106,7 +111,10 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                     continue;
                 }
 
+                HotReloadPdbCompilationInfo beside = HotReloadPdbCompilationInfo.Read(candidate.PdbPath);
+                lostDocuments += beside.DocumentCount < beside.SourceFileCount ? 1 : 0;
                 HotReloadCaptureAssembly assembly = HotReloadCaptureAssemblyEnumerator.ReadSources(candidate, inputs);
+                fromCompilerPdb += assembly.SourcesFromCompilerOutput ? 1 : 0;
                 string[] sourceFiles = unityAssembly.sourceFiles;
                 bool expectedImmutable = sourceFiles.Length > 0
                     && HotReloadSourceSnapshotter.ShouldSkipImmutablePackageSources(sourceFiles);
@@ -118,14 +126,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                     continue;
                 }
 
-                // Why the sources of a read-only package's assembly are not compared: the capture
-                // copies none of them, and some such packages list files their PDB does not.
-                if (expectedImmutable)
-                {
-                    continue;
-                }
-
-                editableSources += assembly.SourceAssetPaths.Count;
+                comparedSources += assembly.SourceAssetPaths.Count;
                 HashSet<string> fromPdb = new HashSet<string>(assembly.SourceAssetPaths, comparer);
                 if (!fromPdb.SetEquals(sourceFiles.Select(HotReloadSourcePathNormalizer.ToForwardSlashes)))
                 {
@@ -142,14 +143,121 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             }
 
             string summary = "Listed " + candidates.Count + " assemblies (Unity: " + fromUnity.Count + "), "
-                + immutableAssemblies + " read-only, " + editableSources + " sources of editable ones; " + mismatches.Count + " mismatches";
+                + immutableAssemblies + " read-only, " + comparedSources + " sources, " + fromCompilerPdb + " from the compiler's PDB of "
+                + lostDocuments + " whose PDB lost documents; " + mismatches.Count + " mismatches";
             TestContext.WriteLine(summary + ".");
+            Debug.Log("[cross-check] " + summary);
+            Assert.That(lostDocuments, Is.GreaterThan(0), "Precondition: some assembly's PDB must have lost sources, so the compiler's PDB is read.");
             Assert.That(candidates.Count, Is.GreaterThan(0), "No compiled assembly with a PDB was listed.");
             Assert.That(immutableAssemblies, Is.GreaterThan(0), "No read-only package assembly was found to compare.");
             Assert.That(
                 mismatches,
                 Is.Empty,
                 summary + ":\n" + string.Join("\n", mismatches.Take(MaxListedMismatches)));
+        }
+
+        /// <summary>
+        /// What: a PDB that lists every source is used as it is, even when the compiler's output of the
+        /// same build sits under Library/Bee and would be used if it were read.
+        /// </summary>
+        [Test]
+        public void ReadSources_CompletePdb_DoesNotReadTheCompilerOutput()
+        {
+            CompiledAssemblyLayout real = CompiledAssemblyLayout.Resolve(RealProjectRoot());
+            string dllPath = ScriptAssembliesDllPathInTemporaryProject();
+            File.Copy(real.DllPath(RewrittenAssemblyName), dllPath);
+            File.Copy(real.PdbPath(RewrittenAssemblyName), Path.ChangeExtension(dllPath, ".pdb"));
+            PutTheRealCompilerOutputInBee();
+
+            HotReloadCaptureAssembly assembly = ReadSourcesOf(dllPath);
+
+            Assert.That(assembly.HasEverySource, Is.True);
+            Assert.That(assembly.SourcesFromCompilerOutput, Is.False);
+        }
+
+        /// <summary>
+        /// What: when the PDB beside the dll lost documents in a rewrite, the sources are read from the
+        /// compiler's PDB of the same build under Library/Bee, and are the sources the complete PDB lists.
+        /// </summary>
+        [Test]
+        public void ReadSources_PdbThatLostDocuments_ListsEverySourceFromTheCompilersPdb()
+        {
+            string dllPath = RewriteIntoTemporaryProject();
+            PutTheRealCompilerOutputInBee();
+
+            HotReloadCaptureAssembly assembly = ReadSourcesOf(dllPath);
+
+            Assert.That(assembly.HasEverySource, Is.True);
+            Assert.That(assembly.SourcesFromCompilerOutput, Is.True);
+            Assert.That(assembly.SourceAssetPaths, Is.EquivalentTo(ReadRealSources().SourceAssetPaths));
+        }
+
+        /// <summary>
+        /// What: when the PDB beside the dll lost documents and no compiler output stands in, the sources
+        /// are what that PDB lists, fewer than the complete PDB's, and are marked as not every source.
+        /// </summary>
+        [Test]
+        public void ReadSources_PdbThatLostDocumentsWithoutTheCompilerOutput_ListsWhatThePdbHas()
+        {
+            string dllPath = RewriteIntoTemporaryProject();
+
+            HotReloadCaptureAssembly assembly = ReadSourcesOf(dllPath);
+
+            Assert.That(assembly.HasEverySource, Is.False);
+            Assert.That(assembly.SourcesFromCompilerOutput, Is.False);
+            Assert.That(assembly.SourceAssetPaths.Count, Is.LessThan(ReadRealSources().SourceAssetPaths.Count));
+        }
+
+        private static string RealProjectRoot()
+        {
+            return Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+        }
+
+        private string ScriptAssembliesDllPathInTemporaryProject()
+        {
+            string directory = CompiledAssemblyLayout.Resolve(_projectRoot).CompiledAssembliesDirectory;
+            Directory.CreateDirectory(directory);
+            return Path.Combine(directory, RewrittenAssemblyName + ".dll");
+        }
+
+        // Writes, beside the temporary project's Library, a copy of the assembly the way an IL
+        // post-processor does, and checks that it lost documents while keeping the MVID.
+        private string RewriteIntoTemporaryProject()
+        {
+            string projectRoot = RealProjectRoot();
+            string dllPath = ScriptAssembliesDllPathInTemporaryProject();
+            CecilPdbRewrite.Rewrite(projectRoot, RewrittenAssemblyName, Path.Combine(_projectRoot, "Work"), dllPath);
+            Assert.That(
+                HotReloadAssemblyMetadataMvid.Read(dllPath),
+                Is.EqualTo(HotReloadAssemblyMetadataMvid.Read(CompiledAssemblyLayout.Resolve(projectRoot).DllPath(RewrittenAssemblyName))),
+                "Precondition: the rewrite must keep the MVID.");
+            HotReloadPdbCompilationInfo rewritten = HotReloadPdbCompilationInfo.Read(Path.ChangeExtension(dllPath, ".pdb"));
+            Assert.That(rewritten.DocumentCount, Is.LessThan(rewritten.SourceFileCount), "Precondition: the rewrite must drop some document.");
+            return dllPath;
+        }
+
+        private void PutTheRealCompilerOutputInBee()
+        {
+            CompiledAssemblyLayout real = CompiledAssemblyLayout.Resolve(RealProjectRoot());
+            string dag = Path.Combine(_projectRoot, "Library", "Bee", "artifacts", "test.dag");
+            Directory.CreateDirectory(dag);
+            File.Copy(real.DllPath(RewrittenAssemblyName), Path.Combine(dag, RewrittenAssemblyName + ".dll"));
+            File.Copy(real.PdbPath(RewrittenAssemblyName), Path.Combine(dag, RewrittenAssemblyName + ".pdb"));
+        }
+
+        private static HotReloadCaptureAssembly ReadSourcesOf(string dllPath)
+        {
+            return HotReloadCaptureAssemblyEnumerator.ReadSources(
+                new HotReloadCaptureAssemblyCandidate(RewrittenAssemblyName, dllPath, Path.ChangeExtension(dllPath, ".pdb")),
+                HotReloadSnapshotCaptureInputs.ReadOnMainThread());
+        }
+
+        private static HotReloadCaptureAssembly ReadRealSources()
+        {
+            CompiledAssemblyLayout real = CompiledAssemblyLayout.Resolve(RealProjectRoot());
+            HotReloadCaptureAssembly assembly = ReadSourcesOf(real.DllPath(RewrittenAssemblyName));
+            Assert.That(assembly.HasEverySource, Is.True, "Precondition: the compiled test assembly's PDB must list every source.");
+            return assembly;
         }
 
         private static void WriteEmptyFiles(string directory, params string[] fileNames)

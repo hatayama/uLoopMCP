@@ -20,7 +20,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
     /// Cross-checks the rebuilt compilation assembly list against Unity's on every assembly of this
     /// project, once from the saved entries and once with every assembly rebuilt from its PDB.
     /// Some packages' PDBs are rewritten after the compile and lose the documents no sequence point
-    /// refers to; those must be refused, not rebuilt with fewer sources.
+    /// refers to; those must be rebuilt from the compiler's own PDB under Library/Bee, not with
+    /// fewer sources.
     /// </summary>
     public sealed class HotReloadCompilationAssemblyReconstructionCrossCheckTests
     {
@@ -64,11 +65,11 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
 
         /// <summary>
         /// What: rebuilding every compiled assembly from its PDB gives Unity's fields, in order, for
-        /// every assembly whose PDB lists as many sources as the compiler was given, and
-        /// pdb_documents_incomplete for every assembly whose PDB lost some of Unity's sources.
+        /// every assembly, including those whose PDB a rewrite left without some documents, which
+        /// are rebuilt from the compiler's own PDB; none is refused.
         /// </summary>
         [Test]
-        public void EveryAssemblyRebuiltFromItsPdb_MatchesGetAssemblies_OrIsRefusedWhenThePdbLostSources()
+        public void EveryAssemblyRebuiltFromItsPdb_MatchesGetAssemblies()
         {
             UnityCompilationAssembly[] expected = CompilationPipeline.GetAssemblies();
             HotReloadSavedCompilationList saved = SaveClean(expected).Load().List;
@@ -82,7 +83,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
 
             List<string> mismatches = new List<string>();
             List<string> refused = new List<string>();
-            List<string> lostSources = new List<string>();
+            int lostDocuments = 0;
             int rebuilt = 0;
             foreach (HotReloadCaptureAssemblyCandidate candidate in HotReloadCaptureAssemblyEnumerator.ListCompiled(inputs.ProjectRoot))
             {
@@ -91,30 +92,25 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                     continue;
                 }
 
+                HotReloadPdbCompilationInfo beside = HotReloadPdbCompilationInfo.Read(candidate.PdbPath);
+                lostDocuments += beside.DocumentCount < beside.SourceFileCount ? 1 : 0;
                 HotReloadSavedCompilationAssembly savedAssembly = saved.assemblies.Find(assembly => assembly.name == candidate.Name);
                 string reason = rebuilder.TryFromPdb(savedAssembly, candidate, out HotReloadRebuiltAssemblyEntry entry);
-                if (LostSources(want, candidate, inputs))
+                if (reason != null)
                 {
-                    lostSources.Add(candidate.Name);
-                }
-
-                if (reason == HotReloadConstants.CompilationListReasonPdbDocumentsIncomplete)
-                {
-                    refused.Add(candidate.Name);
+                    refused.Add(candidate.Name + ": " + reason + " (" + DescribeCompilerOutput(candidate) + ")");
                     continue;
                 }
 
-                Assert.That(reason, Is.Null, candidate.Name + " failure");
                 rebuilt++;
                 AddEntryMismatches(mismatches, want, entry);
             }
 
-            Debug.Log("[cross-check] rebuilt " + rebuilt + ", refused " + refused.Count + ", lost sources " + lostSources.Count);
+            Debug.Log("[cross-check] rebuilt " + rebuilt + ", from compiler pdb " + lostDocuments + ", refused " + refused.Count);
+            Assert.That(lostDocuments, Is.GreaterThan(0), "Precondition: some assembly's PDB must have lost sources, so the compiler's PDB is read.");
+            Assert.That(refused, Is.Empty, "refused assemblies:\n" + string.Join("\n", refused));
             Assert.That(rebuilt, Is.GreaterThan(0), "Precondition: some assembly must be rebuilt.");
             Assert.That(mismatches, Is.Empty, "rebuilt entries");
-            // Why only a superset: a PDB may also be refused for another shortfall against the
-            // compiler's count, which the sources Unity lists need not show.
-            Assert.That(refused, Is.SupersetOf(lostSources), "refused assemblies");
         }
 
         private HotReloadCompilationAssemblyListStore SaveClean(UnityCompilationAssembly[] fetched)
@@ -125,14 +121,56 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             return store;
         }
 
-        // True when some source Unity lists for the assembly is not among the PDB's documents.
-        private static bool LostSources(
-            UnityCompilationAssembly want,
-            HotReloadCaptureAssemblyCandidate candidate,
-            HotReloadSnapshotCaptureInputs inputs)
+        // Says, per dag, why the compiler's own output under Library/Bee did not stand in for this
+        // assembly's PDB, so a refusal on CI can be told apart from the log alone: no dag of the same
+        // build, or one whose PDB lacks documents too. The last case gives the counts either way.
+        private static string DescribeCompilerOutput(HotReloadCaptureAssemblyCandidate candidate)
         {
-            HashSet<string> inPdb = new HashSet<string>(HotReloadCaptureAssemblyEnumerator.ReadSources(candidate, inputs).SourceAssetPaths);
-            return !inPdb.IsSupersetOf(want.sourceFiles);
+            string library = Path.GetDirectoryName(Path.GetDirectoryName(Path.GetFullPath(candidate.DllPath)));
+            string artifacts = Path.Combine(library, "Bee", "artifacts");
+            if (!Directory.Exists(artifacts))
+            {
+                return "no Bee artifacts";
+            }
+
+            Guid mvid = HotReloadAssemblyMetadataMvid.Read(candidate.DllPath);
+            string[] dags = Directory.GetDirectories(artifacts, "*.dag");
+            Array.Sort(dags, StringComparer.Ordinal);
+            List<string> seen = new List<string>();
+            foreach (string dag in dags)
+            {
+                seen.Add(Path.GetFileName(dag) + ": " + DescribeDag(dag, Path.GetFileName(candidate.DllPath), mvid));
+            }
+
+            return seen.Count == 0 ? "no dag" : string.Join("; ", seen);
+        }
+
+        private static string DescribeDag(string dag, string fileName, Guid mvid)
+        {
+            string dll = Path.Combine(dag, fileName);
+            string pdb = Path.ChangeExtension(dll, ".pdb");
+            if (!File.Exists(dll))
+            {
+                return "no compiler dll";
+            }
+
+            if (HotReloadAssemblyMetadataMvid.Read(dll) != mvid)
+            {
+                return "compiler dll of another build";
+            }
+
+            if (!File.Exists(pdb))
+            {
+                return "no compiler PDB";
+            }
+
+            List<HotReloadPdbDocument> documents = HotReloadPdbDocumentTable.TryRead(dll, pdb, out int? count);
+            if (documents == null)
+            {
+                return "compiler PDB of another dll";
+            }
+
+            return "compiler PDB documents " + documents.Count + "/" + (count.HasValue ? count.Value.ToString() : "no count");
         }
 
         private static void AddEntryMismatches(List<string> mismatches, UnityCompilationAssembly want, HotReloadRebuiltAssemblyEntry got)
