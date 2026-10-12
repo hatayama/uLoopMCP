@@ -35,7 +35,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         {
             return new
             {
-                getAssembliesMs = ToMilliseconds(ListingTicks),
+                listingMs = ToMilliseconds(ListingTicks),
                 pdbSourcesMs = ToMilliseconds(PdbSourcesTicks),
                 packageLookupMs = ToMilliseconds(PackageLookupTicks),
                 stampMs = ToMilliseconds(StampTicks),
