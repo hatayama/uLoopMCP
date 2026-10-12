@@ -43,6 +43,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
 
             HotReloadPdbCompilationInfo target = HotReloadPdbCompilationInfo.Read(_targetPdbPath);
             Assert.That(target.DocumentCount, Is.EqualTo(target.SourceFileCount), "Precondition: the compiled test assembly's PDB must list every source.");
+            HotReloadPdbCompilationInfo other = HotReloadPdbCompilationInfo.Read(_otherPdbPath);
+            Assert.That(other.DocumentCount, Is.EqualTo(other.SourceFileCount), "Precondition: the other assembly's PDB must list every source, so a guard that let its files through would return documents.");
 
             _directory = Path.Combine(Path.GetTempPath(), "uloop-compiler-output-documents-" + Guid.NewGuid().ToString("N"));
             _scriptAssembliesDllPath = Path.Combine(
