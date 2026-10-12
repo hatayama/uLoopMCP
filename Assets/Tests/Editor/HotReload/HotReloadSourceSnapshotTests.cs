@@ -477,7 +477,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         {
             string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
             string dllPath = CecilPdbRewrite.RewriteIntoNewDirectoryLosingDocuments(projectRoot, TestAssemblyName);
-            string rewriteRoot = RewriteRoot(dllPath);
+            string rewriteRoot = CecilPdbRewrite.RootOf(dllPath);
             try
             {
                 return HotReloadSourceBaseline.DescribeSnapshotMissAt(
@@ -652,12 +652,6 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 projectRoot,
                 HotReloadConstants.ScriptAssembliesRelativeDirectory,
                 TestAssemblyName + HotReloadConstants.CompiledAssemblyExtension);
-        }
-
-        // The temporary directory RewriteIntoNewDirectoryLosingDocuments created for the dll.
-        private static string RewriteRoot(string dllPath)
-        {
-            return Path.GetDirectoryName(Path.GetDirectoryName(Path.GetDirectoryName(dllPath)));
         }
 
         // Evidence of the kind a run carries for a file Unity's compilation assemblies do not list.

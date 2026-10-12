@@ -31,6 +31,12 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             return dllPath;
         }
 
+        // The temporary directory RewriteIntoNewDirectoryLosingDocuments created for the dll.
+        internal static string RootOf(string dllPath)
+        {
+            return Path.GetDirectoryName(Path.GetDirectoryName(Path.GetDirectoryName(dllPath)));
+        }
+
         // Reads the assembly with its symbols and writes both again, as an IL post-processor does.
         // Cecil keeps only the documents a method refers to. workDirectory receives the copy that is
         // read, so the compiled files are never opened for writing.

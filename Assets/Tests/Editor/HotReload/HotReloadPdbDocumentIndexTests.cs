@@ -581,7 +581,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             }
             finally
             {
-                Directory.Delete(RewriteRoot(dllPath), recursive: true);
+                Directory.Delete(CecilPdbRewrite.RootOf(dllPath), recursive: true);
             }
         }
 
@@ -606,7 +606,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             }
             finally
             {
-                Directory.Delete(RewriteRoot(dllPath), recursive: true);
+                Directory.Delete(CecilPdbRewrite.RootOf(dllPath), recursive: true);
             }
         }
 
@@ -764,12 +764,6 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         private static bool DropsDocuments(HotReloadPdbDocumentIndex index, string dllPath)
         {
             return index.DropsDocuments(dllPath, Path.ChangeExtension(dllPath, ".pdb"), HotReloadAssemblyMvid.Read(dllPath));
-        }
-
-        // The temporary directory RewriteIntoNewDirectoryLosingDocuments created for the dll.
-        private static string RewriteRoot(string dllPath)
-        {
-            return Path.GetDirectoryName(Path.GetDirectoryName(Path.GetDirectoryName(dllPath)));
         }
 
         // Copies the assembly's dll and PDB into a new temp directory and returns the dll's path.
