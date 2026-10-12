@@ -34,11 +34,19 @@ type readinessTestRepo struct {
 
 func newReadinessTestRepo(t *testing.T) readinessTestRepo {
 	t.Helper()
+	return newReadinessTestRepoWithRelease(t, func(*testing.T, string) {})
+}
+
+// newReadinessTestRepoWithRelease lets prepareRelease change the files of the release commit before
+// it is committed.
+func newReadinessTestRepoWithRelease(t *testing.T, prepareRelease func(t *testing.T, root string)) readinessTestRepo {
+	t.Helper()
 	root := t.TempDir()
 	runGitInRepo(t, root, "init", "-q", "-b", "main")
 	writeReadinessReleaseFiles(t, root, "3.0.0-beta.5", unityPackageManifestKey, "CHANGELOG.md")
 	commitReadinessTestRepo(t, root, "chore(v3-beta): release 3.0.0-beta.5")
 	writeReadinessReleaseFiles(t, root, readinessTestVersion, unityPackageManifestKey, "CHANGELOG.md")
+	prepareRelease(t, root)
 	commitReadinessTestRepo(t, root, "chore: release v3-beta")
 	releaseCommit := strings.TrimSpace(runGitInRepoOutput(t, root, "rev-parse", "HEAD"))
 	writeReadinessTestFile(t, root, "follow-up.txt", "follow-up\n")
@@ -283,6 +291,34 @@ func TestCheckUnityPackageReleaseReadinessNamesTheReleaseCommit(t *testing.T) {
 		if !strings.Contains(run.log.String(), want) {
 			t.Fatalf("log = %q, want it to contain %q", run.log.String(), want)
 		}
+	}
+}
+
+// Verifies the runner and dispatcher releases the package waits for are the ones its release commit
+// records, not the ones a later commit on the branch records: the release is tagged at that commit,
+// so its manifest and pin are what the release ships with.
+func TestCheckUnityPackageReleaseReadinessReadsDependenciesAtTheReleaseCommit(t *testing.T) {
+	repo := newReadinessTestRepo(t)
+	writeReadinessTestFile(t, repo.root, releasePleaseManifestRelativePath, `{
+  "Packages/src": "3.0.0-beta.6",
+  "cli/dispatcher": "3.0.0-beta.7",
+  "cli/project-runner": "3.0.0-beta.7"
+}
+`)
+	writeReadinessTestFile(t, repo.root, unityPackageCliPinFile, `{"projectRunnerVersion": "3.0.0-beta.7", "minimumDispatcherVersion": "3.1.0"}`)
+	commitReadinessTestRepo(t, repo.root, "chore: release v3-beta runner")
+	run := newReadinessTestRun(t)
+
+	readiness, err := run.check(repo.root, readinessTestVersion)
+	if err != nil || readiness.ReleaseCommit != repo.releaseCommit {
+		t.Fatalf("readiness = %+v, err = %v; want the release commit %s", readiness, err, repo.releaseCommit)
+	}
+	lookup := "gh api repos/" + unityPackageReleaseTestRepository + "/releases/tags/"
+	if !run.github.ran(lookup+readinessTestRunnerTag) || !run.github.ran(lookup+readinessTestDispatcherTag) {
+		t.Fatalf("commands = %v, want the releases the release commit records looked up", run.github.commands)
+	}
+	if run.github.ran(lookup+"uloop-project-runner-v3.0.0-beta.7") || run.github.ran(lookup+"dispatcher-v3.1.0") {
+		t.Fatalf("commands = %v, want no release that only the later commit records", run.github.commands)
 	}
 }
 
@@ -617,34 +653,51 @@ func TestCheckUnityPackageReleaseReadinessFailsOnAnUnreadableCandidate(t *testin
 	}
 }
 
+// readinessTestRepoWithFile builds the test repository with the file written, or removed when
+// content is empty, either in the release commit or in the checkout after it.
+func readinessTestRepoWithFile(t *testing.T, path string, content string, atReleaseCommit bool) readinessTestRepo {
+	t.Helper()
+	change := func(t *testing.T, root string) {
+		if content != "" {
+			writeReadinessTestFile(t, root, path, content)
+			return
+		}
+		if err := os.Remove(filepath.Join(root, filepath.FromSlash(path))); err != nil {
+			t.Fatalf("remove %s: %v", path, err)
+		}
+	}
+	if atReleaseCommit {
+		return newReadinessTestRepoWithRelease(t, change)
+	}
+	repo := newReadinessTestRepo(t)
+	change(t, repo.root)
+	return repo
+}
+
 // Verifies an unreadable or incomplete release input fails the check instead of reading as a
-// release that is not due, or as a dependency that does not exist. An unreadable pin above all
+// release that is not due, or as a dependency that does not exist. The manifest and pin are read
+// at the release commit and the config and changelog in the checkout. An unreadable pin above all
 // must not read as "no dispatcher floor", which would skip the dispatcher release.
 func TestCheckUnityPackageReleaseReadinessFailsOnUnreadableInputs(t *testing.T) {
 	tests := []struct {
-		name    string
-		path    string
-		content string
-		wantErr string
+		name            string
+		path            string
+		content         string
+		atReleaseCommit bool
+		wantErr         string
 	}{
-		{name: "manifest that is not JSON", path: releasePleaseManifestRelativePath, content: "Packages/src: 3.0.0-beta.6\n", wantErr: releasePleaseManifestRelativePath},
+		{name: "manifest that is not JSON", path: releasePleaseManifestRelativePath, content: "{\n  \"Packages/src\": \"3.0.0-beta.6\",\n}\n", atReleaseCommit: true, wantErr: releasePleaseManifestRelativePath},
 		{name: "config that is not JSON", path: releasePleaseConfigRelativePath, content: "packages:\n", wantErr: releasePleaseConfigRelativePath},
 		{name: "config without the package changelog path", path: releasePleaseConfigRelativePath, content: `{"packages": {"Packages/src": {}}}`, wantErr: "changelog-path"},
 		{name: "runner component missing from its tag", path: releasePleaseConfigRelativePath, content: `{"packages": {"Packages/src": {"changelog-path": "CHANGELOG.md"}, "cli/project-runner": {"include-component-in-tag": true}}}`, wantErr: "without a component"},
 		{name: "changelog that does not exist", path: "Packages/src/CHANGELOG.md", wantErr: "Packages/src/CHANGELOG.md"},
-		{name: "pin that is not JSON", path: unityPackageCliPinFile, content: "minimumDispatcherVersion: 3.0.0\n", wantErr: unityPackageCliPinFile},
+		{name: "pin that is not JSON", path: unityPackageCliPinFile, content: "minimumDispatcherVersion: 3.0.0\n", atReleaseCommit: true, wantErr: unityPackageCliPinFile},
+		{name: "pin missing at the release commit", path: unityPackageCliPinFile, atReleaseCommit: true, wantErr: unityPackageCliPinFile},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			repo := newReadinessTestRepo(t)
-			if test.content == "" {
-				if err := os.Remove(filepath.Join(repo.root, filepath.FromSlash(test.path))); err != nil {
-					t.Fatalf("remove %s: %v", test.path, err)
-				}
-			} else {
-				writeReadinessTestFile(t, repo.root, test.path, test.content)
-			}
+			repo := readinessTestRepoWithFile(t, test.path, test.content, test.atReleaseCommit)
 			run := newReadinessTestRun(t)
 
 			_, err := run.check(repo.root, readinessTestVersion)
@@ -658,22 +711,25 @@ func TestCheckUnityPackageReleaseReadinessFailsOnUnreadableInputs(t *testing.T) 
 	}
 }
 
-// Verifies a manifest without a runner version, or a config without the runner package, skips the
-// runner release, and a pin without a dispatcher floor skips the dispatcher release.
+// Verifies a release commit whose manifest has no runner version, or a config without the runner
+// package, skips the runner release, and a release commit whose pin has no dispatcher floor skips
+// the dispatcher release.
 func TestCheckUnityPackageReleaseReadinessSkipsAbsentDependencies(t *testing.T) {
 	tests := []struct {
-		name     string
-		path     string
-		content  string
-		skipped  string
-		required string
+		name            string
+		path            string
+		content         string
+		atReleaseCommit bool
+		skipped         string
+		required        string
 	}{
 		{
-			name:     "manifest without a runner version",
-			path:     releasePleaseManifestRelativePath,
-			content:  "{\n  \"Packages/src\": \"3.0.0-beta.6\",\n  \"cli/dispatcher\": \"3.0.0-beta.6\"\n}\n",
-			skipped:  readinessTestRunnerTag,
-			required: readinessTestDispatcherTag,
+			name:            "manifest without a runner version",
+			path:            releasePleaseManifestRelativePath,
+			content:         "{\n  \"Packages/src\": \"3.0.0-beta.6\",\n  \"cli/dispatcher\": \"3.0.0-beta.6\"\n}\n",
+			atReleaseCommit: true,
+			skipped:         readinessTestRunnerTag,
+			required:        readinessTestDispatcherTag,
 		},
 		{
 			name:     "config without the runner package",
@@ -683,18 +739,18 @@ func TestCheckUnityPackageReleaseReadinessSkipsAbsentDependencies(t *testing.T) 
 			required: readinessTestDispatcherTag,
 		},
 		{
-			name:     "pin without a dispatcher floor",
-			path:     unityPackageCliPinFile,
-			content:  `{"projectRunnerVersion": "3.0.0-beta.6"}`,
-			skipped:  readinessTestDispatcherTag,
-			required: readinessTestRunnerTag,
+			name:            "pin without a dispatcher floor",
+			path:            unityPackageCliPinFile,
+			content:         `{"projectRunnerVersion": "3.0.0-beta.6"}`,
+			atReleaseCommit: true,
+			skipped:         readinessTestDispatcherTag,
+			required:        readinessTestRunnerTag,
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			repo := newReadinessTestRepo(t)
-			writeReadinessTestFile(t, repo.root, test.path, test.content)
+			repo := readinessTestRepoWithFile(t, test.path, test.content, test.atReleaseCommit)
 			run := newReadinessTestRun(t)
 
 			readiness, err := run.check(repo.root, readinessTestVersion)
@@ -791,9 +847,10 @@ func TestFetchReleaseTagsOverwritesLocalTagsFromOrigin(t *testing.T) {
 // check: a release commit without the protocol constants fails it, naming the file at that commit. The release depends on
 // no runner or dispatcher release here, so nothing is looked up on GitHub.
 func TestRunUnityPackageReleaseReadinessCheckChecksTheReleaseCommit(t *testing.T) {
-	repo := newReadinessTestRepo(t)
+	repo := newReadinessTestRepoWithRelease(t, func(t *testing.T, root string) {
+		writeReadinessTestFile(t, root, unityPackageCliPinFile, `{"projectRunnerVersion": "3.0.0-beta.6"}`)
+	})
 	writeReadinessTestFile(t, repo.root, releasePleaseConfigRelativePath, `{"packages": {"Packages/src": {"changelog-path": "CHANGELOG.md"}}}`)
-	writeReadinessTestFile(t, repo.root, unityPackageCliPinFile, `{"projectRunnerVersion": "3.0.0-beta.6"}`)
 	var log bytes.Buffer
 
 	readiness, err := runUnityPackageReleaseReadinessCheck(context.Background(), &log, unityPackageReleaseReadinessInput{

@@ -42,57 +42,48 @@ type unityPackageReleaseReadinessDeps struct {
 	log             io.Writer
 }
 
-// unityPackageReleaseInputs is what the checkout says the release depends on. An empty tag means
-// the release does not depend on that component.
-type unityPackageReleaseInputs struct {
-	changelogPath string
+// unityPackageReleaseDependencies are the runner and dispatcher releases the release commit
+// records. An empty tag means the release does not depend on that component.
+type unityPackageReleaseDependencies struct {
 	runnerTag     string
 	dispatcherTag string
 }
 
 // checkUnityPackageReleaseReadiness says whether the Unity package release of the version can be
-// created now. It can once the project runner release of the manifest and the dispatcher release
-// of the pin's minimumDispatcherVersion are published with every asset, the runner's attestations
-// bind each asset to the commit of its tag, and the release-please release commit of the version
-// passes the protocol and pin checks. A release it depends on that is not published yet is waited
-// for, because the publish workflow of that release starts the release workflow again. Anything
-// else that is wrong fails the check, because none of it resolves by waiting.
+// created now. It can once the release-please release commit of the version is found, the project
+// runner release of that commit's manifest and the dispatcher release of that commit's
+// minimumDispatcherVersion are published with every asset, the runner's attestations bind each
+// asset to the commit of its tag, and the release commit passes the protocol and pin checks. The
+// release is tagged at the release commit, so what that commit records is what the release ships
+// with, however far the branch has moved since. A release it depends on that is not published yet
+// is waited for, because the publish workflow of that release starts the release workflow again.
+// Anything else that is wrong fails the check, because none of it resolves by waiting.
 func checkUnityPackageReleaseReadiness(ctx context.Context, deps unityPackageReleaseReadinessDeps, input unityPackageReleaseReadinessInput) (unityPackageReleaseReadiness, error) {
-	inputs, err := readUnityPackageReleaseInputs(input.RepoRoot)
+	var config releasePleaseConfig
+	if err := readReadinessJSON(input.RepoRoot, releasePleaseConfigRelativePath, &config); err != nil {
+		return unityPackageReleaseReadiness{}, err
+	}
+	changelogPath, err := unityPackageChangelogPath(input.RepoRoot, config)
+	if err != nil {
+		return unityPackageReleaseReadiness{}, err
+	}
+	releaseCommit, err := findUnityPackageReleaseCommit(ctx, input.RepoRoot, input.Version, changelogPath)
+	if err != nil {
+		return unityPackageReleaseReadiness{}, err
+	}
+	dependencies, err := readReleaseCommitDependencies(ctx, input.RepoRoot, releaseCommit, config)
 	if err != nil {
 		return unityPackageReleaseReadiness{}, err
 	}
 
-	if inputs.runnerTag != "" {
-		ready, err := dependencyReleaseIsReady(ctx, deps, input, inputs.runnerTag, projectRunnerReleaseAssetsScript)
-		if err != nil {
-			return unityPackageReleaseReadiness{}, err
-		}
-		if !ready {
-			return waitForDependencyRelease("Project runner", inputs.runnerTag, input.Version), nil
-		}
-		if err := deps.fetchReleaseTag(ctx, inputs.runnerTag); err != nil {
-			return unityPackageReleaseReadiness{}, err
-		}
-		if err := verifyRunnerReleaseAttestations(ctx, deps, input, inputs.runnerTag); err != nil {
-			return unityPackageReleaseReadiness{}, err
-		}
-	}
-
-	if inputs.dispatcherTag != "" {
-		ready, err := dependencyReleaseIsReady(ctx, deps, input, inputs.dispatcherTag, dispatcherReleaseAssetsScript)
-		if err != nil {
-			return unityPackageReleaseReadiness{}, err
-		}
-		if !ready {
-			return waitForDependencyRelease("Dispatcher", inputs.dispatcherTag, input.Version), nil
-		}
-	}
-
-	releaseCommit, err := findUnityPackageReleaseCommit(ctx, input.RepoRoot, input.Version, inputs.changelogPath)
+	waitingFor, err := waitForUnpublishedDependencies(ctx, deps, input, dependencies)
 	if err != nil {
 		return unityPackageReleaseReadiness{}, err
 	}
+	if waitingFor != "" {
+		return unityPackageReleaseReadiness{WaitingFor: waitingFor}, nil
+	}
+
 	if err := checkUnityPackageReleaseCommit(ctx, deps, input.RepoRoot, releaseCommit); err != nil {
 		return unityPackageReleaseReadiness{}, err
 	}
@@ -100,10 +91,38 @@ func checkUnityPackageReleaseReadiness(ctx context.Context, deps unityPackageRel
 	return unityPackageReleaseReadiness{ReleaseCommit: releaseCommit}, nil
 }
 
-func waitForDependencyRelease(component string, tag string, version string) unityPackageReleaseReadiness {
-	return unityPackageReleaseReadiness{WaitingFor: fmt.Sprintf(
+// waitForUnpublishedDependencies returns what the release waits for, or "" once the runner release
+// is published with its assets and valid attestations and the dispatcher release is published with
+// its assets.
+func waitForUnpublishedDependencies(ctx context.Context, deps unityPackageReleaseReadinessDeps, input unityPackageReleaseReadinessInput, dependencies unityPackageReleaseDependencies) (string, error) {
+	if dependencies.runnerTag != "" {
+		ready, err := dependencyReleaseIsReady(ctx, deps, input, dependencies.runnerTag, projectRunnerReleaseAssetsScript)
+		if err != nil || !ready {
+			return waitReasonUnlessFailed("Project runner", dependencies.runnerTag, input.Version, err)
+		}
+		if err := deps.fetchReleaseTag(ctx, dependencies.runnerTag); err != nil {
+			return "", err
+		}
+		if err := verifyRunnerReleaseAttestations(ctx, deps, input, dependencies.runnerTag); err != nil {
+			return "", err
+		}
+	}
+	if dependencies.dispatcherTag != "" {
+		ready, err := dependencyReleaseIsReady(ctx, deps, input, dependencies.dispatcherTag, dispatcherReleaseAssetsScript)
+		if err != nil || !ready {
+			return waitReasonUnlessFailed("Dispatcher", dependencies.dispatcherTag, input.Version, err)
+		}
+	}
+	return "", nil
+}
+
+func waitReasonUnlessFailed(component string, tag string, version string, err error) (string, error) {
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf(
 		"%s release %s is not published with complete assets yet; the Unity package release v%s waits for it.",
-		component, tag, version)}
+		component, tag, version), nil
 }
 
 // checkUnityPackageReleaseCommit runs the protocol check before the pin check. The release commit
@@ -149,39 +168,46 @@ func dependencyReleaseIsReady(ctx context.Context, deps unityPackageReleaseReadi
 	return true, nil
 }
 
-// readUnityPackageReleaseInputs reads the release-please config, manifest, and package pin of the
-// checkout. An unreadable file fails the check: read as "no value", it would skip a release the
-// package depends on.
-func readUnityPackageReleaseInputs(repoRoot string) (unityPackageReleaseInputs, error) {
-	var config releasePleaseConfig
-	if err := readReadinessJSON(repoRoot, releasePleaseConfigRelativePath, &config); err != nil {
-		return unityPackageReleaseInputs{}, err
-	}
+// readReleaseCommitDependencies reads the manifest and package pin as the release commit recorded
+// them. A file that is missing or unreadable there fails the check: read as "no value", it would
+// skip a release the package depends on.
+func readReleaseCommitDependencies(ctx context.Context, repoRoot string, releaseCommit string, config releasePleaseConfig) (unityPackageReleaseDependencies, error) {
 	var manifest map[string]string
-	if err := readReadinessJSON(repoRoot, releasePleaseManifestRelativePath, &manifest); err != nil {
-		return unityPackageReleaseInputs{}, err
+	if err := readReleaseCommitJSON(ctx, repoRoot, releaseCommit, releasePleaseManifestRelativePath, &manifest); err != nil {
+		return unityPackageReleaseDependencies{}, err
 	}
 	var pin dispatcherMinimumVersionCliPin
-	if err := readReadinessJSON(repoRoot, unityPackageCliPinFile, &pin); err != nil {
-		return unityPackageReleaseInputs{}, err
+	if err := readReleaseCommitJSON(ctx, repoRoot, releaseCommit, unityPackageCliPinFile, &pin); err != nil {
+		return unityPackageReleaseDependencies{}, err
 	}
 
-	changelogPath, err := unityPackageChangelogPath(repoRoot, config)
-	if err != nil {
-		return unityPackageReleaseInputs{}, err
-	}
-	inputs := unityPackageReleaseInputs{changelogPath: changelogPath}
+	var dependencies unityPackageReleaseDependencies
 	runnerConfig, runnerConfigured := config.Packages[projectRunnerManifestKey]
 	if runnerVersion := manifest[projectRunnerManifestKey]; runnerVersion != "" && runnerConfigured {
-		inputs.runnerTag, err = releasePleaseReleaseTag(projectRunnerManifestKey, runnerConfig, runnerVersion)
+		runnerTag, err := releasePleaseReleaseTag(projectRunnerManifestKey, runnerConfig, runnerVersion)
 		if err != nil {
-			return unityPackageReleaseInputs{}, err
+			return unityPackageReleaseDependencies{}, err
 		}
+		dependencies.runnerTag = runnerTag
 	}
 	if pin.MinimumDispatcherVersion != "" {
-		inputs.dispatcherTag = dispatcherReleaseTagPrefix + pin.MinimumDispatcherVersion
+		dependencies.dispatcherTag = dispatcherReleaseTagPrefix + pin.MinimumDispatcherVersion
 	}
-	return inputs, nil
+	return dependencies, nil
+}
+
+func readReleaseCommitJSON(ctx context.Context, repoRoot string, releaseCommit string, relativePath string, value any) error {
+	content, found, err := gitFileAtRef(ctx, repoRoot, releaseCommit, relativePath)
+	if err != nil {
+		return err
+	}
+	if !found {
+		return fmt.Errorf("%s cannot be read at release commit %s", relativePath, releaseCommit)
+	}
+	if err := json.Unmarshal(content, value); err != nil {
+		return fmt.Errorf("parse %s at release commit %s: %w", relativePath, releaseCommit, err)
+	}
+	return nil
 }
 
 func unityPackageChangelogPath(repoRoot string, config releasePleaseConfig) (string, error) {

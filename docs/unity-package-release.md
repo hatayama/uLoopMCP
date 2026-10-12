@@ -27,11 +27,13 @@ after the tarball is signed. The decision and the alternatives it replaced are r
    - A published `v<version>` release is never changed. One that carries
      `io.github.hatayama.uloopmcp-<version>.tgz` needs nothing; one without it gets a warning,
      because no run can attach the tarball any more. Most runs end here.
-   - Otherwise the plan runs its readiness check. It requires the project runner release of
-     the manifest and the dispatcher release of the pin's `minimumDispatcherVersion` to be
-     published with every asset, verifies the runner's attestations, finds the release-please
-     release commit of the package version, and runs the protocol and pin checks at that
-     commit. It names that commit when the release is due. When a release it needs is not
+   - Otherwise the plan runs its readiness check. It finds the release-please release commit
+     of the package version, requires the project runner release of that commit's manifest and
+     the dispatcher release of that commit's `minimumDispatcherVersion` to be published with
+     every asset, verifies the runner's attestations, and runs the protocol and pin checks at
+     that commit. The release is tagged at that commit, so what it records is what the release
+     ships with, however far `main` has moved since. It names that commit when the release is
+     due. When a release it needs is not
      published yet, the plan ends with a notice that names that release, and the publish
      workflow of that release starts this workflow again. A failed check, a failed lookup, an
      unreadable manifest, config, or pin, or an asset list that cannot be read or names nothing
