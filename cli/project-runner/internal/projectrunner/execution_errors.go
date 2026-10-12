@@ -48,7 +48,7 @@ func compileWaitTimeoutDetails(lastStatus *compileStatusResponse, waited time.Du
 }
 
 func compileWaitTimeoutNextActions(retentionRemaining time.Duration) []string {
-	reattachAction := "Unity keeps compiling and refuses other commands with UNITY_SERVER_BUSY until it finishes. Re-run `uloop compile`: it will reattach to the in-flight compile and wait for its result instead of starting a new one."
+	reattachAction := "Unity keeps compiling and refuses other commands with UNITY_SERVER_BUSY until it finishes. Re-run `uloop compile`: it will reattach to the in-flight compile and wait for its result instead of starting a new one. That result covers the scripts as they were when that compile started, so if scripts changed since then, run `uloop compile` once more after it returns."
 	// Why the caller passes remaining: attach re-timeouts keep the original TimedOutAtUtc,
 	// so remaining retention is wall-clock from that first timeout, not (TTL - this wait).
 	remaining := retentionRemaining
