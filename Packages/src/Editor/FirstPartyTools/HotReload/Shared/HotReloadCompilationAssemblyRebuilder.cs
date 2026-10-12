@@ -96,9 +96,10 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
         /// <summary>
         /// Makes the entry of a compiled-again assembly from its PDB. Returns null and the entry, or
-        /// the reason no entry can be trusted: a PDB of another build, a reference that does not
-        /// resolve to a file of the recorded MVID, or a PDB whose documents are not one per syntax
-        /// tree the compiler emitted.
+        /// the reason no entry can be trusted: a PDB of another build, sources that cannot be shown
+        /// to be every source the compiler was given, or a reference that does not resolve to a file
+        /// of the recorded MVID. A PDB that a rewrite left without some documents still gives an
+        /// entry when the compiler's own PDB of the same build under Library/Bee lists every source.
         /// </summary>
         internal string TryFromPdb(
             HotReloadSavedCompilationAssembly assembly,
@@ -117,11 +118,14 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 return HotReloadConstants.CompilationListReasonPdbMismatch;
             }
 
-            // Why the compiler's count: the compiler writes one document per syntax tree, while a
-            // PDB rewritten after the compile (an IL post-processor does this) can drop the
-            // documents no sequence point refers to and keeps the count. A PDB without the count
-            // cannot show it is whole, and extra #line documents are refused as well.
-            if (info.SourceFileCount != info.DocumentCount)
+            // Why the capture's reader decides: it alone judges whether the sources are every
+            // source the compiler was given, reading the compiler's own PDB when a rewrite after the
+            // compile (an IL post-processor does this) dropped the documents no sequence point refers
+            // to. A PDB without the compiler's count cannot show it is whole, and one with extra
+            // #line documents is refused as well. Read before the references so this reason still
+            // comes before theirs.
+            HotReloadCaptureAssembly compiled = HotReloadCaptureAssemblyEnumerator.ReadSources(candidate, _inputs);
+            if (!compiled.HasEverySource)
             {
                 return HotReloadConstants.CompilationListReasonPdbDocumentsIncomplete;
             }
@@ -146,12 +150,10 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 compiledPathByFileName[reference.FileName] = path;
             }
 
-            IReadOnlyList<string> sources = HotReloadCaptureAssemblyEnumerator.ReadSources(candidate, _inputs).SourceAssetPaths;
-
             entry = new HotReloadRebuiltAssemblyEntry(
                 assembly.name,
                 assembly.outputPath,
-                InSavedOrder(assembly.sourceFiles, sources, _pathComparer).ToArray(),
+                InSavedOrder(assembly.sourceFiles, compiled.SourceAssetPaths, _pathComparer).ToArray(),
                 ToArray(info.Defines),
                 InSavedOrder(assembly.assemblyReferences, projectReferences, StringComparer.Ordinal),
                 CompiledReferencesInSavedOrder(assembly, compiledPathByFileName));

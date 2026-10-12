@@ -210,6 +210,43 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         }
 
         /// <summary>
+        /// What: a recompiled assembly whose PDB lost documents in a rewrite is rebuilt from the
+        /// compiler's own PDB of the same build under Library/Bee, with Unity's source files in
+        /// Unity's order.
+        /// </summary>
+        [Test]
+        public void TryFromPdb_PdbThatLostSourcesInARewrite_IsRebuiltFromTheCompilersPdb()
+        {
+            HotReloadSavedCompilationList saved = SaveCleanThenEdit(edit => { }).Load().List;
+            string scriptAssemblies = Path.Combine(_directory, "Project", HotReloadConstants.ScriptAssembliesRelativeDirectory);
+            Directory.CreateDirectory(scriptAssemblies);
+            string dllPath = Path.Combine(scriptAssemblies, TargetAssemblyName + ".dll");
+            string pdbPath = Path.ChangeExtension(dllPath, ".pdb");
+            CecilPdbRewrite.Rewrite(_projectRoot, TargetAssemblyName, _directory, dllPath);
+            CompiledAssemblyLayout real = CompiledAssemblyLayout.Resolve(_projectRoot);
+            Assert.That(
+                HotReloadAssemblyMetadataMvid.Read(dllPath),
+                Is.EqualTo(HotReloadAssemblyMetadataMvid.Read(real.DllPath(TargetAssemblyName))),
+                "Precondition: the rewrite must keep the MVID.");
+            HotReloadPdbCompilationInfo rewritten = HotReloadPdbCompilationInfo.Read(pdbPath);
+            Assert.That(rewritten.DocumentCount, Is.LessThan(rewritten.SourceFileCount), "Precondition: the rewrite must drop some document.");
+            string dag = Path.Combine(_directory, "Project", "Library", "Bee", "artifacts", "test.dag");
+            Directory.CreateDirectory(dag);
+            File.Copy(real.DllPath(TargetAssemblyName), Path.Combine(dag, TargetAssemblyName + ".dll"));
+            File.Copy(real.PdbPath(TargetAssemblyName), Path.Combine(dag, TargetAssemblyName + ".pdb"));
+            HotReloadCompilationAssemblyRebuilder rebuilder =
+                new HotReloadCompilationAssemblyRebuilder(saved, HotReloadSnapshotCaptureInputs.ReadOnMainThread());
+
+            string reason = rebuilder.TryFromPdb(
+                Target(saved),
+                new HotReloadCaptureAssemblyCandidate(TargetAssemblyName, dllPath, pdbPath),
+                out HotReloadRebuiltAssemblyEntry entry);
+
+            Assert.That(reason, Is.Null);
+            Assert.That(entry.SourceFiles, Is.EqualTo(CompilationPipeline.GetAssemblies()[IndexOf(TargetAssemblyName)].sourceFiles));
+        }
+
+        /// <summary>
         /// What: a recompiled assembly whose PDB belongs to another build of the dll gives no list.
         /// </summary>
         [Test]
