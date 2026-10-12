@@ -36,15 +36,18 @@ namespace io.github.hatayama.UnityCliLoop.Infrastructure
             bool isDomainReloadInProgress =
                 sessionFlagsRepository.GetIsDomainReloadInProgress() ||
                 DomainReloadStateRegistry.IsDomainReloadInProgress();
+            bool isSnapshotCaptureHolding =
+                HotReloadSnapshotCaptureCoordination.IsHoldingCompileCompletion?.Invoke() ?? false;
             GetCompileStatusResponse response = BuildResponse(
                 requestId,
                 isCompiling,
                 isUpdating,
                 isDomainReloadInProgress,
+                isSnapshotCaptureHolding,
                 compileSessionLifecycleService,
                 compileResultSessionRepository,
                 pendingCompileSessionRepository);
-            LogCompileStatusQueryReceived(requestId, response);
+            LogCompileStatusQueryReceived(requestId, response, isSnapshotCaptureHolding);
             return response;
         }
 
@@ -53,6 +56,7 @@ namespace io.github.hatayama.UnityCliLoop.Infrastructure
             bool isCompiling,
             bool isUpdating,
             bool isDomainReloadInProgress,
+            bool isSnapshotCaptureHolding,
             UnityCliLoopCompileSessionLifecycleService compileSessionLifecycleService,
             ICompileResultSessionRepository compileResultSessionRepository,
             IPendingCompileSessionRepository pendingCompileSessionRepository)
@@ -61,7 +65,9 @@ namespace io.github.hatayama.UnityCliLoop.Infrastructure
             Debug.Assert(compileResultSessionRepository != null, "compileResultSessionRepository must not be null");
             Debug.Assert(pendingCompileSessionRepository != null, "pendingCompileSessionRepository must not be null");
 
-            bool ready = !isCompiling && !isUpdating && !isDomainReloadInProgress;
+            // The hot reload snapshot capture must finish before compile returns, or an edit made
+            // right after the CLI returns could be captured as the source the compiler read.
+            bool ready = !isCompiling && !isUpdating && !isDomainReloadInProgress && !isSnapshotCaptureHolding;
             compileSessionLifecycleService.ClearExpiredPendingCompileRequest(DateTime.UtcNow);
             UnityCliLoopStoredCompileResult storedResult = string.IsNullOrWhiteSpace(requestId)
                 ? UnityCliLoopStoredCompileResult.None()
@@ -100,7 +106,8 @@ namespace io.github.hatayama.UnityCliLoop.Infrastructure
 
         private static void LogCompileStatusQueryReceived(
             string requestId,
-            GetCompileStatusResponse response)
+            GetCompileStatusResponse response,
+            bool isSnapshotCaptureHolding)
         {
             Debug.Assert(response != null, "response must not be null");
 
@@ -115,6 +122,7 @@ namespace io.github.hatayama.UnityCliLoop.Infrastructure
                     is_compiling = response.IsCompiling,
                     is_updating = response.IsUpdating,
                     is_domain_reload_in_progress = response.IsDomainReloadInProgress,
+                    is_snapshot_capture_holding = isSnapshotCaptureHolding,
                     message = response.Message
                 },
                 requestId);

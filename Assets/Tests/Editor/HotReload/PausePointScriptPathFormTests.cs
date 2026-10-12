@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 
 using NUnit.Framework;
 
@@ -55,7 +56,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         [Test]
         public void Enable_PackageSourceGivenByItsAssetPath_ArmsTheStatementOnTheEditedFileBasis()
         {
-            HotReloadSourceSnapshotter.CaptureAfterDomainReload();
+            HotReloadSourceSnapshotter.CaptureAfterDomainReload(HotReloadSnapshotCaptureInputs.ReadOnMainThread(), CancellationToken.None);
 
             PausePointResponse response = Enable(FixtureAssetPath, SecondStatementLine);
 
@@ -69,7 +70,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         [Test]
         public void Enable_PackageSourceGivenByItsPhysicalPath_ArmsTheSameMarkerAsTheAssetPath()
         {
-            HotReloadSourceSnapshotter.CaptureAfterDomainReload();
+            HotReloadSourceSnapshotter.CaptureAfterDomainReload(HotReloadSnapshotCaptureInputs.ReadOnMainThread(), CancellationToken.None);
 
             PausePointResponse response = Enable(FixturePhysicalPath, SecondStatementLine);
 
@@ -82,7 +83,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         [Test]
         public void Enable_PackageSourceGivenByItsAbsolutePhysicalPath_ArmsTheSameMarkerAsTheAssetPath()
         {
-            HotReloadSourceSnapshotter.CaptureAfterDomainReload();
+            HotReloadSourceSnapshotter.CaptureAfterDomainReload(HotReloadSnapshotCaptureInputs.ReadOnMainThread(), CancellationToken.None);
 
             PausePointResponse response = Enable(ToAbsolutePath(FixturePhysicalPath), SecondStatementLine);
 
@@ -130,7 +131,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         [Test]
         public void Enable_AssetsSourceGivenByItsAbsolutePath_ArmsTheSameMarkerAsTheRelativePath()
         {
-            HotReloadSourceSnapshotter.CaptureAfterDomainReload();
+            HotReloadSourceSnapshotter.CaptureAfterDomainReload(HotReloadSnapshotCaptureInputs.ReadOnMainThread(), CancellationToken.None);
             int line = FindLineNumber(File.ReadAllText(ToAbsolutePath(AssetsFixturePath)), AssetsFixtureStatementText);
             Assert.That(line, Is.GreaterThan(0));
 

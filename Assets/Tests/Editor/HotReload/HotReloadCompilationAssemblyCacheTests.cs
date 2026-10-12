@@ -154,6 +154,57 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             Assert.That(found, Is.Null);
         }
 
+        /// <summary>
+        /// Verifies that a list built off the main thread is kept, without asking Unity, when nothing
+        /// is kept and no invalidation happened since its generation was read.
+        /// </summary>
+        [Test]
+        public void TryFill_WhenEmptyAtTheSameGeneration_KeepsTheRebuiltList()
+        {
+            UnityCompilationAssembly[] rebuilt = { CreateAssembly("Rebuilt") };
+            HotReloadCompilationAssemblyCache cache = CreateCache();
+
+            bool filled = cache.TryFill(rebuilt, cache.Generation);
+
+            Assert.That(filled, Is.True);
+            Assert.That(cache.Current(), Is.SameAs(rebuilt));
+            Assert.That(_fetchCount, Is.EqualTo(0));
+        }
+
+        /// <summary>
+        /// Verifies that a list Unity already answered wins over a rebuilt one.
+        /// </summary>
+        [Test]
+        public void TryFill_WhenAlreadyFilled_KeepsTheFetchedList()
+        {
+            UnityCompilationAssembly[] fetched = { CreateAssembly("Fetched") };
+            _answers.Enqueue(fetched);
+            HotReloadCompilationAssemblyCache cache = CreateCache();
+            cache.Current();
+
+            bool filled = cache.TryFill(new[] { CreateAssembly("Rebuilt") }, cache.Generation);
+
+            Assert.That(filled, Is.False);
+            Assert.That(cache.Current(), Is.SameAs(fetched));
+        }
+
+        /// <summary>
+        /// Verifies that a list built before an invalidation is refused even though nothing is kept,
+        /// because the script set may have changed while it was built.
+        /// </summary>
+        [Test]
+        public void TryFill_AfterAnInvalidation_Refuses()
+        {
+            HotReloadCompilationAssemblyCache cache = CreateCache();
+            int generationBeforeBuild = cache.Generation;
+            cache.Invalidate();
+
+            bool filled = cache.TryFill(new[] { CreateAssembly("Rebuilt") }, generationBeforeBuild);
+
+            Assert.That(filled, Is.False);
+            Assert.That(cache.IsFilled, Is.False);
+        }
+
         private HotReloadCompilationAssemblyCache CreateCache()
         {
             return new HotReloadCompilationAssemblyCache(Fetch);

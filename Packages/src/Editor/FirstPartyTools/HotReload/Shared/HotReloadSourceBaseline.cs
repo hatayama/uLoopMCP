@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -58,30 +59,66 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         /// second lookup reuses the document list the first one kept, so it does not read the PDB
         /// again.
         /// </remarks>
+        /// <param name="newSourceMembershipEvidence">
+        /// The evidence that placed a file Unity's compilation assemblies do not list in the
+        /// assembly, or null for a file they list. Null does not mean the last compile built the
+        /// file: the list also changes on an import that compiles nothing yet, so a file moved,
+        /// renamed or split off into a partial since the compile is listed too.
+        /// </param>
         internal static HotReloadSnapshotMissReason DescribeSnapshotMiss(
             string projectRelativeSourcePath,
-            string targetDllPath)
+            string targetDllPath,
+            HotReloadNewSourceMembershipEvidence newSourceMembershipEvidence)
         {
             string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
             return DescribeSnapshotMissAt(
                 projectRoot,
                 projectRelativeSourcePath,
                 targetDllPath,
-                HotReloadPdbDocumentIndex.Shared);
+                HotReloadPdbDocumentIndex.Shared,
+                newSourceMembershipEvidence);
         }
 
         internal static HotReloadSnapshotMissReason DescribeSnapshotMissAt(
             string projectRoot,
             string projectRelativeSourcePath,
             string targetDllPath,
-            HotReloadPdbDocumentIndex documentIndex)
+            HotReloadPdbDocumentIndex documentIndex,
+            HotReloadNewSourceMembershipEvidence newSourceMembershipEvidence)
         {
-            return TryLoadVerifiedSnapshotSource(
+            HotReloadSnapshotMissReason reason = TryLoadVerifiedSnapshotSource(
                 projectRoot,
                 projectRelativeSourcePath,
                 targetDllPath,
                 documentIndex,
                 out string _);
+            // Why a listed file without a snapshot still asks the PDB: an IL post-processor that
+            // rewrites the PDB drops the documents no sequence point refers to, so the capture, which
+            // names the sources from the PDB, writes no snapshot for a file without a method body.
+            // Such a file must read as one no compile gives a baseline, as it does where the snapshot
+            // was written. Why only when the PDB dropped documents: elsewhere a listed file without a
+            // snapshot is one the last compile did not build yet, and the next compile does give it
+            // a baseline. A file with evidence is not in the list at all, so it is such a file too.
+            if (reason != HotReloadSnapshotMissReason.NoSnapshotFile || newSourceMembershipEvidence != null)
+            {
+                return reason;
+            }
+
+            string pdbPath = Path.ChangeExtension(targetDllPath, ".pdb");
+            string mvid = HotReloadAssemblyMvid.Read(targetDllPath);
+            if (!documentIndex.DropsDocuments(targetDllPath, pdbPath, mvid))
+            {
+                return reason;
+            }
+
+            return documentIndex.TryFindDocument(
+                    targetDllPath,
+                    pdbPath,
+                    mvid,
+                    ToCompiledLookupPath(projectRoot, projectRelativeSourcePath.Replace('\\', '/')),
+                    out HotReloadPdbDocument _)
+                ? HotReloadSnapshotMissReason.NoSnapshotFile
+                : HotReloadSnapshotMissReason.NoDocumentInPdb;
         }
 
         private static HotReloadSnapshotMissReason TryLoadVerifiedSnapshotSource(
@@ -130,10 +167,102 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 return comparison;
             }
 
-            using MemoryStream memoryStream = new MemoryStream(snapshotBytes, writable: false);
-            using StreamReader reader = new StreamReader(memoryStream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
-            source = reader.ReadToEnd();
+            source = DecodeVerifiedSource(snapshotBytes);
             return HotReloadSnapshotMissReason.None;
+        }
+
+        /// <summary>
+        /// Returns the text of the file on disk when its bytes match the checksum the compiled
+        /// assembly's PDB recorded for it, or null when the file is missing or unreadable, the PDB has
+        /// no document for it, or the checksums differ. Matching bytes are the bytes the compiler read,
+        /// so the text equals what the snapshot holds for the same assembly. Main thread only, because
+        /// the checksum lookup asks the Package Manager for the source's physical path.
+        /// </summary>
+        public static string LoadVerifiedLiveSourceOrNull(string projectRelativeSourcePath, string targetDllPath)
+        {
+            Debug.Assert(!string.IsNullOrEmpty(projectRelativeSourcePath), "projectRelativeSourcePath must not be null or empty.");
+            Debug.Assert(!string.IsNullOrEmpty(targetDllPath), "targetDllPath must not be null or empty.");
+
+            string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+            return LoadVerifiedLiveSourceAt(
+                projectRoot,
+                projectRelativeSourcePath,
+                targetDllPath,
+                HotReloadPdbDocumentIndex.Shared);
+        }
+
+        // projectRoot is injectable so EditMode tests can point at a copy of a source under a
+        // temporary root, the same way they do for the snapshot.
+        internal static string LoadVerifiedLiveSourceAt(
+            string projectRoot,
+            string projectRelativeSourcePath,
+            string targetDllPath,
+            HotReloadPdbDocumentIndex documentIndex)
+        {
+            Debug.Assert(!string.IsNullOrEmpty(projectRoot), "projectRoot must not be null or empty.");
+            Debug.Assert(!string.IsNullOrEmpty(projectRelativeSourcePath), "projectRelativeSourcePath must not be null or empty.");
+            Debug.Assert(!string.IsNullOrEmpty(targetDllPath), "targetDllPath must not be null or empty.");
+            Debug.Assert(documentIndex != null, "documentIndex must not be null.");
+
+            string pdbPath = Path.ChangeExtension(targetDllPath, ".pdb");
+            if (!File.Exists(targetDllPath) || !File.Exists(pdbPath))
+            {
+                return null;
+            }
+
+            // Why the same path the snapshot capture reads: the live file must be the file the
+            // capture would have copied, so a match here means the snapshot would hold these bytes.
+            string slashNormalizedRelativePath = projectRelativeSourcePath.Replace('\\', '/');
+            string absoluteSourcePath = Path.Combine(
+                projectRoot,
+                slashNormalizedRelativePath.Replace('/', Path.DirectorySeparatorChar));
+            byte[] liveBytes = ReadAllBytesOrNull(HotReloadFileSystemPath.GetFileSystemPath(absoluteSourcePath));
+            if (liveBytes == null)
+            {
+                return null;
+            }
+
+            HotReloadSnapshotMissReason comparison = CompareWithCompiledDocument(
+                projectRoot,
+                slashNormalizedRelativePath,
+                targetDllPath,
+                pdbPath,
+                HotReloadAssemblyMvid.Read(targetDllPath),
+                liveBytes,
+                documentIndex);
+            return comparison == HotReloadSnapshotMissReason.None ? DecodeVerifiedSource(liveBytes) : null;
+        }
+
+        // Why an unreadable file is a miss rather than an error: the caller falls back to waiting for
+        // the snapshot, which answers for that file the same way it does today.
+        private static byte[] ReadAllBytesOrNull(string fileSystemPath)
+        {
+            if (!File.Exists(fileSystemPath))
+            {
+                return null;
+            }
+
+            try
+            {
+                return File.ReadAllBytes(fileSystemPath);
+            }
+            catch (IOException)
+            {
+                return null;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return null;
+            }
+        }
+
+        // Why one decoder for the snapshot and the live file: a pause point maps lines in whichever
+        // text it gets, so both must treat a byte order mark the same way.
+        private static string DecodeVerifiedSource(byte[] verifiedBytes)
+        {
+            using MemoryStream memoryStream = new MemoryStream(verifiedBytes, writable: false);
+            using StreamReader reader = new StreamReader(memoryStream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+            return reader.ReadToEnd();
         }
 
         /// <summary>
@@ -163,8 +292,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             // Packages/<name> path. Why the Package Manager is asked rather than the package roots a
             // run captures: those live in the main hot-reload assembly, which this one cannot see, and
             // every caller already runs on the Unity main thread the Package Manager requires: a run's
-            // group step, the pause-point port, which the pause-point tools and a run's patch step call,
-            // and the snapshot capture after a domain reload.
+            // group step, and the pause-point port, which the pause-point tools and a run's patch step
+            // call. The snapshot capture names the source from package roots it was handed instead and
+            // calls the second stage directly, so that it asks the Package Manager nothing.
             // Why the root that compiled the assembly rather than the snapshot owner's: the PDB spells a
             // source inside the compiling project as a path relative to that project's root (behind a
             // leading "./"), which the lookup matches as the end of the url. A Multiplayer Play Mode
@@ -172,8 +302,39 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             // Library, so a package folder of the main project lies outside the player's root, and
             // relativizing against the player's root would hand the lookup an absolute path that no
             // document ends with. For an ordinary project the two roots are the same.
+            return CompareWithCompiledDocumentAtLookupPath(
+                ToCompiledLookupPath(projectRoot, slashNormalizedRelativePath),
+                targetDllPath,
+                pdbPath,
+                moduleVersionId,
+                sourceBytes,
+                documentIndex);
+        }
+
+        // The path the compiled assembly's PDB records for the source; see CompareWithCompiledDocument.
+        private static string ToCompiledLookupPath(string projectRoot, string slashNormalizedRelativePath)
+        {
             string compiledProjectRoot = CompiledAssemblyLayout.Resolve(projectRoot).MainProjectRoot;
-            string pdbLookupPath = ScriptPackageRoots.ToPhysicalPath(compiledProjectRoot, slashNormalizedRelativePath);
+            return ScriptPackageRoots.ToPhysicalPath(compiledProjectRoot, slashNormalizedRelativePath);
+        }
+
+        /// <summary>
+        /// Answers the same as <see cref="CompareWithCompiledDocument"/> for a source already named
+        /// the way the PDB records it. Asks nothing of the Package Manager, so it can run off the
+        /// main thread.
+        /// </summary>
+        internal static HotReloadSnapshotMissReason CompareWithCompiledDocumentAtLookupPath(
+            string pdbLookupPath,
+            string targetDllPath,
+            string pdbPath,
+            string moduleVersionId,
+            byte[] sourceBytes,
+            HotReloadPdbDocumentIndex documentIndex)
+        {
+            Debug.Assert(!string.IsNullOrEmpty(pdbLookupPath), "pdbLookupPath must not be null or empty.");
+            Debug.Assert(sourceBytes != null, "sourceBytes must not be null.");
+            Debug.Assert(documentIndex != null, "documentIndex must not be null.");
+
             if (!documentIndex.TryFindDocument(
                     targetDllPath,
                     pdbPath,

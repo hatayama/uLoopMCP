@@ -12,6 +12,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
     {
         public string Name => "pdb_documents";
 
+        public bool NeedsCompilationList => false;
+
         public Task RunAsync(HotReloadWarmUpContext context, CancellationToken ct)
         {
             // Why taken here: the Shared instance reads Application.dataPath when it is first

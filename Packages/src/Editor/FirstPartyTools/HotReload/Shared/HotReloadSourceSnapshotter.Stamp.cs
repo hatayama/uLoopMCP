@@ -9,6 +9,10 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
     {
         private const string StampFileExtension = ".stamp";
 
+        // Why a tag where a stamp has the MVID: the marker of a read-only package's assembly names
+        // no snapshot directory, and reading the MVID would open a dll the capture otherwise skips.
+        private const string ImmutableMarkerTag = "immutable";
+
         private static string StampPath(string snapshotRoot, string assemblyName)
         {
             return Path.Combine(snapshotRoot, assemblyName + StampFileExtension);
@@ -93,6 +97,22 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         private static void WriteStamp(string stampPath, string mvid, long dllMtimeTicks, long dllByteLength)
         {
             File.WriteAllText(stampPath, mvid + "," + dllMtimeTicks + "," + dllByteLength);
+        }
+    }
+
+    /// <summary>
+    /// The write time and length of a compiled dll, which the stamp and the marker beside its
+    /// snapshots record.
+    /// </summary>
+    internal readonly struct HotReloadCompiledDllStamp
+    {
+        internal readonly long MtimeTicks;
+        internal readonly long ByteLength;
+
+        internal HotReloadCompiledDllStamp(long mtimeTicks, long byteLength)
+        {
+            MtimeTicks = mtimeTicks;
+            ByteLength = byteLength;
         }
     }
 }

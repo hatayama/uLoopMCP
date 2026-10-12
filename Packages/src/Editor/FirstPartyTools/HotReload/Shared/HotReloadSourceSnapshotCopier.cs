@@ -18,7 +18,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         internal static void CaptureAtomically(
             string projectRoot,
             string assemblySnapshotDirectory,
-            string[] sourceFiles,
+            IReadOnlyList<string> sourceFiles,
             string assemblyName,
             HotReloadSnapshotSourceCheck check,
             HotReloadSnapshotCaptureStats stats)
@@ -39,7 +39,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             Directory.CreateDirectory(temporaryDirectory);
             stats.PublishTicks += prepareWatch.Elapsed.Ticks;
             SourceCopyTally tally = new SourceCopyTally();
-            List<string> manifestLines = new List<string>(sourceFiles.Length);
+            List<string> manifestLines = new List<string>(sourceFiles.Count);
             foreach (string projectRelativeSourcePath in sourceFiles)
             {
                 SourceCopyOutcome outcome = CopySourceFileByteExact(

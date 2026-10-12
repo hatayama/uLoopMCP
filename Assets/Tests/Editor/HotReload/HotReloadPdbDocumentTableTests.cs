@@ -39,7 +39,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             string dllPath = DllPath(TestAssemblyName);
             string pdbPath = Path.ChangeExtension(dllPath, ".pdb");
 
-            List<HotReloadPdbDocument> table = HotReloadPdbDocumentTable.Read(dllPath, pdbPath);
+            List<HotReloadPdbDocument> table = HotReloadPdbDocumentTable.Read(dllPath, pdbPath, out int? _);
             List<HotReloadPdbDocument> withSequencePoints = HotReloadPdbDocumentIndex.ReadDocuments(dllPath, pdbPath);
 
             foreach (string assetPath in BodylessFixtureAssetPaths)
@@ -72,12 +72,61 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 File.Copy(DllPath(TestAssemblyName), dllPath);
                 File.Copy(Path.ChangeExtension(DllPath(OtherAssemblyName), ".pdb"), pdbPath);
 
-                Assert.Throws<InvalidOperationException>(() => HotReloadPdbDocumentTable.Read(dllPath, pdbPath));
+                Assert.Throws<InvalidOperationException>(() => HotReloadPdbDocumentTable.Read(dllPath, pdbPath, out int? _));
             }
             finally
             {
                 Directory.Delete(directory, recursive: true);
             }
+        }
+
+        /// <summary>
+        /// What: the non-throwing read returns null, rather than documents, for a PDB of another
+        /// assembly than the dll.
+        /// </summary>
+        [Test]
+        public void TryRead_PdbOfAnotherBuild_ReturnsNull()
+        {
+            string directory = Path.Combine(
+                Path.GetTempPath(),
+                "uloop-pdb-document-table-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(directory);
+            try
+            {
+                string dllPath = Path.Combine(directory, "X.dll");
+                string pdbPath = Path.Combine(directory, "X.pdb");
+                File.Copy(DllPath(TestAssemblyName), dllPath);
+                File.Copy(Path.ChangeExtension(DllPath(OtherAssemblyName), ".pdb"), pdbPath);
+
+                List<HotReloadPdbDocument> documents = HotReloadPdbDocumentTable.TryRead(dllPath, pdbPath, out int? sourceFileCount);
+
+                Assert.That(documents, Is.Null);
+                Assert.That(sourceFileCount, Is.Null);
+            }
+            finally
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+
+        /// <summary>
+        /// What: for a PDB the compiler wrote, the non-throwing read returns the same documents as
+        /// Read, and the source count it records equals the number of documents.
+        /// </summary>
+        [Test]
+        public void TryRead_CompilerPdb_ReturnsEveryDocumentAndTheSourceCount()
+        {
+            string dllPath = DllPath(TestAssemblyName);
+            string pdbPath = Path.ChangeExtension(dllPath, ".pdb");
+
+            List<HotReloadPdbDocument> documents = HotReloadPdbDocumentTable.TryRead(dllPath, pdbPath, out int? sourceFileCount);
+            List<HotReloadPdbDocument> read = HotReloadPdbDocumentTable.Read(dllPath, pdbPath, out int? _);
+
+            Assert.That(documents, Is.Not.Null);
+            Assert.That(sourceFileCount, Is.EqualTo(documents.Count));
+            Assert.That(
+                documents.Select(document => document.Url),
+                Is.EqualTo(read.Select(document => document.Url)));
         }
 
         private static bool EndsWithAssetPath(HotReloadPdbDocument document, string assetPath)

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
 
 using HarmonyLib;
 
@@ -72,9 +73,20 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 TransformWorkerHost.Shared,
                 HotReloadGroupProcessorDependencies.CreateProduction,
                 new HotReloadApplicationPlayModeQuery(),
-                new HotReloadSourceSnapshotCapture(HotReloadSourceSnapshotter.CaptureAfterDomainReload),
+                CreateProductionSourceSnapshotCapture(),
                 warmUp,
                 compiledCallers);
+        }
+
+        // Why only the inputs are read before the pool: they are the capture's only Unity calls, and
+        // Unity allows them on the main thread alone. The capture itself reads files and PDBs.
+        private static HotReloadSourceSnapshotCapture CreateProductionSourceSnapshotCapture()
+        {
+            return new HotReloadSourceSnapshotCapture(
+                HotReloadSnapshotCaptureInputs.ReadOnMainThread,
+                HotReloadSourceSnapshotter.CaptureAfterDomainReload,
+                work => Task.Run(work),
+                () => DateTime.UtcNow.Ticks);
         }
 
         private static HotReloadWarmUp CreateProductionWarmUp(HotReloadCompiledCallers compiledCallers)
@@ -84,7 +96,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 new HotReloadWarmUpContextSource(
                     projectRoot,
                     new HotReloadEditorStateSnapshotCapture(),
-                    assemblyName => compiledCallers.CollectReferencingDllPaths(projectRoot, assemblyName)),
+                    assemblyName => compiledCallers.CollectReferencingDllPaths(projectRoot, assemblyName),
+                    HotReloadCompilationAssemblies.IsKept),
                 HotReloadWarmUpItems.CreateProduction(compiledCallers));
         }
 
@@ -272,8 +285,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 new HotReloadPausePointPort(
                     domain,
                     path => new HotReloadSourceContentHasher().TryComputeContentHashOfFileOrNull(path),
-                    () => services.SourceSnapshotCapture.EnsureCaptured(
-                        HotReloadConstants.SourceSnapshotCaptureTriggerPausePoint));
+                    () => services.SourceSnapshotCapture.EnsureCapturedBlocking(
+                        HotReloadConstants.SourceSnapshotCaptureTriggerPausePoint),
+                    () => services.SourceSnapshotCapture.IsInFlight);
             // Attaching last keeps the invariant across the gap: the resolver only starts
             // answering binds once every gateway already points at the domain behind it.
             domain.IntroducedTypeResolver.Resume();

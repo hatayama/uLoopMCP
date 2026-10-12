@@ -29,6 +29,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
         public string Name => ItemName;
 
+        public bool NeedsCompilationList => true;
+
         public async Task RunAsync(HotReloadWarmUpContext context, CancellationToken ct)
         {
             HotReloadTransformWorkerWarmUpRequest request = GatherOnMainThread(context);

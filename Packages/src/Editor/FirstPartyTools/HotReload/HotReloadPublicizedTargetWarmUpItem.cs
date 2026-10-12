@@ -17,6 +17,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
     {
         public string Name => "publicized_targets";
 
+        public bool NeedsCompilationList => true;
+
         public Task RunAsync(HotReloadWarmUpContext context, CancellationToken ct)
         {
             // Why gather every target here first: the compilation assembly lookup may only run on

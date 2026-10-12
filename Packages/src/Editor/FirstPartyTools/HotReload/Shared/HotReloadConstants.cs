@@ -49,6 +49,10 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         // affect the on-disk layout. Adoption is decided at use time by PDB document checksum.
         public const string SourceSnapshotRelativeDirectory = "Library/UloopHotReload/SourceSnapshot";
 
+        // The compilation assembly list saved by a clean domain, from which the next domain
+        // rebuilds the list without asking Unity on the main thread.
+        public const string CompilationAssemblyListRelativePath = "Library/UloopHotReload/CompilationAssemblies.json";
+
         // The file inside a snapshot directory that records each copied source's length and last
         // write time (UTC ticks), so a later domain tells an unchanged source by its stat alone.
         public const string SourceStampManifestFileName = "source-stamps.txt";
@@ -478,10 +482,11 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             "No verified source snapshot for {0} (assembly {1}): the compiled assembly or its PDB is "
             + "missing; patching all methods. Run 'uloop compile'.";
 
-        // Format: file name, assembly name. Used instead of the warnings above when the compiled
-        // PDB lists no document for the file: a file whose code compiles to no method body (an
-        // enum, an interface, fields only) is never recorded there, so no compile can produce the
-        // baseline the other wording asks the reader to establish.
+        // Format: file name, assembly name. Used instead of the warnings above when no sequence
+        // point of the compiled PDB refers to the file: a file whose code compiles to no method
+        // body (an enum, an interface, fields only) has none, so no compile can produce the
+        // baseline the other wording asks the reader to establish. The compiler still records such
+        // a file as a document, but an IL post-processor that rewrites the PDB drops it.
         public const string NoCompiledMethodBodyBaselineWarningFormat =
             "{0} (assembly {1}) has no compiled method body, so there is no baseline for "
             + "edited-method detection; patching all methods. This is expected for files that only "
@@ -677,6 +682,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         public const string VibeLogPublicizedCopyWritten = "hot_reload_publicized_copy_written";
         public const string VibeLogSourceSnapshotChecked = "hot_reload_source_snapshot_checked";
         public const string VibeLogSourceSnapshotBreakdown = "hot_reload_source_snapshot_breakdown";
+        public const string VibeLogCompilationAssembliesFetched = "hot_reload_compilation_assemblies_fetched";
         public const string VibeLogShimCompilerTiming = "hot_reload_shim_compiler_timing";
         public const string VibeLogShimCompileFailed = "hot_reload_shim_compile_failed";
         public const string VibeLogIsolationRetry = "hot_reload_isolation_retry";
@@ -690,9 +696,16 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         public const string VibeLogWarmUpSkipped = "hot_reload_warm_up_skipped";
         public const string VibeLogCallerNoteBackfillComplete = "hot_reload_caller_note_backfill_complete";
         public const string VibeLogSourceSnapshotCaptured = "hot_reload_source_snapshot_captured";
+        // The other entries of a source snapshot capture that runs off the main thread: its start,
+        // the ways it can end without capturing, and the compile completion giving up on it.
+        public const string VibeLogSourceSnapshotCaptureStarted = "hot_reload_source_snapshot_capture_started";
+        public const string VibeLogSourceSnapshotCaptureCancelled = "hot_reload_source_snapshot_capture_cancelled";
+        public const string VibeLogSourceSnapshotCaptureFailed = "hot_reload_source_snapshot_capture_failed";
+        public const string VibeLogSourceSnapshotCaptureEmpty = "hot_reload_source_snapshot_capture_empty";
+        public const string VibeLogSourceSnapshotCaptureHoldCapExceeded = "hot_reload_source_snapshot_capture_hold_cap_exceeded";
 
         // What captured the source snapshot of a domain, as named in the trigger field of
-        // hot_reload_source_snapshot_captured.
+        // hot_reload_source_snapshot_captured and the other capture entries.
         public const string SourceSnapshotCaptureTriggerDomainLoad = "domain_load";
         public const string SourceSnapshotCaptureTriggerFirstUpdateTick = "first_update_tick";
         public const string SourceSnapshotCaptureTriggerApply = "apply";
@@ -704,6 +717,32 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         public const string VibeLogSourceSnapshotSkipped = "hot_reload_source_snapshot_skipped";
         public const string SourceSnapshotSkipReasonToolsDisabled = "tools_disabled";
         public const string WarmUpSkipReasonToolDisabled = "tool_disabled";
+        public const string WarmUpItemSkipReasonCompilationListUnavailable = "compilation_list_unavailable";
+
+        // Saving the compilation assembly list for the next domain: why a domain did not save it,
+        // a save that threw, and a save that finished (its size and time).
+        public const string VibeLogCompilationListSaveSkipped = "hot_reload_compilation_list_save_skipped";
+        public const string VibeLogCompilationListSaveFailed = "hot_reload_compilation_list_save_failed";
+        public const string VibeLogCompilationListSaved = "hot_reload_compilation_list_saved";
+
+        // Why a domain found no saved compilation assembly list to rebuild from: none was saved, or
+        // the saved file is torn, of another format version or missing a required field.
+        public const string CompilationListReasonNoSavedList = "no_saved_list";
+        public const string CompilationListReasonSavedListUnreadable = "saved_list_unreadable";
+
+        // Why a domain did not rebuild the list from the saved one and the compiled files, or did not
+        // keep the rebuilt list, as logged in hot_reload_compilation_list_reconstructed.
+        public const string VibeLogCompilationListReconstructed = "hot_reload_compilation_list_reconstructed";
+        public const string CompilationListReasonAssemblySetChanged = "assembly_set_changed";
+        public const string CompilationListReasonPdbMismatch = "pdb_mismatch";
+        public const string CompilationListReasonPdbDocumentsIncomplete = "pdb_documents_incomplete";
+        public const string CompilationListReasonCompilationFailed = "compilation_failed";
+        public const string CompilationListReasonUnresolvedReference = "unresolved_reference";
+        public const string CompilationListReasonReferenceMissing = "reference_missing";
+        public const string CompilationListReasonReferenceChanged = "reference_changed";
+        public const string CompilationListReasonSuperseded = "superseded";
+        public const string CompilationListReasonCancelled = "cancelled";
+        public const string CompilationListReasonToolDisabled = "tool_disabled";
 
         // What stopped a running warm-up or caller-note backfill, as named in the cancelledBy field
         // of hot_reload_warm_up_complete and hot_reload_caller_note_backfill_complete.

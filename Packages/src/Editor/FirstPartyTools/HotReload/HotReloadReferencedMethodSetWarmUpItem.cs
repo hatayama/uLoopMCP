@@ -22,6 +22,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
         public string Name => "referenced_method_sets";
 
+        // Why: its dlls are the referencing ones, which only the compilation assembly list names.
+        public bool NeedsCompilationList => true;
+
         public Task RunAsync(HotReloadWarmUpContext context, CancellationToken ct)
         {
             List<string> dllPaths = CollectDllPaths(context.Targets);

@@ -28,7 +28,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             _ran = new List<string>();
             _pending = new PendingWarmUpItem("a", _ran);
             _warmUp = new HotReloadWarmUp(
-                new FixedContextSource(HotReloadWarmUpTestDoubles.CreateReadyCapture()),
+                new FixedContextSource(HotReloadWarmUpTestDoubles.CreateReadyCapture(true)),
                 new IHotReloadWarmUpItem[] { _pending, new RecordingWarmUpItem("b", _ran) });
             _scope = HotReloadDomainTestScope.WithWarmUp(_warmUp);
             HotReloadWarmUpEditorHooks.GetServices = () => HotReloadCompositionRoot.Services;

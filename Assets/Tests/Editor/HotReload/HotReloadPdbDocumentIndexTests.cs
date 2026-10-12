@@ -549,6 +549,68 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         }
 
         /// <summary>
+        /// What: the compiler's own PDB, which has a document for every source it emitted, is not
+        /// reported as having dropped documents.
+        /// </summary>
+        [Test]
+        public void DropsDocuments_CompilerPdb_IsFalse()
+        {
+            string dllPath = DllPath(TestAssemblyName);
+            HotReloadPdbCompilationInfo compiled = HotReloadPdbCompilationInfo.Read(Path.ChangeExtension(dllPath, ".pdb"));
+            Assert.That(compiled.SourceFileCount, Is.Not.Null, "Precondition: the compiler's PDB must record its source count.");
+            Assert.That(compiled.DocumentCount, Is.GreaterThanOrEqualTo(compiled.SourceFileCount.Value), "Precondition: the compiler's PDB must drop nothing.");
+
+            bool drops = DropsDocuments(_index, dllPath);
+
+            Assert.That(drops, Is.False);
+        }
+
+        /// <summary>
+        /// What: a PDB rewritten the way an IL post-processor does, which lost the documents no
+        /// sequence point refers to, is reported as having dropped documents.
+        /// </summary>
+        [Test]
+        public void DropsDocuments_PdbThatLostDocumentsInARewrite_IsTrue()
+        {
+            string dllPath = CecilPdbRewrite.RewriteIntoNewDirectoryLosingDocuments(ProjectRoot(), TestAssemblyName);
+            try
+            {
+                bool drops = DropsDocuments(_index, dllPath);
+
+                Assert.That(drops, Is.True);
+            }
+            finally
+            {
+                Directory.Delete(CecilPdbRewrite.RootOf(dllPath), recursive: true);
+            }
+        }
+
+        /// <summary>
+        /// What: a new index on the same directory answers that a rewritten PDB dropped documents
+        /// from the persisted list, without reading the dll and the PDB.
+        /// </summary>
+        [Test]
+        public void DropsDocuments_NewIndexOnTheSameDirectory_AnswersFromThePersistedList()
+        {
+            string dllPath = CecilPdbRewrite.RewriteIntoNewDirectoryLosingDocuments(ProjectRoot(), TestAssemblyName);
+            try
+            {
+                DropsDocuments(_index, dllPath);
+                HotReloadPdbDocumentIndex second = new HotReloadPdbDocumentIndex(_persistenceDirectory);
+
+                bool drops = DropsDocuments(second, dllPath);
+
+                Assert.That(drops, Is.True);
+                Assert.That(second.LoadCount, Is.EqualTo(0));
+                Assert.That(second.PersistedLoadCount, Is.EqualTo(1));
+            }
+            finally
+            {
+                Directory.Delete(CecilPdbRewrite.RootOf(dllPath), recursive: true);
+            }
+        }
+
+        /// <summary>
         /// What: the list read from the PDB holds the same documents, with the same url, hash algorithm
         /// and hash, as a Cecil walk over the dll's types, methods and sequence points, and as many.
         /// </summary>
@@ -697,6 +759,11 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             string pdbPath = Path.ChangeExtension(dllPath, ".pdb");
             string moduleVersionId = HotReloadAssemblyMvid.Read(dllPath);
             return index.TryFindDocument(dllPath, pdbPath, moduleVersionId, projectRelativePath, out document);
+        }
+
+        private static bool DropsDocuments(HotReloadPdbDocumentIndex index, string dllPath)
+        {
+            return index.DropsDocuments(dllPath, Path.ChangeExtension(dllPath, ".pdb"), HotReloadAssemblyMvid.Read(dllPath));
         }
 
         // Copies the assembly's dll and PDB into a new temp directory and returns the dll's path.

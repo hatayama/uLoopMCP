@@ -239,7 +239,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 "unused.dll",
                 "unused.pdb",
                 "unused",
-                new HotReloadPdbDocumentIndex(Path.Combine(root, "PdbDocuments")));
+                new HotReloadPdbDocumentIndex(Path.Combine(root, "PdbDocuments")),
+                Array.Empty<HotReloadSnapshotPackageRoot>(),
+                StringComparison.Ordinal);
         }
 
         // Why a write time the test chooses: SetLastWriteTimeUtc stores microseconds while

@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading.Tasks;
 
 using UnityEditor;
 using UnityEngine;
@@ -16,13 +17,23 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         {
             Debug.Assert(isToolEnabled != null, "isToolEnabled must not be null.");
 
+            // Why first: the snapshot capture no longer touches the compilation assembly list, so
+            // the list's static constructor, which subscribes to compilationStarted, would otherwise
+            // run for whichever caller touches the list first, which need not be on the main thread.
+            HotReloadCompilationAssemblies.EnsureInitialized();
+            // Why at domain load: the rebuild then runs while the Editor finishes loading, so the
+            // first caller of the domain finds the list kept instead of asking Unity on the main thread.
+            // The warm-ups wait for it, and then skip what needs a list when none was kept.
+            Task compilationListReady = RefillCompilationListUnlessHotReloadIsDisabled(
+                isToolEnabled, HotReloadCompilationAssemblies.RefillInBackground);
+
             // Why not EditorApplication.delayCall: a cold-start session that hits Unity's native
             // "Scripts have compiler errors" dialog never flushes delayCall again for the rest of
             // that process's lifetime, even for later registrations — while
             // EditorApplication.update keeps ticking (see SetupWizardWindow.cs:56-70). The
-            // snapshot is captured at the end of the domain load; this tick retries only when that
-            // capture threw or Unity listed no compilation assembly yet, and the gate does nothing
-            // when it already succeeded.
+            // capture starts at the end of the domain load; this tick starts another only when that
+            // one failed, found no compiled assembly, or was cancelled, and the gate does nothing
+            // when it is still running or already succeeded.
             void CaptureOnFirstUpdateTick()
             {
                 EditorApplication.update -= CaptureOnFirstUpdateTick;
@@ -46,8 +57,10 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             void StartWarmUpOnFirstUpdateTick()
             {
                 EditorApplication.update -= StartWarmUpOnFirstUpdateTick;
-                StartWarmUpUnlessHotReloadIsDisabled(
-                    isToolEnabled, () => HotReloadCompositionRoot.Services.WarmUp.Start());
+                _ = StartWarmUpOnceTheCompilationListIsReady(
+                    compilationListReady,
+                    () => StartWarmUpUnlessHotReloadIsDisabled(
+                        isToolEnabled, () => HotReloadCompositionRoot.Services.WarmUp.Start()));
             }
 
             // The services are rebuilt here rather than on first use because the introduced type
@@ -63,13 +76,19 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             // null delegate as "nothing to lose".
             HotReloadRuntimeChangeCoordination.GetActiveRuntimeChangeCount =
                 () => HotReloadCompositionRoot.Services.Domain.CountActiveChanges().RuntimeChangeTotal;
+            // Why here, like the count above: get-compile-status reads it on every poll, which can
+            // come before anything in this assembly is touched.
+            HotReloadSnapshotCaptureCoordination.IsHoldingCompileCompletion =
+                () => HotReloadCompositionRoot.Services.SourceSnapshotCapture.IsHoldingCompileCompletion;
             // Why here, like the count above: the dynamic-code tool reads it after each server
             // reset, which can come before anything in this assembly is touched.
             string warmUpProjectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
             HotReloadSharedCompilerWarmUpReferenceSource warmUpReferences = new HotReloadSharedCompilerWarmUpReferenceSource(
                 warmUpProjectRoot,
                 HotReloadWarmUpTargetLedger.Read,
-                HotReloadCompilationAssemblies.FindByName);
+                HotReloadCompilationAssemblies.FindByName,
+                compilationListReady,
+                HotReloadCompilationAssemblies.IsKept);
             SharedCompilerWarmUpCoordination.CollectWarmUpReferencePaths = warmUpReferences.CollectAsync;
             // Why the same shape for these two: both run from Editor callbacks that take no
             // argument, so they have to read whichever services are installed when they fire.
@@ -93,17 +112,19 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         }
 
         /// <summary>
-        /// Captures the source snapshot of the current compile before this domain answers any uloop
-        /// command, so an edit made after the compile returned is never captured as compiled source.
+        /// Starts the source snapshot capture of the current compile before this domain answers any
+        /// uloop command, without waiting for it. The guarantee that an edit made after the compile
+        /// returned is never captured as compiled source comes from get-compile-status holding the
+        /// compile completion while the capture runs (up to 30 seconds).
         /// </summary>
-        internal static void CaptureSourceSnapshotBeforeServingCommands(Func<string, bool> isToolEnabled)
+        internal static void StartSourceSnapshotCaptureBeforeServingCommands(Func<string, bool> isToolEnabled)
         {
             CaptureAtStartupUnlessReadersAreDisabled(
                 HotReloadConstants.SourceSnapshotCaptureTriggerDomainLoad, isToolEnabled);
         }
 
         /// <summary>
-        /// Captures the source snapshot at a startup trigger unless both tools that read it are
+        /// Starts the source snapshot capture at a startup trigger unless both tools that read it are
         /// disabled in the tool settings.
         /// </summary>
         internal static void CaptureAtStartupUnlessReadersAreDisabled(string trigger, Func<string, bool> isToolEnabled)
@@ -128,7 +149,50 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 return;
             }
 
-            HotReloadCompositionRoot.Services.SourceSnapshotCapture.EnsureCaptured(trigger);
+            // Why the task is not awaited: the domain load must not wait for the capture, and the
+            // gate logs how it ended. A caller that needs the snapshot waits for it itself.
+            _ = HotReloadCompositionRoot.Services.SourceSnapshotCapture.StartIfNeeded(trigger);
+        }
+
+        /// <summary>
+        /// Starts rebuilding the compilation assembly list unless the hot-reload tool is disabled in
+        /// the tool settings. Only hot reload reads the list, so the pause-point tool does not count.
+        /// Completes with whether the rebuilt list was kept.
+        /// </summary>
+        internal static Task<bool> RefillCompilationListUnlessHotReloadIsDisabled(
+            Func<string, bool> isToolEnabled,
+            Func<Task<bool>> startRefill)
+        {
+            Debug.Assert(isToolEnabled != null, "isToolEnabled must not be null.");
+            Debug.Assert(startRefill != null, "startRefill must not be null.");
+
+            if (!isToolEnabled(UnityCliLoopConstants.TOOL_NAME_HOT_RELOAD))
+            {
+                VibeLogger.LogInfo(
+                    HotReloadConstants.VibeLogCompilationListReconstructed,
+                    "Hot reload did not rebuild the compilation assembly list.",
+                    new { filled = false, reason = HotReloadConstants.CompilationListReasonToolDisabled });
+                return Task.FromResult(false);
+            }
+
+            return startRefill();
+        }
+
+        /// <summary>
+        /// Starts the warm-up on the main thread once the domain's attempt to rebuild the compilation
+        /// assembly list has ended, kept or not, so the warm-up sees the list the rebuild kept
+        /// instead of asking Unity for it. Never faults.
+        /// </summary>
+        internal static async Task StartWarmUpOnceTheCompilationListIsReady(Task compilationListReady, Action startWarmUp)
+        {
+            Debug.Assert(compilationListReady != null, "compilationListReady must not be null.");
+            Debug.Assert(startWarmUp != null, "startWarmUp must not be null.");
+
+            // Why ConfigureAwait(false) and then a switch: a rebuild cancelled while it runs ends on a
+            // pool thread, and the warm-up reads Unity state when it starts.
+            await compilationListReady.ConfigureAwait(false);
+            await MainThreadSwitcher.SwitchToMainThread();
+            startWarmUp();
         }
 
         /// <summary>
