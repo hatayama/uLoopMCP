@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.15.2](https://github.com/hatayama/unity-cli-loop/compare/v3.15.1...v3.15.2) (2026-10-12)
+
+
+### Performance Improvements
+
+* Hot reload no longer holds the Editor's main thread after a compile to capture sources or to list assemblies ([#3293](https://github.com/hatayama/unity-cli-loop/issues/3293)) ([f3ed577](https://github.com/hatayama/unity-cli-loop/commit/f3ed577e99ffe2220831c3121d49d9890f31e763))
+
 ## [3.15.1](https://github.com/hatayama/unity-cli-loop/compare/v3.15.0...v3.15.1) (2026-10-11)
 
 
