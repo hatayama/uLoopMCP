@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.15.3](https://github.com/hatayama/unity-cli-loop/compare/v3.15.2...v3.15.3) (2026-10-12)
+
+
+### Bug Fixes
+
+* A compile re-run after a timeout warns that the result it returns predates later script edits ([#3295](https://github.com/hatayama/unity-cli-loop/issues/3295)) ([2ce77ac](https://github.com/hatayama/unity-cli-loop/commit/2ce77ac1caaaa68a3bbcfb81f1dc37fea62732dc))
+
 ## [3.15.2](https://github.com/hatayama/unity-cli-loop/compare/v3.15.1...v3.15.2) (2026-10-12)
 
 
