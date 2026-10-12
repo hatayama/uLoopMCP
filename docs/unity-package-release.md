@@ -33,8 +33,9 @@ after the tarball is signed. The decision and the alternatives it replaced are r
      release commit of the package version, and runs the protocol and pin checks at that
      commit. It names that commit when the release is due. When a release it needs is not
      published yet, the plan ends with a notice that names that release, and the publish
-     workflow of that release starts this workflow again. A failed check, a failed lookup, or
-     an unreadable manifest, config, or pin fails the run.
+     workflow of that release starts this workflow again. A failed check, a failed lookup, an
+     unreadable manifest, config, or pin, or an asset list that cannot be read or names nothing
+     fails the run, because none of them resolves by waiting.
 3. **`sign`** (environment `upm-signing`, `contents: read`) checks out the release commit, or
    the tag of a published release in a dry run, installs the pinned UPM CLI, runs `upm pack`,
    and runs `cmd/stage-signed-unity-package`. Staging rejects a tarball without

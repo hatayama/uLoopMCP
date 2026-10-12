@@ -126,8 +126,9 @@ func checkUnityPackageReleaseCommit(ctx context.Context, deps unityPackageReleas
 
 // dependencyReleaseIsReady says whether the release of the tag is published with every asset its
 // own generation requires. A release lookup that fails for another reason than "not published" is
-// returned as an error, because an outage must not read as "not published yet". An asset list that
-// cannot be read leaves the release not ready, and says why in the log.
+// returned as an error, because an outage must not read as "not published yet". So is an asset
+// list that cannot be read or names nothing: it comes from a script that waiting does not change,
+// and an empty list would pass a release without its assets.
 func dependencyReleaseIsReady(ctx context.Context, deps unityPackageReleaseReadinessDeps, input unityPackageReleaseReadinessInput, tag string, verifyScript string) (bool, error) {
 	release, published, err := lookupPublishedRelease(ctx, deps.runOutput, input.Repository, tag)
 	if err != nil || !published {
@@ -135,12 +136,10 @@ func dependencyReleaseIsReady(ctx context.Context, deps unityPackageReleaseReadi
 	}
 	assets, err := deps.requiredAssets(ctx, input.RepoRoot, verifyScript, tag)
 	if err != nil {
-		writeReadinessLine(deps.log, fmt.Sprintf("Cannot list the assets release %s requires: %v", tag, err))
-		return false, nil
+		return false, fmt.Errorf("%s --list for release %s failed: %w", verifyScript, tag, err)
 	}
 	if len(assets) == 0 {
-		writeReadinessLine(deps.log, fmt.Sprintf("%s --list named no asset for release %s.", verifyScript, tag))
-		return false, nil
+		return false, fmt.Errorf("%s --list named no asset for release %s", verifyScript, tag)
 	}
 	for _, asset := range assets {
 		if !release.hasNonEmptyAsset(asset) {

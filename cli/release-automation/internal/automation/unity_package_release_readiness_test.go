@@ -315,16 +315,6 @@ func TestCheckUnityPackageReleaseReadinessWaitsForDependencyReleases(t *testing.
 			waitTag: readinessTestRunnerTag,
 		},
 		{
-			name:    "runner asset list that cannot be read",
-			prepare: func(run *readinessTestRun) { delete(run.assetLists, "scripts/verify-native-cli-release-assets.sh") },
-			waitTag: readinessTestRunnerTag,
-		},
-		{
-			name:    "runner asset list that names no asset",
-			prepare: func(run *readinessTestRun) { run.assetLists["scripts/verify-native-cli-release-assets.sh"] = nil },
-			waitTag: readinessTestRunnerTag,
-		},
-		{
 			name:    "dispatcher release not published",
 			prepare: func(run *readinessTestRun) { delete(run.github.releases, readinessTestDispatcherTag) },
 			waitTag: readinessTestDispatcherTag,
@@ -334,11 +324,6 @@ func TestCheckUnityPackageReleaseReadinessWaitsForDependencyReleases(t *testing.
 			prepare: func(run *readinessTestRun) {
 				run.github.releases[readinessTestDispatcherTag] = fakeUnityPackageReleaseResponse{output: readinessTestReleaseJSON(readinessTestDispatcherTag, nil, "")}
 			},
-			waitTag: readinessTestDispatcherTag,
-		},
-		{
-			name:    "dispatcher asset list that cannot be read",
-			prepare: func(run *readinessTestRun) { delete(run.assetLists, "scripts/verify-dispatcher-release-assets.sh") },
 			waitTag: readinessTestDispatcherTag,
 		},
 	}
@@ -396,6 +381,43 @@ func TestCheckUnityPackageReleaseReadinessFailsWhenALookupFails(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+// Verifies an asset list of a published runner or dispatcher release that cannot be read, or that
+// names no asset, fails the check instead of making the release wait: the list comes from a script
+// that does not change by waiting, and an empty list would let a release without its assets through.
+func TestCheckUnityPackageReleaseReadinessFailsOnAnUnusableAssetList(t *testing.T) {
+	tests := []struct {
+		name         string
+		verifyScript string
+		assets       []string
+		listFails    bool
+	}{
+		{name: "runner list that cannot be read", verifyScript: projectRunnerReleaseAssetsScript, listFails: true},
+		{name: "runner list that names no asset", verifyScript: projectRunnerReleaseAssetsScript},
+		{name: "dispatcher list that cannot be read", verifyScript: dispatcherReleaseAssetsScript, listFails: true},
+		{name: "dispatcher list that names no asset", verifyScript: dispatcherReleaseAssetsScript},
+	}
+
+	repo := newReadinessTestRepo(t)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			run := newReadinessTestRun(t)
+			if test.listFails {
+				delete(run.assetLists, test.verifyScript)
+			} else {
+				run.assetLists[test.verifyScript] = test.assets
+			}
+
+			readiness, err := run.check(repo.root, readinessTestVersion)
+			if err == nil || !strings.Contains(err.Error(), test.verifyScript) {
+				t.Fatalf("readiness = %+v, err = %v; want a failure that names %s", readiness, err, test.verifyScript)
+			}
+			if len(run.protocolRefs) != 0 {
+				t.Fatalf("protocol refs = %v, want no release commit check", run.protocolRefs)
+			}
+		})
 	}
 }
 
