@@ -78,6 +78,7 @@ internal static class OrdinaryMethodQueue
             replacesCompiledMethod,
             hasBaseline,
             syntaxMethodKey,
+            methodDeclaration,
             methodSymbol,
             typeState,
             snapshotMethodMap,
@@ -121,11 +122,17 @@ internal static class OrdinaryMethodQueue
             semanticModel);
         if (decision.SkipReason != null)
         {
+            // Why every skip reason is replaced, hard skips included: a member with no body has
+            // nothing to patch, so a reason that blames the host type or asks for a compile misleads.
+            WorkerReason skipReason =
+                IsBodylessCompiledMethodWithoutBaseline(isAddedMethod, hasBaseline, methodDeclaration)
+                ? WorkerReason.Of(HotReloadWorkerReasonCode.MethodTransformBodylessNotCompared)
+                : decision.SkipReason;
             skipped.Add(new WorkerSkipped
             {
                 SourceProjectRelativePath = typeState.SourceUnit.Input.ProjectRelativePath,
                 Method = WorkerMethodKeys.FormatMethodLabel(methodSymbol),
-                Reason = decision.SkipReason
+                Reason = skipReason
             });
             if (isAddedMethod)
             {
@@ -219,6 +226,7 @@ internal static class OrdinaryMethodQueue
         bool replacesCompiledMethod,
         bool hasBaseline,
         string syntaxMethodKey,
+        MethodDeclarationSyntax methodDeclaration,
         IMethodSymbol methodSymbol,
         TypeEmitState typeState,
         Dictionary<string, MethodDeclarationSyntax> snapshotMethodMap,
@@ -245,7 +253,9 @@ internal static class OrdinaryMethodQueue
         {
             SourceProjectRelativePath = typeState.SourceUnit.Input.ProjectRelativePath,
             Method = WorkerMethodKeys.FormatMethodLabel(methodSymbol),
-            Reason = WorkerReason.Of(HotReloadWorkerReasonCode.AddedMethodInterfaceMember)
+            Reason = IsBodylessCompiledMethodWithoutBaseline(isAddedMethod, hasBaseline, methodDeclaration)
+                ? WorkerReason.Of(HotReloadWorkerReasonCode.MethodTransformBodylessNotCompared)
+                : WorkerReason.Of(HotReloadWorkerReasonCode.AddedMethodInterfaceMember)
         });
         if (isAddedMethod)
         {
@@ -258,6 +268,34 @@ internal static class OrdinaryMethodQueue
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// True when a compiled method without a body could not be compared with the compiled source:
+    /// there is nothing to patch, and an edit to its default values, attributes or parameter names
+    /// cannot be told apart from no edit.
+    /// </summary>
+    /// <remarks>
+    /// With a baseline the change is known, so the existing reasons stay. An added method needs a
+    /// compile whatever its body. An explicit interface implementation is never matched against the
+    /// compiled type, so it cannot be called compiled.
+    /// </remarks>
+    internal static bool IsBodylessCompiledMethodWithoutBaseline(
+        bool isAddedMethod,
+        bool hasBaseline,
+        MethodDeclarationSyntax methodDeclaration)
+    {
+        if (hasBaseline || isAddedMethod)
+        {
+            return false;
+        }
+
+        if (methodDeclaration.ExplicitInterfaceSpecifier != null)
+        {
+            return false;
+        }
+
+        return methodDeclaration.Body == null && methodDeclaration.ExpressionBody == null;
     }
 
     internal static MethodTransformDecision DecideOrdinaryMethodTransform(

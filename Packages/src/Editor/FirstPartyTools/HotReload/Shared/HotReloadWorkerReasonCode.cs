@@ -15,6 +15,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
     internal enum HotReloadWorkerReasonCode
     {
         MethodTransformNoBody,
+        MethodTransformBodylessNotCompared,
         MethodTransformBaseMemberCall,
         MethodTransformClosureInaccessibleAccess,
         MethodTransformAsyncIteratorInaccessibleAccess,

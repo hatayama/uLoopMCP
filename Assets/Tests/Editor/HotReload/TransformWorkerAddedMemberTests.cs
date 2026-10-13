@@ -2116,6 +2116,150 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         }
 
         /// <summary>
+        /// What: without a baseline, a compiled interface method that has no body is reported as
+        /// not compared, while a compiled default interface method keeps the interface reason.
+        /// </summary>
+        [Test]
+        public async Task NoBaseline_CompiledBodylessInterfaceMethod_SaysItWasNotCompared()
+        {
+            string onDisk = File.ReadAllText(ResolveHostPath());
+            TransformWorkerClientResult result = await RunWorkerOnSourceAsync(
+                WriteEdited("NoBaselineBodylessInterface.cs", onDisk),
+                HostProjectRelativePath,
+                snapshotSource: null);
+            Assert.That(result.Success, Is.True, result.ErrorMessage);
+            Assert.That(
+                FindSkipReasonCode(
+                    result,
+                    FormatHostLabel(typeof(IHotReloadAddedMemberPing), "Ping", new[] { "System.Int32" })),
+                Is.EqualTo(HotReloadWorkerReasonCode.MethodTransformBodylessNotCompared));
+            Assert.That(
+                FindSkipReasonCode(
+                    result,
+                    FormatHostLabel(typeof(IHotReloadAddedMemberDefault), "ExistingDefault", Array.Empty<string>())),
+                Is.EqualTo(HotReloadWorkerReasonCode.AddedMethodInterfaceMember));
+        }
+
+        /// <summary>
+        /// What: without a baseline, a bodyless method added to a compiled interface keeps the
+        /// interface reason because only a compile can add it.
+        /// </summary>
+        [Test]
+        public async Task NoBaseline_AddedBodylessInterfaceMethod_KeepsTheInterfaceReason()
+        {
+            string onDisk = File.ReadAllText(ResolveHostPath());
+            string edited = onDisk.Replace(
+                "        int Ping(int value);",
+                "        int Ping(int value);\n        int Extra(int value);",
+                StringComparison.Ordinal);
+            Assert.That(edited, Is.Not.EqualTo(onDisk));
+            TransformWorkerClientResult result = await RunWorkerOnSourceAsync(
+                WriteEdited("NoBaselineAddedBodylessInterface.cs", edited),
+                HostProjectRelativePath,
+                snapshotSource: null);
+            Assert.That(result.Success, Is.True, result.ErrorMessage);
+            Assert.That(
+                FindSkipReasonCode(
+                    result,
+                    FormatHostLabel(typeof(IHotReloadAddedMemberPing), "Extra", new[] { "System.Int32" })),
+                Is.EqualTo(HotReloadWorkerReasonCode.AddedMethodInterfaceMember));
+        }
+
+        /// <summary>
+        /// What: without a baseline, a compiled abstract method is reported as not compared, and
+        /// the concrete method on the same type is still queued for patching.
+        /// </summary>
+        [Test]
+        public async Task NoBaseline_CompiledAbstractMethod_SaysItWasNotCompared()
+        {
+            string onDisk = File.ReadAllText(ResolveHostPath());
+            TransformWorkerClientResult result = await RunWorkerOnSourceAsync(
+                WriteEdited("NoBaselineAbstract.cs", onDisk),
+                HostProjectRelativePath,
+                snapshotSource: null);
+            Assert.That(result.Success, Is.True, result.ErrorMessage);
+            Assert.That(
+                FindSkipReasonCode(
+                    result,
+                    FormatHostLabel(typeof(HotReloadAddedMemberAbstractHost), "Shape", new[] { "System.Int32" })),
+                Is.EqualTo(HotReloadWorkerReasonCode.MethodTransformBodylessNotCompared));
+            Assert.That(
+                FindEntryOnType(result, typeof(HotReloadAddedMemberAbstractHost), "AbstractHostConcrete"),
+                Is.Not.Null);
+        }
+
+        /// <summary>
+        /// What: without a baseline, a compiled extern method is reported as not compared, and
+        /// the concrete method on the same type is still queued for patching.
+        /// </summary>
+        [Test]
+        public async Task NoBaseline_CompiledExternMethod_SaysItWasNotCompared()
+        {
+            string onDisk = File.ReadAllText(ResolveHostPath());
+            TransformWorkerClientResult result = await RunWorkerOnSourceAsync(
+                WriteEdited("NoBaselineExtern.cs", onDisk),
+                HostProjectRelativePath,
+                snapshotSource: null);
+            Assert.That(result.Success, Is.True, result.ErrorMessage);
+            Assert.That(
+                FindSkipReasonCode(
+                    result,
+                    FormatHostLabel(typeof(HotReloadAddedMemberExternHost), "Missing", new[] { "System.Int32" })),
+                Is.EqualTo(HotReloadWorkerReasonCode.MethodTransformBodylessNotCompared));
+            Assert.That(
+                FindEntryOnType(result, typeof(HotReloadAddedMemberExternHost), "ExternHostConcrete"),
+                Is.Not.Null);
+        }
+
+        /// <summary>
+        /// What: without a baseline, a compiled bodyless method on a generic type is reported as
+        /// not compared instead of the generic hard-skip reason.
+        /// </summary>
+        [Test]
+        public async Task NoBaseline_CompiledAbstractMethodOnGenericType_SaysItWasNotCompared()
+        {
+            string onDisk = File.ReadAllText(ResolveHostPath());
+            TransformWorkerClientResult result = await RunWorkerOnSourceAsync(
+                WriteEdited("NoBaselineGenericAbstract.cs", onDisk),
+                HostProjectRelativePath,
+                snapshotSource: null);
+            Assert.That(result.Success, Is.True, result.ErrorMessage);
+            Assert.That(
+                FindSkipReasonCode(
+                    result,
+                    FormatHostLabel(
+                        typeof(HotReloadAddedMemberGenericAbstractHost<>),
+                        "GenericShape",
+                        new[] { "System.Int32" })),
+                Is.EqualTo(HotReloadWorkerReasonCode.MethodTransformBodylessNotCompared));
+        }
+
+        /// <summary>
+        /// What: with a baseline, a compiled bodyless interface method whose default value changed
+        /// keeps the interface reason because the change was detected.
+        /// </summary>
+        [Test]
+        public async Task WithBaseline_ChangedBodylessInterfaceMethod_KeepsTheInterfaceReason()
+        {
+            string onDisk = File.ReadAllText(ResolveHostPath());
+            string edited = onDisk.Replace(
+                "        int Ping(int value);",
+                "        int Ping(int value = 1);",
+                StringComparison.Ordinal);
+            Assert.That(edited, Is.Not.EqualTo(onDisk));
+            TransformWorkerClientResult result = await RunWorkerOnSourceAsync(
+                WriteEdited("WithBaselineChangedBodylessInterface.cs", edited),
+                HostProjectRelativePath,
+                snapshotSource: onDisk);
+            Assert.That(result.Success, Is.True, result.ErrorMessage);
+            Assert.That(
+                FindSkipReasonCode(
+                    result,
+                    FormatHostLabel(typeof(IHotReloadAddedMemberPing), "Ping", new[] { "System.Int32" })),
+                Is.EqualTo(HotReloadWorkerReasonCode.AddedMethodInterfaceMember));
+        }
+
+        /// <summary>
         /// What: baseline null does not report removed members even when the edited source drops
         /// a compiled method.
         /// </summary>
@@ -2509,6 +2653,49 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 "Expected skip for '" + methodNameFragment + "' with reason containing '"
                 + reasonFragment + "'. Skipped="
                 + FormatSkipped(result.Output.skipped));
+        }
+
+        private static string FormatHostLabel(Type type, string methodName, string[] parameterTypeFullNames)
+        {
+            return HotReloadMethodKeys.FormatMethodLabelParts(
+                new HotReloadMetadataTypeName(type.FullName),
+                methodName,
+                parameterTypeFullNames,
+                genericArity: 0);
+        }
+
+        private static HotReloadWorkerReasonCode? FindSkipReasonCode(
+            TransformWorkerClientResult result,
+            string exactLabel)
+        {
+            foreach (TransformWorkerSkippedDto skipped in result.Output.skipped)
+            {
+                if (skipped.method == exactLabel)
+                {
+                    return skipped.reason.code;
+                }
+            }
+
+            Assert.Fail(
+                "Expected skip with label '" + exactLabel + "'. Skipped="
+                + FormatSkipped(result.Output.skipped));
+            return null;
+        }
+
+        private static TransformWorkerEntryDto FindEntryOnType(
+            TransformWorkerClientResult result,
+            Type type,
+            string methodName)
+        {
+            foreach (TransformWorkerEntryDto entry in result.Output.entries)
+            {
+                if (entry.typeMetadataName == type.FullName && entry.methodName == methodName)
+                {
+                    return entry;
+                }
+            }
+
+            return null;
         }
 
         private static string FindSkipMethod(
