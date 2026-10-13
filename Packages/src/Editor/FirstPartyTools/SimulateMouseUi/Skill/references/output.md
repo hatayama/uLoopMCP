@@ -5,7 +5,9 @@ Returns JSON with:
 - `Success`: Whether the operation succeeded
 - `Message`: Status message (e.g. "Hit element: ButtonStart" or "No UI element under (x, y)")
 - `Action`: Echoes which action was executed (`Click`, `Drag`, `DragStart`, `DragMove`, `DragEnd`, or `LongPress`)
-- `HitGameObjectName`: Name of the GameObject that received the pointer events (nullable string; null if nothing was hit). It is the event-handler target resolved up the hierarchy from the raycast hit (the first `IPointerDownHandler`, else the first `IPointerClickHandler`, for `Click`/`LongPress`; the first `IDragHandler` for drags), so it can be an ancestor of the topmost raycast hit — a Button's child Text reports the Button. With `--bypass-raycast` it is the handler resolved the same way from `--target-path` (also possibly an ancestor), not the raycast hit and not necessarily the raw path GameObject itself
+- `HitGameObjectName`: Name of the GameObject that received the pointer events (nullable string; null if nothing was hit). It is the event-handler target resolved up the hierarchy from the raycast hit (the first `IPointerDownHandler`, else the first `IPointerClickHandler`, for `Click`/`LongPress`; the first `IDragHandler` for drags), so it can be an ancestor of the topmost raycast hit — a Button's child Text reports the Button. With `--bypass-raycast` it is the handler resolved the same way from `--target-path` (also possibly an ancestor), not the raycast hit and not necessarily the raw path GameObject itself. For a UI Toolkit hit it is the control's `name`, the same as the annotation's `Name`
+- `UiSystem`: Which UI system received the press (nullable string; `Click`/`LongPress` only, null if nothing was hit): `UGUI` for a target under a Canvas, `UIToolkit` for a UI Toolkit control, and `""` for a non-UI target such as a physics object
+- `HitPath`: Path of the hit target in the form `AnnotatedElements[].Path` uses (nullable string; `Click`/`LongPress` only): a hierarchy path for GameObjects, `Document/Path#element` for UI Toolkit controls
 - `PositionX`: Target X coordinate that was used
 - `PositionY`: Target Y coordinate that was used
 - `EndPositionX`: Drag end X coordinate (nullable float; populated for drag actions only)
@@ -18,4 +20,4 @@ Note: Click and LongPress on empty space (no UI element) still return `Success =
 
 ## UI Toolkit Elements
 
-`simulate-mouse-ui` drives the uGUI EventSystem raycast path, so it does not reach UI Toolkit controls (`AnnotatedElements` entries with `UiSystem` `UIToolkit`): a click at their `SimX`/`SimY` lands on the panel's own GameObject instead. `--target-path` does not accept their `Path` either. Click them with `simulate-mouse-input` instead, which works when the scene has an EventSystem with an Input System UI input module.
+`Click` and `LongPress` reach UI Toolkit controls at their annotated `SimX`/`SimY`. How presses are delivered and what is not supported: `ui-toolkit.md`.

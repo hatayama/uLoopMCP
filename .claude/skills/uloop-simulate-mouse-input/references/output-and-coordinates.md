@@ -30,7 +30,7 @@ Verify visual outcome with a follow-up screenshot.
 
 - `--x` / `--y` use **top-left Game View coordinates**.
 - Raw image pixels from `uloop screenshot --capture-mode rendering` must be converted with `ScreenshotToInputFormula`.
-- `AnnotatedElements[].SimX/SimY` can be passed directly to this tool. For UI Toolkit entries (`UiSystem` `UIToolkit`), a `Click` reaches the control only when the scene has an EventSystem with an Input System UI input module; without one, nothing receives the click.
+- `AnnotatedElements[].SimX/SimY` can be passed directly to this tool. For UI Toolkit entries (`UiSystem` `UIToolkit`), a `Click` reaches the control only when the scene has an EventSystem with an Input System UI input module; without one, nothing receives the click. `simulate-mouse-ui` reaches them without an EventSystem.
 - Do not flip Y in the caller. The tool converts internally for Unity Input System:
 
 ```text

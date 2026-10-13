@@ -158,7 +158,7 @@ When enabled, dynamic code execution runs with full Unity Editor process permiss
 ### 14. simulate-mouse-ui - Simulate Mouse Input on PlayMode UI
 Simulate mouse click, long-press, and drag on PlayMode UI elements. Uses EventSystem and ExecuteEvents to dispatch pointer events directly — works independently of both old and new Input System. For game logic that reads Input System (e.g. `Mouse.current.leftButton.wasPressedThisFrame`), use `simulate-mouse-input` instead.
 
-Supports 6 actions: Click, LongPress, Drag (one-shot), DragStart/DragMove/DragEnd (split drag).
+Supports 6 actions: Click, LongPress, Drag (one-shot), DragStart/DragMove/DragEnd (split drag). Click and LongPress also reach UI Toolkit controls at their annotated coordinates, without an EventSystem.
 
 ```text
 → screenshot (CaptureMode: rendering, AnnotateElements: true)
@@ -221,4 +221,4 @@ sh scripts/run-posix-e2e.sh --project-path /path/to/unity-project
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\run-windows-e2e.ps1
 ```
 
-`run-posix-e2e.sh` uses the built native CLI binary by default, passes an explicit `--project-path` to every `uloop` invocation, and runs CLI recovery/readiness, simulate-mouse UI coverage, and UI Toolkit screenshot annotation coverage in one sequence (skip the last with `--skip-uitoolkit-annotation`). To verify `replay-input` against a JSON created in the Recordings window, run `verify-replay-via-cli.sh` separately.
+`run-posix-e2e.sh` uses the built native CLI binary by default, passes an explicit `--project-path` to every `uloop` invocation, and runs CLI recovery/readiness, simulate-mouse UI coverage, and UI Toolkit screenshot annotation and click coverage in one sequence (skip the last with `--skip-uitoolkit-annotation`). To verify `replay-input` against a JSON created in the Recordings window, run `verify-replay-via-cli.sh` separately.

@@ -1,7 +1,7 @@
 ---
 name: uloop-simulate-mouse-ui
 toolName: simulate-mouse-ui
-description: "Simulate PlayMode EventSystem UI mouse actions using screen coordinates. Use for UI clicks, long-presses, or drags from annotated screenshots."
+description: "Simulate PlayMode UI mouse actions on uGUI and UI Toolkit using screen coordinates. Use for UI clicks, long-presses, or drags from annotated screenshots."
 ---
 
 # Task
@@ -64,7 +64,7 @@ uloop simulate-mouse-ui --action <action> --x <x> --y <y> [options]
 - Get coordinates from `AnnotatedElements` JSON (`SimX`/`SimY`) — do NOT look up GameObject positions
 - `--bypass-raycast` still uses coordinates for pointer event positions, but chooses the clicked, long-pressed, or dragged GameObject by `--target-path`
 - If `--target-path` or `--drop-target-path` matches multiple active GameObjects, the command fails instead of choosing an arbitrary duplicate
-- Not for UI Toolkit entries (`UiSystem` `UIToolkit`); see `references/output.md`.
+- UI Toolkit entries (`UiSystem` `UIToolkit`) can be clicked and long-pressed at `SimX`/`SimY`; `--bypass-raycast`, `--target-path`, and `--drop-target-path` take GameObjects only. Details: `references/ui-toolkit.md`.
 - Device Simulator play view is supported. Prefer `uloop screenshot --capture-mode rendering --annotate-elements` for coordinates; they use the simulated device resolution (`Handles.GetMainGameViewSize()` / `Screen`), not the Simulator chrome scale.
 
 ## Pause Point Inspection (Standard for E2E)
@@ -86,9 +86,6 @@ uloop simulate-mouse-ui --action Drag --from-x 400 --from-y 300 --x 600 --y 300 
 # Long-press a button for 3 seconds
 uloop simulate-mouse-ui --action LongPress --x 400 --y 300 --duration 3.0
 
-# One-shot drag (start to end in one call)
-uloop simulate-mouse-ui --action Drag --from-x 400 --from-y 300 --x 600 --y 300
-
 # Slow drag for visual inspection
 uloop simulate-mouse-ui --action Drag --from-x 400 --from-y 300 --x 600 --y 300 --drag-speed 200
 
@@ -102,14 +99,14 @@ uloop simulate-mouse-ui --action DragEnd --x 600 --y 300
 ## Prerequisites
 
 - Unity must be in **PlayMode**
-- Target scene must have an **EventSystem** GameObject
-- UI elements must have a **GraphicRaycaster** on their Canvas
+- uGUI targets need an **EventSystem** and a **GraphicRaycaster** on their Canvas; UI Toolkit targets need neither
 - If you need runtime mouse input rather than UI pointer events, `simulate-mouse-input` assumes the project uses the New Input System; otherwise prefer `execute-dynamic-code`
 
 ## Output
 
 The response reports `Success`, `Message`, `Action`, `HitGameObjectName`, the used
-coordinates, and `InterruptedByPausePoint`/`PausePointHits`. Two readings that matter:
+coordinates, and `InterruptedByPausePoint`/`PausePointHits`; `UiSystem` and `HitPath` say
+which UI system was hit and give its path in the annotation's form. Two readings that matter:
 `Click`/`LongPress` on empty space still return `Success = true` with
 `HitGameObjectName = null` (drag actions on empty space fail), and on a pause-point
 interruption `Message` states whether the pointer event fired before the pause.
