@@ -24,6 +24,18 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         // other row.
         public HotReloadFailureKinds FailureKinds { get; }
 
+        /// <summary>
+        /// True for a Skipped row of a compiled member without a body that could not be compared
+        /// with the compiled source. It has no body to apply, so it is not an unapplied edit: the
+        /// outcome, the all-skipped answer and the compile fallback all leave it out, and its
+        /// Reason asks for a compile only if the member's default values, attributes or parameter
+        /// names changed.
+        /// </summary>
+        public bool IsBodylessNotCompared =>
+            Kind == HotReloadMethodOutcomeKind.Skipped
+            && WorkerReason != null
+            && WorkerReason.Code == HotReloadWorkerReasonCode.MethodTransformBodylessNotCompared;
+
         private HotReloadMethodOutcome(
             HotReloadMethodOutcomeKind kind,
             string method,

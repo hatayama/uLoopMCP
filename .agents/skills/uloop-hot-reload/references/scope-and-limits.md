@@ -345,7 +345,15 @@ the baseline again is unpatched on that run — the compiled IL comes back,
 Without a baseline — for example before
 the first compile after installing or updating the package — every editable method in
 the file is patched and a `Warnings` line reports the fallback; run `uloop compile`
-to establish the baseline. Files the reload only re-applied as siblings share one
+to establish the baseline. A member of that file without a body (an interface,
+abstract, or extern method) that has no body in the compiled assembly either is
+`Skipped` with a reason saying it could not be compared: there is nothing to patch, but
+an edit to only its default values, attributes, or parameter names goes undetected, so
+compile only if you made one. Such a row does not make `--compile-on-skip` compile, does
+not count as a skipped edit in `Outcome` (a file holding nothing else is
+`NothingToApply`), and does not bring the all-skipped advice to compile. An edit that
+removes a compiled body keeps the ordinary `Skipped` reasons, because the compiled
+body runs until a compile. Files the reload only re-applied as siblings share one
 such line per reason, `N re-applied sibling file(s) ...: <files>`, instead of one
 line each. A file with a declaration that hot reload refused to introduce (its
 `Warnings` line says the type requires a compile) gets no such line, because that

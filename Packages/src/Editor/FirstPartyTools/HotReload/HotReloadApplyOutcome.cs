@@ -21,7 +21,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         NothingApplied = 2,
 
         // Nothing of the requested files is live, and none was Skipped: every method is
-        // unchanged, or the files hold no method bodies.
+        // unchanged, or the files hold no method bodies. A Skipped row for a bodyless member that
+        // could not be compared does not count as Skipped here: it has no body to apply.
         NothingToApply = 3,
 
         // A Failed row, siblings included: the same condition that turns Success false.
@@ -38,7 +39,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
     /// Why the sibling rows are left out: a sibling file is re-applied on the run's own initiative,
     /// so its rows say nothing about the edit the caller asked about (the same split the message
     /// uses through HotReloadRequestedFileOutcomeSummary). A Failed row counts wherever it is,
-    /// because Success already turns false for it.
+    /// because Success already turns false for it. A Skipped row for a bodyless member that could
+    /// not be compared is not a skipped edit, so a run whose other rows all applied is Applied.
     /// </remarks>
     internal static class HotReloadApplyOutcome
     {
@@ -129,7 +131,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             {
                 HotReloadMethodOutcome method = methods[index];
                 if (method.Kind == HotReloadMethodOutcomeKind.Skipped
-                    && !siblingFiles.Contains(method.FilePath))
+                    && !siblingFiles.Contains(method.FilePath)
+                    && !method.IsBodylessNotCompared)
                 {
                     return true;
                 }

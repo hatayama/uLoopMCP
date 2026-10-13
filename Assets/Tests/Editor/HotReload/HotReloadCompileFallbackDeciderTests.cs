@@ -100,6 +100,55 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         }
 
         /// <summary>
+        /// What: skipped rows for bodyless members that could not be compared leave nothing to
+        /// patch, so they alone do not count as an unapplied edit.
+        /// </summary>
+        [Test]
+        public void HasUnappliedEdit_SkippedRowsThatOnlyHaveNoBodyToPatch_AreNotUnappliedEdits()
+        {
+            HotReloadOrchestratorResult result = new HotReloadOrchestratorResult(
+                new List<HotReloadMethodOutcome>
+                {
+                    SkippedWithWorkerReason(
+                        "IA.Ping(System.Int32)",
+                        HotReloadWorkerReasonCode.MethodTransformBodylessNotCompared),
+                    SkippedWithWorkerReason(
+                        "B.Shape(System.Int32)",
+                        HotReloadWorkerReasonCode.MethodTransformBodylessNotCompared),
+                    HotReloadMethodOutcome.Patched("A.Foo()", "Assets/A.cs")
+                },
+                new List<string>(),
+                patchedTotal: 1,
+                activePatchTotal: 1);
+
+            Assert.That(HotReloadCompileFallbackDecider.HasUnappliedEdit(result, NoActivePatchSiblings()), Is.False);
+        }
+
+        /// <summary>
+        /// What: a skipped row with any other reason still counts as an unapplied edit when it sits
+        /// next to a bodyless row that could not be compared.
+        /// </summary>
+        [Test]
+        public void HasUnappliedEdit_ABodylessRowNextToAnotherSkippedRow_StillCounts()
+        {
+            HotReloadOrchestratorResult result = new HotReloadOrchestratorResult(
+                new List<HotReloadMethodOutcome>
+                {
+                    SkippedWithWorkerReason(
+                        "IA.Ping(System.Int32)",
+                        HotReloadWorkerReasonCode.MethodTransformBodylessNotCompared),
+                    SkippedWithWorkerReason(
+                        "A.Foo()",
+                        HotReloadWorkerReasonCode.MethodTransformBaseMemberCall)
+                },
+                new List<string>(),
+                patchedTotal: 0,
+                activePatchTotal: 0);
+
+            Assert.That(HotReloadCompileFallbackDecider.HasUnappliedEdit(result, NoActivePatchSiblings()), Is.True);
+        }
+
+        /// <summary>
         /// What: one failed method makes the run count as leaving an edit unapplied.
         /// </summary>
         [Test]
@@ -321,6 +370,12 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
 
             Assert.That(siblings.Contains(SiblingPath), Is.True);
             Assert.That(siblings.Contains(retriedSiblingPath), Is.False);
+        }
+
+        private static HotReloadMethodOutcome SkippedWithWorkerReason(string method, HotReloadWorkerReasonCode code)
+        {
+            return HotReloadMethodOutcome.Skipped(method, "reason", "Assets/A.cs")
+                .WithWorkerReason(HotReloadWorkerReasonFacts.From(new TransformWorkerReasonDto { code = code }));
         }
 
         private static HotReloadReappliedSiblingFiles NoActivePatchSiblings()

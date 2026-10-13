@@ -26,6 +26,13 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 HotReloadWorkerReasonCode.MethodTransformNoBody,
                 Plain("Methods without a body (abstract/extern) are skipped.", 0));
             templates.Add(
+                HotReloadWorkerReasonCode.MethodTransformBodylessNotCompared,
+                Plain(
+                    "Has no body, so there is nothing to patch. It could not be compared with the compiled source, "
+                    + "so a change to its default values, attributes or parameter names cannot be detected; "
+                    + "run 'uloop compile' only if you made one.",
+                    0));
+            templates.Add(
                 HotReloadWorkerReasonCode.MethodTransformBaseMemberCall,
                 Plain(
                     "Methods that call base. members are skipped; C# cannot express base calls outside the type.",

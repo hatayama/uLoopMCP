@@ -191,6 +191,12 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 NoArgs,
                 "Methods without a body (abstract/extern) are skipped.");
             yield return Case(
+                HotReloadWorkerReasonCode.MethodTransformBodylessNotCompared,
+                NoArgs,
+                "Has no body, so there is nothing to patch. It could not be compared with the compiled source, "
+                + "so a change to its default values, attributes or parameter names cannot be detected; "
+                + "run 'uloop compile' only if you made one.");
+            yield return Case(
                 HotReloadWorkerReasonCode.MethodTransformBaseMemberCall,
                 NoArgs,
                 "Methods that call base. members are skipped; C# cannot express base calls outside the type.");
