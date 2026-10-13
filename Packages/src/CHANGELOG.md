@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.15.4](https://github.com/hatayama/unity-cli-loop/compare/v3.15.3...v3.15.4) (2026-10-13)
+
+
+### Bug Fixes
+
+* Hot reload no longer compiles just because a file without a baseline declares interface, abstract, or extern methods ([#3299](https://github.com/hatayama/unity-cli-loop/issues/3299)) ([e8058b6](https://github.com/hatayama/unity-cli-loop/commit/e8058b6f6bd483cbc5df57cef87541d0f281262e))
+
+
+### Performance Improvements
+
+* The caller-note backfill also reads the next caller level's dlls, so the run after a cold run reads none ([#3298](https://github.com/hatayama/unity-cli-loop/issues/3298)) ([ab7d1af](https://github.com/hatayama/unity-cli-loop/commit/ab7d1afdc6eaa40078bb2df63964798b9f7d697e))
+
 ## [3.15.3](https://github.com/hatayama/unity-cli-loop/compare/v3.15.2...v3.15.3) (2026-10-12)
 
 
