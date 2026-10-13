@@ -12,12 +12,36 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         // Returns null for elements that are not annotated, including plain elements with a Clickable attached.
         internal static string? Classify(VisualElement element)
         {
-            if (element is Button || element is RepeatButton) return "Button";
-            if (element is BaseBoolField) return "Toggle";
-            if (element is Scroller) return "Scrollbar";
-            if (element is Slider || element is SliderInt || element is MinMaxSlider) return "Slider";
-            if (element is TextField) return "InputField";
-            if (element is DropdownField || element is EnumField) return "Dropdown";
+            if (element is Button || element is RepeatButton)
+            {
+                return "Button";
+            }
+
+            if (element is BaseBoolField)
+            {
+                return "Toggle";
+            }
+
+            if (element is Scroller)
+            {
+                return "Scrollbar";
+            }
+
+            if (element is Slider || element is SliderInt || element is MinMaxSlider)
+            {
+                return "Slider";
+            }
+
+            if (element is TextField)
+            {
+                return "InputField";
+            }
+
+            if (element is DropdownField || element is EnumField)
+            {
+                return "Dropdown";
+            }
+
             return null;
         }
     }

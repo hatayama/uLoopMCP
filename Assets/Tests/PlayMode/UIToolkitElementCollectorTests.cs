@@ -12,8 +12,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.PlayMode
 {
     /// <summary>
     /// Verifies which UI Toolkit controls the annotator collects from live runtime panels and where it places
-    /// them, in bottom-left screen pixels. Panels are built in code without a theme, so every element size is
-    /// set explicitly, and every object is destroyed in TearDown.
+    /// them, in bottom-left screen pixels. PanelSettings.Reset gives every panel the project's default theme, so
+    /// every element size is set explicitly to keep results independent of theme values. Every object is
+    /// destroyed in TearDown.
     /// </summary>
     public sealed class UIToolkitElementCollectorTests
     {
