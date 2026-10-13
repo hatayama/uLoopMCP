@@ -72,7 +72,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
             using (timing.MeasureDetail(HotReloadConstants.TimingDetailStepSnapshotGroupState))
             {
-                SnapshotGroupState(files);
+                HotReloadGroupStateSnapshot.Capture(_domain, _collaborators.PlayMode, files);
             }
 
             // Why here and not at the leave-out decision: the ledgers need the main thread, which
@@ -609,38 +609,6 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             ct.ThrowIfCancellationRequested();
             revertUnchangedPatches();
             return true;
-        }
-
-        private void SnapshotGroupState(IReadOnlyList<HotReloadGroupFile> files)
-        {
-            foreach (HotReloadGroupFile file in files)
-            {
-                // Why snapshot at the group's apply entry: runs process groups sequentially, and
-                // RevertUnchangedPatches / BeginFileGeneration mutate ledgers after the worker.
-                // The worker itself does not.
-                file.SnapshotLabels = HotReloadAppliedSourceLifecycle.CollectActiveLabelsForFile(
-                    _domain,
-                    file.ProjectRelativePath);
-                file.SnapshotAddedLabels = new HashSet<string>(
-                    _domain.ListActiveAddedMethodKeys(file.ProjectRelativePath),
-                    StringComparer.Ordinal);
-                file.SnapshotForwardedUnityMessageLabels = _collaborators.PlayMode.IsPlaying
-                    ? HotReloadDeactivatedUnityMessageNote.CollectForwardedLabels(
-                        _domain.DescribeAddedMembersOfFile(file.ProjectRelativePath))
-                    : new HashSet<string>(StringComparer.Ordinal);
-                // Why projectRelativePath (not workerSourcePath): contentPathOverride E2E copies
-                // live under Library/UloopHotReload/TestSources/ and are absent from the PDB
-                // document list. Assembly resolution already computed the on-disk path.
-                file.SnapshotSource = HotReloadSourceBaseline.LoadVerifiedSnapshotSource(
-                    file.ProjectRelativePath,
-                    file.TargetDllPath);
-                file.SnapshotMissReason = file.SnapshotSource == null
-                    ? HotReloadSourceBaseline.DescribeSnapshotMiss(
-                        file.ProjectRelativePath,
-                        file.TargetDllPath,
-                        file.NewSourceMembershipEvidence)
-                    : HotReloadSnapshotMissReason.None;
-            }
         }
     }
 }
