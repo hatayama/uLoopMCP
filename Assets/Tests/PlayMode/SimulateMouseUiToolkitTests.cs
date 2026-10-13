@@ -471,6 +471,26 @@ namespace io.github.hatayama.UnityCliLoop.Tests.PlayMode
         }
 
         /// <summary>
+        /// Verifies a click whose UI Toolkit press handler throws still releases the pointer, and the exception
+        /// ends the command instead of being swallowed.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator Click_WhenUIToolkitPressHandlerThrows_ReleasesAndPropagates()
+        {
+            yield return RunWithThrowingPressHandler(ClickParameters(GameViewCenter()));
+        }
+
+        /// <summary>
+        /// Verifies a long press whose UI Toolkit press handler throws still releases the pointer, and the
+        /// exception ends the command instead of being swallowed.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator LongPress_WhenUIToolkitPressHandlerThrows_ReleasesAndPropagates()
+        {
+            yield return RunWithThrowingPressHandler(LongPressParameters(GameViewCenter(), 0.2f));
+        }
+
+        /// <summary>
         /// Verifies cancelling a long press while it holds still releases the UI Toolkit press, so no element is
         /// left holding the pointer.
         /// </summary>
@@ -517,6 +537,28 @@ namespace io.github.hatayama.UnityCliLoop.Tests.PlayMode
 
             Assert.IsTrue(_lastResponse.Success, _lastResponse.Message);
             Assert.AreEqual("play", _lastResponse.HitGameObjectName);
+        }
+
+        private IEnumerator RunWithThrowingPressHandler(JObject parameters)
+        {
+            CreateEventSystem();
+            UIDocument document = CreateDocumentWithCenteredButton(0f, out ClickCounter _);
+            UIToolkitButton button = document.rootVisualElement.Q<UIToolkitButton>("play");
+            int pointerUps = 0;
+            button.RegisterCallback<PointerDownEvent>(
+                _ => throw new System.InvalidOperationException("press handler failed"),
+                TrickleDown.TrickleDown);
+            button.RegisterCallback<PointerUpEvent>(_ => pointerUps++, TrickleDown.TrickleDown);
+            yield return WaitForLayout();
+
+            Task<UnityCliLoopToolResponse> task = StartTool(parameters);
+            float timeoutAt = Time.realtimeSinceStartup + 5f;
+            yield return new WaitUntil(() => task.IsCompleted || Time.realtimeSinceStartup >= timeoutAt);
+
+            Assert.IsTrue(task.IsCompleted, "Tool execution timed out.");
+            Assert.IsTrue(task.IsFaulted, $"the handler's exception must end the command, got {task.Status}");
+            Assert.IsInstanceOf<System.InvalidOperationException>(task.Exception!.InnerException);
+            Assert.AreEqual(1, pointerUps, "the release must still be sent");
         }
 
         private ClickTracker _lastTracker = null!;

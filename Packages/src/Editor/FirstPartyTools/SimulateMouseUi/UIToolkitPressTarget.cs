@@ -23,10 +23,18 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
         public MouseUiHitReport Report { get; }
 
+        // UI Toolkit lets handler exceptions reach the sender, unlike uGUI's ExecuteEvents, so the release is
+        // sent even when the press throws, and the exception still reaches the caller.
         public void Click()
         {
-            _target.PressDown(_gameViewTopLeft, _button);
-            _target.Release(_gameViewTopLeft, _button);
+            try
+            {
+                _target.PressDown(_gameViewTopLeft, _button);
+            }
+            finally
+            {
+                _target.Release(_gameViewTopLeft, _button);
+            }
         }
 
         public void PressDown()

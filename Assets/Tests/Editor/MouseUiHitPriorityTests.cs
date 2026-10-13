@@ -21,7 +21,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
 
         /// <summary>
         /// Verifies equal sort priorities leave UI Toolkit in front, since the panel's render order priority is
-        /// nearly int.MaxValue; a fractional panel sorting order is rounded down first.
+        /// nearly int.MaxValue.
         /// </summary>
         [TestCase(10, 10f)]
         [TestCase(10, 10.5f)]
@@ -29,6 +29,17 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
         public void IsUguiInFront_WhenSortPrioritiesAreEqual_ReturnsFalse(int uguiSortOrderPriority, float panelSortingOrder)
         {
             Assert.That(MouseUiHitPriority.IsUguiInFront(uguiSortOrderPriority, panelSortingOrder), Is.False);
+        }
+
+        /// <summary>
+        /// Verifies a fractional panel sorting order is rounded down, as PanelRaycaster does, so a Canvas just
+        /// above the rounded value comes in front; truncating or rounding up or to nearest would not.
+        /// </summary>
+        [TestCase(0, -0.5f)]
+        [TestCase(10, 9.5f)]
+        public void IsUguiInFront_WhenPanelSortingOrderIsFractional_RoundsDown(int uguiSortOrderPriority, float panelSortingOrder)
+        {
+            Assert.That(MouseUiHitPriority.IsUguiInFront(uguiSortOrderPriority, panelSortingOrder), Is.True);
         }
 
         /// <summary>
