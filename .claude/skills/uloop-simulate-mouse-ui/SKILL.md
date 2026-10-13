@@ -64,7 +64,7 @@ uloop simulate-mouse-ui --action <action> --x <x> --y <y> [options]
 - Get coordinates from `AnnotatedElements` JSON (`SimX`/`SimY`) — do NOT look up GameObject positions
 - `--bypass-raycast` still uses coordinates for pointer event positions, but chooses the clicked, long-pressed, or dragged GameObject by `--target-path`
 - If `--target-path` or `--drop-target-path` matches multiple active GameObjects, the command fails instead of choosing an arbitrary duplicate
-- UI Toolkit entries (`UiSystem` `UIToolkit`) can be clicked and long-pressed at `SimX`/`SimY`; `--bypass-raycast`, `--target-path`, and `--drop-target-path` take GameObjects only. Details: `references/ui-toolkit.md`.
+- UI Toolkit entries (`UiSystem` `UIToolkit`) can be clicked, long-pressed, and dragged at `SimX`/`SimY`; `--bypass-raycast`, `--target-path`, and `--drop-target-path` take GameObjects only. Details: `references/ui-toolkit.md`.
 - Device Simulator play view is supported. Prefer `uloop screenshot --capture-mode rendering --annotate-elements` for coordinates; they use the simulated device resolution (`Handles.GetMainGameViewSize()` / `Screen`), not the Simulator chrome scale.
 
 ## Pause Point Inspection (Standard for E2E)
@@ -86,8 +86,8 @@ uloop simulate-mouse-ui --action Drag --from-x 400 --from-y 300 --x 600 --y 300 
 # Long-press a button for 3 seconds
 uloop simulate-mouse-ui --action LongPress --x 400 --y 300 --duration 3.0
 
-# Slow drag for visual inspection
-uloop simulate-mouse-ui --action Drag --from-x 400 --from-y 300 --x 600 --y 300 --drag-speed 200
+# One-shot drag (add --drag-speed 200 to slow it for visual inspection)
+uloop simulate-mouse-ui --action Drag --from-x 400 --from-y 300 --x 600 --y 300
 
 # Split drag with hold (for inspection between steps)
 uloop simulate-mouse-ui --action DragStart --x 400 --y 300
