@@ -38,5 +38,5 @@ func busyCancelHint(runningToolName string) string {
 	if !ClientDisconnectCancelsRunningTool(runningToolName) {
 		return ""
 	}
-	return " Run `uloop cancel` to stop it."
+	return " If it does not finish, run `uloop cancel` to stop it."
 }

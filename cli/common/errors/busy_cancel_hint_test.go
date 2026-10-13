@@ -8,7 +8,7 @@ import (
 	"github.com/hatayama/unity-cli-loop/common/unityipc"
 )
 
-const busyCancelHintText = "Run `uloop cancel` to stop it."
+const busyCancelHintText = "If it does not finish, run `uloop cancel` to stop it."
 
 func classifyBusyForCancelHint(t *testing.T, data string) CLIError {
 	t.Helper()
