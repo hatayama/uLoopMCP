@@ -17,7 +17,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
     {
         internal static async Task<SimulateMouseUiResponse> ExecuteClick(
             MouseUiSimulationCommand parameters,
-            EventSystem eventSystem,
+            EventSystem? eventSystem,
             MouseUiMainThreadCleanupScheduler cleanupScheduler,
             CancellationToken ct)
         {
@@ -86,7 +86,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
         internal static async Task<SimulateMouseUiResponse> ExecuteLongPress(
             MouseUiSimulationCommand parameters,
-            EventSystem eventSystem,
+            EventSystem? eventSystem,
             MouseUiMainThreadCleanupScheduler cleanupScheduler,
             CancellationToken ct)
         {
@@ -242,21 +242,13 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
         private static (IMouseUiPressTarget? Target, SimulateMouseUiResponse? Failure) ResolvePressTarget(
             MouseUiSimulationCommand parameters,
-            EventSystem eventSystem,
+            EventSystem? eventSystem,
             Vector2 inputPos,
             MouseAction action)
         {
             Vector2 screenPos = MouseUiCoordinateConverter.InputToScreen(inputPos);
-            PointerEventData pointerData = MouseUiPointerTargetResolver.CreatePointerPressData(eventSystem, screenPos, parameters.Button);
             MouseUiInputSystemSync.SyncMousePosition(screenPos);
-            ResolvedPointerTargets resolvedTargets =
-                MouseUiPointerTargetResolver.ResolvePressablePointerTargets(parameters, eventSystem, inputPos, screenPos, pointerData, action);
-            if (resolvedTargets.FailureResponse != null)
-            {
-                return (null, resolvedTargets.FailureResponse);
-            }
-
-            return (new UguiPressTarget(resolvedTargets, pointerData), null);
+            return MouseUiPressTargetResolver.Resolve(parameters, eventSystem, inputPos, screenPos, action);
         }
     }
 }

@@ -147,6 +147,52 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
         }
 
         /// <summary>
+        /// Verifies click and long-press results carry the hit's UI system and path, and name UI Toolkit hits as
+        /// such in the message.
+        /// </summary>
+        [Test]
+        public void CreatePressResults_WithUIToolkitHit_MapUiSystemAndPath()
+        {
+            MouseUiHitReport hit = new MouseUiHitReport("play", "Menu/Document#play", "UIToolkit");
+            Vector2 position = new(200f, 125f);
+
+            SimulateMouseUiResponse click = MouseUiSimulationResponseFactory.CreateClickResult(
+                CreateCommand(new SimulateMouseUiSchema { Action = UnityCliLoopMouseUiAction.Click }), position, hit);
+            SimulateMouseUiResponse longPress = MouseUiSimulationResponseFactory.CreateLongPressResult(
+                CreateCommand(new SimulateMouseUiSchema { Action = UnityCliLoopMouseUiAction.LongPress, Duration = 0.5f }), position, hit);
+
+            Assert.That(click.Message, Is.EqualTo("Clicked UI Toolkit element 'play' at (200.0, 125.0)"));
+            Assert.That(longPress.Message, Is.EqualTo("Long-pressed UI Toolkit element 'play' at (200.0, 125.0) for 0.5s"));
+            foreach (SimulateMouseUiResponse response in new[] { click, longPress })
+            {
+                Assert.That(response.HitGameObjectName, Is.EqualTo("play"));
+                Assert.That(response.UiSystem, Is.EqualTo("UIToolkit"));
+                Assert.That(response.HitPath, Is.EqualTo("Menu/Document#play"));
+            }
+        }
+
+        /// <summary>
+        /// Verifies a uGUI hit keeps its message and carries its UI system and path, and no hit leaves both null.
+        /// </summary>
+        [Test]
+        public void CreateClickResult_WithUguiHitOrNoHit_MapsUiSystemAndPath()
+        {
+            MouseUiSimulationCommand command = CreateCommand(new SimulateMouseUiSchema { Action = UnityCliLoopMouseUiAction.Click });
+            Vector2 position = new(10f, 20f);
+
+            SimulateMouseUiResponse ugui = MouseUiSimulationResponseFactory.CreateClickResult(
+                command, position, new MouseUiHitReport("Ok", "Canvas/Ok", "UGUI"));
+            SimulateMouseUiResponse none = MouseUiSimulationResponseFactory.CreateClickResult(
+                command, position, MouseUiHitReport.None);
+
+            Assert.That(ugui.Message, Is.EqualTo("Clicked 'Ok' at (10.0, 20.0)"));
+            Assert.That(ugui.UiSystem, Is.EqualTo("UGUI"));
+            Assert.That(ugui.HitPath, Is.EqualTo("Canvas/Ok"));
+            Assert.That(none.UiSystem, Is.Null);
+            Assert.That(none.HitPath, Is.Null);
+        }
+
+        /// <summary>
         /// Verifies one-shot drag results retain normal and bypass message contracts.
         /// </summary>
         [TestCase(false, "", "Dragged 'DragTarget' from (10.3, 20.8) to (30.5, 40.3) at 125 px/s")]
