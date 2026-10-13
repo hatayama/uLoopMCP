@@ -232,6 +232,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 Path = GameObjectPathUtility.GetFullPath(go),
                 Type = type,
                 Interaction = GetInteractionForType(type),
+                UiSystem = AnnotatedUiSystem.UGUI,
                 SimX = reachablePoint.x,
                 SimY = reachablePoint.y,
                 BoundsMinX = minX,
