@@ -10,15 +10,16 @@ Device Simulator is supported for this flow: prefer `--capture-mode rendering` (
 
 - `Label`: Index label in JSON (`A` = first in that sort, `B` = next, ...). Treat it as a stable handle, not as proof of what is actually in front: when overlapping elements cross parents, pick the target by `Path` and confirm the result with `simulate-mouse-ui`'s `HitGameObjectName` — the handler that received the events, resolved up the hierarchy from the raycast hit (or from `--target-path` in bypass mode), so it can name an ancestor of the element you clicked. Screenshot labels also include the interaction hint, such as `A / CLICK` or `B / DRAG`.
 - `Name`: Element name
-- `Path`: Hierarchy path from the scene root, for example `Canvas/Panel/Button`. Use this as `simulate-mouse-ui --target-path` when bypassing raycast blockers.
+- `Path`: Hierarchy path from the scene root, for example `Canvas/Panel/Button`. Use this as `simulate-mouse-ui --target-path` when bypassing raycast blockers. UI Toolkit entries use a different form that `--target-path` does not accept; see [UI Toolkit Elements](#ui-toolkit-elements).
 - `Type`: Element type (`Button`, `Toggle`, `Slider`, `Dropdown`, `InputField`, `Scrollbar`, `Draggable`, `DropTarget`, `Selectable`, `PhysicsCollider`)
 - `Interaction`: Derived interaction category (`Click`, `Drag`, `Drop`, `Text`) or `Raycast` for clustered physics collider entries. Use this to choose between `simulate-mouse-ui --action Click`, drag actions, or `simulate-mouse-input` (including `--dry-run`).
+- `UiSystem`: UI system the entry came from: `UGUI`, `UIToolkit`, or empty for `PhysicsCollider` entries.
 - `Layer`: Physics layer name for `PhysicsCollider` entries. Empty for UI entries.
 - `Components`: Collider and MonoBehaviour component type names from the hit GameObject for `PhysicsCollider` entries. Empty for UI entries.
 - `SimX`, `SimY`: Target click position in top-left Game View coordinates. For UI entries this is the element center when that center is raycast-reachable; otherwise it is a reachable probe point inside the bounds (center, then four interior quarter points). For `PhysicsCollider` entries this is a representative sampled hit. Use these directly with `simulate-mouse-ui --x/--y` or `simulate-mouse-input --x/--y` (`--dry-run` optional).
 - `BoundsMinX`, `BoundsMinY`, `BoundsMaxX`, `BoundsMaxY`: Bounding box in the same coordinates as `SimX/SimY`. For `PhysicsCollider` entries, this is the axis-aligned sampled-cell coverage box from reachable raycast hits, not a guarantee that every interior point is clickable.
-- `SortingOrder`: Canvas sorting order. Higher values are in front.
-- `SiblingIndex`: Transform sibling index under the element's direct parent. Do not use it as a reliable z-order signal across nested UI hierarchies; the frontmost-first sort above can then disagree with draw order.
+- `SortingOrder`: Canvas sorting order (for UI Toolkit, the panel's `PanelSettings.sortingOrder` rounded down). Higher values are in front.
+- `SiblingIndex`: Transform sibling index under the element's direct parent (for UI Toolkit, the index in the parent visual element). Do not use it as a reliable z-order signal across nested UI hierarchies; the frontmost-first sort above can then disagree with draw order.
 
 ## Exclusion rules (by design)
 
@@ -28,6 +29,33 @@ The annotator lists elements that share the same EventSystem raycast path as `si
 - Elements on a World Space or Camera Space Canvas whose camera cannot be resolved from `worldCamera`, the root canvas, or `Camera.main` have no screen coordinates, so they are not listed.
 - Elements whose center and four interior quarter probe points are all covered by another raycast hit are not listed.
 - Selectables that are not interactable (`interactable = false`, or a parent `CanvasGroup` with `interactable = false`) ignore clicks and drags, so they are not listed. A separate pointer handler script on the same GameObject is still listed as that handler.
+
+## UI Toolkit Elements
+
+Entries with `UiSystem` `UIToolkit` come from the `UIDocument`s on screen-space panels shown in the Game View. They use the same fields and top-left Game View coordinates as uGUI entries.
+
+- `Type`: `Button` (`Button`, `RepeatButton`), `Toggle` (`Toggle` and other boolean fields), `Slider` (`Slider`, `SliderInt`, `MinMaxSlider`), `Scrollbar` (`Scroller`, including the scrollers of a `ScrollView`), `InputField` (`TextField`), `Dropdown` (`DropdownField`, `EnumField`). `Interaction` follows from `Type` as for uGUI.
+- `Path`: `<UIDocument GameObject path>#<element chain>`, for example `UI/Menu#panel/play`. The chain starts below the document root and joins element names with `/`; an element without a name appears as its type name.
+
+Omitted on purpose:
+
+- Disabled elements, `visibility: hidden`, `display: none` (with everything under it), and zero-size elements.
+- Elements covered at the center and every interior quarter probe point by a panel with a higher sorting order or by another element of the same panel, including parts clipped away by a parent with `overflow: hidden`.
+- Panels that render into a RenderTexture, panels on a display other than the Game View's, world-space panels (Unity 6), and panels whose screen-to-panel mapping is not a plain scale and offset.
+- Parts inside a control (the slider and buttons of a `Scroller`, for example) and any element that is not one of the types above. A custom element with only a `Clickable` manipulator is not listed.
+
+Limits:
+
+- When uGUI and UI Toolkit overlap, which one is in front is not checked; both may be listed.
+- Panels with the same sorting order are not checked against each other.
+- `Bounds` is the whole element rectangle and can include parts clipped away by a parent.
+- Unity 2022.3 with both Device Simulator and Game View open lays UI Toolkit panels out at the Game View size and stretches them onto the simulated screen. Bounds and `SimX`/`SimY` then match where clicks land but not the PNG, and `set-game-view-size` cannot change the hidden Game View while Simulator is shown. Closing the Game View while using Simulator makes them match.
+
+Clicking:
+
+- `simulate-mouse-input --action Click --x <SimX> --y <SimY>` reaches UI Toolkit controls when the scene has an EventSystem with an Input System UI input module.
+- Without an EventSystem the click does not reach UI Toolkit controls.
+- `simulate-mouse-ui` does not reach UI Toolkit controls, and its `--target-path` does not accept UI Toolkit `Path` values.
 
 ### PhysicsCollider Entries Per Closed Region
 

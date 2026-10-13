@@ -15,3 +15,7 @@ Returns JSON with:
 Verify the visual outcome with a follow-up `uloop screenshot --capture-mode rendering --annotate-elements`.
 
 Note: Click and LongPress on empty space (no UI element) still return `Success = true` with `HitGameObjectName = null`. Drag actions on empty space return `Success = false`.
+
+## UI Toolkit Elements
+
+`simulate-mouse-ui` drives the uGUI EventSystem raycast path, so it does not reach UI Toolkit controls (`AnnotatedElements` entries with `UiSystem` `UIToolkit`): a click at their `SimX`/`SimY` lands on the panel's own GameObject instead. `--target-path` does not accept their `Path` either. Click them with `simulate-mouse-input` instead, which works when the scene has an EventSystem with an Input System UI input module.

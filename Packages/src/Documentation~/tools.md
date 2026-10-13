@@ -221,4 +221,4 @@ sh scripts/run-posix-e2e.sh --project-path /path/to/unity-project
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\run-windows-e2e.ps1
 ```
 
-`run-posix-e2e.sh` uses the built native CLI binary by default, passes an explicit `--project-path` to every `uloop` invocation, and runs CLI recovery/readiness and simulate-mouse UI coverage in one sequence. To verify `replay-input` against a JSON created in the Recordings window, run `verify-replay-via-cli.sh` separately.
+`run-posix-e2e.sh` uses the built native CLI binary by default, passes an explicit `--project-path` to every `uloop` invocation, and runs CLI recovery/readiness, simulate-mouse UI coverage, and UI Toolkit screenshot annotation coverage in one sequence (skip the last with `--skip-uitoolkit-annotation`). To verify `replay-input` against a JSON created in the Recordings window, run `verify-replay-via-cli.sh` separately.
