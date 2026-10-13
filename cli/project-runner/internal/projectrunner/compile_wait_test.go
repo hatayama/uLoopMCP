@@ -945,6 +945,66 @@ func TestWaitForCompileCompletionReturnsLastStatusOnTimeout(t *testing.T) {
 	}
 }
 
+// Verifies a wait whose timeout has already passed still asks Unity once and returns that status.
+func TestWaitForCompileCompletionQueriesOnceWhenTimeoutAlreadyPassed(t *testing.T) {
+	connection := compileWaitTestConnection(t)
+	queries := 0
+	deps := compileWaitTestDeps(func(context.Context, unityipc.Connection, string) (compileStatusResponse, error) {
+		queries++
+		return compileStatusResponse{Ready: false, IsCompiling: true}, nil
+	})
+
+	_, completed, lastStatus, err := waitForCompileCompletionWithDeps(context.Background(), compileCompletionOptions{
+		connection:   connection,
+		requestID:    "compile_expired_wait",
+		timeout:      time.Nanosecond,
+		pollInterval: 5 * time.Millisecond,
+	}, deps)
+	if err != nil {
+		t.Fatalf("waitForCompileCompletion failed: %v", err)
+	}
+	if completed {
+		t.Fatal("expected timeout")
+	}
+	if queries != 1 {
+		t.Fatalf("expected exactly one status query, got %d", queries)
+	}
+	if lastStatus == nil || !lastStatus.IsCompiling {
+		t.Fatalf("expected the observed compiling status, got %#v", lastStatus)
+	}
+}
+
+// Verifies a wait whose timeout has already passed returns the result when its one query finds the compile done.
+func TestWaitForCompileCompletionReturnsResultWhenTimeoutAlreadyPassed(t *testing.T) {
+	connection := compileWaitTestConnection(t)
+	deps := compileWaitTestDeps(func(context.Context, unityipc.Connection, string) (compileStatusResponse, error) {
+		return compileStatusResponse{
+			Ready:     true,
+			HasResult: true,
+			Result:    json.RawMessage(`{"Success":true}`),
+		}, nil
+	})
+
+	result, completed, lastStatus, err := waitForCompileCompletionWithDeps(context.Background(), compileCompletionOptions{
+		connection:   connection,
+		requestID:    "compile_expired_wait_done",
+		timeout:      time.Nanosecond,
+		pollInterval: 5 * time.Millisecond,
+	}, deps)
+	if err != nil {
+		t.Fatalf("waitForCompileCompletion failed: %v", err)
+	}
+	if !completed {
+		t.Fatal("expected the completed result instead of a timeout")
+	}
+	if string(result) != `{"Success":true}` {
+		t.Fatalf("result mismatch: %s", string(result))
+	}
+	if lastStatus != nil {
+		t.Fatalf("completed wait should not return a last status: %#v", lastStatus)
+	}
+}
+
 // assertCompileWaitTimeoutEnvelopeDetails checks the run/attach wiring that passes
 // lastStatus and WaitedMs into the COMPILE_WAIT_TIMEOUT stderr envelope.
 func assertCompileWaitTimeoutEnvelopeDetails(t *testing.T, stderr []byte, wantCompiling bool) {
