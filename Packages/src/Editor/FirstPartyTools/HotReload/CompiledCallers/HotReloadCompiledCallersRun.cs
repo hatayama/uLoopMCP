@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 using UnityEngine;
 
@@ -15,16 +17,24 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
     public sealed class HotReloadCompiledCallersRun : IDisposable
     {
         private readonly IDisposable _hold;
+        private readonly Func<IDisposable> _holdEntries;
         private readonly HotReloadCallSiteBackfill _backfill;
         private IReadOnlyList<string> _refusedDllPaths = Array.Empty<string>();
+        private string _projectRoot;
+        private IReadOnlyList<HotReloadOneShotCallerNoteRequest> _requests;
         private bool _notesBuilt;
         private bool _ended;
 
-        internal HotReloadCompiledCallersRun(IDisposable hold, HotReloadCallSiteBackfill backfill)
+        internal HotReloadCompiledCallersRun(
+            IDisposable hold,
+            Func<IDisposable> holdEntries,
+            HotReloadCallSiteBackfill backfill)
         {
             Debug.Assert(hold != null, "hold must not be null.");
+            Debug.Assert(holdEntries != null, "holdEntries must not be null.");
             Debug.Assert(backfill != null, "backfill must not be null.");
             _hold = hold;
+            _holdEntries = holdEntries;
             _backfill = backfill;
         }
 
@@ -45,6 +55,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             Debug.Assert(!string.IsNullOrEmpty(correlationId), "correlationId must not be null or empty.");
             Debug.Assert(!_notesBuilt, "one budget per run: notes are built once.");
             _notesBuilt = true;
+            _projectRoot = projectRoot;
+            _requests = requests;
 
             // Why one budget per run rather than per scan: the direct scan and every level of the
             // caller closure go through the same lambda, so one budget bounds the whole note step
@@ -84,10 +96,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             // Why the hold ends here, before the backfill starts: its reads belong to no run, so they
             // must evict as reads outside a run do rather than pile up under this run's hold.
             _hold.Dispose();
-            _backfill.Start(
-                _refusedDllPaths,
-                ct => System.Threading.Tasks.Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>()),
-                correlationId);
+            _backfill.Start(_refusedDllPaths, FindRefusedAgainAsync, correlationId);
         }
 
         /// <summary>
@@ -104,6 +113,33 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         {
             Debug.Assert(dllPaths != null, "dllPaths must not be null.");
             _refusedDllPaths = dllPaths;
+        }
+
+        // Recomputes this run's notes without reading any dll and returns the dlls that recompute
+        // refuses: the ones the next run would refuse once the backfill read the earlier ones.
+        private async Task<IReadOnlyList<string>> FindRefusedAgainAsync(CancellationToken ct)
+        {
+            // A run that built no notes has nothing to recompute; that is a valid run, not a misuse.
+            if (_requests == null)
+            {
+                return Array.Empty<string>();
+            }
+
+            // Why the main thread: the scan resolves compiled assemblies through Editor APIs.
+            await MainThreadSwitcher.SwitchToMainThread(ct);
+            // Why a hold only around the recompute: it keeps the dlls it scans from being evicted
+            // mid-scan, and is released before the backfill reads, which belong to no run.
+            using (IDisposable hold = _holdEntries())
+            {
+                // Why a zero budget: the recompute only collects the dlls not read yet; the backfill
+                // reads them off the main thread. Its notes are discarded, and it logs no budget
+                // exhaustion because no run's note was omitted.
+                HotReloadCallSiteLoadBudget budget = new HotReloadCallSiteLoadBudget(0);
+                HotReloadOneShotCallerNoteEnricher.BuildNotes(
+                    _requests,
+                    (ignoredAssemblyName, identities) => HotReloadCallSiteScanner.FindCallSites(_projectRoot, identities, budget));
+                return budget.RefusedDllPaths;
+            }
         }
 
         private static void LogLoadBudgetExhausted(
