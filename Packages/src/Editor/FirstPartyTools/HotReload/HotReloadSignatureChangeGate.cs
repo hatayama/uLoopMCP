@@ -42,7 +42,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                     context.WorkerOutput.unchangedMethods ?? Array.Empty<TransformWorkerUnchangedMethodDto>(),
                     context.WorkerOutput.skipped ?? Array.Empty<TransformWorkerSkippedDto>(),
                     removedSignatures);
-            List<HotReloadCallSiteHit> hits = collaborators.CompiledCallers.FindCallSites(context.ProjectRoot, targets);
+            List<HotReloadCallSiteHit> hits = context.CompiledCallersRun.FindCallSites(context.ProjectRoot, targets);
             Dictionary<string, List<HotReloadQualifiedMethodIdentity>> uncoveredCallersByTarget =
                 CollectInitialUncoveredCallers(context.AssemblyName, entries, hits, deletedCallerExemptions);
 

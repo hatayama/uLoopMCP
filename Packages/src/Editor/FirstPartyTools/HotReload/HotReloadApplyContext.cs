@@ -28,7 +28,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             TransformWorkerOutputDto workerOutput,
             IReadOnlyList<HotReloadGroupFile> files,
             HotReloadPreparedIntroducedTypes preparedIntroducedTypes,
-            HotReloadCompileFailureNoteSources compileFailureNoteSources)
+            HotReloadCompileFailureNoteSources compileFailureNoteSources,
+            HotReloadCompiledCallersRun compiledCallersRun)
         {
             Debug.Assert(!string.IsNullOrEmpty(projectRoot), "projectRoot must not be empty.");
             Debug.Assert(!string.IsNullOrEmpty(assemblyName), "assemblyName must not be empty.");
@@ -39,6 +40,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             Debug.Assert(workerOutput != null, "workerOutput must not be null.");
             Debug.Assert(files != null && files.Count > 0, "A group must hold a file.");
             Debug.Assert(compileFailureNoteSources != null, "compileFailureNoteSources must not be null.");
+            Debug.Assert(compiledCallersRun != null, "compiledCallersRun must not be null.");
 
             ProjectRoot = projectRoot;
             AssemblyName = assemblyName;
@@ -51,6 +53,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             Files = files;
             PreparedIntroducedTypes = preparedIntroducedTypes;
             CompileFailureNoteSources = compileFailureNoteSources;
+            CompiledCallersRun = compiledCallersRun;
 
             List<(string ProjectRelativePath, string AssemblyResolvePath)> filePaths =
                 new List<(string ProjectRelativePath, string AssemblyResolvePath)>(files.Count);
@@ -100,6 +103,10 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
         // What a shim compile failure of this group can be explained with.
         internal HotReloadCompileFailureNoteSources CompileFailureNoteSources { get; }
+
+        // The compiled-caller analysis of the run this group belongs to; caller scans go through it
+        // so they read only while the run keeps the cached assemblies alive.
+        internal HotReloadCompiledCallersRun CompiledCallersRun { get; }
 
         // The edited files of this group, in the order they were sent to the worker.
         internal IReadOnlyList<HotReloadGroupFile> Files { get; }

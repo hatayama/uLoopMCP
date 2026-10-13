@@ -3710,7 +3710,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 workerOutput,
                 new[] { file },
                 null,
-                new HotReloadCompileFailureNoteSources(workerOutput.skipped, Array.Empty<HotReloadRefusedIntroducedType>()));
+                new HotReloadCompileFailureNoteSources(workerOutput.skipped, Array.Empty<HotReloadRefusedIntroducedType>()),
+                HotReloadCompiledCallersTestRuns.OpenIsolated());
         }
 
         private static HotReloadOrchestratorResult ToOrchestratorResult(

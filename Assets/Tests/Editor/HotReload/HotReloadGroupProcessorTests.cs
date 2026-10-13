@@ -639,11 +639,16 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                         collaborators, context, compileResult, entriesToPatch),
                     collaborators.EntryApplier.ApplyPreparedEntries)))
             {
-                results = await HotReloadCompositionRoot.Services.GroupProcessor.ProcessGroupAsync(
-                    new[] { file },
-                    "worker-failure-test",
-                    new HotReloadRunTiming(),
-                    CancellationToken.None);
+                using (HotReloadCompiledCallersRun compiledCallersRun =
+                    await HotReloadCompositionRoot.Services.CompiledCallers.BeginRunAsync())
+                {
+                    results = await HotReloadCompositionRoot.Services.GroupProcessor.ProcessGroupAsync(
+                        new[] { file },
+                        compiledCallersRun,
+                        "worker-failure-test",
+                        new HotReloadRunTiming(),
+                        CancellationToken.None);
+                }
             }
 
             Assert.That(results, Has.Count.EqualTo(1));
@@ -749,13 +754,18 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             {
                 try
                 {
-                    total.Start();
-                    await HotReloadCompositionRoot.Services.GroupProcessor.ProcessGroupAsync(
-                        new[] { stubs.GroupFile },
-                        "phase-timing-test",
-                        timing,
-                        CancellationToken.None);
-                    total.Stop();
+                    using (HotReloadCompiledCallersRun compiledCallersRun =
+                        await HotReloadCompositionRoot.Services.CompiledCallers.BeginRunAsync())
+                    {
+                        total.Start();
+                        await HotReloadCompositionRoot.Services.GroupProcessor.ProcessGroupAsync(
+                            new[] { stubs.GroupFile },
+                            compiledCallersRun,
+                            "phase-timing-test",
+                            timing,
+                            CancellationToken.None);
+                        total.Stop();
+                    }
                 }
                 catch (OperationCanceledException exception)
                 {
@@ -1821,7 +1831,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 workerOutput,
                 new[] { callerFile, targetFile },
                 null,
-                new HotReloadCompileFailureNoteSources(workerOutput.skipped, Array.Empty<HotReloadRefusedIntroducedType>()));
+                new HotReloadCompileFailureNoteSources(workerOutput.skipped, Array.Empty<HotReloadRefusedIntroducedType>()),
+                HotReloadCompiledCallersTestRuns.OpenIsolated());
         }
 
         private static HotReloadApplyContext CreateEmptyEntriesContext(
@@ -1848,7 +1859,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 emptyWorkerOutput,
                 context.Files,
                 null,
-                new HotReloadCompileFailureNoteSources(emptyWorkerOutput.skipped, Array.Empty<HotReloadRefusedIntroducedType>()));
+                new HotReloadCompileFailureNoteSources(emptyWorkerOutput.skipped, Array.Empty<HotReloadRefusedIntroducedType>()),
+                context.CompiledCallersRun);
         }
 
         private static Assembly FindCompilationAssembly()

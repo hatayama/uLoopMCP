@@ -48,11 +48,13 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
         internal async Task<IReadOnlyList<HotReloadFileProcessResult>> ProcessGroupAsync(
             IReadOnlyList<HotReloadGroupFile> files,
+            HotReloadCompiledCallersRun compiledCallersRun,
             string correlationId,
             HotReloadRunTiming timing,
             CancellationToken ct)
         {
             Debug.Assert(files != null && files.Count > 0, "A group must hold a file.");
+            Debug.Assert(compiledCallersRun != null, "compiledCallersRun must not be null.");
             Debug.Assert(timing != null, "timing must not be null.");
 
             HotReloadGroupFile firstFile = files[0];
@@ -72,7 +74,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
             using (timing.MeasureDetail(HotReloadConstants.TimingDetailStepSnapshotGroupState))
             {
-                SnapshotGroupState(files);
+                HotReloadGroupStateSnapshot.Capture(_domain, _collaborators.PlayMode, files);
             }
 
             // Why here and not at the leave-out decision: the ledgers need the main thread, which
@@ -159,7 +161,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
             if (preparation.Prepared == null)
             {
-                return await TransformAndApplyGroupAsync(files, workerInput, null, refusedTypes, activePaths, correlationId, timing, ct)
+                return await TransformAndApplyGroupAsync(files, workerInput, null, refusedTypes, activePaths, compiledCallersRun, correlationId, timing, ct)
                     .ConfigureAwait(false);
             }
 
@@ -169,6 +171,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 preparation.Prepared,
                 refusedTypes,
                 activePaths,
+                compiledCallersRun,
                 correlationId,
                 timing,
                 ct).ConfigureAwait(false);
@@ -194,6 +197,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             HotReloadPreparedIntroducedTypes prepared,
             IReadOnlyList<HotReloadRefusedIntroducedType> refusedTypes,
             HashSet<string> activePaths,
+            HotReloadCompiledCallersRun compiledCallersRun,
             string correlationId,
             HotReloadRunTiming timing,
             CancellationToken ct)
@@ -227,6 +231,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                         prepared,
                         refusedTypes,
                         activePaths,
+                        compiledCallersRun,
                         correlationId,
                         timing,
                         ct).ConfigureAwait(false);
@@ -255,6 +260,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             HotReloadPreparedIntroducedTypes prepared,
             IReadOnlyList<HotReloadRefusedIntroducedType> refusedTypes,
             HashSet<string> activePaths,
+            HotReloadCompiledCallersRun compiledCallersRun,
             string correlationId,
             HotReloadRunTiming timing,
             CancellationToken ct)
@@ -281,7 +287,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
             if (leftOutPaths.Count == 0)
             {
-                return await ApplyTransformedGroupAsync(files, workerInput, workerOutput, prepared, refusedTypes, correlationId, timing, ct)
+                return await ApplyTransformedGroupAsync(files, workerInput, workerOutput, prepared, refusedTypes, compiledCallersRun, correlationId, timing, ct)
                     .ConfigureAwait(false);
             }
 
@@ -306,6 +312,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                     retryResult.Output,
                     prepared,
                     refusedTypes,
+                    compiledCallersRun,
                     correlationId,
                     timing,
                     ct).ConfigureAwait(false)
@@ -366,6 +373,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             TransformWorkerOutputDto workerOutput,
             HotReloadPreparedIntroducedTypes prepared,
             IReadOnlyList<HotReloadRefusedIntroducedType> refusedTypes,
+            HotReloadCompiledCallersRun compiledCallersRun,
             string correlationId,
             HotReloadRunTiming timing,
             CancellationToken ct)
@@ -424,7 +432,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                     workerOutput,
                     files,
                     prepared,
-                    new HotReloadCompileFailureNoteSources(workerOutput.skipped, refusedTypes));
+                    new HotReloadCompileFailureNoteSources(workerOutput.skipped, refusedTypes),
+                    compiledCallersRun);
             }
 
             Stopwatch gateWatch = Stopwatch.StartNew();
@@ -609,38 +618,6 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             ct.ThrowIfCancellationRequested();
             revertUnchangedPatches();
             return true;
-        }
-
-        private void SnapshotGroupState(IReadOnlyList<HotReloadGroupFile> files)
-        {
-            foreach (HotReloadGroupFile file in files)
-            {
-                // Why snapshot at the group's apply entry: runs process groups sequentially, and
-                // RevertUnchangedPatches / BeginFileGeneration mutate ledgers after the worker.
-                // The worker itself does not.
-                file.SnapshotLabels = HotReloadAppliedSourceLifecycle.CollectActiveLabelsForFile(
-                    _domain,
-                    file.ProjectRelativePath);
-                file.SnapshotAddedLabels = new HashSet<string>(
-                    _domain.ListActiveAddedMethodKeys(file.ProjectRelativePath),
-                    StringComparer.Ordinal);
-                file.SnapshotForwardedUnityMessageLabels = _collaborators.PlayMode.IsPlaying
-                    ? HotReloadDeactivatedUnityMessageNote.CollectForwardedLabels(
-                        _domain.DescribeAddedMembersOfFile(file.ProjectRelativePath))
-                    : new HashSet<string>(StringComparer.Ordinal);
-                // Why projectRelativePath (not workerSourcePath): contentPathOverride E2E copies
-                // live under Library/UloopHotReload/TestSources/ and are absent from the PDB
-                // document list. Assembly resolution already computed the on-disk path.
-                file.SnapshotSource = HotReloadSourceBaseline.LoadVerifiedSnapshotSource(
-                    file.ProjectRelativePath,
-                    file.TargetDllPath);
-                file.SnapshotMissReason = file.SnapshotSource == null
-                    ? HotReloadSourceBaseline.DescribeSnapshotMiss(
-                        file.ProjectRelativePath,
-                        file.TargetDllPath,
-                        file.NewSourceMembershipEvidence)
-                    : HotReloadSnapshotMissReason.None;
-            }
         }
     }
 }

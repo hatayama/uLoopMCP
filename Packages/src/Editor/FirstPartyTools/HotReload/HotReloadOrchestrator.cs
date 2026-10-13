@@ -206,7 +206,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                         contentPathOverrideByFile,
                         isLastChangedGroup,
                         extraResults,
-                        run)
+                        run,
+                        compiledCallersRun)
                     .ConfigureAwait(false);
             }
 
@@ -322,7 +323,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             IReadOnlyDictionary<string, string> contentPathOverrideByFile,
             bool isLastGroupOfAssembly,
             List<(string Path, HotReloadFileProcessResult Result)> extraResults,
-            HotReloadRunAccumulator run)
+            HotReloadRunAccumulator run,
+            HotReloadCompiledCallersRun compiledCallersRun)
         {
             Debug.Assert(inputIndexes != null && inputIndexes.Count > 0, "A group must hold a file.");
             List<HotReloadGroupFile> filesOfGroup = new List<HotReloadGroupFile>(inputIndexes.Count);
@@ -351,7 +353,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             // ProcessGroupAsync switches back via MainThreadSwitcher (EditorApplication.update
             // queue) before any main-thread-only editor API or Harmony patch.
             IReadOnlyList<HotReloadFileProcessResult> groupResults =
-                await _groupProcessor.ProcessGroupAsync(filesOfGroup, correlationId, timing, ct)
+                await _groupProcessor.ProcessGroupAsync(filesOfGroup, compiledCallersRun, correlationId, timing, ct)
                     .ConfigureAwait(false);
             Debug.Assert(
                 groupResults.Count == filesOfGroup.Count,

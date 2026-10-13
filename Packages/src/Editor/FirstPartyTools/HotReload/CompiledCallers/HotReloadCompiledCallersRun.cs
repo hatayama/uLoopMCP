@@ -24,6 +24,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         private IReadOnlyList<HotReloadOneShotCallerNoteRequest> _requests;
         private bool _notesBuilt;
         private bool _ended;
+        private bool _disposed;
 
         internal HotReloadCompiledCallersRun(
             IDisposable hold,
@@ -36,6 +37,18 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             _hold = hold;
             _holdEntries = holdEntries;
             _backfill = backfill;
+        }
+
+        /// <summary>
+        /// Finds the compiled call and ldftn sites that reference any of <paramref name="targets"/>,
+        /// reading every compiled assembly it needs. Call before the run ends: the assemblies it
+        /// reads stay cached only while the run is open, so another thread cannot evict and
+        /// dispose one this is still reading.
+        /// </summary>
+        public List<HotReloadCallSiteHit> FindCallSites(string projectRoot, HotReloadCompiledMethodIdentity[] targets)
+        {
+            Debug.Assert(!_ended && !_disposed, "FindCallSites is called only while the run is open.");
+            return HotReloadCallSiteScanner.FindCallSites(projectRoot, targets).Hits;
         }
 
         /// <summary>
@@ -105,6 +118,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         /// </summary>
         public void Dispose()
         {
+            _disposed = true;
             _hold.Dispose();
         }
 
