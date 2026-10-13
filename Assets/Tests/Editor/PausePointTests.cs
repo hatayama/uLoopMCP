@@ -13,6 +13,7 @@ using UnityEngine.TestTools;
 
 using io.github.hatayama.UnityCliLoop.Application;
 using io.github.hatayama.UnityCliLoop.CompositionRoot;
+using io.github.hatayama.UnityCliLoop.Domain;
 using io.github.hatayama.UnityCliLoop.FirstPartyTools;
 using io.github.hatayama.UnityCliLoop.Infrastructure;
 using io.github.hatayama.UnityCliLoop.Runtime;
@@ -1190,6 +1191,63 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
 
             Assert.That(_pauseController.IsPaused, Is.False);
             Assert.That(_pauseController.ResumeCount, Is.EqualTo(1));
+        }
+
+        /// <summary>
+        /// Verifies uloop cancel that stops a running tool also releases a pause point's Editor
+        /// pause on the next main-thread apply, as a client disconnect does.
+        /// </summary>
+        [Test]
+        public void CancelRunningToolBridgeCommand_WhenToolIsCancelled_ShouldResumePauseOnMainThreadApply()
+        {
+            UloopPausePointRegistry.Enable("jump", 30);
+            UloopPausePoint.Pause("jump");
+            ToolExecutionSession session = new ToolExecutionSession();
+            ToolExecutionLease lease = session.TryEnter("run-tests").Lease;
+
+            CancelRunningToolResponse response = CancelRunningToolBridgeCommand.Execute(CreateRegistrarService(session));
+            Assert.That(_pauseController.ResumeCount, Is.EqualTo(0));
+            UloopPausePointRegistry.ApplyPendingClientDisconnectResume();
+
+            Assert.That(response.Outcome, Is.EqualTo("Cancelled"));
+            Assert.That(response.Success, Is.True);
+            Assert.That(_pauseController.IsPaused, Is.False);
+            Assert.That(_pauseController.ResumeCount, Is.EqualTo(1));
+
+            lease.Dispose();
+        }
+
+        /// <summary>
+        /// Verifies uloop cancel that cannot stop the running tool leaves the pause point's Editor
+        /// pause alone and reports the refusal as a failure.
+        /// </summary>
+        [Test]
+        public void CancelRunningToolBridgeCommand_WhenToolIsNotCancellable_ShouldKeepPauseAndReportFailure()
+        {
+            UloopPausePointRegistry.Enable("jump", 30);
+            UloopPausePoint.Pause("jump");
+            ToolExecutionSession session = new ToolExecutionSession();
+            ToolExecutionLease lease = session.TryEnter("compile", cancellableByUser: false).Lease;
+
+            CancelRunningToolResponse response = CancelRunningToolBridgeCommand.Execute(CreateRegistrarService(session));
+            UloopPausePointRegistry.ApplyPendingClientDisconnectResume();
+
+            Assert.That(response.Outcome, Is.EqualTo("NotCancellable"));
+            Assert.That(response.RunningToolName, Is.EqualTo("compile"));
+            Assert.That(response.Success, Is.False);
+            Assert.That(_pauseController.IsPaused, Is.True);
+            Assert.That(_pauseController.ResumeCount, Is.EqualTo(0));
+
+            lease.Dispose();
+        }
+
+        private static UnityCliLoopToolRegistrarService CreateRegistrarService(ToolExecutionSession session)
+        {
+            return new UnityCliLoopToolRegistrarService(
+                new EmptyInternalToolNameProvider(),
+                new AlwaysEnabledToolSettingsPort(),
+                new UnityCliLoopToolExecutionService(new NoOpEditorRuntimeStatePort(), session),
+                () => Array.Empty<IUnityCliLoopTool>());
         }
 
         [Test]

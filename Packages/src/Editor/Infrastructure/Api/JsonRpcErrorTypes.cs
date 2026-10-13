@@ -9,5 +9,6 @@ namespace io.github.hatayama.UnityCliLoop.Infrastructure
         public const string InternalError = "internal_error";
         public const string CliUpdateRequired = "cli_update_required";
         public const string ServerBusy = "server_busy";
+        public const string ToolCancelled = "tool_cancelled";
     }
 }

@@ -143,6 +143,9 @@ namespace io.github.hatayama.UnityCliLoop.Infrastructure
                         request.ClientProtocolVersion);
                 }
 
+                // Why computed for every request: the same policy decides whether uloop cancel may stop
+                // the request, and that holds whether or not the CLI asked for a dispatch ack.
+                bool cancellableByUser = ShouldCancelAcceptedRequestOnClientDisconnect(request);
                 if (request.AcceptsDispatchAck && earlyResponseWriter != null)
                 {
                     int heartbeatIntervalSeconds = request.AcceptsHeartbeat
@@ -155,14 +158,18 @@ namespace io.github.hatayama.UnityCliLoop.Infrastructure
                         : null;
                     await earlyResponseWriter(
                         JsonRpcResponseFactory.CreateDispatchAcceptedResponse(request.Id, heartbeatIntervalSeconds),
-                        ShouldCancelAcceptedRequestOnClientDisconnect(request),
+                        cancellableByUser,
                         createHeartbeatJson);
                 }
 
                 Stopwatch requestStopwatch = Stopwatch.StartNew();
 
                 Stopwatch executeMethodStopwatch = Stopwatch.StartNew();
-                UnityCliLoopToolResponse result = await ExecuteMethod(request.Method, request.Params, ct);
+                UnityCliLoopToolResponse result = await ExecuteMethod(
+                    request.Method,
+                    request.Params,
+                    ct,
+                    cancellableByUser);
                 executeMethodStopwatch.Stop();
 
                 JsonRpcResponseFactory.AppendTimingIfRequested(
@@ -194,7 +201,8 @@ namespace io.github.hatayama.UnityCliLoop.Infrastructure
 
         private static void LogRpcExceptionIfNeeded(Exception ex)
         {
-            if (ex is UnityCliLoopToolBusyException)
+            // Why not log these: busy and uloop cancel are expected outcomes the CLI reports itself.
+            if (ex is UnityCliLoopToolBusyException || ex is UnityCliLoopToolCancelledException)
             {
                 return;
             }
@@ -239,9 +247,10 @@ namespace io.github.hatayama.UnityCliLoop.Infrastructure
         private async Task<UnityCliLoopToolResponse> ExecuteMethod(
             string method,
             JToken paramsToken,
-            CancellationToken ct)
+            CancellationToken ct,
+            bool cancellableByUser)
         {
-            return await _executionRouter.ExecuteAsync(method, paramsToken, ct);
+            return await _executionRouter.ExecuteAsync(method, paramsToken, ct, cancellableByUser);
         }
     }
 }

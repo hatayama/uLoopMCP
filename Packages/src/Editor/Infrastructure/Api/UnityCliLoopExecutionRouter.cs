@@ -14,6 +14,8 @@ namespace io.github.hatayama.UnityCliLoop.Infrastructure
     /// <summary>
     /// Routes JSON-RPC execution requests received by JsonRpcRequestProcessor to either the
     /// internal bridge command router or the registered tools in the Application layer.
+    /// get-editor-status and cancel-running-tool are answered here, off the main thread and outside
+    /// the activity hold, because they must answer while a tool blocks the Editor main thread.
     /// Terminology for "tool" vs "internal bridge command" is defined in docs/glossary.md.
     /// </summary>
     internal sealed class UnityCliLoopExecutionRouter
@@ -39,11 +41,13 @@ namespace io.github.hatayama.UnityCliLoop.Infrastructure
         /// </summary>
         /// <param name="methodName">JSON-RPC method name</param>
         /// <param name="paramsToken">Parameters</param>
+        /// <param name="cancellableByUser">Whether uloop cancel may stop the tool this request runs</param>
         /// <returns>Execution result</returns>
         public async Task<UnityCliLoopToolResponse> ExecuteAsync(
             string methodName,
             JToken paramsToken,
-            CancellationToken ct)
+            CancellationToken ct,
+            bool cancellableByUser = true)
         {
             if (methodName == UnityCliLoopConstants.COMMAND_NAME_GET_EDITOR_STATUS)
             {
@@ -59,13 +63,21 @@ namespace io.github.hatayama.UnityCliLoop.Infrastructure
                     EditorMainThreadLivenessTracker.SecondsSinceLastMainThreadTick());
             }
 
+            if (methodName == UnityCliLoopConstants.COMMAND_NAME_CANCEL_RUNNING_TOOL)
+            {
+                // Why before the main-thread switch below: uloop cancel exists for the tool that
+                // blocks the main thread, so it must answer without waiting for it.
+                ct.ThrowIfCancellationRequested();
+                return CancelRunningToolBridgeCommand.Execute(_toolRegistrarService);
+            }
+
             // Why hold an activity for the length of the request: macOS throttles an Editor that is not
             // frontmost, and a request that arrives while it is throttled is served several times slower.
-            // Why not around the status answer above: that path must stay free of anything that can block
-            // or fail, because it answers while the main thread is stuck.
+            // Why not around the status and cancel answers above: those paths must stay free of anything
+            // that can block or fail, because they answer while the main thread is stuck.
             using (_executionActivity.Hold())
             {
-                return await ExecuteCommandOrToolAsync(methodName, paramsToken, ct);
+                return await ExecuteCommandOrToolAsync(methodName, paramsToken, ct, cancellableByUser);
             }
         }
 
@@ -75,7 +87,8 @@ namespace io.github.hatayama.UnityCliLoop.Infrastructure
         private async Task<UnityCliLoopToolResponse> ExecuteCommandOrToolAsync(
             string methodName,
             JToken paramsToken,
-            CancellationToken ct)
+            CancellationToken ct,
+            bool cancellableByUser)
         {
             UnityCliLoopToolResponse response;
             if (InternalBridgeCommandRouter.IsInternalCommand(methodName))
@@ -86,10 +99,11 @@ namespace io.github.hatayama.UnityCliLoop.Infrastructure
                 return response;
             }
 
-            response = await _toolRegistrarService.ExecuteToolAsync(
+            response = await _toolRegistrarService.ExecuteRequestedToolAsync(
                 methodName,
                 paramsToken,
-                ct);
+                ct,
+                cancellableByUser);
             return response;
         }
     }
