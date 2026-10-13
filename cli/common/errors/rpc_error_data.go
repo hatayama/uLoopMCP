@@ -28,6 +28,20 @@ type cliUpdateRequiredErrorData struct {
 	RetryableAfterUpdate    bool   `json:"retryableAfterUpdate"`
 }
 
+// Mirrors Packages/src/Editor/Infrastructure/Api/ToolCancelledErrorData.cs public properties.
+type toolCancelledErrorData struct {
+	Type            string `json:"type"`
+	Message         string `json:"message"`
+	RunningToolName string `json:"runningToolName"`
+}
+
+func decodeToolCancelledErrorData(data json.RawMessage) toolCancelledErrorData {
+	var decoded toolCancelledErrorData
+	// Why ignore: keep the previous missing-key = zero-value fallback.
+	_ = json.Unmarshal(data, &decoded)
+	return decoded
+}
+
 func decodeServerBusyErrorData(data json.RawMessage) serverBusyErrorData {
 	var decoded serverBusyErrorData
 	// Why ignore: keep the previous missing-key = zero-value fallback. A type mismatch

@@ -22,6 +22,7 @@ const (
 	errorCodeUnityEditorUnresponsive         = "UNITY_EDITOR_UNRESPONSIVE"
 	errorCodeUnityRPCError                   = "UNITY_RPC_ERROR"
 	errorCodeUnityServerBusy                 = "UNITY_SERVER_BUSY"
+	errorCodeToolCancelled                   = "TOOL_CANCELLED"
 	ErrorCodeCLIUpdateRequired               = "CLI_UPDATE_REQUIRED"
 	ErrorCodeV2ProjectDetected               = "V2_PROJECT_DETECTED"
 	ErrorCodeToolDisabled                    = "TOOL_DISABLED"

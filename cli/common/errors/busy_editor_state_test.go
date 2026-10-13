@@ -92,7 +92,7 @@ func TestUnityServerBusyEditorActivitySummary_CopiesKnownFields(t *testing.T) {
 const (
 	expectedPausedBusyStalledAction = "Unity is paused in Play Mode. A running command that waits for a frame or a physics step cannot finish until play resumes, so this busy state does not clear on its own."
 	expectedPausedBusyStatusAction  = "Run `uloop pause-point-status` (it answers while Unity is busy) to see whether a pause-point hit is holding the pause."
-	expectedPausedBusyStopAction    = "Stop the uloop process that is running the command (Ctrl-C in its terminal, otherwise interrupt or kill that process). Its request is cancelled and returns no result, the Editor pause is released, and the next command can run."
+	expectedPausedBusyStopAction    = "Run `uloop cancel` (it answers while Unity is busy): the running command is cancelled and the Editor pause is released."
 	expectedPausedBusyResumeAction  = "Release the pause in the Editor (Edit > Play Mode > Pause). Frames resume, so the running command finishes and returns its result."
 )
 
@@ -138,8 +138,8 @@ func TestUnityServerBusyNextActions_WhenPausedOutsidePlayMode_OmitsPauseRecovery
 	}
 }
 
-// Verifies a running tool the Editor keeps alive across a client disconnect drops the
-// stop-the-process step, because stopping it would not release the Editor pause.
+// Verifies a running tool the Editor keeps alive across a client disconnect and uloop cancel
+// drops the cancel step, because cancelling would neither stop it nor release the Editor pause.
 func TestUnityServerBusyNextActions_WhenPausedWhileRunningDisconnectSurvivingTool_OmitsStopStep(t *testing.T) {
 	isPlaying := true
 	isPaused := true
@@ -149,7 +149,7 @@ func TestUnityServerBusyNextActions_WhenPausedWhileRunningDisconnectSurvivingToo
 		actions := unityServerBusyNextActions(data)
 		for _, action := range actions {
 			if action == expectedPausedBusyStopAction {
-				t.Fatalf("%s must not promise recovery by stopping the process: %#v", runningToolName, actions)
+				t.Fatalf("%s must not promise recovery through uloop cancel: %#v", runningToolName, actions)
 			}
 		}
 		if actions[2] != expectedPausedBusyResumeAction {
