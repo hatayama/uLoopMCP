@@ -718,6 +718,140 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             Assert.That(snapshot.IsBusy, Is.False);
         }
 
+        /// <summary>
+        /// Verifies cancelling with nothing in the slot reports NothingRunning without a running tool.
+        /// </summary>
+        [Test]
+        public void CancelRunning_WhenIdle_ReportsNothingRunning()
+        {
+            ToolExecutionSession session = new ToolExecutionSession();
+
+            ToolCancelRequestResult result = session.CancelRunning();
+
+            Assert.That(result.Outcome, Is.EqualTo(ToolCancelRequestOutcome.NothingRunning));
+            Assert.That(result.RunningToolName, Is.Null);
+            Assert.That(result.RunningToolElapsedSeconds, Is.Null);
+        }
+
+        /// <summary>
+        /// Verifies cancelling a cancellable holder fires its execution token, marks it as cancelled
+        /// by the user, and reports the running tool with its elapsed seconds.
+        /// </summary>
+        [Test]
+        public void CancelRunning_WhenCancellableLeaseRuns_FiresExecutionTokenAndReportsCancelled()
+        {
+            long timestamp = 0;
+            ToolExecutionSession session = new ToolExecutionSession(() => timestamp);
+            ToolExecutionLease lease = session.TryEnter("run-tests").Lease;
+            timestamp += 3 * Stopwatch.Frequency;
+
+            ToolCancelRequestResult result = session.CancelRunning();
+
+            Assert.That(result.Outcome, Is.EqualTo(ToolCancelRequestOutcome.Cancelled));
+            Assert.That(result.RunningToolName, Is.EqualTo("run-tests"));
+            Assert.That(result.RunningToolElapsedSeconds, Is.EqualTo(3));
+            Assert.That(lease.ExecutionToken.IsCancellationRequested, Is.True);
+            Assert.That(lease.WasCancelledByUser, Is.True);
+
+            lease.Dispose();
+        }
+
+        /// <summary>
+        /// Verifies a holder whose request must not be cancelled is left running: the outcome is
+        /// NotCancellable and its execution token does not fire.
+        /// </summary>
+        [Test]
+        public void CancelRunning_WhenOnlyNonCancellableLease_DoesNotCancel()
+        {
+            ToolExecutionSession session = new ToolExecutionSession();
+            ToolExecutionLease lease = session.TryEnter("compile", cancellableByUser: false).Lease;
+
+            ToolCancelRequestResult result = session.CancelRunning();
+
+            Assert.That(result.Outcome, Is.EqualTo(ToolCancelRequestOutcome.NotCancellable));
+            Assert.That(result.RunningToolName, Is.EqualTo("compile"));
+            Assert.That(result.RunningToolElapsedSeconds, Is.Not.Null);
+            Assert.That(lease.ExecutionToken.IsCancellationRequested, Is.False);
+            Assert.That(lease.WasCancelledByUser, Is.False);
+
+            lease.Dispose();
+        }
+
+        /// <summary>
+        /// Verifies cancelling a shared execute-dynamic-code slot fires every lease that holds it.
+        /// </summary>
+        [Test]
+        public void CancelRunning_WithTwoSharedLeases_CancelsBoth()
+        {
+            ToolExecutionSession session = new ToolExecutionSession();
+            ToolExecutionLease firstLease = session.TryEnter(UnityCliLoopConstants.TOOL_NAME_EXECUTE_DYNAMIC_CODE).Lease;
+            ToolExecutionLease secondLease = session.TryEnter(UnityCliLoopConstants.TOOL_NAME_EXECUTE_DYNAMIC_CODE).Lease;
+
+            ToolCancelRequestResult result = session.CancelRunning();
+
+            Assert.That(result.Outcome, Is.EqualTo(ToolCancelRequestOutcome.Cancelled));
+            Assert.That(firstLease.ExecutionToken.IsCancellationRequested, Is.True);
+            Assert.That(secondLease.ExecutionToken.IsCancellationRequested, Is.True);
+
+            firstLease.Dispose();
+            secondLease.Dispose();
+        }
+
+        /// <summary>
+        /// Verifies a lease's execution token also fires when only its request token is cancelled,
+        /// without marking it as cancelled by the user.
+        /// </summary>
+        [Test]
+        public void ExecutionToken_WhenRequestTokenIsCancelled_FiresWithoutUserCancellation()
+        {
+            ToolExecutionSession session = new ToolExecutionSession();
+            using CancellationTokenSource requestCancellation = new CancellationTokenSource();
+            ToolExecutionLease lease = session.TryEnter("run-tests", requestCancellation.Token).Lease;
+
+            requestCancellation.Cancel();
+
+            Assert.That(lease.ExecutionToken.IsCancellationRequested, Is.True);
+            Assert.That(lease.WasCancelledByUser, Is.False);
+
+            lease.Dispose();
+        }
+
+        /// <summary>
+        /// Verifies a uloop cancel that races the holder's release does not throw on the released lease.
+        /// </summary>
+        [Test]
+        public void CancelByUser_AfterLeaseIsDisposed_DoesNotThrow()
+        {
+            ToolExecutionSession session = new ToolExecutionSession();
+            ToolExecutionLease lease = session.TryEnter("run-tests").Lease;
+            lease.Dispose();
+
+            Assert.DoesNotThrow(() => lease.CancelByUser());
+        }
+
+        /// <summary>
+        /// Verifies an execute-dynamic-code holder cancelled only by uloop cancel is taken back once
+        /// it outlives the grace period, the same as one whose client disconnected.
+        /// </summary>
+        [Test]
+        public void TryEnter_WhenDynamicCodeHolderIsCancelledByUserPastGrace_ShouldLetOtherToolEnter()
+        {
+            long timestamp = 0;
+            ToolExecutionSession session = new ToolExecutionSession(() => timestamp);
+            ToolExecutionLease holderLease = session.TryEnter(UnityCliLoopConstants.TOOL_NAME_EXECUTE_DYNAMIC_CODE).Lease;
+            session.CancelRunning();
+
+            ToolExecutionSessionEnterResult firstAttempt = session.TryEnter("other-tool");
+            timestamp += GraceTicks;
+            ToolExecutionSessionEnterResult secondAttempt = session.TryEnter("other-tool");
+
+            Assert.That(firstAttempt.IsEntered, Is.False);
+            Assert.That(secondAttempt.IsEntered, Is.True);
+
+            secondAttempt.Lease.Dispose();
+            holderLease.Dispose();
+        }
+
         private static long GraceTicks => ToolExecutionSession.CancelledLeaseGraceSeconds * Stopwatch.Frequency;
 
         private static UnityCliLoopToolRegistry CreateRegistry(InMemoryToolSettingsPort settingsPort, IUnityCliLoopTool[] tools)

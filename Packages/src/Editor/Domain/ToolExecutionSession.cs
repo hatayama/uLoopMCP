@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 
 using io.github.hatayama.UnityCliLoop.ToolContracts;
@@ -29,7 +30,11 @@ namespace io.github.hatayama.UnityCliLoop.Domain
             _timestampProvider = timestampProvider ?? Stopwatch.GetTimestamp;
         }
 
-        internal ToolExecutionSessionBeginResult Begin(UnityCliLoopToolRegistry registry, string toolName, CancellationToken ct)
+        internal ToolExecutionSessionBeginResult Begin(
+            UnityCliLoopToolRegistry registry,
+            string toolName,
+            CancellationToken ct,
+            bool cancellableByUser = true)
         {
             Debug.Assert(registry != null, "registry must not be null");
             Debug.Assert(!string.IsNullOrWhiteSpace(toolName), "toolName must not be null or whitespace");
@@ -50,7 +55,7 @@ namespace io.github.hatayama.UnityCliLoop.Domain
                 throw new UnityCliLoopSecurityException(toolName, "Tool is blocked by security settings");
             }
 
-            ToolExecutionSessionEnterResult enterResult = TryEnter(toolName, ct);
+            ToolExecutionSessionEnterResult enterResult = TryEnter(toolName, ct, cancellableByUser);
             if (!enterResult.IsEntered)
             {
                 return ToolExecutionSessionBeginResult.Busy(
@@ -62,7 +67,10 @@ namespace io.github.hatayama.UnityCliLoop.Domain
             return ToolExecutionSessionBeginResult.Entered(tool, enterResult.Lease);
         }
 
-        internal ToolExecutionSessionEnterResult TryEnter(string requestedToolName, CancellationToken ct = default)
+        internal ToolExecutionSessionEnterResult TryEnter(
+            string requestedToolName,
+            CancellationToken ct = default,
+            bool cancellableByUser = true)
         {
             Debug.Assert(!string.IsNullOrWhiteSpace(requestedToolName), "requestedToolName must not be null or whitespace");
 
@@ -71,7 +79,7 @@ namespace io.github.hatayama.UnityCliLoop.Domain
             lock (_executionStateLock)
             {
                 revokedLeases = RevokeCancelledLeasesPastGraceInsideLock(requestedToolName);
-                result = TryEnterInsideLock(requestedToolName, ct);
+                result = TryEnterInsideLock(requestedToolName, ct, cancellableByUser);
             }
 
             // Why not log inside the lock: the log call writes a file, and every other request
@@ -80,20 +88,23 @@ namespace io.github.hatayama.UnityCliLoop.Domain
             return result;
         }
 
-        private ToolExecutionSessionEnterResult TryEnterInsideLock(string requestedToolName, CancellationToken ct)
+        private ToolExecutionSessionEnterResult TryEnterInsideLock(
+            string requestedToolName,
+            CancellationToken ct,
+            bool cancellableByUser)
         {
             if (_activeLeases.Count == 0)
             {
                 _runningToolName = requestedToolName;
                 _runningStartedTimestamp = _timestampProvider();
-                return ToolExecutionSessionEnterResult.Entered(IssueLeaseInsideLock(requestedToolName, ct));
+                return ToolExecutionSessionEnterResult.Entered(IssueLeaseInsideLock(requestedToolName, ct, cancellableByUser));
             }
 
             if (CanShareExecutionSlot(_runningToolName, requestedToolName))
             {
                 // Why not refresh the start timestamp: shared-slot re-entry is the same
                 // flight, so elapsed must keep measuring from the first Begin.
-                return ToolExecutionSessionEnterResult.Entered(IssueLeaseInsideLock(requestedToolName, ct));
+                return ToolExecutionSessionEnterResult.Entered(IssueLeaseInsideLock(requestedToolName, ct, cancellableByUser));
             }
 
             return ToolExecutionSessionEnterResult.Busy(
@@ -182,6 +193,40 @@ namespace io.github.hatayama.UnityCliLoop.Domain
             }
         }
 
+        // Fires the explicit cancellation of every lease whose request may be cancelled by uloop
+        // cancel. Why the leases are copied under the lock and cancelled outside it: Cancel() runs
+        // the cancelled requests' continuations and their lease Release on this thread, and Release
+        // takes this lock.
+        internal ToolCancelRequestResult CancelRunning()
+        {
+            List<ToolExecutionLease> targets;
+            ToolCancelRequestResult result;
+            lock (_executionStateLock)
+            {
+                if (_activeLeases.Count == 0)
+                {
+                    return ToolCancelRequestResult.NothingRunning();
+                }
+
+                string toolName = GetRunningToolNameInsideLock();
+                int elapsedSeconds = GetRunningToolElapsedSecondsInsideLock();
+                targets = _activeLeases.Where(lease => lease.CancellableByUser).ToList();
+                if (targets.Count == 0)
+                {
+                    return ToolCancelRequestResult.NotCancellable(toolName, elapsedSeconds);
+                }
+
+                result = ToolCancelRequestResult.Cancelled(toolName, elapsedSeconds);
+            }
+
+            foreach (ToolExecutionLease lease in targets)
+            {
+                lease.CancelByUser();
+            }
+
+            return result;
+        }
+
         private static void LogRevokedLeases(List<RevokedLeaseRecord> revokedLeases)
         {
             if (revokedLeases == null)
@@ -227,9 +272,9 @@ namespace io.github.hatayama.UnityCliLoop.Domain
             }
         }
 
-        private ToolExecutionLease IssueLeaseInsideLock(string toolName, CancellationToken ct)
+        private ToolExecutionLease IssueLeaseInsideLock(string toolName, CancellationToken ct, bool cancellableByUser)
         {
-            ToolExecutionLease lease = new ToolExecutionLease(this, toolName, ct, _timestampProvider());
+            ToolExecutionLease lease = new ToolExecutionLease(this, toolName, ct, _timestampProvider(), cancellableByUser);
             _activeLeases.Add(lease);
             return lease;
         }
@@ -261,7 +306,10 @@ namespace io.github.hatayama.UnityCliLoop.Domain
     internal sealed class ToolExecutionLease : IDisposable
     {
         private readonly ToolExecutionSession _session;
-        private readonly CancellationToken _requestCancellation;
+        // Why never disposed: it has no timer, so it holds nothing to leak, and leaving it alive
+        // lets a uloop cancel that races the lease's Release call Cancel() without throwing.
+        private readonly CancellationTokenSource _explicitCancellation = new();
+        private readonly CancellationTokenSource _executionCancellation;
         private long? _cancellationObservedTimestamp;
         // A count, not a flag: one request can have several switches queued at once (WhenAll).
         private int _pendingMainThreadWaits;
@@ -270,16 +318,30 @@ namespace io.github.hatayama.UnityCliLoop.Domain
             ToolExecutionSession session,
             string toolName,
             CancellationToken requestCancellation,
-            long issuedTimestamp)
+            long issuedTimestamp,
+            bool cancellableByUser)
         {
             Debug.Assert(session != null, "session must not be null");
             Debug.Assert(!string.IsNullOrWhiteSpace(toolName), "toolName must not be null or whitespace");
 
             _session = session;
             ToolName = toolName;
-            _requestCancellation = requestCancellation;
+            _executionCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+                requestCancellation,
+                _explicitCancellation.Token);
             IssuedTimestamp = issuedTimestamp;
+            CancellableByUser = cancellableByUser;
         }
+
+        // False for calls that did not come from the CLI: their callers manage cancellation with
+        // their own token, and uloop cancel only stops what a CLI asked for.
+        internal bool CancellableByUser { get; }
+
+        // Fires when the request is cancelled (client disconnect, server stop) or uloop cancel
+        // fires this lease. Tools run with this token instead of the raw request token.
+        internal CancellationToken ExecutionToken => _executionCancellation.Token;
+
+        internal bool WasCancelledByUser => _explicitCancellation.IsCancellationRequested;
 
         internal string ToolName { get; }
 
@@ -301,14 +363,23 @@ namespace io.github.hatayama.UnityCliLoop.Domain
             Interlocked.Decrement(ref _pendingMainThreadWaits);
         }
 
+        // Runs other requests' continuations and this lease's Release synchronously on the
+        // calling thread (MainThreadSwitcher registers on the token), so never call it under the
+        // session lock or inside an activity hold.
+        internal void CancelByUser()
+        {
+            _explicitCancellation.Cancel();
+        }
+
         public void Dispose()
         {
             _session.Release(this);
+            _executionCancellation.Dispose();
         }
 
-        // Records the first time a waiting request sees this lease's request cancelled, and
-        // reports whether the lease has stayed cancelled for the whole grace period since then.
-        // Called only under the session lock.
+        // Records the first time a waiting request sees this lease cancelled, by its client or by
+        // uloop cancel, and reports whether the lease has stayed cancelled for the whole grace
+        // period since then. Called only under the session lock.
         internal bool ObserveCancellationPastGrace(long now, long graceTicks)
         {
             if (ToolName != UnityCliLoopConstants.TOOL_NAME_EXECUTE_DYNAMIC_CODE)
@@ -316,7 +387,7 @@ namespace io.github.hatayama.UnityCliLoop.Domain
                 return false;
             }
 
-            if (!_requestCancellation.IsCancellationRequested)
+            if (!ExecutionToken.IsCancellationRequested)
             {
                 return false;
             }
