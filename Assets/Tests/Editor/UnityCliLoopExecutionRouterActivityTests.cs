@@ -13,7 +13,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
 {
     /// <summary>
     /// Verifies the execution router holds an operating-system activity for exactly the length of each
-    /// tool or internal bridge command, and never for the editor status answer.
+    /// tool or internal bridge command, and never for the editor status or cancel answers.
     /// </summary>
     public sealed class UnityCliLoopExecutionRouterActivityTests
     {
@@ -128,6 +128,25 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
                 CancellationToken.None);
 
             Assert.That(response, Is.InstanceOf<GetEditorStatusResponse>());
+            Assert.That(api.BeginCount, Is.EqualTo(0));
+        }
+
+        /// <summary>
+        /// Verifies the cancel-running-tool answer starts no activity, because it must answer while a
+        /// tool blocks the Editor main thread.
+        /// </summary>
+        [Test]
+        public async Task ExecuteAsync_CancelRunningTool_DoesNotBeginAnActivity()
+        {
+            RecordingProcessActivityApi api = new RecordingProcessActivityApi();
+            UnityCliLoopExecutionRouter router = CreateRouter(api);
+
+            UnityCliLoopToolResponse response = await router.ExecuteAsync(
+                UnityCliLoopConstants.COMMAND_NAME_CANCEL_RUNNING_TOOL,
+                new JObject(),
+                CancellationToken.None);
+
+            Assert.That(response, Is.InstanceOf<CancelRunningToolResponse>());
             Assert.That(api.BeginCount, Is.EqualTo(0));
         }
 

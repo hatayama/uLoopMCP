@@ -356,7 +356,7 @@ func TestClassifyServerBusyRPCError_WhenPausedInPlayMode_ExplainsTheStallAndReco
 		t.Fatalf("next actions must lead with the pause stall: %#v", cliErr.NextActions)
 	}
 	joinedActions := strings.Join(cliErr.NextActions, "\n")
-	if !strings.Contains(joinedActions, "Stop the uloop process that is running the command") {
+	if !strings.Contains(joinedActions, "Run `uloop cancel`") {
 		t.Fatalf("next actions must name the recovery step: %#v", cliErr.NextActions)
 	}
 	editorActivity, ok := cliErr.Details["EditorActivity"].(map[string]any)

@@ -281,8 +281,20 @@ func reportFromEditorResponse(response editorStatusResponse) statusReport {
 		report.RunningToolName = response.RunningToolName
 		report.RunningToolElapsedSeconds = response.RunningToolElapsedSeconds
 		report.RunningToolPhase = response.RunningToolPhase
+		report.NextActions = append(report.NextActions, busyCancelNextActions(response)...)
 	}
 	return report
+}
+
+// busyCancelNextActions offers uloop cancel only for a tool it can stop. Why the tool name and
+// not the request: status sees only the name, so run-tests and compile, which uloop cancel
+// leaves running in some modes, never get a promise that may not hold.
+func busyCancelNextActions(response editorStatusResponse) []string {
+	if response.RunningToolElapsedSeconds == nil ||
+		!clierrors.ClientDisconnectCancelsRunningTool(response.RunningToolName) {
+		return nil
+	}
+	return []string{"If it does not finish, run `uloop cancel` to stop it."}
 }
 
 // classifyEditorState picks the state of an Editor that answered. The order is the contract: a

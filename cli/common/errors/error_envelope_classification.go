@@ -143,6 +143,8 @@ func classifyRPCError(rpcErr *unityipc.RPCError, context ErrorContext) CLIError 
 		return cliUpdateRequiredError(rpcErr, details, decodeCliUpdateRequiredErrorData(rpcErr.Data), context)
 	case "server_busy":
 		return unityServerBusyError(rpcErr, details, decodeServerBusyErrorData(rpcErr.Data), context)
+	case "tool_cancelled":
+		return toolCancelledError(rpcErr, details, decodeToolCancelledErrorData(rpcErr.Data), context)
 	default:
 		return genericRPCError(rpcErr, details, context)
 	}

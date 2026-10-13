@@ -106,6 +106,39 @@ func TestRunStatusCommandReportsBusyBeforeMainThreadBlocked(t *testing.T) {
 	assertStatusRequestCount(t, server, 1)
 }
 
+// Verifies a Busy report offers uloop cancel after the wait steps when a tool uloop cancel can
+// stop holds the slot, and leaves it out for run-tests and compile.
+func TestRunStatusCommandBusyNextActionsOfferCancelOnlyForCancellableTools(t *testing.T) {
+	waitSteps := []string{
+		"Wait for the running command to finish, then run uloop status again.",
+		"Another command sent now is rejected as busy.",
+	}
+	cases := []struct {
+		toolName string
+		want     []string
+	}{
+		{toolName: "execute-dynamic-code", want: append(append([]string{}, waitSteps...), "If it does not finish, run `uloop cancel` to stop it.")},
+		{toolName: "run-tests", want: waitSteps},
+		{toolName: "compile", want: waitSteps},
+	}
+	for _, testCase := range cases {
+		t.Run(testCase.toolName, func(t *testing.T) {
+			elapsedSeconds := 40
+			report := reportFromEditorResponse(editorStatusResponse{
+				IsBusy:                    true,
+				RunningToolName:           testCase.toolName,
+				RunningToolElapsedSeconds: &elapsedSeconds,
+				RunningToolPhase:          "Executing",
+				HasEditorState:            true,
+			})
+
+			if !reflect.DeepEqual(report.NextActions, testCase.want) {
+				t.Fatalf("next actions mismatch:\n got: %#v\nwant: %#v", report.NextActions, testCase.want)
+			}
+		})
+	}
+}
+
 // Verifies Busy is decided before the missing Editor state, and that the play and compile
 // values are left out when the Editor has not recorded them.
 func TestRunStatusCommandReportsBusyBeforeStarting(t *testing.T) {

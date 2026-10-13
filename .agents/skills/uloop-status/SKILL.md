@@ -52,6 +52,7 @@ Play Mode does not change the state: a paused Play Mode session is `Ready`, with
 ## Notes
 
 - Exits 0 only for Ready.
+- When `Busy` does not clear and the running command shows no sign of finishing, stop it with `uloop cancel`.
 - It never focuses the window, launches Unity, or takes the command slot, so it is safe to poll.
 - A sandboxed shell that cannot open the Unix socket gets an error, not NotRunning; run it outside the sandbox.
 - uloop cannot detect Safe Mode directly; ServerUnavailable that does not clear is the signal.

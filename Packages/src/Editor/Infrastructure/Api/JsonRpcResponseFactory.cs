@@ -84,6 +84,12 @@ namespace io.github.hatayama.UnityCliLoop.Infrastructure
                     busyEx.RunningToolElapsedSeconds,
                     busyEx.RunningToolPhase);
             }
+            else if (ex is UnityCliLoopToolCancelledException cancelledEx)
+            {
+                errorData = new ToolCancelledErrorData(
+                    cancelledEx.ToolName,
+                    exceptionResponse.Explanation ?? ex.Message);
+            }
             else
             {
                 errorData = new InternalErrorData(exceptionResponse.Explanation ?? ex.Message);

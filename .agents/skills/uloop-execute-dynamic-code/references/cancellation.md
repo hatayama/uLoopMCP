@@ -16,11 +16,12 @@ So a `CancellationToken` named `ct` is always in scope; use it without declaring
 - a domain reload starts,
 - the Unity Editor quits,
 - the uloop server inside the Editor stops or restarts,
-- the snippet was sent with `--yield-to-foreground-requests` and another `execute-dynamic-code` request arrives that it yields to.
+- the snippet was sent with `--yield-to-foreground-requests` and another `execute-dynamic-code` request arrives that it yields to,
+- `uloop cancel` is run while the snippet is running.
 
 ## Long awaits block other tool commands
 
-uloop runs one tool command at a time per Editor. While a snippet is awaiting, other tool commands against that Editor (such as `compile`, `get-logs`, or `run-tests`) are rejected as BUSY. An await that may never finish — waiting for an animation or a scripted sequence to complete, or for an external event — keeps the Editor BUSY for as long as it waits. `uloop status` still answers while a tool runs, so use it to check what is running.
+uloop runs one tool command at a time per Editor. While a snippet is awaiting, other tool commands against that Editor (such as `compile`, `get-logs`, or `run-tests`) are rejected as BUSY. An await that may never finish — waiting for an animation or a scripted sequence to complete, or for an external event — keeps the Editor BUSY for as long as it waits. `uloop status` still answers while a tool runs, so use it to check what is running. To stop a running snippet from another terminal, run `uloop cancel`.
 
 Another `execute-dynamic-code` is not rejected as BUSY: it returns `Success: false` with `ErrorMessage` "Another execution is already in progress". Since the next command an agent sends is often another snippet, treat that message as the sign that an earlier snippet is still awaiting.
 
@@ -58,6 +59,6 @@ uloop stops waiting for the snippet and frees the Editor for the next command. A
 
 What the CLI that sent the snippet sees depends on why `ct` fired:
 
-- Yielded to a foreground request: the connection is still open, so the CLI receives `Success: false` with `ErrorMessage` "Execution was cancelled or timed out".
+- Yielded to a foreground request, or stopped by `uloop cancel`: the connection is still open, so the CLI receives `Success: false` with `ErrorMessage` "Execution was cancelled or timed out".
 - The CLI disconnected: no response is sent; the CLI that was waiting is already gone.
 - Domain reload, Editor quit, or server stop/restart: no response arrives. The CLI treats it as a lost connection: after a domain reload it prints "Connection lost during execute-dynamic-code", waits for the Editor to come back, and then reports the disconnect as an error. Check the Editor with `uloop status` before sending the next command.
