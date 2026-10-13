@@ -5,7 +5,9 @@
 - `Applied` — the edits of the files you asked about are live (`Patched`, `Added`, or `AlreadyActive` rows, or introduced types), and none was `Skipped`. Nothing else to do.
 - `PartiallyApplied` — some of them are live, some were `Skipped`; read the `Methods[]` rows with `Kind: "Skipped"`.
 - `NothingApplied` — none of them is live, and some were `Skipped`. `Warnings` (or `Methods[].Reason`) says why.
-- `NothingToApply` — nothing changed against the compiled code (see `UnchangedTotal`), the files hold no method bodies, or their only rows are `Stale`.
+- `NothingToApply` — nothing changed against the compiled code (see `UnchangedTotal`), the files hold no method bodies, or their only rows are `Stale` or `Skipped` rows for bodyless members that could not be compared.
+
+A `Skipped` row for a compiled member without a body that could not be compared for lack of a source baseline is not counted as a skipped edit by `Outcome`: it has nothing to apply. A run that patched the rest of the file is `Applied`; its `Reason` asks for a compile only if the member's default values, attributes, or parameter names changed.
 - `Failed` — at least one `Failed` row, so `Success` is `false` — unless a fallback compile then succeeded, which turns the whole answer into `ReplacedByCompile`.
 - `ReplacedByCompile` — a fallback compile ran in this same command and succeeded (`Compile` holds its response): every edit is compiled in, and `Success` is the compile's. The compile reloaded the domain, so none of this run's patches survive; the totals and `Methods[]` describe the reload that ran before the compile — read `--status` for the state after it.
 
