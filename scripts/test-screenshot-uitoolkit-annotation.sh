@@ -220,6 +220,11 @@ verify_annotated_capture() {
     assert_jq "$E1_JSON" \
         '[.Screenshots[0].AnnotatedElements[] | select(.UiSystem == "UIToolkit" and .Type == "Scrollbar")] | length == 1' \
         "Expected exactly one UI Toolkit Scrollbar"
+    # The six named controls plus the list's vertical Scroller; parts inside a control would add more.
+    count=$(jq '[.Screenshots[0].AnnotatedElements[] | select(.UiSystem == "UIToolkit")] | length' "$E1_JSON")
+    assert_text_equals "$count" "7" "UI Toolkit element count"
+    play_path=$(jq -r '[.Screenshots[0].AnnotatedElements[] | select(.UiSystem == "UIToolkit" and .Name == "play")][0].Path' "$E1_JSON")
+    assert_text_equals "$play_path" "UIToolkitAnnotationDemo/BackDocument#play" "UI Toolkit element 'play' path"
     assert_jq "$E1_JSON" \
         '[.Screenshots[0].AnnotatedElements[] | select(.Name == "locked" or .Name == "ghost")] | length == 0' \
         "Disabled or hidden UI Toolkit buttons were annotated"
@@ -278,7 +283,13 @@ if (demo == null) { return "ERROR: UIToolkitAnnotationDemo not found"; }
 return demo.GetClickCount("play");
 ')
     assert_json_success "$json" "Read play click count"
-    printf '%s\n' "$json" | jq -r '.Result'
+    count=$(printf '%s\n' "$json" | jq -r '.Result')
+    case "$count" in
+        ERROR:*)
+            fail "Read play click count failed: ${count#ERROR: }"
+            ;;
+    esac
+    printf '%s\n' "$count"
 }
 
 # simulate-mouse-input reaches UI Toolkit buttons through the EventSystem; simulate-mouse-ui does not.

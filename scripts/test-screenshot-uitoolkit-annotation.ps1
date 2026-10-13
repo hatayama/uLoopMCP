@@ -311,11 +311,11 @@ function Get-SingleUiToolkitElement {
         [string]$Interaction
     )
 
-    [object[]]$matches = @($Elements | Where-Object { $_.Name -eq $Name })
-    Assert-Condition -Condition ($matches.Count -eq 1) -Message "Expected exactly one UI Toolkit element named '$Name', found $($matches.Count)"
-    Assert-EqualText -Actual $matches[0].Type -Expected $Type -Context "$Name Type"
-    Assert-EqualText -Actual $matches[0].Interaction -Expected $Interaction -Context "$Name Interaction"
-    return $matches[0]
+    [object[]]$found = @($Elements | Where-Object { $_.Name -eq $Name })
+    Assert-Condition -Condition ($found.Count -eq 1) -Message "Expected exactly one UI Toolkit element named '$Name', found $($found.Count)"
+    Assert-EqualText -Actual $found[0].Type -Expected $Type -Context "$Name Type"
+    Assert-EqualText -Actual $found[0].Interaction -Expected $Interaction -Context "$Name Interaction"
+    return $found[0]
 }
 
 function Test-AnnotatedCapture {
@@ -338,6 +338,9 @@ function Test-AnnotatedCapture {
     Get-SingleUiToolkitElement -Elements $elements -Name "quality" -Type "Dropdown" -Interaction "Click" | Out-Null
     [pscustomobject]$partlyCovered = Get-SingleUiToolkitElement -Elements $elements -Name "partly-covered" -Type "Button" -Interaction "Click"
     Assert-Condition -Condition (@($elements | Where-Object { $_.Type -eq "Scrollbar" }).Count -eq 1) -Message "Expected exactly one UI Toolkit Scrollbar"
+    # The six named controls plus the list's vertical Scroller; parts inside a control would add more.
+    Assert-EqualText -Actual ([string]$elements.Count) -Expected "7" -Context "UI Toolkit element count"
+    Assert-EqualText -Actual $play.Path -Expected "UIToolkitAnnotationDemo/BackDocument#play" -Context "UI Toolkit element 'play' path"
 
     [object[]]$allElements = @($response.Screenshots[0].AnnotatedElements)
     Assert-Condition -Condition (@($allElements | Where-Object { $_.Name -eq "locked" -or $_.Name -eq "ghost" }).Count -eq 0) -Message "Disabled or hidden UI Toolkit buttons were annotated"
@@ -395,7 +398,12 @@ return demo.GetClickCount("play");
 
     [pscustomobject]$result = Invoke-UloopJson -CommandArguments @("execute-dynamic-code", "--code", $code)
     Assert-Condition -Condition ($result.Success -eq $true) -Message "Read play click count failed: $($result.ErrorMessage)"
-    return [string]$result.Result
+    [string]$count = [string]$result.Result
+    if ($count.StartsWith("ERROR:")) {
+        throw "Read play click count failed: $($count.Substring(6).Trim())"
+    }
+
+    return $count
 }
 
 # simulate-mouse-input reaches UI Toolkit buttons through the EventSystem; simulate-mouse-ui does not.
