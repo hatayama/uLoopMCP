@@ -2235,6 +2235,82 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         }
 
         /// <summary>
+        /// What: without a baseline, a compiled method with a body that the edit made abstract keeps
+        /// the no-body reason, because the compiled body keeps running until a compile.
+        /// </summary>
+        [Test]
+        public async Task NoBaseline_CompiledMethodMadeAbstract_KeepsTheNoBodyReason()
+        {
+            string onDisk = File.ReadAllText(ResolveHostPath());
+            string edited = onDisk.Replace(
+                "        public int AbstractHostConcrete()\n        {\n            return 1;\n        }",
+                "        public abstract int AbstractHostConcrete();",
+                StringComparison.Ordinal);
+            Assert.That(edited, Is.Not.EqualTo(onDisk));
+            TransformWorkerClientResult result = await RunWorkerOnSourceAsync(
+                WriteEdited("NoBaselineMadeAbstract.cs", edited),
+                HostProjectRelativePath,
+                snapshotSource: null);
+            Assert.That(result.Success, Is.True, result.ErrorMessage);
+            Assert.That(
+                FindSkipReasonCode(
+                    result,
+                    FormatHostLabel(typeof(HotReloadAddedMemberAbstractHost), "AbstractHostConcrete", Array.Empty<string>())),
+                Is.EqualTo(HotReloadWorkerReasonCode.MethodTransformNoBody));
+        }
+
+        /// <summary>
+        /// What: without a baseline, a compiled method with a body that the edit made extern keeps
+        /// the no-body reason, because the compiled body keeps running until a compile.
+        /// </summary>
+        [Test]
+        public async Task NoBaseline_CompiledMethodMadeExtern_KeepsTheNoBodyReason()
+        {
+            string onDisk = File.ReadAllText(ResolveHostPath());
+            string edited = onDisk.Replace(
+                "        public static int ExternHostConcrete()\n        {\n            return 1;\n        }",
+                "        [DllImport(\"hot_reload_test_missing_library\")]\n"
+                + "        public static extern int ExternHostConcrete();",
+                StringComparison.Ordinal);
+            Assert.That(edited, Is.Not.EqualTo(onDisk));
+            TransformWorkerClientResult result = await RunWorkerOnSourceAsync(
+                WriteEdited("NoBaselineMadeExtern.cs", edited),
+                HostProjectRelativePath,
+                snapshotSource: null);
+            Assert.That(result.Success, Is.True, result.ErrorMessage);
+            Assert.That(
+                FindSkipReasonCode(
+                    result,
+                    FormatHostLabel(typeof(HotReloadAddedMemberExternHost), "ExternHostConcrete", Array.Empty<string>())),
+                Is.EqualTo(HotReloadWorkerReasonCode.MethodTransformNoBody));
+        }
+
+        /// <summary>
+        /// What: without a baseline, a compiled default interface method that the edit made bodyless
+        /// keeps the interface reason, because the compiled default body keeps running until a compile.
+        /// </summary>
+        [Test]
+        public async Task NoBaseline_DefaultInterfaceMethodMadeBodyless_KeepsTheInterfaceReason()
+        {
+            string onDisk = File.ReadAllText(ResolveHostPath());
+            string edited = onDisk.Replace(
+                "        int ExistingDefault() => 1;",
+                "        int ExistingDefault();",
+                StringComparison.Ordinal);
+            Assert.That(edited, Is.Not.EqualTo(onDisk));
+            TransformWorkerClientResult result = await RunWorkerOnSourceAsync(
+                WriteEdited("NoBaselineDefaultMadeBodyless.cs", edited),
+                HostProjectRelativePath,
+                snapshotSource: null);
+            Assert.That(result.Success, Is.True, result.ErrorMessage);
+            Assert.That(
+                FindSkipReasonCode(
+                    result,
+                    FormatHostLabel(typeof(IHotReloadAddedMemberDefault), "ExistingDefault", Array.Empty<string>())),
+                Is.EqualTo(HotReloadWorkerReasonCode.AddedMethodInterfaceMember));
+        }
+
+        /// <summary>
         /// What: with a baseline, a compiled bodyless interface method whose default value changed
         /// keeps the interface reason because the change was detected.
         /// </summary>

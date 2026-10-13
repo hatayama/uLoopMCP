@@ -56,6 +56,12 @@ internal static class OrdinaryMethodQueue
             methodDeclaration,
             compiledType,
             methodSymbol);
+        bool bodylessNotCompared = IsBodylessCompiledMethodWithoutBaseline(
+            isAddedMethod,
+            hasBaseline,
+            methodDeclaration,
+            compiledType,
+            methodSymbol);
         if (TrySkipExcludedOrdinaryMethod(
             isAddedMethod,
             replacesCompiledMethod,
@@ -78,7 +84,7 @@ internal static class OrdinaryMethodQueue
             replacesCompiledMethod,
             hasBaseline,
             syntaxMethodKey,
-            methodDeclaration,
+            bodylessNotCompared,
             methodSymbol,
             typeState,
             snapshotMethodMap,
@@ -124,8 +130,7 @@ internal static class OrdinaryMethodQueue
         {
             // Why every skip reason is replaced, hard skips included: a member with no body has
             // nothing to patch, so a reason that blames the host type or asks for a compile misleads.
-            WorkerReason skipReason =
-                IsBodylessCompiledMethodWithoutBaseline(isAddedMethod, hasBaseline, methodDeclaration)
+            WorkerReason skipReason = bodylessNotCompared
                 ? WorkerReason.Of(HotReloadWorkerReasonCode.MethodTransformBodylessNotCompared)
                 : decision.SkipReason;
             skipped.Add(new WorkerSkipped
@@ -226,7 +231,7 @@ internal static class OrdinaryMethodQueue
         bool replacesCompiledMethod,
         bool hasBaseline,
         string syntaxMethodKey,
-        MethodDeclarationSyntax methodDeclaration,
+        bool bodylessNotCompared,
         IMethodSymbol methodSymbol,
         TypeEmitState typeState,
         Dictionary<string, MethodDeclarationSyntax> snapshotMethodMap,
@@ -253,7 +258,7 @@ internal static class OrdinaryMethodQueue
         {
             SourceProjectRelativePath = typeState.SourceUnit.Input.ProjectRelativePath,
             Method = WorkerMethodKeys.FormatMethodLabel(methodSymbol),
-            Reason = IsBodylessCompiledMethodWithoutBaseline(isAddedMethod, hasBaseline, methodDeclaration)
+            Reason = bodylessNotCompared
                 ? WorkerReason.Of(HotReloadWorkerReasonCode.MethodTransformBodylessNotCompared)
                 : WorkerReason.Of(HotReloadWorkerReasonCode.AddedMethodInterfaceMember)
         });
@@ -278,12 +283,17 @@ internal static class OrdinaryMethodQueue
     /// <remarks>
     /// With a baseline the change is known, so the existing reasons stay. An added method needs a
     /// compile whatever its body. An explicit interface implementation is never matched against the
-    /// compiled type, so it cannot be called compiled.
+    /// compiled type, so it cannot be called compiled. The compiled method must lack a body as well:
+    /// the signature match ignores abstract and extern, so an edit that removes a body (virtual to
+    /// abstract, a method made extern, a default interface method made bodyless) leaves the
+    /// compiled body running until a compile.
     /// </remarks>
     internal static bool IsBodylessCompiledMethodWithoutBaseline(
         bool isAddedMethod,
         bool hasBaseline,
-        MethodDeclarationSyntax methodDeclaration)
+        MethodDeclarationSyntax methodDeclaration,
+        INamedTypeSymbol compiledType,
+        IMethodSymbol methodSymbol)
     {
         if (hasBaseline || isAddedMethod)
         {
@@ -295,7 +305,19 @@ internal static class OrdinaryMethodQueue
             return false;
         }
 
-        return methodDeclaration.Body == null && methodDeclaration.ExpressionBody == null;
+        if (methodDeclaration.Body != null || methodDeclaration.ExpressionBody != null)
+        {
+            return false;
+        }
+
+        IMethodSymbol compiledMethod = CompiledMemberMatcher.FindCompiledOrdinaryMethod(compiledType, methodSymbol);
+        if (compiledMethod == null)
+        {
+            throw new InvalidOperationException(
+                "A method classified as compiled has no compiled counterpart: " + methodSymbol.ToDisplayString());
+        }
+
+        return compiledMethod.IsAbstract || compiledMethod.IsExtern;
     }
 
     internal static MethodTransformDecision DecideOrdinaryMethodTransform(
