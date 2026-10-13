@@ -10,7 +10,7 @@ Run focused C# snippets in the active Unity Editor with `uloop execute-dynamic-c
 
 For basic selected GameObject discovery or property inspection, use `find-game-objects --search-mode selected` first. Use this tool when the built-in inspection tools are not enough or when you need to modify Unity state.
 
-This tool can inspect reachable Unity state — GameObjects, components, public properties, static values, method results — but it cannot read local variables or intermediate calculations inside an already-running method. When those values matter, follow the `uloop-pause-point` skill: a pause point's `CapturedVariables` carries the locals, parameters, and instance fields at that line with no code edit or recompile, and while Unity stays paused `UloopPausePoint.TryGetCapturedValue(name)` gives this tool live captured references (it returns `(bool Found, object Value)`; see its `references/captured-variables.md`). That skill also covers the reverse combination — registering an `EditorApplication.update` watcher from this tool that freezes Unity on the first frame a runtime condition holds. Never poll or sleep inside a snippet; the body runs synchronously on the main thread.
+This tool can inspect reachable Unity state — GameObjects, components, public properties, static values, method results — but it cannot read local variables or intermediate calculations inside an already-running method. When those values matter, follow the `uloop-pause-point` skill: a pause point's `CapturedVariables` carries the locals, parameters, and instance fields at that line with no code edit or recompile, and while Unity stays paused `UloopPausePoint.TryGetCapturedValue(name)` gives this tool live captured references (it returns `(bool Found, object Value)`; see its `references/captured-variables.md`). That skill also covers the reverse combination — registering an `EditorApplication.update` watcher from this tool that freezes Unity on the first frame a runtime condition holds. Never poll or sleep inside a snippet: the body runs on the main thread, and a long await keeps other tool commands BUSY — pass `ct` (see [references/cancellation.md](references/cancellation.md)).
 
 Live state injection: when a running PlayMode session is merely in the wrong state — a stuck end-to-end scenario, a camera angle a raycast can never hit, a private flag blocking the path under test — fix the state instead of the code: write the field directly from this tool (reflection reaches private fields) and steer the session onward. Nothing recompiles or reloads, so the session's in-memory state survives. The snippet is a one-off diagnostic that never lands in source files, so project rules against reflection in production code do not apply.
 
@@ -29,7 +29,7 @@ CLI-only flag, accepted instead of a schema parameter:
 
 ## Code Rules
 
-Write direct statements from your own Unity API knowledge — no class/namespace/method wrappers. Return is optional. `await` works, and a returned `Task` is awaited: its value becomes `Result`, its exception a failure. Long or open-ended awaits block other uloop tool commands; pass `ct` and see [references/cancellation.md](references/cancellation.md).
+Write direct statements from your own Unity API knowledge — no class/namespace/method wrappers. Return is optional. `await` works, and a returned `Task` is awaited: its value becomes `Result`, its exception a failure.
 
 ```csharp
 using UnityEngine;

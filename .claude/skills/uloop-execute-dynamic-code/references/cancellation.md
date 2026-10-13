@@ -14,7 +14,8 @@ So a `CancellationToken` named `ct` is always in scope; use it without declaring
 
 - the `uloop` CLI that sent the snippet disconnects (for example, its process is killed or interrupted),
 - a domain reload starts,
-- the Unity Editor quits.
+- the Unity Editor quits,
+- the snippet was sent with `--yield-to-foreground-requests` and another `execute-dynamic-code` request arrives that it yields to.
 
 ## Long awaits block other tool commands
 
@@ -22,10 +23,10 @@ uloop runs one tool command at a time per Editor. While a snippet is awaiting, o
 
 ## Recommended patterns
 
-Pass `ct` to everything that waits:
+Do not add sleeps or polling loops. When you await an API that accepts a cancellation token, pass `ct` to it (`LoadSomethingAsync` stands for any such API):
 
 ```csharp
-await Task.Delay(500, ct);
+await LoadSomethingAsync(path, ct);
 ```
 
 With UniTask, attach the token: `await SomeUniTask().AttachExternalCancellation(ct);`, or pass it to APIs that accept one (`cancellationToken: ct`).
