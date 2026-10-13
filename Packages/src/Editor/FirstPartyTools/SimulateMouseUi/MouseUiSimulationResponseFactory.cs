@@ -66,19 +66,21 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         internal static SimulateMouseUiResponse CreateClickResult(
             MouseUiSimulationCommand parameters,
             Vector2 inputPos,
-            string? targetName,
-            bool hitTarget)
+            MouseUiHitReport hit)
         {
+            string? targetName = hit.Name;
             return new SimulateMouseUiResponse
             {
                 Success = true,
-                Message = hitTarget
+                Message = hit.HasHit
                     ? parameters.BypassRaycast
                         ? $"Bypass-clicked '{targetName}' at ({inputPos.x:F1}, {inputPos.y:F1}) via '{parameters.TargetPath}'"
-                        : $"Clicked '{targetName}' at ({inputPos.x:F1}, {inputPos.y:F1})"
+                        : $"Clicked {DescribeHit(hit)} at ({inputPos.x:F1}, {inputPos.y:F1})"
                     : $"Clicked at ({inputPos.x:F1}, {inputPos.y:F1}) - no UI element hit",
                 Action = MouseAction.Click.ToString(),
                 HitGameObjectName = targetName,
+                UiSystem = hit.UiSystem,
+                HitPath = hit.Path,
                 PositionX = inputPos.x,
                 PositionY = inputPos.y
             };
@@ -87,22 +89,31 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         internal static SimulateMouseUiResponse CreateLongPressResult(
             MouseUiSimulationCommand parameters,
             Vector2 inputPos,
-            string? targetName,
-            bool hitTarget)
+            MouseUiHitReport hit)
         {
+            string? targetName = hit.Name;
             return new SimulateMouseUiResponse
             {
                 Success = true,
-                Message = hitTarget
+                Message = hit.HasHit
                     ? parameters.BypassRaycast
                         ? $"Bypass-long-pressed '{targetName}' at ({inputPos.x:F1}, {inputPos.y:F1}) via '{parameters.TargetPath}' for {parameters.Duration:F1}s"
-                        : $"Long-pressed '{targetName}' at ({inputPos.x:F1}, {inputPos.y:F1}) for {parameters.Duration:F1}s"
+                        : $"Long-pressed {DescribeHit(hit)} at ({inputPos.x:F1}, {inputPos.y:F1}) for {parameters.Duration:F1}s"
                     : $"Long-pressed at ({inputPos.x:F1}, {inputPos.y:F1}) for {parameters.Duration:F1}s - no UI element hit",
                 Action = MouseAction.LongPress.ToString(),
                 HitGameObjectName = targetName,
+                UiSystem = hit.UiSystem,
+                HitPath = hit.Path,
                 PositionX = inputPos.x,
                 PositionY = inputPos.y
             };
+        }
+
+        private static string DescribeHit(MouseUiHitReport hit)
+        {
+            return hit.UiSystem == MouseUiHitSystem.UIToolkit
+                ? $"UI Toolkit element '{hit.Name}'"
+                : $"'{hit.Name}'";
         }
 
         internal static SimulateMouseUiResponse CreateDragResult(

@@ -13,7 +13,24 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
     {
         public string Message { get; set; } = "";
         public string Action { get; set; } = "";
+        /// <summary>
+        /// Name of what received the press: the uGUI or physics GameObject that handles it, or the UI Toolkit
+        /// control under the point (its name, or its type name when it has none). Null when nothing was hit.
+        /// </summary>
         public string? HitGameObjectName { get; set; }
+
+        /// <summary>
+        /// Which UI system was hit: "UGUI" for a target under a Canvas, "" for a target outside any Canvas (a
+        /// physics hit), "UIToolkit" for a UI Toolkit control, or null when nothing was hit.
+        /// </summary>
+        public string? UiSystem { get; set; }
+
+        /// <summary>
+        /// Path of what was hit, in the form screenshot annotations use: the GameObject's hierarchy path for
+        /// uGUI and physics, or the document path, '#', and element chain for UI Toolkit. Null when nothing was
+        /// hit or when a UI Toolkit element belongs to no document, such as an open dropdown's menu.
+        /// </summary>
+        public string? HitPath { get; set; }
         public float PositionX { get; set; }
         public float PositionY { get; set; }
         public float? EndPositionX { get; set; }

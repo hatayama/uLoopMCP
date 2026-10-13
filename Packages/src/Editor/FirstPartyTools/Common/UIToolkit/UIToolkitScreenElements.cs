@@ -32,5 +32,17 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             UIToolkitScreenPanels.SettleLayouts(panels);
             return UIToolkitControlCollector.Collect(panels, probePointsForTopLeftBounds);
         }
+
+        /// <summary>
+        /// Returns the control that pointer input at a Game View point reaches, or null when no panel takes
+        /// input there. Panels are tried front to back, as Unity routes input. The control reported is the
+        /// outermost control around the element under the point, the one screenshot annotations list.
+        /// </summary>
+        public static UIToolkitPointerTarget? FindPointerTarget(Vector2 gameViewTopLeft)
+        {
+            List<UIToolkitScreenPanels.PanelEntry> panels = UIToolkitScreenPanels.Gather();
+            UIToolkitScreenPanels.SettleLayouts(panels);
+            return UIToolkitPointerTargetFinder.Find(panels, gameViewTopLeft);
+        }
     }
 }

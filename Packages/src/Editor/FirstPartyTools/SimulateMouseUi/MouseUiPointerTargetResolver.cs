@@ -51,7 +51,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 return ResolveBypassPressablePointerTargets(parameters, inputPos, pointerData, action);
             }
 
-            RaycastResult? hit = UiRaycastHelper.RaycastUI(screenPos, eventSystem);
+            // UI Toolkit is resolved separately at the requested point; the bridge's panel hits are flipped with
+            // Screen.height and would land on the wrong element.
+            RaycastResult? hit = UiRaycastHelper.RaycastUISkippingUIToolkitPanels(screenPos, eventSystem);
             if (hit == null)
             {
                 return ResolvedPointerTargets.Empty;

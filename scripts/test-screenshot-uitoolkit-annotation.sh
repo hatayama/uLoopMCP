@@ -1,7 +1,8 @@
 #!/bin/sh
-# E2E verification that screenshot --annotate-elements lists UI Toolkit controls, using the uloop CLI against
+# E2E verification that screenshot --annotate-elements lists UI Toolkit controls and that simulate-mouse-ui and
+# simulate-mouse-input press them at the annotated points, using the uloop CLI against
 # UIToolkitAnnotationDemoScene. Safe to run repeatedly: it stops PlayMode and restores the Game View size on
-# exit, and never saves the scene.
+# exit, and never saves the scene, so the listener and EventSystem changes made in PlayMode are discarded.
 
 set -eu
 
@@ -276,34 +277,164 @@ verify_elements_only_capture() {
         >/dev/null || fail "Elements-only coordinates differ from the annotated capture by more than 1 pixel"
 }
 
-get_play_click_count() {
-    json=$(run_uloop_json execute-dynamic-code --code '
+get_click_count() {
+    name=$1
+    json=$(run_uloop_json execute-dynamic-code --code "
 UIToolkitAnnotationDemo demo = UnityEngine.Object.FindObjectOfType<UIToolkitAnnotationDemo>();
-if (demo == null) { return "ERROR: UIToolkitAnnotationDemo not found"; }
-return demo.GetClickCount("play");
-')
-    assert_json_success "$json" "Read play click count"
+if (demo == null) { return \"ERROR: UIToolkitAnnotationDemo not found\"; }
+return demo.GetClickCount(\"$name\");
+")
+    assert_json_success "$json" "Read $name click count"
     count=$(printf '%s\n' "$json" | jq -r '.Result')
     case "$count" in
         ERROR:*)
-            fail "Read play click count failed: ${count#ERROR: }"
+            fail "Read $name click count failed: ${count#ERROR: }"
             ;;
     esac
     printf '%s\n' "$count"
 }
 
-# simulate-mouse-input reaches UI Toolkit buttons through the EventSystem; simulate-mouse-ui does not.
-verify_click() {
-    x=$(jq -r '[.Screenshots[0].AnnotatedElements[] | select(.UiSystem == "UIToolkit" and .Name == "play")][0].SimX' "$E1_JSON")
-    y=$(jq -r '[.Screenshots[0].AnnotatedElements[] | select(.UiSystem == "UIToolkit" and .Name == "play")][0].SimY' "$E1_JSON")
-    before=$(get_play_click_count)
+# Prints a field of the first annotated element matching the jq selector.
+annotated_field() {
+    selector=$1
+    field=$2
+    jq -r "[.Screenshots[0].AnnotatedElements[] | select($selector)][0].$field" "$E2_JSON"
+}
 
-    json=$(run_uloop_json simulate-mouse-input --action Click --x "$x" --y "$y")
-    assert_json_success "$json" "Click play"
+assert_response_field() {
+    json=$1
+    field=$2
+    expected=$3
+    context=$4
+    assert_text_equals "$(printf '%s\n' "$json" | jq -r ".$field")" "$expected" "$context $field"
+}
+
+# Prints the simulate-mouse-ui response after checking it succeeded.
+simulate_ui() {
+    context=$1
+    shift
+    json=$(run_uloop_json simulate-mouse-ui "$@")
+    assert_json_success "$json" "$context"
+    printf '%s\n' "$json"
+}
+
+PLAY_SELECTOR='.UiSystem == "UIToolkit" and .Name == "play"'
+
+# simulate-mouse-ui reaches the UI Toolkit button directly and reports it, including for a click inside a
+# scrollbar, where it must report the scrollbar rather than the part inside it.
+verify_ui_click() {
+    x=$(annotated_field "$PLAY_SELECTOR" SimX)
+    y=$(annotated_field "$PLAY_SELECTOR" SimY)
+    before=$(get_click_count play)
+
+    json=$(simulate_ui "simulate-mouse-ui click on play" --action Click --x "$x" --y "$y")
+    assert_response_field "$json" UiSystem "UIToolkit" "simulate-mouse-ui click on play"
+    assert_response_field "$json" HitPath "UIToolkitAnnotationDemo/BackDocument#play" "simulate-mouse-ui click on play"
+    assert_response_field "$json" HitGameObjectName "play" "simulate-mouse-ui click on play"
+    assert_text_equals "$(get_click_count play)" "$((before + 1))" "play click count after simulate-mouse-ui"
+
+    scrollbar_selector='.UiSystem == "UIToolkit" and .Type == "Scrollbar"'
+    json=$(simulate_ui "simulate-mouse-ui click on the scrollbar" --action Click \
+        --x "$(annotated_field "$scrollbar_selector" SimX)" --y "$(annotated_field "$scrollbar_selector" SimY)")
+    assert_response_field "$json" HitPath "$(annotated_field "$scrollbar_selector" Path)" "simulate-mouse-ui click on the scrollbar"
+}
+
+# simulate-mouse-input reaches UI Toolkit buttons through the EventSystem's Input System UI module.
+verify_input_click() {
+    before=$(get_click_count play)
+
+    json=$(run_uloop_json simulate-mouse-input --action Click \
+        --x "$(annotated_field "$PLAY_SELECTOR" SimX)" --y "$(annotated_field "$PLAY_SELECTOR" SimY)")
+    assert_json_success "$json" "simulate-mouse-input click on play"
     sleep 1
 
-    after=$(get_play_click_count)
-    assert_text_equals "$after" "$((before + 1))" "play click count"
+    assert_text_equals "$(get_click_count play)" "$((before + 1))" "play click count after simulate-mouse-input"
+}
+
+# The front panel takes a click on the covered part; the uncovered annotated point reaches the button.
+verify_covered_click() {
+    selector='.UiSystem == "UIToolkit" and .Name == "partly-covered"'
+    min_x=$(annotated_field "$selector" BoundsMinX)
+    max_x=$(annotated_field "$selector" BoundsMaxX)
+    min_y=$(annotated_field "$selector" BoundsMinY)
+    max_y=$(annotated_field "$selector" BoundsMaxY)
+    covered_x=$(jq -n --argjson min "$min_x" --argjson max "$max_x" '$min + ($max - $min) * 0.3')
+    covered_y=$(jq -n --argjson min "$min_y" --argjson max "$max_y" '($min + $max) / 2')
+    before=$(get_click_count partly-covered)
+
+    json=$(simulate_ui "simulate-mouse-ui click on the covered part" --action Click --x "$covered_x" --y "$covered_y")
+    assert_response_field "$json" HitPath "UIToolkitAnnotationDemo/FrontDocument#cover" "simulate-mouse-ui click on the covered part"
+    assert_text_equals "$(get_click_count partly-covered)" "$before" "partly-covered click count after clicking its cover"
+
+    simulate_ui "simulate-mouse-ui click on partly-covered" --action Click \
+        --x "$(annotated_field "$selector" SimX)" --y "$(annotated_field "$selector" SimY)" >/dev/null
+    assert_text_equals "$(get_click_count partly-covered)" "$((before + 1))" "partly-covered click count"
+}
+
+# The disabled button is not annotated, so its layout centre in the demo (100,440 200x50) is used. The press is
+# delivered but, as with real input, the disabled button does not react.
+verify_disabled_click() {
+    json=$(simulate_ui "simulate-mouse-ui click on locked" --action Click --x 200 --y 465)
+    assert_response_field "$json" HitPath "UIToolkitAnnotationDemo/BackDocument#locked" "simulate-mouse-ui click on locked"
+    assert_text_equals "$(get_click_count locked)" "0" "locked click count"
+}
+
+verify_long_press() {
+    before=$(get_click_count play)
+
+    simulate_ui "simulate-mouse-ui long press on play" --action LongPress --duration 0.5 \
+        --x "$(annotated_field "$PLAY_SELECTOR" SimX)" --y "$(annotated_field "$PLAY_SELECTOR" SimY)" >/dev/null
+
+    assert_text_equals "$(get_click_count play)" "$((before + 1))" "play click count after long press"
+}
+
+# The demo does not count uGUI clicks, so a listener added in PlayMode writes the count into the button label.
+verify_ugui_click() {
+    json=$(run_uloop_json execute-dynamic-code --code '
+using UnityEngine;
+using UnityEngine.UI;
+GameObject buttonObject = GameObject.Find("ugui-button");
+if (buttonObject == null) { return "ERROR: ugui-button not found"; }
+Text label = buttonObject.GetComponentInChildren<Text>();
+if (label == null) { return "ERROR: ugui-button has no Text"; }
+int clicks = 0;
+buttonObject.GetComponent<Button>().onClick.AddListener(() => { clicks++; label.text = "clicked " + clicks; });
+label.text = "clicked 0";
+return label.text;
+')
+    assert_json_success "$json" "Add ugui-button listener"
+    assert_text_equals "$(printf '%s\n' "$json" | jq -r '.Result')" "clicked 0" "ugui-button listener"
+
+    selector='.UiSystem == "UGUI" and .Name == "ugui-button"'
+    json=$(simulate_ui "simulate-mouse-ui click on ugui-button" --action Click \
+        --x "$(annotated_field "$selector" SimX)" --y "$(annotated_field "$selector" SimY)")
+    assert_response_field "$json" UiSystem "UGUI" "simulate-mouse-ui click on ugui-button"
+
+    json=$(run_uloop_json execute-dynamic-code --code '
+using UnityEngine;
+using UnityEngine.UI;
+return GameObject.Find("ugui-button").GetComponentInChildren<Text>().text;
+')
+    assert_json_success "$json" "Read ugui-button label"
+    assert_text_equals "$(printf '%s\n' "$json" | jq -r '.Result')" "clicked 1" "ugui-button label"
+}
+
+# Runs last: the EventSystem stays disabled until PlayMode stops on exit.
+verify_click_without_event_system() {
+    json=$(run_uloop_json execute-dynamic-code --code '
+using UnityEngine.EventSystems;
+if (EventSystem.current == null) { return "ERROR: no EventSystem"; }
+EventSystem.current.gameObject.SetActive(false);
+return EventSystem.current == null ? "disabled" : "ERROR: still active";
+')
+    assert_json_success "$json" "Disable EventSystem"
+    assert_text_equals "$(printf '%s\n' "$json" | jq -r '.Result')" "disabled" "EventSystem"
+    before=$(get_click_count play)
+
+    simulate_ui "simulate-mouse-ui click on play without an EventSystem" --action Click \
+        --x "$(annotated_field "$PLAY_SELECTOR" SimX)" --y "$(annotated_field "$PLAY_SELECTOR" SimY)" >/dev/null
+
+    assert_text_equals "$(get_click_count play)" "$((before + 1))" "play click count without an EventSystem"
 }
 
 rm -rf "$TMP_DIR"
@@ -317,25 +448,43 @@ printf '=========================================\n'
 
 wait_unity_ready
 
-printf '[1/6] Loading UI Toolkit annotation demo scene...\n'
+printf '[1/12] Loading UI Toolkit annotation demo scene...\n'
 initialize_demo_scene
 
-printf '[2/6] Selecting Full HD Game View resolution...\n'
+printf '[2/12] Selecting Full HD Game View resolution...\n'
 select_full_hd_game_view
 
-printf '[3/6] Starting PlayMode and waiting for UI Toolkit controls...\n'
+printf '[3/12] Starting PlayMode and waiting for UI Toolkit controls...\n'
 run_uloop_json control-play-mode --action Play >/dev/null
 wait_play_mode
 wait_for_uitoolkit_play
 
-printf '[4/6] Checking the annotated capture...\n'
+printf '[4/12] Checking the annotated capture...\n'
 verify_annotated_capture
 
-printf '[5/6] Checking the elements-only capture matches...\n'
+printf '[5/12] Checking the elements-only capture matches...\n'
 verify_elements_only_capture
 
-printf '[6/6] Clicking a UI Toolkit button at its annotated point...\n'
-verify_click
+printf '[6/12] Clicking UI Toolkit controls with simulate-mouse-ui...\n'
+verify_ui_click
+
+printf '[7/12] Clicking a UI Toolkit button with simulate-mouse-input...\n'
+verify_input_click
+
+printf '[8/12] Clicking a partly covered UI Toolkit button...\n'
+verify_covered_click
+
+printf '[9/12] Clicking a disabled UI Toolkit button...\n'
+verify_disabled_click
+
+printf '[10/12] Long-pressing a UI Toolkit button...\n'
+verify_long_press
+
+printf '[11/12] Clicking the uGUI button with simulate-mouse-ui...\n'
+verify_ugui_click
+
+printf '[12/12] Clicking a UI Toolkit button without an EventSystem...\n'
+verify_click_without_event_system
 
 printf '\n'
 printf '=========================================\n'

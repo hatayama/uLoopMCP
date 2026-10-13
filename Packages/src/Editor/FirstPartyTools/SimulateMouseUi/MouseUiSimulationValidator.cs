@@ -1,6 +1,4 @@
 #nullable enable
-using UnityEngine.EventSystems;
-
 using io.github.hatayama.UnityCliLoop.Runtime;
 
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
@@ -12,7 +10,6 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
     {
         internal static SimulateMouseUiResponse? ValidateSimulationStart(
             MouseUiSimulationCommand parameters,
-            EventSystem? eventSystem,
             string pausedActionDescription)
         {
             PlayModeToolPreflightResult playModeResult =
@@ -20,13 +17,6 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             if (!playModeResult.IsValid)
             {
                 return MouseUiSimulationResponseFactory.CreatePreflightFailure(parameters, playModeResult);
-            }
-
-            if (eventSystem == null)
-            {
-                return MouseUiSimulationResponseFactory.CreateFailure(
-                    parameters,
-                    "No EventSystem found in the scene. Ensure an EventSystem GameObject exists.");
             }
 
             return ValidateSimulationRequestOptions(parameters);
@@ -91,7 +81,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 || action == MouseAction.DragStart;
         }
 
-        private static bool IsDragAction(MouseAction action)
+        internal static bool IsDragAction(MouseAction action)
         {
             return action == MouseAction.Drag
                 || action == MouseAction.DragStart

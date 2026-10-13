@@ -8,7 +8,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
     /// </summary>
     public sealed class UIToolkitScreenControl
     {
-        public UIToolkitScreenControl(
+        internal UIToolkitScreenControl(
             string name,
             string path,
             string type,

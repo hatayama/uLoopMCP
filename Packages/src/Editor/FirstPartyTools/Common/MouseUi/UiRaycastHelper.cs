@@ -12,10 +12,56 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
     /// </summary>
     internal static class UiRaycastHelper
     {
+        // Results from uGUI's bridge to UI Toolkit panels are recognised by type name because the type is
+        // compiled only when the UI Toolkit package is present. They are skipped where a caller resolves UI
+        // Toolkit itself: the bridge flips Y with Screen.height, which outside the player loop is the size of
+        // the last Editor view drawn, so its hits land at the wrong place on the panel.
+        internal const string PanelRaycasterTypeFullName = "UnityEngine.UIElements.PanelRaycaster";
+
         public static RaycastResult? RaycastUI(Vector2 screenPosition, EventSystem eventSystem)
         {
             RaycastContext context = new(eventSystem);
             return context.Raycast(screenPosition);
+        }
+
+        internal static RaycastResult? RaycastUISkippingUIToolkitPanels(Vector2 screenPosition, EventSystem eventSystem)
+        {
+            RaycastContext context = new(eventSystem);
+            return context.RaycastSkippingUIToolkitPanels(screenPosition);
+        }
+
+        // Picks the EventSystem's first hit, unless the Canvas-space hit should win over it; with no
+        // EventSystem hit, the Canvas-space hit.
+        internal static RaycastResult? ChooseHit(List<RaycastResult> eventSystemResults, RaycastResult? canvasSpaceHit)
+        {
+            if (eventSystemResults.Count > 0)
+            {
+                RaycastResult firstHit = eventSystemResults[0];
+
+                if (canvasSpaceHit != null && ShouldPreferCanvasSpaceHit(canvasSpaceHit.Value, firstHit))
+                {
+                    return canvasSpaceHit;
+                }
+
+                return firstHit;
+            }
+
+            // EventSystem clips at Screen.width/height, which can be smaller than the
+            // Canvas layout space (Game view target resolution). Fall back to manual hit testing.
+            return canvasSpaceHit;
+        }
+
+        internal static RaycastResult? ChooseHitSkippingUIToolkitPanels(
+            List<RaycastResult> eventSystemResults,
+            RaycastResult? canvasSpaceHit)
+        {
+            List<RaycastResult> withoutPanels = eventSystemResults.FindAll(result => !IsPanelRaycasterHit(result));
+            return ChooseHit(withoutPanels, canvasSpaceHit);
+        }
+
+        private static bool IsPanelRaycasterHit(RaycastResult result)
+        {
+            return result.module != null && result.module.GetType().FullName == PanelRaycasterTypeFullName;
         }
 
         private static List<CanvasRaycastSource> CollectCanvasRaycastSources()
@@ -107,26 +153,23 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
             public RaycastResult? Raycast(Vector2 screenPosition)
             {
+                RaycastResult? canvasSpaceHit = RaycastBothWays(screenPosition);
+                return ChooseHit(_eventSystemResults, canvasSpaceHit);
+            }
+
+            internal RaycastResult? RaycastSkippingUIToolkitPanels(Vector2 screenPosition)
+            {
+                RaycastResult? canvasSpaceHit = RaycastBothWays(screenPosition);
+                return ChooseHitSkippingUIToolkitPanels(_eventSystemResults, canvasSpaceHit);
+            }
+
+            // Fills the EventSystem results and returns the Canvas-space hit for the same point.
+            private RaycastResult? RaycastBothWays(Vector2 screenPosition)
+            {
                 _eventSystemResults.Clear();
                 _pointerData.position = screenPosition;
                 _eventSystem.RaycastAll(_pointerData, _eventSystemResults);
-                RaycastResult? canvasSpaceHit = RaycastCanvasSpaceFromSources(screenPosition, _canvasRaycastSources);
-
-                if (_eventSystemResults.Count > 0)
-                {
-                    RaycastResult firstHit = _eventSystemResults[0];
-
-                    if (canvasSpaceHit != null && ShouldPreferCanvasSpaceHit(canvasSpaceHit.Value, firstHit))
-                    {
-                        return canvasSpaceHit;
-                    }
-
-                    return firstHit;
-                }
-
-                // EventSystem clips at Screen.width/height, which can be smaller than the
-                // Canvas layout space (Game view target resolution). Fall back to manual hit testing.
-                return canvasSpaceHit;
+                return RaycastCanvasSpaceFromSources(screenPosition, _canvasRaycastSources);
             }
         }
 

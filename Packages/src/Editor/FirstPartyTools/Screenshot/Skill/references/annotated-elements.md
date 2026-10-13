@@ -10,7 +10,7 @@ Device Simulator is supported for this flow: prefer `--capture-mode rendering` (
 
 - `Label`: Index label in JSON (`A` = first in that sort, `B` = next, ...). Treat it as a stable handle, not as proof of what is actually in front: when overlapping elements cross parents, pick the target by `Path` and confirm the result with `simulate-mouse-ui`'s `HitGameObjectName` — the handler that received the events, resolved up the hierarchy from the raycast hit (or from `--target-path` in bypass mode), so it can name an ancestor of the element you clicked. Screenshot labels also include the interaction hint, such as `A / CLICK` or `B / DRAG`.
 - `Name`: Element name
-- `Path`: Hierarchy path from the scene root, for example `Canvas/Panel/Button`. Use this as `simulate-mouse-ui --target-path` when bypassing raycast blockers. UI Toolkit entries use a different form that `--target-path` does not accept; see [UI Toolkit Elements](#ui-toolkit-elements).
+- `Path`: Hierarchy path from the scene root, for example `Canvas/Panel/Button`. Use this as `simulate-mouse-ui --target-path` when bypassing raycast blockers. UI Toolkit entries use a different form that `--target-path` does not accept; click them at `SimX`/`SimY` instead. See [UI Toolkit Elements](#ui-toolkit-elements).
 - `Type`: Element type (`Button`, `Toggle`, `Slider`, `Dropdown`, `InputField`, `Scrollbar`, `Draggable`, `DropTarget`, `Selectable`, `PhysicsCollider`)
 - `Interaction`: Derived interaction category (`Click`, `Drag`, `Drop`, `Text`) or `Raycast` for clustered physics collider entries. Use this to choose between `simulate-mouse-ui --action Click`, drag actions, or `simulate-mouse-input` (including `--dry-run`).
 - `UiSystem`: UI system the entry came from: `UGUI`, `UIToolkit`, or empty for `PhysicsCollider` entries.
@@ -53,9 +53,9 @@ Limits:
 
 Clicking:
 
-- `simulate-mouse-input --action Click --x <SimX> --y <SimY>` reaches UI Toolkit controls when the scene has an EventSystem with an Input System UI input module.
-- Without an EventSystem the click does not reach UI Toolkit controls.
-- `simulate-mouse-ui` does not reach UI Toolkit controls, and its `--target-path` does not accept UI Toolkit `Path` values.
+- `simulate-mouse-ui --action Click --x <SimX> --y <SimY>` (or `LongPress`) reaches UI Toolkit controls, with or without an EventSystem. Its `--target-path` does not accept UI Toolkit `Path` values.
+- `simulate-mouse-input --action Click --x <SimX> --y <SimY>` also reaches them when the scene has an EventSystem with an Input System UI input module.
+- Without an EventSystem the `simulate-mouse-input` click does not reach UI Toolkit controls.
 
 ### PhysicsCollider Entries Per Closed Region
 

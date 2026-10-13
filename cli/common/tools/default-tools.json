@@ -521,7 +521,7 @@
     },
     {
       "name": "simulate-mouse-ui",
-      "description": "Simulate PlayMode EventSystem UI mouse actions using screen coordinates. Use for UI clicks, long-presses, or drags from annotated screenshots.",
+      "description": "Simulate PlayMode UI mouse actions on uGUI and UI Toolkit using screen coordinates. Use for UI clicks, long-presses, or drags from annotated screenshots.",
       "inputSchema": {
         "type": "object",
         "properties": {
