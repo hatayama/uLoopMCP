@@ -31,6 +31,10 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         /// an edit that was never applied.
         /// A declaration a sibling owns is left out even when refused: an introduced type is never
         /// unloaded, so a failed run does not take the sibling's earlier declaration away.
+        /// A Skipped row for a compiled member without a body that could not be compared with the
+        /// compiled source is left out too: it has no body to apply. An edit to only its default
+        /// values, attributes or parameter names therefore does not start a compile on its own;
+        /// the row's sentence asks for one instead.
         /// </remarks>
         internal static bool HasUnappliedEdit(
             HotReloadOrchestratorResult result,
@@ -44,7 +48,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 }
 
                 if (method.Kind == HotReloadMethodOutcomeKind.Skipped
-                    && !activePatchSiblingFiles.Contains(method.FilePath))
+                    && !activePatchSiblingFiles.Contains(method.FilePath)
+                    && !method.IsBodylessNotCompared)
                 {
                     return true;
                 }

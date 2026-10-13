@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 using UnityEngine;
 
@@ -461,5 +462,45 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         {
             return 2;
         }
+    }
+
+    /// <summary>
+    /// Compiled abstract host so a bodyless abstract method can be classified against a real
+    /// compiled type when no compiled-source baseline exists.
+    /// </summary>
+    public abstract class HotReloadAddedMemberAbstractHost
+    {
+        public abstract int Shape(int value);
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public int AbstractHostConcrete()
+        {
+            return 1;
+        }
+    }
+
+    /// <summary>
+    /// Compiled host with an extern method so a bodyless extern method can be classified against
+    /// a real compiled type when no compiled-source baseline exists. The library is never loaded.
+    /// </summary>
+    public static class HotReloadAddedMemberExternHost
+    {
+        [DllImport("hot_reload_test_missing_library")]
+        public static extern int Missing(int value);
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public static int ExternHostConcrete()
+        {
+            return 1;
+        }
+    }
+
+    /// <summary>
+    /// Compiled generic abstract host so a bodyless method on a generic type, which the worker
+    /// hard-skips before it looks at the body, can be classified when no baseline exists.
+    /// </summary>
+    public abstract class HotReloadAddedMemberGenericAbstractHost<T>
+    {
+        public abstract int GenericShape(int value);
     }
 }

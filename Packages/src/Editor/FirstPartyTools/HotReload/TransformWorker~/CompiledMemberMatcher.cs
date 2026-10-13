@@ -22,6 +22,25 @@ internal static class CompiledMemberMatcher
         INamedTypeSymbol compiledType,
         IMethodSymbol sourceMethod)
     {
+        IMethodSymbol compiledMethod = FindCompiledOrdinaryMethod(compiledType, sourceMethod);
+        if (compiledMethod == null)
+        {
+            return CompiledMethodMatch.NotFound;
+        }
+
+        return ReturnTypesMatch(compiledMethod, sourceMethod)
+            ? CompiledMethodMatch.Matched
+            : CompiledMethodMatch.ReturnTypeChanged;
+    }
+
+    /// <summary>
+    /// The compiled ordinary method with the source method's name, arity, static-ness and parameter
+    /// types, whatever its return type; null when there is none.
+    /// </summary>
+    internal static IMethodSymbol FindCompiledOrdinaryMethod(
+        INamedTypeSymbol compiledType,
+        IMethodSymbol sourceMethod)
+    {
         string[] sourceParameterTypeFullNames = sourceMethod.Parameters
             .Select(CecilTypeNames.ToParameterTypeFullName)
             .ToArray();
@@ -48,20 +67,13 @@ internal static class CompiledMemberMatcher
                 }
             }
 
-            if (!parametersMatch)
+            if (parametersMatch)
             {
-                continue;
+                return compiledMethod;
             }
-
-            if (ReturnTypesMatch(compiledMethod, sourceMethod))
-            {
-                return CompiledMethodMatch.Matched;
-            }
-
-            return CompiledMethodMatch.ReturnTypeChanged;
         }
 
-        return CompiledMethodMatch.NotFound;
+        return null;
     }
 
     internal static bool ReturnTypesMatch(IMethodSymbol compiledMethod, IMethodSymbol sourceMethod)
