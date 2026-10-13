@@ -20,4 +20,4 @@ Note: Click and LongPress on empty space (no UI element) still return `Success =
 
 ## UI Toolkit Elements
 
-`Click` and `LongPress` reach UI Toolkit controls at their annotated `SimX`/`SimY`. How presses are delivered and what is not supported: `ui-toolkit.md`.
+`Click`, `LongPress`, and the drag actions reach UI Toolkit controls at their annotated `SimX`/`SimY` (`--from-x`/`--from-y` for `Drag`). How presses and drags are delivered and what is not supported: `ui-toolkit.md`.
