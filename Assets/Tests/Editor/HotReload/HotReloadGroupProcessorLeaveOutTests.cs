@@ -289,11 +289,16 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                         collaborators, context, compileResult, entriesToPatch),
                     collaborators.EntryApplier.ApplyPreparedEntries)))
             {
-                return await HotReloadCompositionRoot.Services.GroupProcessor.ProcessGroupAsync(
-                    files,
-                    "leave-out-test",
-                    new HotReloadRunTiming(),
-                    CancellationToken.None);
+                using (HotReloadCompiledCallersRun compiledCallersRun =
+                    await HotReloadCompositionRoot.Services.CompiledCallers.BeginRunAsync())
+                {
+                    return await HotReloadCompositionRoot.Services.GroupProcessor.ProcessGroupAsync(
+                        files,
+                        compiledCallersRun,
+                        "leave-out-test",
+                        new HotReloadRunTiming(),
+                        CancellationToken.None);
+                }
             }
         }
 

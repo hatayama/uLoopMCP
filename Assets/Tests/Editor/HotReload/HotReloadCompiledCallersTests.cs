@@ -1,8 +1,13 @@
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
 using NUnit.Framework;
+
+using UnityEngine;
+using UnityEngine.TestTools;
 
 using io.github.hatayama.UnityCliLoop.FirstPartyTools;
 using io.github.hatayama.UnityCliLoop.ToolContracts;
@@ -103,6 +108,22 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             Assert.That(_cache.HoldDepth, Is.EqualTo(0), "the hold is released");
             Assert.That(_loader.Ran, Is.Empty, "no background read starts");
             Assert.That(_backfill.State, Is.EqualTo(HotReloadCallSiteBackfillState.Idle));
+        }
+
+        /// <summary>
+        /// What: a caller scan asked of a run that already ended is reported, since its reads are
+        /// no longer held against eviction.
+        /// </summary>
+        [Test]
+        public async Task FindCallSites_AfterTheRunEnded_Asserts()
+        {
+            HotReloadCompiledCallersRun run = await _compiledCallers.BeginRunAsync();
+            run.End("corr");
+            LogAssert.Expect(LogType.Assert, "FindCallSites is called only while the run is open.");
+
+            run.FindCallSites(Path.GetFullPath(Path.Combine(Application.dataPath, "..")), Array.Empty<HotReloadCompiledMethodIdentity>());
+
+            run.Dispose();
         }
     }
 }

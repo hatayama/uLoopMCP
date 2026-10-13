@@ -48,11 +48,13 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
         internal async Task<IReadOnlyList<HotReloadFileProcessResult>> ProcessGroupAsync(
             IReadOnlyList<HotReloadGroupFile> files,
+            HotReloadCompiledCallersRun compiledCallersRun,
             string correlationId,
             HotReloadRunTiming timing,
             CancellationToken ct)
         {
             Debug.Assert(files != null && files.Count > 0, "A group must hold a file.");
+            Debug.Assert(compiledCallersRun != null, "compiledCallersRun must not be null.");
             Debug.Assert(timing != null, "timing must not be null.");
 
             HotReloadGroupFile firstFile = files[0];
@@ -159,7 +161,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
             if (preparation.Prepared == null)
             {
-                return await TransformAndApplyGroupAsync(files, workerInput, null, refusedTypes, activePaths, correlationId, timing, ct)
+                return await TransformAndApplyGroupAsync(files, workerInput, null, refusedTypes, activePaths, compiledCallersRun, correlationId, timing, ct)
                     .ConfigureAwait(false);
             }
 
@@ -169,6 +171,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 preparation.Prepared,
                 refusedTypes,
                 activePaths,
+                compiledCallersRun,
                 correlationId,
                 timing,
                 ct).ConfigureAwait(false);
@@ -194,6 +197,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             HotReloadPreparedIntroducedTypes prepared,
             IReadOnlyList<HotReloadRefusedIntroducedType> refusedTypes,
             HashSet<string> activePaths,
+            HotReloadCompiledCallersRun compiledCallersRun,
             string correlationId,
             HotReloadRunTiming timing,
             CancellationToken ct)
@@ -227,6 +231,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                         prepared,
                         refusedTypes,
                         activePaths,
+                        compiledCallersRun,
                         correlationId,
                         timing,
                         ct).ConfigureAwait(false);
@@ -255,6 +260,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             HotReloadPreparedIntroducedTypes prepared,
             IReadOnlyList<HotReloadRefusedIntroducedType> refusedTypes,
             HashSet<string> activePaths,
+            HotReloadCompiledCallersRun compiledCallersRun,
             string correlationId,
             HotReloadRunTiming timing,
             CancellationToken ct)
@@ -281,7 +287,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
             if (leftOutPaths.Count == 0)
             {
-                return await ApplyTransformedGroupAsync(files, workerInput, workerOutput, prepared, refusedTypes, correlationId, timing, ct)
+                return await ApplyTransformedGroupAsync(files, workerInput, workerOutput, prepared, refusedTypes, compiledCallersRun, correlationId, timing, ct)
                     .ConfigureAwait(false);
             }
 
@@ -306,6 +312,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                     retryResult.Output,
                     prepared,
                     refusedTypes,
+                    compiledCallersRun,
                     correlationId,
                     timing,
                     ct).ConfigureAwait(false)
@@ -366,6 +373,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             TransformWorkerOutputDto workerOutput,
             HotReloadPreparedIntroducedTypes prepared,
             IReadOnlyList<HotReloadRefusedIntroducedType> refusedTypes,
+            HotReloadCompiledCallersRun compiledCallersRun,
             string correlationId,
             HotReloadRunTiming timing,
             CancellationToken ct)
@@ -424,7 +432,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                     workerOutput,
                     files,
                     prepared,
-                    new HotReloadCompileFailureNoteSources(workerOutput.skipped, refusedTypes));
+                    new HotReloadCompileFailureNoteSources(workerOutput.skipped, refusedTypes),
+                    compiledCallersRun);
             }
 
             Stopwatch gateWatch = Stopwatch.StartNew();
