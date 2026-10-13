@@ -140,6 +140,30 @@ func TestStatusHelpPrintsUsage(t *testing.T) {
 	}
 }
 
+// Verifies cancel --help prints its usage line and registry description with only the global
+// option, since cancel takes no options of its own.
+func TestCancelHelpPrintsUsage(t *testing.T) {
+	t.Chdir(t.TempDir())
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	code := RunProjectLocal(context.Background(), []string{"cancel", "--help"}, &stdout, &stderr)
+
+	if code != 0 {
+		t.Fatalf("cancel --help failed: code=%d stderr=%s", code, stderr.String())
+	}
+	const expected = "Usage:\n" +
+		"  uloop cancel\n" +
+		"\n" +
+		"Cancel the tool the Unity Editor for this project is running now\n" +
+		"\n" +
+		"Global options:\n" +
+		"  --project-path <path>   Run against a Unity project outside the current directory\n"
+	if stdout.String() != expected {
+		t.Fatalf("cancel --help output mismatch:\n got:\n%s\nwant:\n%s", stdout.String(), expected)
+	}
+}
+
 // Verifies list --help prints the complete names-only option contract, including the usage and
 // global options sections that callers need after the unknown-option recovery guidance.
 func TestRunProjectLocalListHelpOutput(t *testing.T) {

@@ -40,6 +40,8 @@ func runResolvedProjectCommand(
 		return runSetCodeOptimizationCommand(ctx, connection, commandArgs, stdout, stderr)
 	case clicore.StatusCommandName:
 		return runStatusCommand(ctx, connection, commandArgs, stdout, stderr)
+	case clicore.CancelCommandName:
+		return runCancelCommand(ctx, connection, commandArgs, stdout, stderr)
 	case pausePointEnableCommandName:
 		return runEnablePausePointCommand(ctx, connection, commandArgs, startPath, stdout, stderr)
 	default:

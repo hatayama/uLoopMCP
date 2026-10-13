@@ -16,6 +16,7 @@ const (
 	PausePointStatusUserCommandName = "pause-point-status"
 	SetCodeOptimizationCommandName  = "set-code-optimization"
 	StatusCommandName               = "status"
+	CancelCommandName               = "cancel"
 	RunTestsCommandName             = "run-tests"
 )
 
@@ -47,6 +48,7 @@ var NativeCommands = []NativeCommandEntry{
 	{Name: PausePointStatusUserCommandName, Description: "Show one pause point marker's state, or list all registered markers when no target is given", Owner: RunnerOwned},
 	{Name: SetCodeOptimizationCommandName, Description: "Switch Unity's Code Optimization to Debug for this session or, with approval, as the machine-wide startup default", Owner: RunnerOwned},
 	{Name: StatusCommandName, Description: "Report whether the Unity Editor for this project can take a command now, without changing anything", Owner: RunnerOwned},
+	{Name: CancelCommandName, Description: "Cancel the tool the Unity Editor for this project is running now", Owner: RunnerOwned},
 	{Name: SkillsCommandName, Description: "List, install, or uninstall agent skills", Owner: DispatcherOwned},
 	{Name: PackageCommandName, Description: "Install or inspect the Unity CLI Loop package in a project", Owner: DispatcherOwned},
 	{Name: InstallCommandName, Description: "Configure the global uloop dispatcher binary", Owner: DispatcherOwned},
