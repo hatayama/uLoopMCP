@@ -248,7 +248,10 @@ func waitForAttachedCompileCompletion(
 	defer ticker.Stop()
 	for {
 		now := time.Now()
-		if !now.Before(deadline) {
+		// Why attempts > 0: logging and setup between taking the deadline and this check can use up a
+		// short timeout, and a wait that never asked Unity would report a timeout without the state it
+		// timed out in. The first query always runs; later ones stop at the deadline as before.
+		if attempts > 0 && !now.Before(deadline) {
 			break
 		}
 

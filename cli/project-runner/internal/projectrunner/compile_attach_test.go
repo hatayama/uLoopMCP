@@ -829,3 +829,32 @@ func TestPersistCompilePendingRecordOrWarnReportsWriteFailure(t *testing.T) {
 		t.Fatalf("stderr must warn about the failed write:\n%s", stderr.String())
 	}
 }
+
+// Verifies an attach wait whose timeout has already passed still asks Unity once and returns that status.
+func TestWaitForAttachedCompileCompletionQueriesOnceWhenTimeoutAlreadyPassed(t *testing.T) {
+	connection := compileWaitTestConnection(t)
+	queries := 0
+	deps := compileWaitTestDeps(func(context.Context, unityipc.Connection, string) (compileStatusResponse, error) {
+		queries++
+		return compileStatusResponse{Ready: false, IsCompiling: true}, nil
+	})
+
+	_, outcome, lastStatus, err := waitForAttachedCompileCompletion(context.Background(), compileCompletionOptions{
+		connection:   connection,
+		requestID:    "compile_attach_expired_wait",
+		timeout:      time.Nanosecond,
+		pollInterval: 5 * time.Millisecond,
+	}, deps)
+	if err != nil {
+		t.Fatalf("waitForAttachedCompileCompletion failed: %v", err)
+	}
+	if outcome != attachWaitTimedOut {
+		t.Fatalf("expected attach timeout: %v", outcome)
+	}
+	if queries != 1 {
+		t.Fatalf("expected exactly one status query, got %d", queries)
+	}
+	if lastStatus == nil || !lastStatus.IsCompiling {
+		t.Fatalf("expected the observed compiling status, got %#v", lastStatus)
+	}
+}
