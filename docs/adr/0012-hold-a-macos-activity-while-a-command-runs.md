@@ -7,9 +7,9 @@ Date: 2026-10-07
 While the Unity Editor processes a command — a tool or an internal bridge command — it holds a
 macOS process activity started with `NSActivityUserInitiatedAllowingIdleSystemSleep`. The
 activity begins when the execution router starts the command and ends when the router returns,
-whether the command succeeded, failed, or was canceled. `get-editor-status` holds nothing: it
-answers before the router starts any command, and it must keep answering while the main thread
-is stuck. Every activity still held is ended before a domain reload. Other platforms hold
+whether the command succeeded, failed, or was canceled. `get-editor-status` and
+`cancel-running-tool` hold nothing: they answer before the router starts any command, and they
+must keep answering while the main thread is stuck. Every activity still held is ended before a domain reload. Other platforms hold
 nothing.
 
 ## Context
