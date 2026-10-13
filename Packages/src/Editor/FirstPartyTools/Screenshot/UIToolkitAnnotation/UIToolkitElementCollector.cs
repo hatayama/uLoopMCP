@@ -19,7 +19,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         private const char PATH_SEPARATOR = '#';
         private const string CHAIN_SEPARATOR = "/";
 
-        internal static void Collect(List<UIElementInfo> elements)
+        internal static void Collect(List<UIElementInfo> elements, float gameViewHeight)
         {
             List<PanelEntry> panels = GatherPanels();
 
@@ -39,6 +39,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 }
 
                 VisitContext context = new VisitContext(
+                    gameViewHeight,
                     entry,
                     entry.Mapping,
                     CreateFrontPickers(panels, entry),
@@ -183,35 +184,36 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 return;
             }
 
-            // Screen.height, not the Game View size, because Unity flips input with Screen.height before handing
-            // it to the panel.
-            float screenHeight = Screen.height;
+            // Not Screen.height: uloop commands run outside the player loop, where Screen reports the size of the
+            // last Editor view drawn. ConvertToSimCoordinates flips the result back with the Game View height, so
+            // the same height is used here.
+            float gameViewHeight = context.GameViewHeight;
             Vector2 topLeftMin = context.Mapping.PanelToScreenTopLeft(new Vector2(worldBound.xMin, worldBound.yMin));
             Vector2 topLeftMax = context.Mapping.PanelToScreenTopLeft(new Vector2(worldBound.xMax, worldBound.yMax));
             Rect bottomLeftBounds = Rect.MinMaxRect(
                 topLeftMin.x,
-                screenHeight - topLeftMax.y,
+                gameViewHeight - topLeftMax.y,
                 topLeftMax.x,
-                screenHeight - topLeftMin.y);
+                gameViewHeight - topLeftMin.y);
 
-            Vector2? reachable = FindReachablePoint(element, bottomLeftBounds, screenHeight, context);
+            Vector2? reachable = FindReachablePoint(element, bottomLeftBounds, gameViewHeight, context);
             if (reachable == null)
             {
                 return;
             }
 
             context.Elements.Add(CreateElementInfo(
-                element, type, document, context.Entry, bottomLeftBounds, new Vector2(reachable.Value.x, screenHeight - reachable.Value.y)));
+                element, type, document, context.Entry, bottomLeftBounds, new Vector2(reachable.Value.x, gameViewHeight - reachable.Value.y)));
         }
 
         // Probes the same points as the uGUI annotator, converted to the top-left origin panels take input in.
         private static Vector2? FindReachablePoint(
-            VisualElement element, Rect bottomLeftBounds, float screenHeight, VisitContext context)
+            VisualElement element, Rect bottomLeftBounds, float gameViewHeight, VisitContext context)
         {
             Vector2[] bottomLeftProbes = UIElementAnnotator.GenerateReachabilityProbePoints(
                 bottomLeftBounds.xMin, bottomLeftBounds.yMin, bottomLeftBounds.xMax, bottomLeftBounds.yMax);
             Vector2[] topLeftProbes = bottomLeftProbes
-                .Select(probe => new Vector2(probe.x, screenHeight - probe.y))
+                .Select(probe => new Vector2(probe.x, gameViewHeight - probe.y))
                 .ToArray();
             return UIToolkitReachabilityProbe.FindReachablePoint(
                 topLeftProbes, element, context.FrontPickers, context.OwnPicker);
@@ -296,12 +298,14 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         private sealed class VisitContext
         {
             internal VisitContext(
+                float gameViewHeight,
                 PanelEntry entry,
                 UIToolkitScreenMapping mapping,
                 List<Func<Vector2, VisualElement?>> frontPickers,
                 Func<Vector2, VisualElement?> ownPicker,
                 List<UIElementInfo> elements)
             {
+                GameViewHeight = gameViewHeight;
                 Entry = entry;
                 Mapping = mapping;
                 FrontPickers = frontPickers;
@@ -309,6 +313,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 Elements = elements;
             }
 
+            internal float GameViewHeight { get; }
             internal PanelEntry Entry { get; }
             internal UIToolkitScreenMapping Mapping { get; }
             internal List<Func<Vector2, VisualElement?>> FrontPickers { get; }

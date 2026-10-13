@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using NUnit.Framework;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.UIElements;
@@ -56,15 +57,37 @@ namespace io.github.hatayama.UnityCliLoop.Tests.PlayMode
 
             Assert.That(matches.Count, Is.EqualTo(1));
             UIElementInfo element = matches[0];
-            float screenHeight = Screen.height;
+            float gameViewHeight = Handles.GetMainGameViewSize().y;
             Assert.That(element.Name, Is.EqualTo("play"));
             Assert.That(element.Path, Is.EqualTo(Prefix + "Overlay#play"));
             Assert.That(element.Type, Is.EqualTo("Button"));
             Assert.That(element.Interaction, Is.EqualTo("Click"));
             Assert.That(element.UiSystem, Is.EqualTo("UIToolkit"));
-            AssertBounds(element, Left, screenHeight - (Top + Height), Left + Width, screenHeight - Top);
+            AssertBounds(element, Left, gameViewHeight - (Top + Height), Left + Width, gameViewHeight - Top);
             Assert.That(element.SimX, Is.EqualTo(Left + Width / 2f).Within(Tolerance));
-            Assert.That(element.SimY, Is.EqualTo(screenHeight - (Top + Height / 2f)).Within(Tolerance));
+            Assert.That(element.SimY, Is.EqualTo(gameViewHeight - (Top + Height / 2f)).Within(Tolerance));
+        }
+
+        /// <summary>
+        /// Verifies the flip to a bottom-left origin uses the Game View height it is given rather than
+        /// Screen.height, which outside the player loop reports the size of the last Editor view drawn.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator Collect_WithGameViewHeightUnlikeScreenHeight_ShouldFlipWithGivenHeight()
+        {
+            UIDocument document = CreateDocument("GivenHeight", CreatePanelSettings(0f));
+            AddPlaced(document.rootVisualElement, new Button { name = "play" }, Left, Top, Width, Height);
+            yield return WaitForLayout();
+            float gameViewHeight = Screen.height + 300f;
+
+            List<UIElementInfo> elements = new List<UIElementInfo>();
+            UIToolkitElementCollector.Collect(elements, gameViewHeight);
+            List<UIElementInfo> matches = elements.FindAll(element => element.Path.StartsWith(Prefix + "GivenHeight"));
+
+            Assert.That(matches.Count, Is.EqualTo(1));
+            AssertBounds(matches[0], Left, gameViewHeight - (Top + Height), Left + Width, gameViewHeight - Top);
+            Assert.That(matches[0].SimX, Is.EqualTo(Left + Width / 2f).Within(Tolerance));
+            Assert.That(matches[0].SimY, Is.EqualTo(gameViewHeight - (Top + Height / 2f)).Within(Tolerance));
         }
 
         /// <summary>
@@ -82,10 +105,10 @@ namespace io.github.hatayama.UnityCliLoop.Tests.PlayMode
             List<UIElementInfo> matches = CollectFrom("Scaled");
 
             Assert.That(matches.Count, Is.EqualTo(1));
-            float screenHeight = Screen.height;
-            AssertBounds(matches[0], Left * 2f, screenHeight - (Top + Height) * 2f, (Left + Width) * 2f, screenHeight - Top * 2f);
+            float gameViewHeight = Handles.GetMainGameViewSize().y;
+            AssertBounds(matches[0], Left * 2f, gameViewHeight - (Top + Height) * 2f, (Left + Width) * 2f, gameViewHeight - Top * 2f);
             Assert.That(matches[0].SimX, Is.EqualTo((Left + Width / 2f) * 2f).Within(Tolerance));
-            Assert.That(matches[0].SimY, Is.EqualTo(screenHeight - (Top + Height / 2f) * 2f).Within(Tolerance));
+            Assert.That(matches[0].SimY, Is.EqualTo(gameViewHeight - (Top + Height / 2f) * 2f).Within(Tolerance));
         }
 
         /// <summary>
@@ -104,9 +127,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.PlayMode
             List<UIElementInfo> matches = CollectFrom("PartlyCovered#");
 
             Assert.That(matches.Count, Is.EqualTo(1));
-            float screenHeight = Screen.height;
+            float gameViewHeight = Handles.GetMainGameViewSize().y;
             Assert.That(matches[0].SimX, Is.EqualTo(Left + Width * 0.75f).Within(Tolerance));
-            Assert.That(matches[0].SimY, Is.EqualTo(screenHeight - (Top + Height) + Height * 0.25f).Within(Tolerance));
+            Assert.That(matches[0].SimY, Is.EqualTo(gameViewHeight - (Top + Height) + Height * 0.25f).Within(Tolerance));
         }
 
         /// <summary>
@@ -248,8 +271,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.PlayMode
             List<UIElementInfo> matches = CollectFrom("SameFrame");
 
             Assert.That(matches.Count, Is.EqualTo(1));
-            float screenHeight = Screen.height;
-            AssertBounds(matches[0], Left, screenHeight - (Top + Height), Left + Width, screenHeight - Top);
+            float gameViewHeight = Handles.GetMainGameViewSize().y;
+            AssertBounds(matches[0], Left, gameViewHeight - (Top + Height), Left + Width, gameViewHeight - Top);
         }
 
         /// <summary>

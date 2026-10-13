@@ -28,7 +28,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
             CollectSelectables(elements, processedObjects, raycastContext);
             CollectEventHandlers(elements, processedObjects, raycastContext);
-            UIToolkitElementCollector.Collect(elements);
+            UIToolkitElementCollector.Collect(elements, GameViewCoordinateUtility.GetMainGameViewSize().y);
 
             return elements;
         }
