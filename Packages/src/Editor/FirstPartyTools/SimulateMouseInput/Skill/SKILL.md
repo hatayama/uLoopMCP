@@ -110,7 +110,7 @@ uloop simulate-mouse-input --action SmoothDelta --delta-x 300 --delta-y 0 --dura
 ## Coordinate System
 
 `--x`/`--y` use top-left Game View coordinates: pass `AnnotatedElements[].SimX/SimY`
-directly, convert raw screenshot pixels with `ScreenshotToInputFormula`, and never flip Y
+directly (UI Toolkit entries need an EventSystem in the scene), convert raw screenshot pixels with `ScreenshotToInputFormula`, and never flip Y
 in the caller (the tool converts internally). Conversion formula, Device Simulator
 notes, and how the injected position reads back inside Unity are in
 `references/output-and-coordinates.md`.
