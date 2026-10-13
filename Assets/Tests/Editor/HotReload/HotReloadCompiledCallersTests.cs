@@ -125,5 +125,19 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
 
             run.Dispose();
         }
+
+        /// <summary>
+        /// What: a caller scan asked of a run that was disposed without End (a run that threw) is
+        /// reported too, since its hold is released as well.
+        /// </summary>
+        [Test]
+        public async Task FindCallSites_AfterTheRunWasDisposedWithoutEnd_Asserts()
+        {
+            HotReloadCompiledCallersRun run = await _compiledCallers.BeginRunAsync();
+            run.Dispose();
+            LogAssert.Expect(LogType.Assert, "FindCallSites is called only while the run is open.");
+
+            run.FindCallSites(Path.GetFullPath(Path.Combine(Application.dataPath, "..")), Array.Empty<HotReloadCompiledMethodIdentity>());
+        }
     }
 }
