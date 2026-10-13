@@ -12,7 +12,7 @@ For basic selected GameObject discovery or property inspection, use `find-game-o
 
 This tool can inspect reachable Unity state — GameObjects, components, public properties, static values, method results — but it cannot read local variables or intermediate calculations inside an already-running method. When those values matter, follow the `uloop-pause-point` skill: a pause point's `CapturedVariables` carries the locals, parameters, and instance fields at that line with no code edit or recompile, and while Unity stays paused `UloopPausePoint.TryGetCapturedValue(name)` gives this tool live captured references (it returns `(bool Found, object Value)`; see its `references/captured-variables.md`). That skill also covers the reverse combination — registering an `EditorApplication.update` watcher from this tool that freezes Unity on the first frame a runtime condition holds. Never poll or sleep inside a snippet; the body runs synchronously on the main thread.
 
-Live state injection: when a running PlayMode session is merely in the wrong state — a stuck end-to-end scenario, a camera angle a raycast can never hit, a private flag blocking the path under test — fix the state instead of the code: write the field directly from this tool (reflection reaches private fields) and steer the session onward. Nothing recompiles and no domain reload happens, so the session's in-memory state survives intact. The snippet is a one-off diagnostic that never lands in source files, so project rules restricting reflection in production code are not violated.
+Live state injection: when a running PlayMode session is merely in the wrong state — a stuck end-to-end scenario, a camera angle a raycast can never hit, a private flag blocking the path under test — fix the state instead of the code: write the field directly from this tool (reflection reaches private fields) and steer the session onward. Nothing recompiles or reloads, so the session's in-memory state survives. The snippet is a one-off diagnostic that never lands in source files, so project rules against reflection in production code do not apply.
 
 ## Parameters
 
@@ -25,11 +25,11 @@ Live state injection: when a running PlayMode session is merely in the wrong sta
 
 CLI-only flag, accepted instead of a schema parameter:
 
-- `--code-file <path>`: Read the C# statements from a file instead of `--code`. Use this when the active shell or launcher cannot preserve inline code exactly. Exactly one of `--code` or `--code-file` is required; combining them is an error.
+- `--code-file <path>`: Read the C# statements from a file instead of `--code`. Use this when the active shell or launcher cannot preserve inline code exactly. Exactly one of `--code` or `--code-file` is required.
 
 ## Code Rules
 
-Write direct statements from your own Unity API knowledge — no class/namespace/method wrappers. Return is optional. `await` works, and a returned `Task` is awaited: its value becomes `Result`, its exception a failure.
+Write direct statements from your own Unity API knowledge — no class/namespace/method wrappers. Return is optional. `await` works, and a returned `Task` is awaited: its value becomes `Result`, its exception a failure. Long or open-ended awaits block every other uloop command; pass `ct` and see [references/cancellation.md](references/cancellation.md).
 
 ```csharp
 using UnityEngine;
@@ -41,7 +41,7 @@ Prefer terminal commands for file operations.
 
 A type an active hot reload introduced is nameable here; write its full name. Members hot reload *added* to a type are not; see the hot-reload skill's `added-field-wiring.md`.
 
-This snippet runs in the Editor execution context: `Screen.width` and `Screen.height` are Editor pixels, not the Game View resolution. For a ray through the Game View center, use `cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f))`.
+Snippets run in the Editor context: `Screen.width` and `Screen.height` are Editor pixels, not the Game View resolution. For a ray through the Game View center, use `cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f))`.
 
 ## Known transpiler constraints
 
@@ -76,7 +76,7 @@ Returns JSON:
 - `Error` / `ErrorMessage`: string — top-level failure summary (empty on success)
 - `UpdatedCode`: string|null — the wrapped form actually compiled (handy when debugging using-statement reordering)
 - `DiagnosticsSummary`: string|null — compact summary when diagnostics are available
-- `Diagnostics`: object[] — structured diagnostics; same shape as `CompilationErrors`, usually populated together with it
+- `Diagnostics`: object[] — structured diagnostics; same shape as `CompilationErrors`, usually populated with it
 - `Warning` (string, optional): Set when Play Mode is running while the Unity Editor is unfocused. Progress may be throttled; run `uloop focus-window`, or use the `pause-point --await`/`--trigger` flow instead of polling for progress.
 
 To retain an intermediate value across a later exception, opt in before the risky code:
@@ -87,4 +87,4 @@ UloopDynamicCodePartialResults.Set("completedSteps", completedSteps);
 
 `PartialResults` contains only values explicitly saved this way. Ordinary local variables cannot be recovered after an exception unwinds the snippet. A cancellation before the snippet produces an execution result also returns no `PartialResults`.
 
-On `Success: false`, inspect `CompilationErrors` first. If empty, read `ErrorMessage` (and `Logs` for extra context) — the failure may be a runtime exception, cancellation, or an "execution in progress" rejection, all of which return empty `CompilationErrors`. Both EditMode and PlayMode are supported — the snippet runs in whichever mode the Editor is in.
+On `Success: false`, inspect `CompilationErrors` first. If empty, read `ErrorMessage` and `Logs` — the failure may be a runtime exception, cancellation, or an "execution in progress" rejection, all of which return empty `CompilationErrors`. The snippet runs in whichever mode (EditMode or PlayMode) the Editor is in.
