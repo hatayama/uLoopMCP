@@ -53,7 +53,7 @@ Limits:
 
 Clicking:
 
-- `simulate-mouse-ui --action Click --x <SimX> --y <SimY>` (or `LongPress`) reaches UI Toolkit controls, with or without an EventSystem. Its `--target-path` does not accept UI Toolkit `Path` values.
+- `simulate-mouse-ui --action Click --x <SimX> --y <SimY>` (or `LongPress`, or a drag from that point) reaches UI Toolkit controls, with or without an EventSystem. Its `--target-path` does not accept UI Toolkit `Path` values.
 - `simulate-mouse-input --action Click --x <SimX> --y <SimY>` also reaches them when the scene has an EventSystem with an Input System UI input module.
 - Without an EventSystem the `simulate-mouse-input` click does not reach UI Toolkit controls.
 

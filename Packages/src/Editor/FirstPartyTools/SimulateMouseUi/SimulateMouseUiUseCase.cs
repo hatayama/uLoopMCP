@@ -56,15 +56,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 return validationFailure;
             }
 
-            // Clicks and long presses can reach UI Toolkit without an EventSystem and check for one when they
-            // resolve their target. DragMove and DragEnd executors never receive it, so drags are checked here.
-            if (MouseUiSimulationValidator.IsDragAction(parameters.Action) && eventSystem == null)
-            {
-                return MouseUiSimulationResponseFactory.CreateFailure(
-                    parameters,
-                    "No EventSystem found in the scene. Ensure an EventSystem GameObject exists.");
-            }
-
+            // UI Toolkit targets need no EventSystem, so each action checks for one only once it knows it is
+            // going through uGUI.
             MouseUiSimulationActivityLogger.LogSimulationStart(parameters, correlationId);
             OverlayCanvasFactory.EnsureExists();
 
@@ -97,18 +90,16 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                         ct).ConfigureAwait(false);
 
                 case MouseAction.Drag:
-                    Debug.Assert(eventSystem != null, "Drags without an EventSystem must be rejected before dispatch.");
                     return await MouseUiOneShotDragExecutor.ExecuteDragOneShot(
                         parameters,
-                        eventSystem!,
+                        eventSystem,
                         _mainThreadCleanupScheduler,
                         ct).ConfigureAwait(false);
 
                 case MouseAction.DragStart:
-                    Debug.Assert(eventSystem != null, "Drags without an EventSystem must be rejected before dispatch.");
                     return await MouseUiIncrementalDragExecutor.ExecuteDragStart(
                         parameters,
-                        eventSystem!,
+                        eventSystem,
                         _mainThreadCleanupScheduler,
                         ct).ConfigureAwait(false);
 

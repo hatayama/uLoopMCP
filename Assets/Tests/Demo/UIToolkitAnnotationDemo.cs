@@ -21,6 +21,13 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Demo
             return _clickCounts.TryGetValue(elementName, out int count) ? count : 0;
         }
 
+        // NaN when the back panel has no slider by that name, so a missing control cannot pass as a value.
+        public float GetSliderValue(string elementName)
+        {
+            Slider? slider = backDocument.rootVisualElement?.Q<Slider>(elementName);
+            return slider != null ? slider.value : float.NaN;
+        }
+
         // Start runs after every Awake and OnEnable, so both documents have created their roots by now
         // regardless of component order.
         private void Start()
@@ -33,7 +40,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Demo
         {
             AddPlaced(root, CreateCountingButton("play"), 100f, 100f, 200f, 50f);
             AddPlaced(root, new Toggle("Sound") { name = "sound" }, 100f, 180f, 200f, 30f);
-            AddPlaced(root, new Slider("Volume", 0f, 1f) { name = "volume" }, 100f, 240f, 300f, 30f);
+            // No label, so the slider's bounds are its track and the E2E can drag between its edges.
+            AddPlaced(root, new Slider(0f, 1f) { name = "volume" }, 100f, 240f, 300f, 30f);
             AddPlaced(root, new TextField("Player") { name = "player-name" }, 100f, 300f, 300f, 40f);
             DropdownField quality = new DropdownField(
                 "Quality", new List<string> { "Low", "Medium", "High" }, 1) { name = "quality" };

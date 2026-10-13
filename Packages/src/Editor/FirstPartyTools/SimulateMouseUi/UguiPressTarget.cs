@@ -23,25 +23,10 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             // UnityEngine.Object targets for null is not safe.
             bool shouldReleasePointer = resolvedTargets.RawTarget != null && resolvedTargets.Target != null;
             _shouldReleasePointer = shouldReleasePointer;
-            Report = CreateReport(resolvedTargets.Target);
+            Report = MouseUiGameObjectHitReport.Create(resolvedTargets.Target);
         }
 
         public MouseUiHitReport Report { get; }
-
-        // Decided by whether the handler sits under a Canvas rather than by raycaster type, because a bypass
-        // press has no raycaster and both paths must report alike.
-        private static MouseUiHitReport CreateReport(GameObject? target)
-        {
-            if (target == null)
-            {
-                return MouseUiHitReport.None;
-            }
-
-            string uiSystem = target.GetComponentInParent<Canvas>() != null
-                ? MouseUiHitSystem.UGUI
-                : MouseUiHitSystem.NonUi;
-            return new MouseUiHitReport(target.name, GameObjectPathUtility.GetFullPath(target), uiSystem);
-        }
 
         public void Click()
         {

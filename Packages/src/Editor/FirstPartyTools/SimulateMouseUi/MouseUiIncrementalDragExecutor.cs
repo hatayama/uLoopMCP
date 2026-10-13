@@ -17,7 +17,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
     {
         internal static async Task<SimulateMouseUiResponse> ExecuteDragStart(
             MouseUiSimulationCommand parameters,
-            EventSystem eventSystem,
+            EventSystem? eventSystem,
             MouseUiMainThreadCleanupScheduler cleanupScheduler,
             CancellationToken ct)
         {
@@ -35,7 +35,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
             Vector2 inputPos = new(parameters.X, parameters.Y);
             Vector2 screenPos = MouseUiCoordinateConverter.InputToScreen(inputPos);
-            (RaycastResult startRaycast, GameObject? target, SimulateMouseUiResponse? targetFailureResponse) =
+            (MouseUiDragStartTarget start, SimulateMouseUiResponse? targetFailureResponse) =
                 MouseUiDragTargetResolver.Resolve(
                     parameters,
                     eventSystem,
@@ -47,7 +47,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 return targetFailureResponse;
             }
 
-            if (target == null)
+            if (!start.HasTarget)
             {
                 SimulateMouseUiOverlayState.Update(
                     MouseAction.DragStart, inputPos, null, Handles.GetMainGameViewSize());
@@ -93,14 +93,10 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 };
             }
 
-            PointerEventData pointerData = MouseUiDragEventExecutor.InitiateDrag(eventSystem, screenPos, startRaycast, target, PointerEventData.InputButton.Left);
-            ExecuteEvents.Execute(target, pointerData, ExecuteEvents.beginDragHandler);
-            pointerData.dragging = true;
+            IMouseUiDragSession session = start.Begin(inputPos, screenPos);
+            MouseDragState.Session = session;
 
-            MouseDragState.Target = target;
-            MouseDragState.PointerData = pointerData;
-
-            string targetName = target.name;
+            string targetName = session.Report.Name!;
             SimulateMouseUiOverlayState.Update(
                 MouseAction.DragStart, inputPos, inputPos, Handles.GetMainGameViewSize());
 
@@ -130,8 +126,15 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 {
                     cleanupScheduler.ExecuteCleanupOnMainThread(() =>
                     {
-                        MouseUiDragEventExecutor.FinalizeDrag(pointerData, target, null);
-                        MouseDragState.Clear();
+                        // Cleared even when the release throws, so no drag is left in progress.
+                        try
+                        {
+                            session.Finish(null);
+                        }
+                        finally
+                        {
+                            MouseDragState.Clear();
+                        }
                     });
                 }
             }
@@ -139,9 +142,11 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             return new SimulateMouseUiResponse
             {
                 Success = true,
-                Message = $"Drag started on '{targetName}' at ({inputPos.x:F1}, {inputPos.y:F1})",
+                Message = $"Drag started on {MouseUiSimulationResponseFactory.DescribeHit(session.Report)} at ({inputPos.x:F1}, {inputPos.y:F1})",
                 Action = MouseAction.DragStart.ToString(),
                 HitGameObjectName = targetName,
+                UiSystem = session.Report.UiSystem,
+                HitPath = session.Report.Path,
                 PositionX = inputPos.x,
                 PositionY = inputPos.y
             };
@@ -164,30 +169,27 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 };
             }
 
-            Debug.Assert(MouseDragState.Target != null, "Target must not be null when IsDragging is true");
-            Debug.Assert(MouseDragState.PointerData != null, "PointerData must not be null when IsDragging is true");
+            Debug.Assert(MouseDragState.Session != null, "Session must not be null when IsDragging is true");
 
-            SimulateMouseUiResponse? invalidResponse = ValidateDragStillActive(parameters.Action);
+            SimulateMouseUiResponse? invalidResponse = ValidateDragStillActive(parameters);
             if (invalidResponse != null)
             {
                 return invalidResponse;
             }
 
             Vector2 inputEnd = new(parameters.X, parameters.Y);
-            Vector2 screenEnd = MouseUiCoordinateConverter.InputToScreen(inputEnd);
-            PointerEventData pointerData = MouseDragState.PointerData!;
-            GameObject target = MouseDragState.Target!;
-            string targetName = target.name;
+            IMouseUiDragSession session = MouseDragState.Session!;
+            string targetName = session.Report.Name!;
 
             SimulateMouseUiOverlayState.Update(
                 MouseAction.DragMove,
-                MouseUiCoordinateConverter.ScreenToInput(pointerData.position),
+                session.CurrentInputPosition,
                 SimulateMouseUiOverlayState.DragStartPosition,
                 Handles.GetMainGameViewSize());
 
             // Cancellation leaves drag state intact so the user can continue with DragMove/DragEnd
             MouseUiFrameWaitOutcome dragOutcome = await MouseUiDragEventExecutor.InterpolateDragPosition(
-                pointerData, target, screenEnd,
+                session, inputEnd,
                 parameters.DragSpeed, ct).ConfigureAwait(false);
             if (dragOutcome == MouseUiFrameWaitOutcome.TimedOut)
             {
@@ -208,9 +210,11 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             return new SimulateMouseUiResponse
             {
                 Success = true,
-                Message = $"Drag moved on '{targetName}' to ({inputEnd.x:F1}, {inputEnd.y:F1}) at {parameters.DragSpeed:F0} px/s",
+                Message = $"Drag moved on {MouseUiSimulationResponseFactory.DescribeHit(session.Report)} to ({inputEnd.x:F1}, {inputEnd.y:F1}) at {parameters.DragSpeed:F0} px/s",
                 Action = MouseAction.DragMove.ToString(),
                 HitGameObjectName = targetName,
+                UiSystem = session.Report.UiSystem,
+                HitPath = session.Report.Path,
                 PositionX = inputEnd.x,
                 PositionY = inputEnd.y
             };
@@ -233,20 +237,26 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 };
             }
 
-            Debug.Assert(MouseDragState.Target != null, "Target must not be null when IsDragging is true");
-            Debug.Assert(MouseDragState.PointerData != null, "PointerData must not be null when IsDragging is true");
+            Debug.Assert(MouseDragState.Session != null, "Session must not be null when IsDragging is true");
 
-            SimulateMouseUiResponse? invalidResponse = ValidateDragStillActive(parameters.Action);
+            SimulateMouseUiResponse? invalidResponse = ValidateDragStillActive(parameters);
             if (invalidResponse != null)
             {
                 return invalidResponse;
             }
 
             Vector2 inputEnd = new(parameters.X, parameters.Y);
-            Vector2 screenEnd = MouseUiCoordinateConverter.InputToScreen(inputEnd);
-            PointerEventData pointerData = MouseDragState.PointerData!;
-            GameObject target = MouseDragState.Target!;
-            string targetName = target.name;
+            IMouseUiDragSession session = MouseDragState.Session!;
+            string targetName = session.Report.Name!;
+            // The drag stays in progress so DragEnd can be retried without the option.
+            SimulateMouseUiResponse? dropRefusal = MouseUiDragTargetResolver.RefuseDropTargetOnUIToolkit(
+                parameters,
+                session.UsesEventSystem ? null : targetName);
+            if (dropRefusal != null)
+            {
+                return dropRefusal;
+            }
+
             (GameObject? explicitDropTarget, SimulateMouseUiResponse? dropFailureResponse) =
                 MouseUiPointerTargetResolver.ResolveDropTargetPath(
                     parameters,
@@ -259,7 +269,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
             SimulateMouseUiOverlayState.Update(
                 MouseAction.DragEnd,
-                MouseUiCoordinateConverter.ScreenToInput(pointerData.position),
+                session.CurrentInputPosition,
                 SimulateMouseUiOverlayState.DragStartPosition,
                 Handles.GetMainGameViewSize());
 
@@ -271,7 +281,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             try
             {
                 MouseUiFrameWaitOutcome dragOutcome = await MouseUiDragEventExecutor.InterpolateDragPosition(
-                    pointerData, target, screenEnd,
+                    session, inputEnd,
                     parameters.DragSpeed, ct).ConfigureAwait(false);
                 if (dragOutcome == MouseUiFrameWaitOutcome.TimedOut)
                 {
@@ -304,8 +314,15 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             {
                 cleanupScheduler.ExecuteCleanupOnMainThread(() =>
                 {
-                    MouseUiDragEventExecutor.FinalizeDrag(pointerData, target, explicitDropTarget);
-                    MouseDragState.Clear();
+                    // Cleared even when the release throws, so no drag is left in progress.
+                    try
+                    {
+                        session.Finish(explicitDropTarget);
+                    }
+                    finally
+                    {
+                        MouseDragState.Clear();
+                    }
                 });
             }
 
@@ -316,7 +333,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             if (dissipateOutcome == MouseUiFrameWaitOutcome.TimedOut)
             {
                 cleanupScheduler.QueueOverlayClear();
-                return MouseUiSimulationResponseFactory.CreateDragEndResult(parameters, inputEnd, targetName);
+                return MouseUiSimulationResponseFactory.CreateDragEndResult(parameters, inputEnd, session.Report);
             }
             if (dissipateOutcome == MouseUiFrameWaitOutcome.Paused)
             {
@@ -327,36 +344,31 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             }
             await MainThreadSwitcher.SwitchToMainThread(ct);
 
-            return MouseUiSimulationResponseFactory.CreateDragEndResult(parameters, inputEnd, targetName);
+            return MouseUiSimulationResponseFactory.CreateDragEndResult(parameters, inputEnd, session.Report);
         }
 
-        // User input during a CLI drag can cause Unity's StandaloneInputModule to
-        // release or reassign the drag, leaving MouseDragState stale.
-        private static SimulateMouseUiResponse? ValidateDragStillActive(MouseAction action)
+        // A drag that can no longer continue is cleared; a missing EventSystem keeps the drag in progress so it
+        // can continue once one exists. UI Toolkit drags never use the EventSystem.
+        private static SimulateMouseUiResponse? ValidateDragStillActive(MouseUiSimulationCommand parameters)
         {
-            if (!MouseDragState.Target!.activeInHierarchy)
+            IMouseUiDragSession session = MouseDragState.Session!;
+            string? reason = session.CheckStillActive();
+            if (reason != null)
             {
                 MouseDragState.Clear();
                 SimulateMouseUiOverlayState.Clear();
                 return new SimulateMouseUiResponse
                 {
                     Success = false,
-                    Message = "Drag target was destroyed or deactivated during drag.",
-                    Action = action.ToString()
+                    Message = reason,
+                    Action = parameters.Action.ToString()
                 };
             }
 
-            if (!MouseDragState.PointerData!.dragging ||
-                MouseDragState.PointerData.pointerDrag != MouseDragState.Target)
+            if (session.UsesEventSystem && EventSystem.current == null)
             {
-                MouseDragState.Clear();
-                SimulateMouseUiOverlayState.Clear();
-                return new SimulateMouseUiResponse
-                {
-                    Success = false,
-                    Message = "Drag was interrupted by user input or system event.",
-                    Action = action.ToString()
-                };
+                return MouseUiSimulationResponseFactory.CreateFailure(
+                    parameters, MouseUiPressTargetResolver.NoEventSystemMessage);
             }
 
             return null;

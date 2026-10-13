@@ -1,9 +1,9 @@
 # simulate-mouse-ui and UI Toolkit
 
-`Click` and `LongPress` reach UI Toolkit controls on screen-space panels — the
-`AnnotatedElements` entries with `UiSystem` `UIToolkit`. Pass the entry's `SimX`/`SimY` as
-`--x`/`--y`; the response reports `UiSystem` `UIToolkit`, the control's `Name` as
-`HitGameObjectName`, and its annotation `Path` as `HitPath`.
+`Click`, `LongPress`, and the drag actions reach UI Toolkit controls on screen-space panels —
+the `AnnotatedElements` entries with `UiSystem` `UIToolkit`. Pass the entry's `SimX`/`SimY` as
+`--x`/`--y` (`--from-x`/`--from-y` for `Drag`); the response reports `UiSystem` `UIToolkit`, the
+control's `Name` as `HitGameObjectName`, and its annotation `Path` as `HitPath`.
 
 ## How a press is delivered
 
@@ -29,18 +29,33 @@ A UI Toolkit `Button` fires `clicked` once when the long press is released (UI T
 `Clickable` behaviour); a uGUI long press sends no click. A `RepeatButton` fires repeatedly
 while held.
 
+## Drags
+
+- A drag whose start point resolves to a UI Toolkit control (by the rule above) presses it
+  with the left button, moves the pointer, and releases at the end, so a `Slider` or a
+  `Scroller` follows the drag. The start point is what counts: the drag stays with that panel
+  wherever it moves.
+- A labelled slider's bounds include its label; start the drag on the track.
+- `--drop-target-path` applies to uGUI drags only. A `Drag` with it fails before anything is
+  sent; a `DragEnd` with it fails and leaves the drag in progress, so call `DragEnd` again
+  without it.
+- If the control's document is disabled or destroyed during a split drag, the next `DragMove`
+  or `DragEnd` fails and the drag ends. A one-shot `Drag` stops sending and still succeeds.
+- If a UI Toolkit handler throws, the button is released and the exception ends the command.
+  A `DragMove` that throws leaves the drag in progress, as a cancelled `DragMove` does.
+
 ## Not supported
 
 - `--bypass-raycast`, `--target-path`, and `--drop-target-path` take GameObject paths only;
   a UI Toolkit `Path` (it contains `#`) is reported as not found.
-- Drag actions go through the uGUI EventSystem only.
 - World-space panels (Unity 6), as in the annotation.
 - Two panels with the same `sortingOrder` overlapping at the point: Unity orders them by
   creation order, which is not exposed, so either one may be chosen.
 
 ## Notes
 
-- Move the real mouse cursor out of the Game View while simulating. Real pointer input over
-  the Game View reaches the same panels and can interleave with the simulated press.
+- Move the real mouse cursor out of the Game View while simulating, and keep it away between
+  `DragStart` and `DragEnd`. Real pointer input over the Game View reaches the same panels and
+  can interleave with the simulated press or move a held slider.
 - Device Simulator has the same limits as the annotation: coordinates use the simulated device
   resolution.

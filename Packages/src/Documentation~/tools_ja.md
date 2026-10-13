@@ -158,7 +158,7 @@ Unity Editor内で動的にC#コードを実行します。
 ### 14. simulate-mouse-ui - PlayMode UI要素のマウス操作シミュレーション
 PlayMode中のUI要素に対してマウスクリック・長押し・ドラッグをシミュレーションします。EventSystemとExecuteEventsを使ってポインタイベントを直接ディスパッチするため、旧Input System・新Input Systemの両方に依存せず動作します。ゲームロジックがInput Systemを直接読み取る場合（例：`Mouse.current.leftButton.wasPressedThisFrame`）は、`simulate-mouse-input` を使用してください。
 
-6つのアクションに対応: Click、LongPress、Drag（ワンショット）、DragStart/DragMove/DragEnd（分割ドラッグ）。Click と LongPress は、注釈の座標で UI Toolkit のコントロールにも届きます（EventSystem は不要）。
+6つのアクションに対応: Click、LongPress、Drag（ワンショット）、DragStart/DragMove/DragEnd（分割ドラッグ）。Click・LongPress・ドラッグは、注釈の座標で UI Toolkit のコントロールにも届きます（EventSystem は不要）。
 
 ```text
 → screenshot (CaptureMode: rendering, AnnotateElements: true)

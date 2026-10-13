@@ -158,7 +158,7 @@ When enabled, dynamic code execution runs with full Unity Editor process permiss
 ### 14. simulate-mouse-ui - Simulate Mouse Input on PlayMode UI
 Simulate mouse click, long-press, and drag on PlayMode UI elements. Uses EventSystem and ExecuteEvents to dispatch pointer events directly — works independently of both old and new Input System. For game logic that reads Input System (e.g. `Mouse.current.leftButton.wasPressedThisFrame`), use `simulate-mouse-input` instead.
 
-Supports 6 actions: Click, LongPress, Drag (one-shot), DragStart/DragMove/DragEnd (split drag). Click and LongPress also reach UI Toolkit controls at their annotated coordinates, without an EventSystem.
+Supports 6 actions: Click, LongPress, Drag (one-shot), DragStart/DragMove/DragEnd (split drag). Click, LongPress, and drags also reach UI Toolkit controls at their annotated coordinates, without an EventSystem.
 
 ```text
 → screenshot (CaptureMode: rendering, AnnotateElements: true)

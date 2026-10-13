@@ -216,12 +216,14 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
                 command,
                 startPosition,
                 endPosition,
-                "DragTarget");
+                new MouseUiHitReport("DragTarget", "Canvas/DragTarget", "UGUI"));
 
             Assert.That(response.Success, Is.True);
             Assert.That(response.Message, Is.EqualTo(expectedMessage));
             Assert.That(response.Action, Is.EqualTo(MouseAction.Drag.ToString()));
             Assert.That(response.HitGameObjectName, Is.EqualTo("DragTarget"));
+            Assert.That(response.UiSystem, Is.EqualTo("UGUI"));
+            Assert.That(response.HitPath, Is.EqualTo("Canvas/DragTarget"));
             Assert.That(response.PositionX, Is.EqualTo(startPosition.x));
             Assert.That(response.PositionY, Is.EqualTo(startPosition.y));
             Assert.That(response.EndPositionX, Is.EqualTo(endPosition.x));
@@ -244,16 +246,42 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             SimulateMouseUiResponse response = MouseUiSimulationResponseFactory.CreateDragEndResult(
                 command,
                 endPosition,
-                "DragTarget");
+                new MouseUiHitReport("DragTarget", "Canvas/DragTarget", "UGUI"));
 
             Assert.That(response.Success, Is.True);
             Assert.That(
                 response.Message,
                 Is.EqualTo("Drag ended on 'DragTarget' at (30.5, 40.3) at 125 px/s"));
+            Assert.That(response.UiSystem, Is.EqualTo("UGUI"));
+            Assert.That(response.HitPath, Is.EqualTo("Canvas/DragTarget"));
             Assert.That(response.Action, Is.EqualTo(MouseAction.DragEnd.ToString()));
             Assert.That(response.HitGameObjectName, Is.EqualTo("DragTarget"));
             Assert.That(response.PositionX, Is.EqualTo(endPosition.x));
             Assert.That(response.PositionY, Is.EqualTo(endPosition.y));
+        }
+
+        /// <summary>
+        /// Verifies drag results name a UI Toolkit start element as such and carry its UI system and path.
+        /// </summary>
+        [Test]
+        public void CreateDragResults_WithUIToolkitHit_NameUIToolkitElement()
+        {
+            MouseUiHitReport hit = new MouseUiHitReport("volume", "Menu/Document#volume", "UIToolkit");
+            Vector2 start = new(100f, 200f);
+            Vector2 end = new(300f, 200f);
+
+            SimulateMouseUiResponse drag = MouseUiSimulationResponseFactory.CreateDragResult(
+                CreateCommand(new SimulateMouseUiSchema { Action = UnityCliLoopMouseUiAction.Drag, DragSpeed = 100f }), start, end, hit);
+            SimulateMouseUiResponse dragEnd = MouseUiSimulationResponseFactory.CreateDragEndResult(
+                CreateCommand(new SimulateMouseUiSchema { Action = UnityCliLoopMouseUiAction.DragEnd, DragSpeed = 100f }), end, hit);
+
+            Assert.That(drag.Message, Is.EqualTo("Dragged UI Toolkit element 'volume' from (100.0, 200.0) to (300.0, 200.0) at 100 px/s"));
+            Assert.That(dragEnd.Message, Is.EqualTo("Drag ended on UI Toolkit element 'volume' at (300.0, 200.0) at 100 px/s"));
+            foreach (SimulateMouseUiResponse response in new[] { drag, dragEnd })
+            {
+                Assert.That(response.UiSystem, Is.EqualTo("UIToolkit"));
+                Assert.That(response.HitPath, Is.EqualTo("Menu/Document#volume"));
+            }
         }
 
         private static MouseUiSimulationCommand CreateCommand(SimulateMouseUiSchema schema)
