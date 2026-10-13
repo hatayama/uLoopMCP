@@ -24,9 +24,24 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         /// <summary>
         /// Presses the left button on the control at the start point.
         /// </summary>
+        // UI Toolkit passes handler exceptions on to the sender; a press that throws is released before the
+        // exception leaves, since no session exists yet to release it later.
         internal static UIToolkitDragSession Begin(UIToolkitPointerTarget target, Vector2 inputStart)
         {
-            target.PressDown(inputStart, LeftButton);
+            bool pressed = false;
+            try
+            {
+                target.PressDown(inputStart, LeftButton);
+                pressed = true;
+            }
+            finally
+            {
+                if (!pressed)
+                {
+                    target.Release(inputStart, LeftButton);
+                }
+            }
+
             return new UIToolkitDragSession(target, inputStart);
         }
 

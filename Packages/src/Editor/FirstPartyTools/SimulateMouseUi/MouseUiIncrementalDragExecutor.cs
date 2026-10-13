@@ -126,8 +126,15 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 {
                     cleanupScheduler.ExecuteCleanupOnMainThread(() =>
                     {
-                        session.Finish(null);
-                        MouseDragState.Clear();
+                        // Cleared even when the release throws, so no drag is left in progress.
+                        try
+                        {
+                            session.Finish(null);
+                        }
+                        finally
+                        {
+                            MouseDragState.Clear();
+                        }
                     });
                 }
             }
@@ -307,8 +314,15 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             {
                 cleanupScheduler.ExecuteCleanupOnMainThread(() =>
                 {
-                    session.Finish(explicitDropTarget);
-                    MouseDragState.Clear();
+                    // Cleared even when the release throws, so no drag is left in progress.
+                    try
+                    {
+                        session.Finish(explicitDropTarget);
+                    }
+                    finally
+                    {
+                        MouseDragState.Clear();
+                    }
                 });
             }
 

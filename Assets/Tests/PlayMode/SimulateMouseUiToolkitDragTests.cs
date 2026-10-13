@@ -485,6 +485,77 @@ namespace io.github.hatayama.UnityCliLoop.Tests.PlayMode
             Assert.IsFalse(MouseDragState.IsDragging);
         }
 
+        /// <summary>
+        /// Verifies a DragStart whose UI Toolkit press handler throws releases the pointer, leaves no drag in
+        /// progress, and ends with the exception.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator DragStart_WhenUIToolkitPressHandlerThrows_ReleasesAndLeavesNoDrag()
+        {
+            CreateEventSystem();
+            CreateDocumentWithSlider(out Slider slider);
+            int pointerUps = 0;
+            slider.RegisterCallback<PointerDownEvent>(_ => throw new System.InvalidOperationException("press failed"), TrickleDown.TrickleDown);
+            slider.RegisterCallback<PointerUpEvent>(_ => pointerUps++, TrickleDown.TrickleDown);
+            yield return WaitForLayout();
+
+            yield return WaitForFaulted(_tool.ExecuteAsync(SplitParameters(MouseAction.DragStart, SliderLeft()), CancellationToken.None));
+
+            Assert.AreEqual(1, pointerUps, "the release must still be sent");
+            Assert.IsFalse(MouseDragState.IsDragging);
+        }
+
+        /// <summary>
+        /// Verifies a DragEnd whose UI Toolkit release handler throws still ends the drag and ends with the
+        /// exception.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator DragEnd_WhenUIToolkitReleaseHandlerThrows_StillEndsDrag()
+        {
+            CreateEventSystem();
+            UIDocument document = CreateDocumentWithSlider(out Slider _);
+            yield return WaitForLayout();
+            yield return RunTool(SplitParameters(MouseAction.DragStart, SliderLeft()));
+            Assert.IsTrue(_lastResponse.Success, _lastResponse.Message);
+            CapturingControl(document).RegisterCallback<PointerUpEvent>(_ => throw new System.InvalidOperationException("release failed"));
+
+            yield return WaitForFaulted(_tool.ExecuteAsync(SplitParameters(MouseAction.DragEnd, SliderRight()), CancellationToken.None));
+
+            Assert.IsFalse(MouseDragState.IsDragging);
+        }
+
+        /// <summary>
+        /// Verifies a DragMove whose UI Toolkit move handler throws keeps the drag in progress and the button
+        /// held, as a cancelled DragMove does, so a later DragEnd releases it.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator DragMove_WhenUIToolkitMoveHandlerThrows_KeepsDrag()
+        {
+            CreateEventSystem();
+            UIDocument document = CreateDocumentWithSlider(out Slider _);
+            yield return WaitForLayout();
+            yield return RunTool(SplitParameters(MouseAction.DragStart, SliderLeft()));
+            Assert.IsTrue(_lastResponse.Success, _lastResponse.Message);
+            bool throwOnMove = false;
+            CapturingControl(document).RegisterCallback<PointerMoveEvent>(_ =>
+            {
+                if (throwOnMove)
+                {
+                    throw new System.InvalidOperationException("move failed");
+                }
+            });
+
+            throwOnMove = true;
+            yield return WaitForFaulted(_tool.ExecuteAsync(SplitParameters(MouseAction.DragMove, GameViewCenter()), CancellationToken.None));
+
+            Assert.IsTrue(MouseDragState.IsDragging, "the drag must stay in progress");
+            Assert.IsNotNull(CapturingElement(document), "the button must stay held");
+            throwOnMove = false;
+            yield return RunTool(SplitParameters(MouseAction.DragEnd, SliderRight()));
+            Assert.IsTrue(_lastResponse.Success, _lastResponse.Message);
+            Assert.IsNull(CapturingElement(document));
+        }
+
         // Steps right to the centre, then back to the left edge, checking the value after each step.
         private IEnumerator RunSplitDrag(Slider slider)
         {
@@ -576,6 +647,15 @@ namespace io.github.hatayama.UnityCliLoop.Tests.PlayMode
             document.rootVisualElement.Add(element);
         }
 
+        // While the pointer is captured, its events go to the capturing element only, so handlers that must see
+        // them are registered there.
+        private static VisualElement CapturingControl(UIDocument document)
+        {
+            VisualElement? capturing = CapturingElement(document) as VisualElement;
+            Assert.IsNotNull(capturing, "Setup: the drag must have captured the pointer.");
+            return capturing!;
+        }
+
         private static IEventHandler? CapturingElement(UIDocument document)
         {
             return document.rootVisualElement.panel.GetCapturingElement(PointerId.mousePointerId);
@@ -640,6 +720,15 @@ namespace io.github.hatayama.UnityCliLoop.Tests.PlayMode
             Assert.IsTrue(task.IsCompleted, "Tool execution timed out.");
             Assert.AreEqual(TaskStatus.RanToCompletion, task.Status, $"Tool execution should complete: {task.Exception}");
             _lastResponse = (SimulateMouseUiResponse)task.Result;
+        }
+
+        private static IEnumerator WaitForFaulted(Task<UnityCliLoopToolResponse> task)
+        {
+            float timeoutAt = Time.realtimeSinceStartup + 5f;
+            yield return new WaitUntil(() => task.IsCompleted || Time.realtimeSinceStartup >= timeoutAt);
+            Assert.IsTrue(task.IsCompleted, "Tool execution timed out.");
+            Assert.IsTrue(task.IsFaulted, $"the handler's exception must end the command, got {task.Status}");
+            Assert.IsInstanceOf<System.InvalidOperationException>(task.Exception!.InnerException);
         }
 
         private static IEnumerator WaitForCancelled(Task<UnityCliLoopToolResponse> task)
