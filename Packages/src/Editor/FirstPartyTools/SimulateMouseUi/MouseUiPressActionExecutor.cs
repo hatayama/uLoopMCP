@@ -22,17 +22,16 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             CancellationToken ct)
         {
             Vector2 inputPos = new(parameters.X, parameters.Y);
-            Vector2 screenPos = MouseUiCoordinateConverter.InputToScreen(inputPos);
-            PointerEventData pointerData = MouseUiPointerTargetResolver.CreatePointerPressData(eventSystem, screenPos, parameters.Button);
-            MouseUiInputSystemSync.SyncMousePosition(screenPos);
-            ResolvedPointerTargets resolvedTargets =
-                MouseUiPointerTargetResolver.ResolvePressablePointerTargets(parameters, eventSystem, inputPos, screenPos, pointerData, MouseAction.Click);
-            if (resolvedTargets.FailureResponse != null)
+            (IMouseUiPressTarget? resolvedTarget, SimulateMouseUiResponse? failure) =
+                ResolvePressTarget(parameters, eventSystem, inputPos, MouseAction.Click);
+            if (failure != null)
             {
-                return resolvedTargets.FailureResponse;
+                return failure;
             }
 
-            if (parameters.BypassRaycast && resolvedTargets.Target == null)
+            IMouseUiPressTarget pressTarget = resolvedTarget!;
+            MouseUiHitReport report = pressTarget.Report;
+            if (parameters.BypassRaycast && !report.HasHit)
             {
                 return new SimulateMouseUiResponse
                 {
@@ -44,8 +43,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 };
             }
 
-            string? targetName = resolvedTargets.Target?.name;
-            bool hitTarget = resolvedTargets.Target != null;
+            string? targetName = report.Name;
             SimulateMouseUiOverlayState.Update(
                 MouseAction.Click, inputPos, null,
                 Handles.GetMainGameViewSize());
@@ -66,13 +64,13 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             await MainThreadSwitcher.SwitchToMainThread(ct);
 
             // Fire click events after expand animation so the user sees where the click lands
-            ExecutePointerClickEvents(resolvedTargets, pointerData);
+            pressTarget.Click();
 
             MouseUiFrameWaitOutcome dissipateOutcome = await MouseUiOverlayAnimator.PlayDissipateAnimation(ct).ConfigureAwait(false);
             if (dissipateOutcome == MouseUiFrameWaitOutcome.TimedOut)
             {
                 cleanupScheduler.QueueOverlayClear();
-                return MouseUiSimulationResponseFactory.CreateClickResult(parameters, inputPos, targetName, hitTarget);
+                return MouseUiSimulationResponseFactory.CreateClickResult(parameters, inputPos, report);
             }
             if (dissipateOutcome == MouseUiFrameWaitOutcome.Paused)
             {
@@ -83,7 +81,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             }
             await MainThreadSwitcher.SwitchToMainThread(ct);
 
-            return MouseUiSimulationResponseFactory.CreateClickResult(parameters, inputPos, targetName, hitTarget);
+            return MouseUiSimulationResponseFactory.CreateClickResult(parameters, inputPos, report);
         }
 
         internal static async Task<SimulateMouseUiResponse> ExecuteLongPress(
@@ -99,17 +97,16 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             }
 
             Vector2 inputPos = new(parameters.X, parameters.Y);
-            Vector2 screenPos = MouseUiCoordinateConverter.InputToScreen(inputPos);
-            PointerEventData pointerData = MouseUiPointerTargetResolver.CreatePointerPressData(eventSystem, screenPos, parameters.Button);
-            MouseUiInputSystemSync.SyncMousePosition(screenPos);
-            ResolvedPointerTargets resolvedTargets =
-                MouseUiPointerTargetResolver.ResolvePressablePointerTargets(parameters, eventSystem, inputPos, screenPos, pointerData, MouseAction.LongPress);
-            if (resolvedTargets.FailureResponse != null)
+            (IMouseUiPressTarget? resolvedTarget, SimulateMouseUiResponse? failure) =
+                ResolvePressTarget(parameters, eventSystem, inputPos, MouseAction.LongPress);
+            if (failure != null)
             {
-                return resolvedTargets.FailureResponse;
+                return failure;
             }
 
-            if (parameters.BypassRaycast && resolvedTargets.Target == null)
+            IMouseUiPressTarget pressTarget = resolvedTarget!;
+            MouseUiHitReport report = pressTarget.Report;
+            if (parameters.BypassRaycast && !report.HasHit)
             {
                 return new SimulateMouseUiResponse
                 {
@@ -121,9 +118,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 };
             }
 
-            string? targetName = resolvedTargets.Target?.name;
-            bool hitTarget = resolvedTargets.Target != null;
-            bool shouldReleasePointer = resolvedTargets.RawTarget != null && resolvedTargets.Target != null;
+            string? targetName = report.Name;
             SimulateMouseUiOverlayState.Update(
                 MouseAction.LongPress, inputPos, null,
                 Handles.GetMainGameViewSize());
@@ -143,7 +138,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             }
             await MainThreadSwitcher.SwitchToMainThread(ct);
 
-            ExecuteLongPressPointerDown(resolvedTargets, pointerData);
+            pressTarget.PressDown();
 
             try
             {
@@ -157,11 +152,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             finally
             {
                 // Ensure pointerUp fires even if the hold loop is cancelled
-                if (shouldReleasePointer)
-                {
-                    cleanupScheduler.ExecuteCleanupOnMainThread(
-                        () => ExecuteEvents.Execute(resolvedTargets.Target!, pointerData, ExecuteEvents.pointerUpHandler));
-                }
+                cleanupScheduler.ExecuteCleanupOnMainThread(pressTarget.Release);
             }
 
             // Why switch after the helper: HoldLongPressOrAbortAsync ends on the main thread,
@@ -172,7 +163,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             if (dissipateOutcome == MouseUiFrameWaitOutcome.TimedOut)
             {
                 cleanupScheduler.QueueOverlayClear();
-                return MouseUiSimulationResponseFactory.CreateLongPressResult(parameters, inputPos, targetName, hitTarget);
+                return MouseUiSimulationResponseFactory.CreateLongPressResult(parameters, inputPos, report);
             }
             if (dissipateOutcome == MouseUiFrameWaitOutcome.Paused)
             {
@@ -183,7 +174,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             }
             await MainThreadSwitcher.SwitchToMainThread(ct);
 
-            return MouseUiSimulationResponseFactory.CreateLongPressResult(parameters, inputPos, targetName, hitTarget);
+            return MouseUiSimulationResponseFactory.CreateLongPressResult(parameters, inputPos, report);
         }
 
         private static SimulateMouseUiResponse? CreateInvalidLongPressDurationResponse(float duration)
@@ -249,53 +240,23 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             return null;
         }
 
-        private static void ExecutePointerClickEvents(
-            ResolvedPointerTargets resolvedTargets,
-            PointerEventData pointerData)
+        private static (IMouseUiPressTarget? Target, SimulateMouseUiResponse? Failure) ResolvePressTarget(
+            MouseUiSimulationCommand parameters,
+            EventSystem eventSystem,
+            Vector2 inputPos,
+            MouseAction action)
         {
-            if (resolvedTargets.RawTarget == null)
+            Vector2 screenPos = MouseUiCoordinateConverter.InputToScreen(inputPos);
+            PointerEventData pointerData = MouseUiPointerTargetResolver.CreatePointerPressData(eventSystem, screenPos, parameters.Button);
+            MouseUiInputSystemSync.SyncMousePosition(screenPos);
+            ResolvedPointerTargets resolvedTargets =
+                MouseUiPointerTargetResolver.ResolvePressablePointerTargets(parameters, eventSystem, inputPos, screenPos, pointerData, action);
+            if (resolvedTargets.FailureResponse != null)
             {
-                return;
+                return (null, resolvedTargets.FailureResponse);
             }
 
-            if (resolvedTargets.PressTarget != null)
-            {
-                ExecuteEvents.ExecuteHierarchy(
-                    resolvedTargets.RawTarget,
-                    pointerData,
-                    ExecuteEvents.pointerDownHandler);
-            }
-
-            if (resolvedTargets.Target != null)
-            {
-                ExecuteEvents.Execute(
-                    resolvedTargets.Target,
-                    pointerData,
-                    ExecuteEvents.pointerUpHandler);
-            }
-
-            if (resolvedTargets.ClickTarget != null)
-            {
-                ExecuteEvents.Execute(
-                    resolvedTargets.ClickTarget,
-                    pointerData,
-                    ExecuteEvents.pointerClickHandler);
-            }
-        }
-
-        private static void ExecuteLongPressPointerDown(
-            ResolvedPointerTargets resolvedTargets,
-            PointerEventData pointerData)
-        {
-            if (resolvedTargets.RawTarget == null || resolvedTargets.Target == null)
-            {
-                return;
-            }
-
-            ExecuteEvents.ExecuteHierarchy(
-                resolvedTargets.RawTarget,
-                pointerData,
-                ExecuteEvents.pointerDownHandler);
+            return (new UguiPressTarget(resolvedTargets, pointerData), null);
         }
     }
 }

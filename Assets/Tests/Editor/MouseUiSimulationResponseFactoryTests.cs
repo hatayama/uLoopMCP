@@ -103,7 +103,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             Vector2 position = new(10.25f, 20.75f);
 
             SimulateMouseUiResponse response =
-                MouseUiSimulationResponseFactory.CreateClickResult(command, position, targetName, hitTarget);
+                MouseUiSimulationResponseFactory.CreateClickResult(command, position, CreateHit(hitTarget, targetName));
 
             Assert.That(response.Success, Is.True);
             Assert.That(response.Message, Is.EqualTo(expectedMessage));
@@ -136,7 +136,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             Vector2 position = new(10.25f, 20.75f);
 
             SimulateMouseUiResponse response =
-                MouseUiSimulationResponseFactory.CreateLongPressResult(command, position, targetName, hitTarget);
+                MouseUiSimulationResponseFactory.CreateLongPressResult(command, position, CreateHit(hitTarget, targetName));
 
             Assert.That(response.Success, Is.True);
             Assert.That(response.Message, Is.EqualTo(expectedMessage));
@@ -217,6 +217,11 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             Assert.That(errorMessage, Is.Null);
             Assert.That(command, Is.Not.Null);
             return command!;
+        }
+
+        private static MouseUiHitReport CreateHit(bool hitTarget, string? targetName)
+        {
+            return hitTarget ? new MouseUiHitReport(targetName, null, null) : MouseUiHitReport.None;
         }
     }
 }
