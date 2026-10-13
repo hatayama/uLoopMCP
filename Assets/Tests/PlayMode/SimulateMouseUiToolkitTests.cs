@@ -350,13 +350,15 @@ namespace io.github.hatayama.UnityCliLoop.Tests.PlayMode
 
         /// <summary>
         /// Verifies a click still succeeds without error when the UI Toolkit document is disabled after the
-        /// target is resolved and before the press is sent, and nothing is clicked (#25).
+        /// target is resolved and before the press is sent, and sends nothing: a document behind it on the same
+        /// panel would otherwise receive the press (#25).
         /// </summary>
         [UnityTest]
         public IEnumerator Click_WhenUIToolkitDocumentDisabledBeforeDispatch_SkipsWithoutError()
         {
             CreateEventSystem();
             UIDocument document = CreateDocumentWithCenteredButton(0f, out ClickCounter counter);
+            AddDocumentWithCenteredButton(document.panelSettings, "back", document.sortingOrder - 1f, out ClickCounter backCounter);
             yield return WaitForLayout();
             Task<UnityCliLoopToolResponse> task = StartTool(ClickParameters(GameViewCenter()));
 
@@ -366,8 +368,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.PlayMode
             yield return WaitForTask(task);
 
             Assert.IsTrue(_lastResponse.Success, _lastResponse.Message);
-            Assert.AreEqual(0, counter.Clicks);
-            Assert.AreEqual("play", _lastResponse.HitGameObjectName);
+            Assert.AreEqual("play", _lastResponse.HitGameObjectName, "the front document must have been resolved");
+            Assert.AreEqual(0, counter.PointerDowns);
+            Assert.AreEqual(0, backCounter.PointerDowns, "no press may reach the document behind");
         }
 
         /// <summary>
@@ -572,14 +575,25 @@ namespace io.github.hatayama.UnityCliLoop.Tests.PlayMode
             Assert.IsNotNull(settings.themeStyleSheet, "the runtime theme must exist at " + RuntimeThemePath);
             _createdObjects.Add(settings);
 
+            return AddDocumentWithCenteredButton(settings, "play", 0f, out counter);
+        }
+
+        // Documents sharing panel settings share one panel, ordered within it by the document's sorting order.
+        private UIDocument AddDocumentWithCenteredButton(
+            PanelSettings settings,
+            string buttonName,
+            float documentSortingOrder,
+            out ClickCounter counter)
+        {
             GameObject documentObject = new GameObject(DocumentName);
             documentObject.SetActive(false);
             _createdObjects.Add(documentObject);
             UIDocument document = documentObject.AddComponent<UIDocument>();
             document.panelSettings = settings;
+            document.sortingOrder = documentSortingOrder;
             documentObject.SetActive(true);
 
-            UIToolkitButton button = new UIToolkitButton { name = "play" };
+            UIToolkitButton button = new UIToolkitButton { name = buttonName };
             Vector2 center = GameViewCenter();
             button.style.position = Position.Absolute;
             button.style.left = center.x - ButtonWidth / 2f;
