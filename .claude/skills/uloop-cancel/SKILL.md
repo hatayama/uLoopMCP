@@ -52,7 +52,7 @@ A default EditMode `run-tests` and `compile --no-wait-for-domain-reload` can be 
 - Most commands fail with `ErrorCode` `TOOL_CANCELLED` (not retryable).
 - `execute-dynamic-code` returns its usual cancelled result: `Success: false` with "Execution was cancelled or timed out".
 
-When a pause point's hit holds Play Mode paused, `Cancelled` also releases that pause.
+`Cancelled` also resumes Play Mode when the Editor is paused, whether a pause point or a manual pause holds it — the same as when the waiting CLI is killed.
 
 ## After Cancelling
 

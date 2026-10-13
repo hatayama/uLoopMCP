@@ -1218,6 +1218,27 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
         }
 
         /// <summary>
+        /// Verifies uloop cancel that stops a running tool also releases a manual Editor pause that
+        /// no pause point owns, the same as when the waiting CLI is killed.
+        /// </summary>
+        [Test]
+        public void CancelRunningToolBridgeCommand_WhenEditorIsManuallyPaused_ShouldResumePauseOnMainThreadApply()
+        {
+            _pauseController.PauseExternally();
+            ToolExecutionSession session = new ToolExecutionSession();
+            ToolExecutionLease lease = session.TryEnter("run-tests").Lease;
+
+            CancelRunningToolResponse response = CancelRunningToolBridgeCommand.Execute(CreateRegistrarService(session));
+            UloopPausePointRegistry.ApplyPendingClientDisconnectResume();
+
+            Assert.That(response.Outcome, Is.EqualTo("Cancelled"));
+            Assert.That(_pauseController.IsPaused, Is.False);
+            Assert.That(_pauseController.ResumeCount, Is.EqualTo(1));
+
+            lease.Dispose();
+        }
+
+        /// <summary>
         /// Verifies uloop cancel that cannot stop the running tool leaves the pause point's Editor
         /// pause alone and reports the refusal as a failure.
         /// </summary>

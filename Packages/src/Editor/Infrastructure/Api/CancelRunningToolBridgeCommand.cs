@@ -12,8 +12,9 @@ namespace io.github.hatayama.UnityCliLoop.Infrastructure
     internal static class CancelRunningToolBridgeCommand
     {
         // Why no main-thread switch: this must answer while a tool blocks the main thread. The
-        // cancellation has already fired, and the cancelled requests' continuations already ran,
-        // when CancelRunningTool returns, so the response is built from its result.
+        // cancellation has already fired when CancelRunningTool returns: continuations registered
+        // synchronously on the token have run, and others are only scheduled, so the response is
+        // built from its result rather than from whether the tool has stopped.
         internal static CancelRunningToolResponse Execute(UnityCliLoopToolRegistrarService toolRegistrarService)
         {
             if (toolRegistrarService == null)
@@ -24,9 +25,10 @@ namespace io.github.hatayama.UnityCliLoop.Infrastructure
             UnityCliLoopCancelRequestResult result = toolRegistrarService.CancelRunningTool();
             if (result.FiredCancellation)
             {
-                // Why: a tool waiting for frames while a pause point holds Play Mode paused would
-                // never see its cancellation through. This only sets a flag; the next main-thread
-                // tick releases the pause.
+                // Why: a tool waiting for frames while Play Mode is paused would never see its
+                // cancellation through. Like a killed CLI, this releases any Editor pause, whether
+                // a pause point or a manual pause holds it. This only sets a flag; the next
+                // main-thread tick releases the pause.
                 UloopPausePointRegistry.ResumeEditorPauseForClientDisconnect();
             }
 
