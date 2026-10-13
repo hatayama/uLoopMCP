@@ -138,10 +138,11 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             }
             await MainThreadSwitcher.SwitchToMainThread(ct);
 
-            pressTarget.PressDown();
-
             try
             {
+                // Inside the try: a UI Toolkit handler that throws on the press still gets the release, which is
+                // safe to send when nothing was pressed.
+                pressTarget.PressDown();
                 SimulateMouseUiResponse? holdAbort = await HoldLongPressOrAbortAsync(
                     parameters.Duration, inputPos, targetName, cleanupScheduler, ct).ConfigureAwait(false);
                 if (holdAbort != null)
