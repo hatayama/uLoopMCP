@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -57,9 +58,11 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         }
 
         /// <summary>
-        /// Starts reading <paramref name="dllPaths"/> on the main thread. Precondition: no backfill
-        /// is running (the run calling this yielded to the previous one first). Nothing starts and
-        /// nothing is logged for an empty list.
+        /// Starts reading <paramref name="dllPaths"/> on the main thread. Once they are read,
+        /// <paramref name="findRefusedAgain"/> recomputes the dlls the run's notes would refuse now
+        /// and the new ones are read too, until none is new or the caller-depth round limit is
+        /// reached. Precondition: no backfill is running (the run calling this yielded to the
+        /// previous one first). Nothing starts and nothing is logged for an empty list.
         /// </summary>
         internal void Start(
             IReadOnlyList<string> dllPaths,
@@ -90,7 +93,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 _state = HotReloadCallSiteBackfillState.Running;
                 _cancelledBy = null;
                 _cancellation = new CancellationTokenSource();
-                _completion = RunAllAsync(dllPaths, correlationId, _cancellation.Token);
+                _completion = RunAllAsync(dllPaths, findRefusedAgain, correlationId, _cancellation.Token);
             }
         }
 
@@ -136,40 +139,83 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             return _completion;
         }
 
-        private async Task RunAllAsync(IReadOnlyList<string> dllPaths, string correlationId, CancellationToken ct)
+        private async Task RunAllAsync(
+            IReadOnlyList<string> dllPaths,
+            Func<CancellationToken, Task<IReadOnlyList<string>>> findRefusedAgain,
+            string correlationId,
+            CancellationToken ct)
         {
             Stopwatch total = Stopwatch.StartNew();
+            int requested = 0;
             int loaded = 0;
             int failed = 0;
+            int rounds = 0;
+            // Why remember every tried path: a dll that failed to read is refused again by the
+            // recompute, and trying it again would loop until the round limit.
+            HashSet<string> attempted = new HashSet<string>(StringComparer.Ordinal);
+            IReadOnlyList<string> pending = dllPaths;
             try
             {
                 try
                 {
-                    foreach (string dllPath in dllPaths)
+                    while (true)
                     {
-                        // Why between dlls: a read cannot be interrupted, so a cancel takes effect
-                        // before the next one, and the run that cancelled waits for this one only.
+                        foreach (string dllPath in pending)
+                        {
+                            // Why between dlls: a read cannot be interrupted, so a cancel takes effect
+                            // before the next one, and the run that cancelled waits for this one only.
+                            if (ct.IsCancellationRequested)
+                            {
+                                break;
+                            }
+
+                            if (!attempted.Add(dllPath))
+                            {
+                                continue;
+                            }
+
+                            requested++;
+                            if (await TryLoadAsync(dllPath, ct).ConfigureAwait(false))
+                            {
+                                loaded++;
+                            }
+                            else
+                            {
+                                failed++;
+                            }
+                        }
+
+                        // Why check before recomputing too: the run that cancelled waits for this
+                        // backfill, so it must not also wait for a recompute nobody will use.
                         if (ct.IsCancellationRequested)
                         {
                             break;
                         }
 
-                        if (await TryLoadAsync(dllPath, ct).ConfigureAwait(false))
+                        // Why a limit: each round reaches at most one more caller level and the
+                        // notes walk no deeper than this; the attempted set already ends the loop.
+                        if (rounds >= HotReloadOneShotCallerClosure.MaxCallerDepth)
                         {
-                            loaded++;
+                            break;
                         }
-                        else
+
+                        rounds++;
+                        // Why recompute rather than walk past the refused level: a refused dll's
+                        // callers are unknown until it is read, so each read can reveal the next level.
+                        IReadOnlyList<string> refusedAgain = await findRefusedAgain(ct).ConfigureAwait(false);
+                        pending = refusedAgain.Where(dllPath => !attempted.Contains(dllPath)).ToList();
+                        if (pending.Count == 0)
                         {
-                            failed++;
+                            break;
                         }
                     }
                 }
                 catch (OperationCanceledException) when (ct.IsCancellationRequested)
                 {
-                    // A load cancelled before it started read nothing; it counts as neither.
+                    // A load or recompute cancelled before it finished counts as neither.
                 }
 
-                LogComplete(dllPaths.Count, loaded, failed, total.ElapsedMilliseconds, correlationId);
+                LogComplete(requested, loaded, failed, rounds, total.ElapsedMilliseconds, correlationId);
             }
             catch (Exception ex)
             {
@@ -209,7 +255,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             return ex is IOException || ex is UnauthorizedAccessException || ex is BadImageFormatException;
         }
 
-        private void LogComplete(int requested, int loaded, int failed, long totalMs, string correlationId)
+        // requested counts the distinct dlls tried; rounds counts the recomputes.
+        private void LogComplete(int requested, int loaded, int failed, int rounds, long totalMs, string correlationId)
         {
             string cancelledBy;
             lock (_gate)
@@ -220,7 +267,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             VibeLogger.LogInfo(
                 HotReloadConstants.VibeLogCallerNoteBackfillComplete,
                 "Hot reload caller-note backfill finished.",
-                new { requested, loaded, failed, totalMs, cancelledBy },
+                new { requested, loaded, failed, rounds, totalMs, cancelledBy },
                 correlationId);
         }
     }

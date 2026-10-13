@@ -43,13 +43,17 @@ command ran against:
   only from one-shot lifecycle messages) reads at most one compiled assembly that is not in the
   call-site cache yet; when it would need more, the note is omitted and the run writes one
   `hot_reload_caller_note_load_budget_exhausted` with `budgetLoads` and the `refusedAssemblies`
-  it did not read. Right after the run the refused assemblies are read on a pool thread, and
-  when that finishes the run's correlation id gets one `hot_reload_caller_note_backfill_complete`
-  with `requested`, `loaded`, `failed` (dlls that could not be read; the next run reads them
-  itself), `totalMs` and `cancelledBy` (`run` when the next run came first,
-  `beforeAssemblyReload`, `compilationStarted`, `services_replaced`, or null). The next run finds
-  them cached, so a note that needs more than one assembly appears from the second run on; a
-  run's `warm_up_yield` step also covers the wait for a backfill's dll in flight.
+  it did not read. Right after the run the refused assemblies are read on a pool thread; then the
+  notes are recomputed without reading anything, and the assemblies that recompute would still
+  refuse (callers one level further, found only once the refused ones are read) are read too,
+  for at most four recomputes. When that finishes the run's correlation id gets one
+  `hot_reload_caller_note_backfill_complete` with `requested` (distinct dlls tried), `loaded`,
+  `failed` (dlls that could not be read; the next run reads them itself), `rounds` (recomputes
+  done), `totalMs` and `cancelledBy` (`run` when the next run came first,
+  `beforeAssemblyReload`, `compilationStarted`, `services_replaced`, or null). The recompute
+  writes no `hot_reload_caller_note_load_budget_exhausted`. The next run finds them cached, so a
+  note that needs more than one assembly appears from the second run on; a run's
+  `warm_up_yield` step also covers the wait for a backfill's dll in flight.
   The time inside the analysis and shim-compile phases is split by separate entries, never by
   `steps`, so `unaccountedMs` keeps its meaning. `hot_reload_worker_request_timing` (one per
   request to the transform worker, prepare and transform) has the gate wait, launch target
