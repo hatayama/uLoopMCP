@@ -1,6 +1,6 @@
 #!/bin/sh
 # E2E verification that screenshot --annotate-elements lists UI Toolkit controls and that simulate-mouse-ui and
-# simulate-mouse-input press them at the annotated points, using the uloop CLI against
+# simulate-mouse-input press and drag them at the annotated points, using the uloop CLI against
 # UIToolkitAnnotationDemoScene. Safe to run repeatedly: it stops PlayMode and restores the Game View size on
 # exit, and never saves the scene, so the listener and EventSystem changes made in PlayMode are discarded.
 
@@ -419,6 +419,62 @@ return GameObject.Find("ugui-button").GetComponentInChildren<Text>().text;
     assert_text_equals "$(printf '%s\n' "$json" | jq -r '.Result')" "clicked 1" "ugui-button label"
 }
 
+get_slider_value() {
+    json=$(run_uloop_json execute-dynamic-code --code '
+UIToolkitAnnotationDemo demo = UnityEngine.Object.FindObjectOfType<UIToolkitAnnotationDemo>();
+if (demo == null) { return "ERROR: UIToolkitAnnotationDemo not found"; }
+return demo.GetSliderValue("volume").ToString(System.Globalization.CultureInfo.InvariantCulture);
+')
+    assert_json_success "$json" "Read volume value"
+    value=$(printf '%s\n' "$json" | jq -r '.Result')
+    case "$value" in
+        ERROR:*|NaN)
+            fail "Read volume value failed: $value"
+            ;;
+    esac
+    printf '%s\n' "$value"
+}
+
+# Fails unless the number is within [min, max].
+assert_in_range() {
+    value=$1
+    min=$2
+    max=$3
+    context=$4
+    jq -e -n --argjson v "$value" --argjson min "$min" --argjson max "$max" '$v >= $min and $v <= $max' >/dev/null \
+        || fail "$context: expected $min..$max, got $value"
+}
+
+VOLUME_SELECTOR='.UiSystem == "UIToolkit" and .Name == "volume"'
+
+# Points 5 pixels inside the slider's left and right edges, on its annotated row.
+volume_left_x() {
+    jq -n --argjson min "$(annotated_field "$VOLUME_SELECTOR" BoundsMinX)" '$min + 5'
+}
+
+volume_right_x() {
+    jq -n --argjson max "$(annotated_field "$VOLUME_SELECTOR" BoundsMaxX)" '$max - 5'
+}
+
+verify_one_shot_drag() {
+    y=$(annotated_field "$VOLUME_SELECTOR" SimY)
+    json=$(simulate_ui "simulate-mouse-ui drag on volume" --action Drag \
+        --from-x "$(volume_left_x)" --from-y "$y" --x "$(volume_right_x)" --y "$y")
+    assert_response_field "$json" UiSystem "UIToolkit" "simulate-mouse-ui drag on volume"
+    assert_in_range "$(get_slider_value)" 0.9 1 "volume after a drag to its right edge"
+}
+
+verify_split_drag() {
+    y=$(annotated_field "$VOLUME_SELECTOR" SimY)
+    center_x=$(jq -n --argjson l "$(volume_left_x)" --argjson r "$(volume_right_x)" '($l + $r) / 2')
+
+    simulate_ui "simulate-mouse-ui DragStart on volume" --action DragStart --x "$(volume_left_x)" --y "$y" >/dev/null
+    simulate_ui "simulate-mouse-ui DragMove on volume" --action DragMove --x "$center_x" --y "$y" >/dev/null
+    assert_in_range "$(get_slider_value)" 0.3 0.7 "volume after DragMove to its centre"
+    simulate_ui "simulate-mouse-ui DragEnd on volume" --action DragEnd --x "$(volume_left_x)" --y "$y" >/dev/null
+    assert_in_range "$(get_slider_value)" 0 0.1 "volume after DragEnd at its left edge"
+}
+
 # Runs last: the EventSystem stays disabled until PlayMode stops on exit.
 verify_click_without_event_system() {
     json=$(run_uloop_json execute-dynamic-code --code '
@@ -448,42 +504,48 @@ printf '=========================================\n'
 
 wait_unity_ready
 
-printf '[1/12] Loading UI Toolkit annotation demo scene...\n'
+printf '[1/14] Loading UI Toolkit annotation demo scene...\n'
 initialize_demo_scene
 
-printf '[2/12] Selecting Full HD Game View resolution...\n'
+printf '[2/14] Selecting Full HD Game View resolution...\n'
 select_full_hd_game_view
 
-printf '[3/12] Starting PlayMode and waiting for UI Toolkit controls...\n'
+printf '[3/14] Starting PlayMode and waiting for UI Toolkit controls...\n'
 run_uloop_json control-play-mode --action Play >/dev/null
 wait_play_mode
 wait_for_uitoolkit_play
 
-printf '[4/12] Checking the annotated capture...\n'
+printf '[4/14] Checking the annotated capture...\n'
 verify_annotated_capture
 
-printf '[5/12] Checking the elements-only capture matches...\n'
+printf '[5/14] Checking the elements-only capture matches...\n'
 verify_elements_only_capture
 
-printf '[6/12] Clicking UI Toolkit controls with simulate-mouse-ui...\n'
+printf '[6/14] Clicking UI Toolkit controls with simulate-mouse-ui...\n'
 verify_ui_click
 
-printf '[7/12] Clicking a UI Toolkit button with simulate-mouse-input...\n'
+printf '[7/14] Clicking a UI Toolkit button with simulate-mouse-input...\n'
 verify_input_click
 
-printf '[8/12] Clicking a partly covered UI Toolkit button...\n'
+printf '[8/14] Clicking a partly covered UI Toolkit button...\n'
 verify_covered_click
 
-printf '[9/12] Clicking a disabled UI Toolkit button...\n'
+printf '[9/14] Clicking a disabled UI Toolkit button...\n'
 verify_disabled_click
 
-printf '[10/12] Long-pressing a UI Toolkit button...\n'
+printf '[10/14] Long-pressing a UI Toolkit button...\n'
 verify_long_press
 
-printf '[11/12] Clicking the uGUI button with simulate-mouse-ui...\n'
+printf '[11/14] Clicking the uGUI button with simulate-mouse-ui...\n'
 verify_ugui_click
 
-printf '[12/12] Clicking a UI Toolkit button without an EventSystem...\n'
+printf '[12/14] Dragging a UI Toolkit slider in one shot...\n'
+verify_one_shot_drag
+
+printf '[13/14] Dragging a UI Toolkit slider in steps...\n'
+verify_split_drag
+
+printf '[14/14] Clicking a UI Toolkit button without an EventSystem...\n'
 verify_click_without_event_system
 
 printf '\n'

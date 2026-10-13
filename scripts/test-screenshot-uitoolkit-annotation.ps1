@@ -1,6 +1,6 @@
 <#
 E2E verification that screenshot --annotate-elements lists UI Toolkit controls and that simulate-mouse-ui and
-simulate-mouse-input press them at the annotated points, using the uloop CLI against UIToolkitAnnotationDemoScene.
+simulate-mouse-input press and drag them at the annotated points, using the uloop CLI against UIToolkitAnnotationDemoScene.
 Safe to run repeatedly: it stops PlayMode and restores the Game View size on exit, and never saves the scene, so
 the listener and EventSystem changes made in PlayMode are discarded.
 
@@ -583,6 +583,63 @@ return GameObject.Find("ugui-button").GetComponentInChildren<Text>().text;
     Assert-EqualText -Actual (Invoke-DynamicCodeText -Code $labelCode -Context "Read ugui-button label") -Expected "clicked 1" -Context "ugui-button label"
 }
 
+function Get-SliderValue {
+    [string]$code = @'
+UIToolkitAnnotationDemo demo = UnityEngine.Object.FindObjectOfType<UIToolkitAnnotationDemo>();
+if (demo == null) { return "ERROR: UIToolkitAnnotationDemo not found"; }
+return demo.GetSliderValue("volume").ToString(System.Globalization.CultureInfo.InvariantCulture);
+'@
+    [string]$value = Invoke-DynamicCodeText -Code $code -Context "Read volume value"
+    if ($value.StartsWith("ERROR:") -or $value -eq "NaN") {
+        throw "Read volume value failed: $value"
+    }
+
+    return [double]::Parse($value, [Globalization.CultureInfo]::InvariantCulture)
+}
+
+function Assert-InRange {
+    param(
+        [double]$Value,
+        [double]$Min,
+        [double]$Max,
+        [string]$Context
+    )
+
+    Assert-Condition -Condition ($Value -ge $Min -and $Value -le $Max) -Message "${Context}: expected $Min..$Max, got $Value"
+}
+
+function Test-OneShotDrag {
+    param(
+        [pscustomobject]$ElementsOnly
+    )
+
+    [pscustomobject]$volume = Get-AnnotatedElement -Response $ElementsOnly -UiSystem "UIToolkit" -Name "volume"
+    [pscustomobject]$response = Invoke-SimulateUi -Context "simulate-mouse-ui drag on volume" -Arguments @(
+        "--action", "Drag",
+        "--from-x", (Format-Coordinate ($volume.BoundsMinX + 5)), "--from-y", (Format-Coordinate $volume.SimY),
+        "--x", (Format-Coordinate ($volume.BoundsMaxX - 5)), "--y", (Format-Coordinate $volume.SimY))
+    Assert-EqualText -Actual $response.UiSystem -Expected "UIToolkit" -Context "simulate-mouse-ui drag on volume UiSystem"
+    Assert-InRange -Value (Get-SliderValue) -Min 0.9 -Max 1 -Context "volume after a drag to its right edge"
+}
+
+function Test-SplitDrag {
+    param(
+        [pscustomobject]$ElementsOnly
+    )
+
+    [pscustomobject]$volume = Get-AnnotatedElement -Response $ElementsOnly -UiSystem "UIToolkit" -Name "volume"
+    [string]$y = Format-Coordinate $volume.SimY
+    [double]$left = $volume.BoundsMinX + 5
+    [double]$right = $volume.BoundsMaxX - 5
+    [string]$center = Format-Coordinate (($left + $right) / 2)
+
+    Invoke-SimulateUi -Context "simulate-mouse-ui DragStart on volume" -Arguments @("--action", "DragStart", "--x", (Format-Coordinate $left), "--y", $y) | Out-Null
+    Invoke-SimulateUi -Context "simulate-mouse-ui DragMove on volume" -Arguments @("--action", "DragMove", "--x", $center, "--y", $y) | Out-Null
+    Assert-InRange -Value (Get-SliderValue) -Min 0.3 -Max 0.7 -Context "volume after DragMove to its centre"
+    Invoke-SimulateUi -Context "simulate-mouse-ui DragEnd on volume" -Arguments @("--action", "DragEnd", "--x", (Format-Coordinate $left), "--y", $y) | Out-Null
+    Assert-InRange -Value (Get-SliderValue) -Min 0 -Max 0.1 -Context "volume after DragEnd at its left edge"
+}
+
 # Runs last: the EventSystem stays disabled until PlayMode stops on exit.
 function Test-ClickWithoutEventSystem {
     param(
@@ -618,42 +675,48 @@ Wait-UnityReady
 [pscustomobject]$originalGameViewSize = $null
 
 try {
-    Write-Host "[1/12] Loading UI Toolkit annotation demo scene..."
+    Write-Host "[1/14] Loading UI Toolkit annotation demo scene..."
     Initialize-DemoScene
 
-    Write-Host "[2/12] Selecting Full HD Game View resolution..."
+    Write-Host "[2/14] Selecting Full HD Game View resolution..."
     $originalGameViewSize = Select-FullHdGameView
 
-    Write-Host "[3/12] Starting PlayMode and waiting for UI Toolkit controls..."
+    Write-Host "[3/14] Starting PlayMode and waiting for UI Toolkit controls..."
     Invoke-UloopJson -CommandArguments @("control-play-mode", "--action", "Play") | Out-Null
     Wait-PlayMode
     Wait-UiToolkitPlay
 
-    Write-Host "[4/12] Checking the annotated capture..."
+    Write-Host "[4/14] Checking the annotated capture..."
     [pscustomobject]$annotated = Test-AnnotatedCapture
 
-    Write-Host "[5/12] Checking the elements-only capture matches..."
+    Write-Host "[5/14] Checking the elements-only capture matches..."
     [pscustomobject]$elementsOnly = Test-ElementsOnlyCapture -AnnotatedResponse $annotated
 
-    Write-Host "[6/12] Clicking UI Toolkit controls with simulate-mouse-ui..."
+    Write-Host "[6/14] Clicking UI Toolkit controls with simulate-mouse-ui..."
     Test-UiClick -ElementsOnly $elementsOnly
 
-    Write-Host "[7/12] Clicking a UI Toolkit button with simulate-mouse-input..."
+    Write-Host "[7/14] Clicking a UI Toolkit button with simulate-mouse-input..."
     Test-InputClick -ElementsOnly $elementsOnly
 
-    Write-Host "[8/12] Clicking a partly covered UI Toolkit button..."
+    Write-Host "[8/14] Clicking a partly covered UI Toolkit button..."
     Test-CoveredClick -ElementsOnly $elementsOnly
 
-    Write-Host "[9/12] Clicking a disabled UI Toolkit button..."
+    Write-Host "[9/14] Clicking a disabled UI Toolkit button..."
     Test-DisabledClick
 
-    Write-Host "[10/12] Long-pressing a UI Toolkit button..."
+    Write-Host "[10/14] Long-pressing a UI Toolkit button..."
     Test-LongPress -ElementsOnly $elementsOnly
 
-    Write-Host "[11/12] Clicking the uGUI button with simulate-mouse-ui..."
+    Write-Host "[11/14] Clicking the uGUI button with simulate-mouse-ui..."
     Test-UguiClick -ElementsOnly $elementsOnly
 
-    Write-Host "[12/12] Clicking a UI Toolkit button without an EventSystem..."
+    Write-Host "[12/14] Dragging a UI Toolkit slider in one shot..."
+    Test-OneShotDrag -ElementsOnly $elementsOnly
+
+    Write-Host "[13/14] Dragging a UI Toolkit slider in steps..."
+    Test-SplitDrag -ElementsOnly $elementsOnly
+
+    Write-Host "[14/14] Clicking a UI Toolkit button without an EventSystem..."
     Test-ClickWithoutEventSystem -ElementsOnly $elementsOnly
 
     Write-Host ""
