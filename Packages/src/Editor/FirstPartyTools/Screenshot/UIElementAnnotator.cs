@@ -28,6 +28,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
             CollectSelectables(elements, processedObjects, raycastContext);
             CollectEventHandlers(elements, processedObjects, raycastContext);
+            UIToolkitElementCollector.Collect(elements, GameViewCoordinateUtility.GetMainGameViewSize().y);
 
             return elements;
         }
@@ -232,6 +233,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 Path = GameObjectPathUtility.GetFullPath(go),
                 Type = type,
                 Interaction = GetInteractionForType(type),
+                UiSystem = AnnotatedUiSystem.UGUI,
                 SimX = reachablePoint.x,
                 SimY = reachablePoint.y,
                 BoundsMinX = minX,

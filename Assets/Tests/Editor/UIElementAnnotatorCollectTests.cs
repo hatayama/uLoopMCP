@@ -90,6 +90,26 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
         }
 
         /// <summary>
+        /// Verifies uGUI elements, both selectables and handler scripts, are tagged as coming from uGUI.
+        /// </summary>
+        [Test]
+        public void CollectInteractiveElements_WithUguiElements_TagsThemAsUgui()
+        {
+            Assume.That(EventSystem.current, Is.Null);
+            Transform canvas = CreateCanvas("UiSystem", RenderMode.ScreenSpaceOverlay, true, null);
+            CreateUiChild<Button>(canvas, "Button");
+            CreateUiChild<UIElementAnnotatorTestClickHandler>(canvas, "Click");
+
+            List<UIElementInfo> buttons = CollectByPath(Prefix + "UiSystem/Button");
+            List<UIElementInfo> handlers = CollectByPath(Prefix + "UiSystem/Click");
+
+            Assert.That(buttons.Count, Is.EqualTo(1));
+            Assert.That(buttons[0].UiSystem, Is.EqualTo("UGUI"));
+            Assert.That(handlers.Count, Is.EqualTo(1));
+            Assert.That(handlers[0].UiSystem, Is.EqualTo("UGUI"));
+        }
+
+        /// <summary>
         /// Verifies an object with both a selectable and a handler script is collected once, as the selectable.
         /// </summary>
         [Test]

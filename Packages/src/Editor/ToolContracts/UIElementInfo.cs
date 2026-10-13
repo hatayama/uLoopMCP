@@ -11,6 +11,7 @@ namespace io.github.hatayama.UnityCliLoop.ToolContracts
         public string Path { get; set; } = "";
         public string Type { get; set; } = "";
         public string Interaction { get; set; } = "";
+        public string UiSystem { get; set; } = "";
         public string Layer { get; set; } = "";
         public List<string> Components { get; set; } = new List<string>();
         public float SimX { get; set; }
