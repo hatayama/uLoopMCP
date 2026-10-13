@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.10.0](https://github.com/hatayama/unity-cli-loop/compare/uloop-project-runner-v3.9.1...uloop-project-runner-v3.10.0) (2026-10-13)
+
+
+### Features
+
+* uloop cancel stops the tool the Editor is running, and the waiting CLI gets TOOL_CANCELLED ([#3303](https://github.com/hatayama/unity-cli-loop/issues/3303)) ([cd65bb5](https://github.com/hatayama/unity-cli-loop/commit/cd65bb5b78aed5d57bc4687ce573cd007266ee59))
+
+
+### Bug Fixes
+
+* Compile waits ask Unity at least once even when the wait timeout has already passed ([#3304](https://github.com/hatayama/unity-cli-loop/issues/3304)) ([158439f](https://github.com/hatayama/unity-cli-loop/commit/158439fc65607a26f903491e60243c535d192d51))
+
 ## [3.9.1](https://github.com/hatayama/unity-cli-loop/compare/uloop-project-runner-v3.9.0...uloop-project-runner-v3.9.1) (2026-10-12)
 
 
