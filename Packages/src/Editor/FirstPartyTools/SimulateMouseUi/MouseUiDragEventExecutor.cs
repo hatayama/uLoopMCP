@@ -81,17 +81,19 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             pointerData.pointerCurrentRaycast = hit ?? new RaycastResult();
         }
 
+        // Interpolates in top-left input coordinates. The flip to screen space is affine and the Game View
+        // height cannot change within one command, so the screen points a uGUI drag passes match interpolating
+        // in screen space.
         internal static async Task<MouseUiFrameWaitOutcome> InterpolateDragPosition(
-            PointerEventData pointerData,
-            GameObject target,
-            Vector2 endPos,
+            IMouseUiDragSession session,
+            Vector2 endInput,
             float dragSpeed,
             CancellationToken ct)
         {
             Debug.Assert(dragSpeed >= 0f, "dragSpeed must be non-negative");
 
-            Vector2 startPos = pointerData.position;
-            float distance = Vector2.Distance(startPos, endPos);
+            Vector2 startInput = session.CurrentInputPosition;
+            float distance = Vector2.Distance(startInput, endInput);
             float duration = dragSpeed > 0f ? distance / dragSpeed : 0f;
 
             if (duration <= 0f)
@@ -103,13 +105,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 }
                 await MainThreadSwitcher.SwitchToMainThread(ct);
 
-                Vector2 previousPosition = pointerData.position;
-                pointerData.position = endPos;
-                pointerData.delta = endPos - previousPosition;
-                MouseUiInputSystemSync.SyncMousePosition(endPos);
-                ExecuteEvents.Execute(target, pointerData, ExecuteEvents.dragHandler);
-
-                SimulateMouseUiOverlayState.UpdatePosition(MouseUiCoordinateConverter.ScreenToInput(endPos));
+                session.MoveTo(endInput);
+                SimulateMouseUiOverlayState.UpdatePosition(endInput);
                 return MouseUiFrameWaitOutcome.Completed;
             }
 
@@ -127,16 +124,10 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
                 float elapsed = Time.realtimeSinceStartup - startTime;
                 t = Mathf.Clamp01(elapsed / duration);
-                Vector2 previousPosition = pointerData.position;
-                Vector2 currentPosition = Vector2.Lerp(startPos, endPos, t);
+                Vector2 currentInput = Vector2.Lerp(startInput, endInput, t);
 
-                pointerData.position = currentPosition;
-                pointerData.delta = currentPosition - previousPosition;
-
-                MouseUiInputSystemSync.SyncMousePosition(currentPosition);
-                ExecuteEvents.Execute(target, pointerData, ExecuteEvents.dragHandler);
-
-                SimulateMouseUiOverlayState.UpdatePosition(MouseUiCoordinateConverter.ScreenToInput(currentPosition));
+                session.MoveTo(currentInput);
+                SimulateMouseUiOverlayState.UpdatePosition(currentInput);
             }
             while (t < 1.0f);
 

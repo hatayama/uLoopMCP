@@ -24,7 +24,6 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             Vector2 inputStart = new(parameters.FromX, parameters.FromY);
             Vector2 inputEnd = new(parameters.X, parameters.Y);
             Vector2 screenStart = MouseUiCoordinateConverter.InputToScreen(inputStart);
-            Vector2 screenEnd = MouseUiCoordinateConverter.InputToScreen(inputEnd);
             (RaycastResult startRaycast, GameObject? target, SimulateMouseUiResponse? targetFailureResponse) =
                 MouseUiDragTargetResolver.Resolve(
                     parameters,
@@ -53,12 +52,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                     parameters, inputStart, inputEnd, cleanupScheduler, ct).ConfigureAwait(false);
             }
 
-            // uGUI drag controls (ScrollRect, Slider) only respond to left-button drags
-            PointerEventData pointerData = MouseUiDragEventExecutor.InitiateDrag(eventSystem, screenStart, startRaycast, target, PointerEventData.InputButton.Left);
-            ExecuteEvents.Execute(target, pointerData, ExecuteEvents.beginDragHandler);
-            pointerData.dragging = true;
+            IMouseUiDragSession session = UguiDragSession.Begin(eventSystem, screenStart, startRaycast, target);
 
-            string targetName = target.name;
+            string targetName = session.Report.Name!;
             SimulateMouseUiOverlayState.Update(
                 MouseAction.Drag, inputStart, inputStart, Handles.GetMainGameViewSize());
 
@@ -72,11 +68,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             {
                 SimulateMouseUiResponse? motionAbort = await AnimateDragMotionOrAbortAsync(
                     parameters,
-                    pointerData,
-                    target,
+                    session,
                     inputStart,
                     inputEnd,
-                    screenEnd,
                     targetName,
                     DragInterruptedDuringMotionMessage,
                     cleanupScheduler,
@@ -88,7 +82,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             }
             finally
             {
-                cleanupScheduler.ExecuteCleanupOnMainThread(() => MouseUiDragEventExecutor.FinalizeDrag(pointerData, target, explicitDropTarget));
+                cleanupScheduler.ExecuteCleanupOnMainThread(() => session.Finish(explicitDropTarget));
             }
 
             // Why switch after the helper: AnimateDragMotionOrAbortAsync ends on the main
@@ -172,11 +166,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
         private static async Task<SimulateMouseUiResponse?> AnimateDragMotionOrAbortAsync(
             MouseUiSimulationCommand parameters,
-            PointerEventData pointerData,
-            GameObject target,
+            IMouseUiDragSession session,
             Vector2 inputStart,
             Vector2 inputEnd,
-            Vector2 screenEnd,
             string targetName,
             string interruptedMessage,
             MouseUiMainThreadCleanupScheduler cleanupScheduler,
@@ -197,7 +189,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             await MainThreadSwitcher.SwitchToMainThread(ct);
 
             SimulateMouseUiResponse? dragAbort = AbortDragOnOverlayOutcome(
-                await MouseUiDragEventExecutor.InterpolateDragPosition(pointerData, target, screenEnd, parameters.DragSpeed, ct)
+                await MouseUiDragEventExecutor.InterpolateDragPosition(session, inputEnd, parameters.DragSpeed, ct)
                     .ConfigureAwait(false),
                 inputStart,
                 inputEnd,

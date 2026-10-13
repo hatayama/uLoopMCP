@@ -1,7 +1,5 @@
 #nullable enable
 using UnityEditor;
-using UnityEngine;
-using UnityEngine.EventSystems;
 
 using io.github.hatayama.UnityCliLoop.Runtime;
 
@@ -12,9 +10,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
     /// </summary>
     internal sealed class MouseDragStateService
     {
-        internal bool IsDragging => Target != null && PointerData != null;
-        internal GameObject? Target { get; set; }
-        internal PointerEventData? PointerData { get; set; }
+        // A destroyed target ends the drag without a command, as Unity's null check on it already did.
+        internal bool IsDragging => Session != null && !Session.IsTargetDestroyed;
+        internal IMouseUiDragSession? Session { get; set; }
 
         internal void RegisterPlayModeCallbacks()
         {
@@ -25,8 +23,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
         internal void Clear()
         {
-            Target = null;
-            PointerData = null;
+            Session = null;
         }
 
         private void OnPlayModeStateChanged(PlayModeStateChange state)
@@ -53,16 +50,10 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
         internal static bool IsDragging => ServiceValue.IsDragging;
 
-        internal static GameObject? Target
+        internal static IMouseUiDragSession? Session
         {
-            get => ServiceValue.Target;
-            set => ServiceValue.Target = value;
-        }
-
-        internal static PointerEventData? PointerData
-        {
-            get => ServiceValue.PointerData;
-            set => ServiceValue.PointerData = value;
+            get => ServiceValue.Session;
+            set => ServiceValue.Session = value;
         }
 
         internal static void Clear()
