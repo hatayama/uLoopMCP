@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.9.0](https://github.com/hatayama/unity-cli-loop/compare/dispatcher-v3.8.2...dispatcher-v3.9.0) (2026-10-13)
+
+
+### Features
+
+* uloop cancel stops the tool the Editor is running, and the waiting CLI gets TOOL_CANCELLED ([#3303](https://github.com/hatayama/unity-cli-loop/issues/3303)) ([cd65bb5](https://github.com/hatayama/unity-cli-loop/commit/cd65bb5b78aed5d57bc4687ce573cd007266ee59))
+
 ## [3.8.2](https://github.com/hatayama/unity-cli-loop/compare/dispatcher-v3.8.1...dispatcher-v3.8.2) (2026-10-10)
 
 
