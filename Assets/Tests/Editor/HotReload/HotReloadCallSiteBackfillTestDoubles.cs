@@ -76,4 +76,42 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             return source;
         }
     }
+
+    /// <summary>
+    /// A stand-in for the backfill's recompute of the refused dlls: it counts its calls and
+    /// answers each from a function of the call number (1-based) and the backfill's token.
+    /// </summary>
+    internal sealed class RefusedAgainFinder
+    {
+        private readonly Func<int, CancellationToken, IReadOnlyList<string>> _answer;
+
+        internal RefusedAgainFinder(Func<int, CancellationToken, IReadOnlyList<string>> answer)
+        {
+            _answer = answer;
+        }
+
+        internal int Calls { get; private set; }
+
+        /// <summary>Answers the given lists in order, then empty lists.</summary>
+        internal static RefusedAgainFinder Answering(params string[][] answers)
+        {
+            return new RefusedAgainFinder(
+                (call, ct) => call <= answers.Length ? answers[call - 1] : Array.Empty<string>());
+        }
+
+        internal Task<IReadOnlyList<string>> Find(CancellationToken ct)
+        {
+            Calls++;
+            return Task.FromResult(_answer(Calls, ct));
+        }
+    }
+
+    internal static class HotReloadCallSiteBackfillTestDoubles
+    {
+        /// <summary>A recompute that finds no refused dll, for tests that do not exercise it.</summary>
+        internal static Task<IReadOnlyList<string>> FindNothingRefusedAgain(CancellationToken ct)
+        {
+            return Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>());
+        }
+    }
 }

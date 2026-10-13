@@ -61,9 +61,13 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         /// is running (the run calling this yielded to the previous one first). Nothing starts and
         /// nothing is logged for an empty list.
         /// </summary>
-        internal void Start(IReadOnlyList<string> dllPaths, string correlationId)
+        internal void Start(
+            IReadOnlyList<string> dllPaths,
+            Func<CancellationToken, Task<IReadOnlyList<string>>> findRefusedAgain,
+            string correlationId)
         {
             Debug.Assert(dllPaths != null, "dllPaths must not be null.");
+            Debug.Assert(findRefusedAgain != null, "findRefusedAgain must not be null.");
             Debug.Assert(!string.IsNullOrEmpty(correlationId), "correlationId must not be null or empty.");
             if (dllPaths.Count == 0)
             {

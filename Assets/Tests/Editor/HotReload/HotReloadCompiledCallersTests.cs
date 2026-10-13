@@ -47,7 +47,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         public async Task BeginRunAsync_WhileABackgroundReadIsInFlight_TakesTheHoldOnlyAfterTheReadEnds()
         {
             _loader.PendingFor.Add("a.dll");
-            _backfill.Start(new[] { "a.dll", "b.dll" }, "corr");
+            _backfill.Start(new[] { "a.dll", "b.dll" }, HotReloadCallSiteBackfillTestDoubles.FindNothingRefusedAgain, "corr");
 
             Task<HotReloadCompiledCallersRun> begin = _compiledCallers.BeginRunAsync();
             Assert.That(begin.IsCompleted, Is.False, "the run waits for the read in flight");

@@ -122,7 +122,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             HotReloadCallSiteBackfill backfill = new HotReloadCallSiteBackfill(loader.Load);
             _scope = HotReloadDomainTestScope.WithCallSiteBackfill(backfill);
             await _scope.InstalledWarmUpStopped;
-            backfill.Start(new[] { "a.dll", "b.dll" }, "corr");
+            backfill.Start(new[] { "a.dll", "b.dll" }, HotReloadCallSiteBackfillTestDoubles.FindNothingRefusedAgain, "corr");
 
             string editedPath = HotReloadTestSourceWriter.WriteEditedSource(
                 "CallerNoteBackfillE2E.cs",
@@ -162,7 +162,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             _scope = HotReloadDomainTestScope.WithCallSiteBackfill(backfill);
             await _scope.InstalledWarmUpStopped;
             VibeLogger.ClearMemoryLogs();
-            backfill.Start(new[] { "a.dll" }, "corr");
+            backfill.Start(new[] { "a.dll" }, HotReloadCallSiteBackfillTestDoubles.FindNothingRefusedAgain, "corr");
 
             string editedPath = HotReloadTestSourceWriter.WriteEditedSource(
                 "CallerNoteBackfillE2E.cs",

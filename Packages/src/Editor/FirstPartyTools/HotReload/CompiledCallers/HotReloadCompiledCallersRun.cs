@@ -84,7 +84,10 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             // Why the hold ends here, before the backfill starts: its reads belong to no run, so they
             // must evict as reads outside a run do rather than pile up under this run's hold.
             _hold.Dispose();
-            _backfill.Start(_refusedDllPaths, correlationId);
+            _backfill.Start(
+                _refusedDllPaths,
+                ct => System.Threading.Tasks.Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>()),
+                correlationId);
         }
 
         /// <summary>
