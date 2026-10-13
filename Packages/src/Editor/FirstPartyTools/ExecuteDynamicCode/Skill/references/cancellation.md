@@ -16,9 +16,9 @@ So a `CancellationToken` named `ct` is always in scope; use it without declaring
 - a domain reload starts,
 - the Unity Editor quits.
 
-## Long awaits block every other command
+## Long awaits block other tool commands
 
-uloop runs one command at a time per Editor. While a snippet is awaiting, every other `uloop` command against that Editor is rejected as BUSY. An await that may never finish — waiting for an animation or a scripted sequence to complete, or for an external event — keeps the Editor BUSY for as long as it waits.
+uloop runs one tool command at a time per Editor. While a snippet is awaiting, other tool commands against that Editor (such as `compile`, `get-logs`, or `run-tests`) are rejected as BUSY. An await that may never finish — waiting for an animation or a scripted sequence to complete, or for an external event — keeps the Editor BUSY for as long as it waits. `uloop status` still answers while a tool runs, so use it to check what is running.
 
 ## Recommended patterns
 

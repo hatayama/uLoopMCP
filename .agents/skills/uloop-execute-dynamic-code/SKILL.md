@@ -29,7 +29,7 @@ CLI-only flag, accepted instead of a schema parameter:
 
 ## Code Rules
 
-Write direct statements from your own Unity API knowledge — no class/namespace/method wrappers. Return is optional. `await` works, and a returned `Task` is awaited: its value becomes `Result`, its exception a failure. Long or open-ended awaits block every other uloop command; pass `ct` and see [references/cancellation.md](references/cancellation.md).
+Write direct statements from your own Unity API knowledge — no class/namespace/method wrappers. Return is optional. `await` works, and a returned `Task` is awaited: its value becomes `Result`, its exception a failure. Long or open-ended awaits block other uloop tool commands; pass `ct` and see [references/cancellation.md](references/cancellation.md).
 
 ```csharp
 using UnityEngine;
