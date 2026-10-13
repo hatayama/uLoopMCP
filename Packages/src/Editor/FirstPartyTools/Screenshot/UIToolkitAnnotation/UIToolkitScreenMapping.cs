@@ -29,7 +29,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
         // Unity offers no panel-to-screen API, and a panel may replace the screen-to-panel function with any
         // function, so the inverse is derived by sampling it. Returns null when the function is not invertible
-        // per axis (non-linear, sheared, rotated, swapped, or non-finite), because no screen rectangle would
+        // per axis (non-linear, sheared, rotated, swapped, mirrored, or non-finite), because no screen rectangle would
         // then match what is drawn.
         internal static UIToolkitScreenMapping? TryCreate(Func<Vector2, Vector2> screenTopLeftToPanel)
         {
@@ -50,7 +50,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
             float scaleX = (unitX.x - origin.x) / SAMPLE;
             float scaleY = (unitY.y - origin.y) / SAMPLE;
-            if (Mathf.Abs(scaleX) < MIN_SCALE || Mathf.Abs(scaleY) < MIN_SCALE)
+            // A mirrored axis (negative scale) is rejected too: its inverse would swap the bounds' minimum and
+            // maximum.
+            if (scaleX < MIN_SCALE || scaleY < MIN_SCALE)
             {
                 return null;
             }

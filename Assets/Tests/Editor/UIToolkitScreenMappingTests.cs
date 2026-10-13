@@ -80,6 +80,19 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
         }
 
         /// <summary>
+        /// Verifies a function that mirrors an axis is rejected, since inverting it would yield bounds whose
+        /// minimum exceeds their maximum.
+        /// </summary>
+        [Test]
+        public void TryCreate_WithMirroredAxis_ShouldReturnNull()
+        {
+            UIToolkitScreenMapping mapping = UIToolkitScreenMapping.TryCreate(
+                screen => new Vector2(1000f - screen.x, screen.y));
+
+            Assert.That(mapping, Is.Null);
+        }
+
+        /// <summary>
         /// Verifies a constant function, which has no inverse, is rejected.
         /// </summary>
         [Test]
