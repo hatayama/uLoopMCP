@@ -42,6 +42,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.PlayMode
         private GameObject _canvasObject = null!;
         private SimulateMouseUiTool _tool = null!;
         private SimulateMouseUiResponse _lastResponse = null!;
+        private DragTracker _lastDragTracker = null!;
+        private Slider _lastSlider = null!;
 
         [UnitySetUp]
         public IEnumerator SetUp()
@@ -232,6 +234,72 @@ namespace io.github.hatayama.UnityCliLoop.Tests.PlayMode
             Assert.IsFalse(_lastResponse.Success);
             Assert.AreEqual(NoEventSystemMessage, _lastResponse.Message);
             Assert.IsTrue(MouseDragState.IsDragging, "the drag must stay in progress");
+        }
+
+        /// <summary>
+        /// Verifies a drag starting where a uGUI drag target's Canvas sorts above the panel drags the uGUI target
+        /// and leaves the slider alone.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator Drag_WhereUguiCanvasSortsAbovePanel_DragsUgui()
+        {
+            yield return DragOverlap(canvasSortingOrder: 11, panelSortingOrder: 10f);
+
+            Assert.IsTrue(_lastResponse.Success, _lastResponse.Message);
+            Assert.AreEqual("UGUI", _lastResponse.UiSystem);
+            Assert.AreEqual("UguiDragTarget", _lastResponse.HitGameObjectName);
+            Assert.IsTrue(_lastDragTracker.BeginDragCalled, "the uGUI target must be dragged");
+            Assert.AreEqual(0f, _lastSlider.value, "the slider must not move");
+        }
+
+        /// <summary>
+        /// Verifies a drag starting where the panel sorts above a uGUI drag target's Canvas drags the slider and
+        /// leaves the uGUI target alone.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator Drag_WherePanelSortsAboveUguiCanvas_DragsUIToolkit()
+        {
+            yield return DragOverlap(canvasSortingOrder: 9, panelSortingOrder: 10f);
+
+            Assert.IsTrue(_lastResponse.Success, _lastResponse.Message);
+            Assert.AreEqual("UIToolkit", _lastResponse.UiSystem);
+            Assert.GreaterOrEqual(_lastSlider.value, 0.9f);
+            Assert.IsFalse(_lastDragTracker.BeginDragCalled, "the uGUI target must not be dragged");
+            Assert.AreEqual(0, _lastDragTracker.DragCallCount, "the uGUI target must not be dragged");
+        }
+
+        /// <summary>
+        /// Verifies a bypass drag on an existing uGUI drag target fails without an EventSystem, for both a
+        /// one-shot Drag and a DragStart, and sends it nothing.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator BypassDrag_WithoutEventSystem_FailsAsBefore()
+        {
+            Assert.IsNull(EventSystem.current, "Setup: no EventSystem must be active.");
+            GameObject dragTarget = CreateCanvasElement("UguiDragTarget", Vector2.zero);
+            dragTarget.AddComponent<Image>();
+            DragTracker tracker = dragTarget.AddComponent<DragTracker>();
+            yield return null;
+            Vector2 center = GameViewCenter();
+
+            JObject drag = DragParameters(center, center + new Vector2(50f, 0f), 0f);
+            drag["bypassRaycast"] = true;
+            drag["targetPath"] = "TestCanvas/UguiDragTarget";
+            yield return RunTool(drag);
+
+            Assert.IsFalse(_lastResponse.Success);
+            Assert.AreEqual(NoEventSystemMessage, _lastResponse.Message);
+
+            JObject dragStart = SplitParameters(MouseAction.DragStart, center);
+            dragStart["bypassRaycast"] = true;
+            dragStart["targetPath"] = "TestCanvas/UguiDragTarget";
+            yield return RunTool(dragStart);
+
+            Assert.IsFalse(_lastResponse.Success);
+            Assert.AreEqual(NoEventSystemMessage, _lastResponse.Message);
+            Assert.IsFalse(MouseDragState.IsDragging);
+            Assert.IsFalse(tracker.BeginDragCalled, "the uGUI target must receive nothing");
+            Assert.AreEqual(0, tracker.DragCallCount, "the uGUI target must receive nothing");
         }
 
         /// <summary>
@@ -582,6 +650,21 @@ namespace io.github.hatayama.UnityCliLoop.Tests.PlayMode
         }
 
         // Offset from the Canvas centre, which is the Game View centre in PlayMode; Canvas y grows upwards.
+        // A uGUI drag target laid exactly over the slider, so the drag start point hits both.
+        private IEnumerator DragOverlap(int canvasSortingOrder, float panelSortingOrder)
+        {
+            CreateEventSystem();
+            _canvasObject.GetComponent<Canvas>().sortingOrder = canvasSortingOrder;
+            CreateDocumentWithSlider(out Slider slider, panelSortingOrder);
+            GameObject dragTarget = CreateCanvasElement("UguiDragTarget", Vector2.zero);
+            dragTarget.AddComponent<Image>();
+            _lastDragTracker = dragTarget.AddComponent<DragTracker>();
+            _lastSlider = slider;
+            yield return WaitForLayout();
+
+            yield return RunTool(DragParameters(SliderLeft(), SliderRight(), 0f));
+        }
+
         private GameObject CreateCanvasElement(string name, Vector2 offset)
         {
             GameObject element = new GameObject(name);
@@ -594,10 +677,10 @@ namespace io.github.hatayama.UnityCliLoop.Tests.PlayMode
             return element;
         }
 
-        private UIDocument CreateDocumentWithSlider(out Slider slider)
+        private UIDocument CreateDocumentWithSlider(out Slider slider, float panelSortingOrder = 0f)
         {
             slider = new Slider(0f, 1f) { name = "volume" };
-            UIDocument document = CreateDocument();
+            UIDocument document = CreateDocument(panelSortingOrder);
             PlaceAtCenter(document, slider);
             return document;
         }
@@ -614,11 +697,12 @@ namespace io.github.hatayama.UnityCliLoop.Tests.PlayMode
         }
 
         // The object starts inactive so the document sees its panel settings when it first enables.
-        private UIDocument CreateDocument()
+        private UIDocument CreateDocument(float panelSortingOrder = 0f)
         {
             PanelSettings settings = ScriptableObject.CreateInstance<PanelSettings>();
             settings.scaleMode = PanelScaleMode.ConstantPixelSize;
             settings.scale = 1f;
+            settings.sortingOrder = panelSortingOrder;
             settings.themeStyleSheet = AssetDatabase.LoadAssetAtPath<ThemeStyleSheet>(RuntimeThemePath);
             Assert.IsNotNull(settings.themeStyleSheet, "the runtime theme must exist at " + RuntimeThemePath);
             _createdObjects.Add(settings);
