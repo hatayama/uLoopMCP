@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -18,12 +19,14 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
 {
     /// <summary>
     /// End-to-end EditMode coverage for the caller-note backfill around a hot reload run: a run
-    /// whose note step refused a dll reads it in the background afterwards, so the next run reads
-    /// nothing, and a run that comes while a backfill reads waits for that dll only.
+    /// whose note step refused a dll reads it, and the next caller level's dlls, in the background
+    /// afterwards, so the next run reads nothing, and a run that comes while a backfill reads
+    /// waits for that dll only.
     /// </summary>
     public class HotReloadCallerNoteBackfillE2ETests
     {
         private const string BackfillFixtureFileName = "HotReloadCallerNoteBackfillE2EFixture.cs";
+        private const string Level2BackfillFixtureFileName = "HotReloadCallerNoteBackfillLevel2E2EFixture.cs";
         private const string CacheFixtureFileName = "HotReloadCallSiteCacheE2EFixture.cs";
         private const string CrossAssemblyName = "UnityCLILoop.Tests.Editor.HotReload.CallSiteCrossAssembly";
         private const string ReadBody = "return 1;";
@@ -108,6 +111,62 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         }
 
         /// <summary>
+        /// What: when the refused dll holds a caller whose own caller sits in a further uncached dll,
+        /// the cold run's backfill reads that dll too, so the next run reads no dll; the backfill's
+        /// recompute writes no budget-exhausted entry.
+        /// </summary>
+        [Test]
+        public async Task Run_WhoseNoteStepRefusedADllWithACallerChain_BackfillsTheNextLevelSoTheNextRunReadsNothing()
+        {
+            string fixturePath = FixturePath(Level2BackfillFixtureFileName);
+            string source = File.ReadAllText(fixturePath);
+            Assert.That(source, Does.Contain(ReadBody), "Precondition: the Read body anchor must exist.");
+            _scope = new HotReloadDomainTestScope();
+            await _scope.InstalledWarmUpStopped;
+            // Why clear: entries cached by earlier tests would let the runs refuse nothing.
+            HotReloadCompiledCallSiteCache.Shared.Clear();
+            int before = HotReloadCompiledCallSiteCache.Shared.LoadCount;
+
+            HotReloadOrchestratorResult first = await RunWithReadReturningAsync(
+                fixturePath,
+                source,
+                2,
+                ReadLevel2FixtureWithoutACallSite);
+            JArray exhausted = JArray.Parse(VibeLogger.GetLogsForAi(HotReloadConstants.VibeLogCallerNoteLoadBudgetExhausted));
+            Assert.That(exhausted.Count, Is.EqualTo(1), "Precondition: the first run's budget must refuse a dll.\n" + FormatOutcomes(first));
+            Assert.That(
+                exhausted[0]["context"]["refusedAssemblies"].ToObject<string[]>(),
+                Is.EqualTo(new[] { CrossAssemblyName }),
+                "Precondition: the first run must refuse only the relay's dll; the next level is found later.");
+
+            await HotReloadCompositionRoot.Services.CompiledCallers.Backfill.Completion;
+            int afterBackfill = HotReloadCompiledCallSiteCache.Shared.LoadCount;
+            Assert.That(
+                JArray.Parse(VibeLogger.GetLogsForAi(HotReloadConstants.VibeLogCallerNoteLoadBudgetExhausted)).Count,
+                Is.EqualTo(1),
+                "The backfill's recompute writes no budget-exhausted entry.");
+
+            HotReloadOrchestratorResult second = await RunWithReadReturningAsync(
+                fixturePath,
+                source,
+                3,
+                ReadLevel2FixtureWithoutACallSite);
+            Assert.That(
+                HotReloadCompiledCallSiteCache.Shared.LoadCount,
+                Is.EqualTo(afterBackfill),
+                "The second run reads no dll: the backfill already read the next caller level.\n" + FormatOutcomes(second));
+            Assert.That(
+                JArray.Parse(VibeLogger.GetLogsForAi(HotReloadConstants.VibeLogCallerNoteLoadBudgetExhausted)).Count,
+                Is.EqualTo(1),
+                "The second run's budget refuses nothing.");
+
+            JObject backfill = HotReloadWarmUpTestDoubles.ReadSingleVibeContext(HotReloadConstants.VibeLogCallerNoteBackfillComplete);
+            Assert.That((int)backfill["rounds"], Is.GreaterThanOrEqualTo(2), "rounds");
+            Assert.That((int)backfill["loaded"], Is.EqualTo(2), "loaded: the relay's dll and the level-2 caller's dll");
+            Assert.That(afterBackfill - before, Is.EqualTo(3), "the host's dll in the run, then the two dlls in the backfill");
+        }
+
+        /// <summary>
         /// What: a run that comes while the previous run's backfill is reading a dll waits for
         /// that dll, applies, and the backfill reads no later dll; the entry names the run.
         /// </summary>
@@ -122,7 +181,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             HotReloadCallSiteBackfill backfill = new HotReloadCallSiteBackfill(loader.Load);
             _scope = HotReloadDomainTestScope.WithCallSiteBackfill(backfill);
             await _scope.InstalledWarmUpStopped;
-            backfill.Start(new[] { "a.dll", "b.dll" }, "corr");
+            backfill.Start(new[] { "a.dll", "b.dll" }, HotReloadCallSiteBackfillTestDoubles.FindNothingRefusedAgain, "corr");
 
             string editedPath = HotReloadTestSourceWriter.WriteEditedSource(
                 "CallerNoteBackfillE2E.cs",
@@ -162,7 +221,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
             _scope = HotReloadDomainTestScope.WithCallSiteBackfill(backfill);
             await _scope.InstalledWarmUpStopped;
             VibeLogger.ClearMemoryLogs();
-            backfill.Start(new[] { "a.dll" }, "corr");
+            backfill.Start(new[] { "a.dll" }, HotReloadCallSiteBackfillTestDoubles.FindNothingRefusedAgain, "corr");
 
             string editedPath = HotReloadTestSourceWriter.WriteEditedSource(
                 "CallerNoteBackfillE2E.cs",
@@ -213,6 +272,15 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
                 Is.EqualTo(value),
                 "Precondition: the run must patch Read, so its caller scan runs.\n" + FormatOutcomes(result));
             return result;
+        }
+
+        // Why reflection: a direct call here would be a compiled caller of Read in this test
+        // assembly, and the caller closure would stop at it before walking the relay's level.
+        private static int ReadLevel2FixtureWithoutACallSite()
+        {
+            MethodInfo read = typeof(HotReloadCallerNoteBackfillLevel2E2EFixture).GetMethod(
+                nameof(HotReloadCallerNoteBackfillLevel2E2EFixture.Read));
+            return (int)read.Invoke(new HotReloadCallerNoteBackfillLevel2E2EFixture(), null);
         }
 
         private static async Task<HotReloadOrchestratorResult> AwaitRunAsync(Task<HotReloadOrchestratorResult> run)

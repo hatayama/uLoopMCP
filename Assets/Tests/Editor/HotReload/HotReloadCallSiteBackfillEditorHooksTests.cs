@@ -64,7 +64,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
 
         private async Task StopWith(Action hook)
         {
-            _backfill.Start(new[] { "a.dll", "b.dll" }, "corr");
+            _backfill.Start(new[] { "a.dll", "b.dll" }, HotReloadCallSiteBackfillTestDoubles.FindNothingRefusedAgain, "corr");
             Assert.That(
                 _backfill.State,
                 Is.EqualTo(HotReloadCallSiteBackfillState.Running),

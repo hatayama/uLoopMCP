@@ -135,7 +135,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             // Why the whole run: the signature-change gate during analysis and the caller notes at
             // the end both scan callers through the shared cache, once per method they check, so
             // one hold keeps every dll they read until the run ends.
-            return new HotReloadCompiledCallersRun(_cache.HoldEntriesForRun(), _backfill);
+            return new HotReloadCompiledCallersRun(_cache.HoldEntriesForRun(), () => _cache.HoldEntriesForRun(), _backfill);
         }
     }
 }
