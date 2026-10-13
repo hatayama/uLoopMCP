@@ -31,14 +31,15 @@ namespace io.github.hatayama.UnityCliLoop.Application
             UnityCliLoopToolRegistry registry,
             string toolName,
             JToken paramsToken,
-            CancellationToken ct)
+            CancellationToken ct,
+            bool cancellableByUser = true)
         {
             Debug.Assert(registry != null, "registry must not be null");
             Debug.Assert(!string.IsNullOrWhiteSpace(toolName), "toolName must not be null or whitespace");
 
             ct.ThrowIfCancellationRequested();
 
-            ToolExecutionSessionBeginResult beginResult = _executionSession.Begin(registry, toolName, ct);
+            ToolExecutionSessionBeginResult beginResult = _executionSession.Begin(registry, toolName, ct, cancellableByUser);
             if (!beginResult.IsEntered)
             {
                 throw CreateBusyException(
@@ -49,18 +50,20 @@ namespace io.github.hatayama.UnityCliLoop.Application
                     beginResult.RunningToolPhase?.ToString());
             }
 
+            ToolExecutionLease lease = beginResult.Lease;
+            CancellationToken executionToken = lease.ExecutionToken;
             try
             {
                 // Why an async-flow observer instead of marking phases here: the request can also
                 // wait for the main thread inside the tool, after its work is done (for example
                 // execute-dynamic-code reading the pause state), and only the switch itself sees that.
                 // The value set here flows into the tool and is restored for this method's caller.
-                MainThreadWaitObservation.SetCurrent(new ToolExecutionLeaseWaitObserver(beginResult.Lease));
-                await MainThreadSwitcher.SwitchToMainThread(ct);
-                ct.ThrowIfCancellationRequested();
+                MainThreadWaitObservation.SetCurrent(new ToolExecutionLeaseWaitObserver(lease));
+                await MainThreadSwitcher.SwitchToMainThread(executionToken);
+                executionToken.ThrowIfCancellationRequested();
                 UnityCliLoopEditorStateGuard.Validate(toolName, _editorRuntimeStatePort);
 
-                UnityCliLoopToolResponse response = await beginResult.Tool.ExecuteAsync(paramsToken, ct).ConfigureAwait(false);
+                UnityCliLoopToolResponse response = await beginResult.Tool.ExecuteAsync(paramsToken, executionToken).ConfigureAwait(false);
                 if (response == null)
                 {
                     throw new InvalidOperationException($"Tool returned null response: {toolName}");
@@ -68,10 +71,23 @@ namespace io.github.hatayama.UnityCliLoop.Application
 
                 return response;
             }
+            // Why convert: an explicit uloop cancel must reach the waiting CLI as its own error, while a
+            // disconnect (the request token) still drops the connection because nobody is left to answer.
+            catch (OperationCanceledException) when (lease.WasCancelledByUser && !ct.IsCancellationRequested)
+            {
+                throw new UnityCliLoopToolCancelledException(toolName);
+            }
             finally
             {
-                beginResult.Lease.Dispose();
+                lease.Dispose();
             }
+        }
+
+        // Why convert here: Infrastructure cannot see the Domain result type, so the outcome leaves
+        // in an Application type, the same way GetExecutionStatus does.
+        internal UnityCliLoopCancelRequestResult CancelRunningTool()
+        {
+            return UnityCliLoopCancelRequestResult.From(_executionSession.CancelRunning());
         }
 
         // Why convert here: Infrastructure cannot see the Domain snapshot type, so the phase leaves

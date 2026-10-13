@@ -79,6 +79,19 @@ namespace io.github.hatayama.UnityCliLoop.Application
                 };
             }
 
+            if (exception is UnityCliLoopToolCancelledException cancelledException)
+            {
+                return new TranslationOutput
+                {
+                    FriendlyMessage = cancelledException.Message,
+                    Explanation = cancelledException.Message,
+                    Solutions = new List<string>
+                    {
+                        "Run uloop status to confirm the Editor is Ready before the next command"
+                    }
+                };
+            }
+
             if (exception is TimeoutException)
             {
                 return new TranslationOutput

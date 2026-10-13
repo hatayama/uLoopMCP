@@ -288,6 +288,196 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             }
         }
 
+        /// <summary>
+        /// Verifies a tool that honours its token ends with UnityCliLoopToolCancelledException when
+        /// uloop cancel fires, and that the slot is free again afterwards.
+        /// </summary>
+        [Test]
+        public async Task ExecuteToolAsync_WhenCancelledByUser_ThrowsToolCancelledAndReleasesSlot()
+        {
+            ToolExecutionSession session = new ToolExecutionSession();
+            UnityCliLoopToolRegistry registry = ToolRegistryTestFactory.Create();
+            CooperativeTool tool = new CooperativeTool();
+            registry.RegisterTool(tool);
+            UnityCliLoopToolExecutionService executionService =
+                new UnityCliLoopToolExecutionService(new NoOpEditorRuntimeStatePort(), session);
+            MainThreadSwitcher.RegisterService(new ImmediateMainThreadDispatcher());
+
+            try
+            {
+                Task<UnityCliLoopToolResponse> runningTask = executionService.ExecuteToolAsync(
+                    registry,
+                    CooperativeTool.ToolNameValue,
+                    null,
+                    CancellationToken.None);
+
+                UnityCliLoopCancelRequestResult cancelResult = executionService.CancelRunningTool();
+                await AwaitCompletionWithTimeout(runningTask);
+
+                Assert.That(cancelResult.Outcome, Is.EqualTo("Cancelled"));
+                Assert.That(cancelResult.RunningToolName, Is.EqualTo(CooperativeTool.ToolNameValue));
+                UnityCliLoopToolCancelledException exception =
+                    Assert.ThrowsAsync<UnityCliLoopToolCancelledException>(() => runningTask);
+                Assert.That(exception.ToolName, Is.EqualTo(CooperativeTool.ToolNameValue));
+                ToolExecutionSessionEnterResult nextEnter = session.TryEnter("other-tool");
+                Assert.That(nextEnter.IsEntered, Is.True);
+                nextEnter.Lease.Dispose();
+            }
+            finally
+            {
+                RestoreEditorMainThreadDispatcher();
+            }
+        }
+
+        /// <summary>
+        /// Verifies a request still waiting for the stalled Editor main thread is resumed by uloop
+        /// cancel, ends with UnityCliLoopToolCancelledException, and frees the slot without the main
+        /// thread ever running it.
+        /// </summary>
+        [Test]
+        public async Task ExecuteToolAsync_WhenCancelledByUserWhileWaitingForMainThread_ThrowsToolCancelledAndReleasesSlot()
+        {
+            ToolExecutionSession session = new ToolExecutionSession();
+            UnityCliLoopToolRegistry registry = ToolRegistryTestFactory.Create();
+            registry.RegisterTool(new ImmediateTool(ImmediateTool.HolderName));
+            UnityCliLoopToolExecutionService executionService =
+                new UnityCliLoopToolExecutionService(new NoOpEditorRuntimeStatePort(), session);
+            QueueingMainThreadDispatcher dispatcher = new QueueingMainThreadDispatcher();
+            MainThreadSwitcher.RegisterService(dispatcher);
+
+            try
+            {
+                Task<UnityCliLoopToolResponse> waitingTask = executionService.ExecuteToolAsync(
+                    registry,
+                    ImmediateTool.HolderName,
+                    null,
+                    CancellationToken.None);
+                Assert.That(waitingTask.IsCompleted, Is.False);
+
+                executionService.CancelRunningTool();
+                await AwaitCompletionWithTimeout(waitingTask);
+
+                Assert.ThrowsAsync<UnityCliLoopToolCancelledException>(() => waitingTask);
+                ToolExecutionSessionEnterResult nextEnter = session.TryEnter("other-tool");
+                Assert.That(nextEnter.IsEntered, Is.True);
+                nextEnter.Lease.Dispose();
+            }
+            finally
+            {
+                RestoreEditorMainThreadDispatcher();
+            }
+        }
+
+        /// <summary>
+        /// Verifies a request whose client also disconnected after uloop cancel keeps ending with the
+        /// plain OperationCanceledException, because nobody is left to read a cancel error.
+        /// </summary>
+        [Test]
+        public async Task ExecuteToolAsync_WhenRequestTokenAlsoCancelledAfterUserCancel_ThrowsOperationCanceled()
+        {
+            ToolExecutionSession session = new ToolExecutionSession();
+            UnityCliLoopToolRegistry registry = ToolRegistryTestFactory.Create();
+            ManuallyCancelledTool tool = new ManuallyCancelledTool();
+            registry.RegisterTool(tool);
+            UnityCliLoopToolExecutionService executionService =
+                new UnityCliLoopToolExecutionService(new NoOpEditorRuntimeStatePort(), session);
+            MainThreadSwitcher.RegisterService(new ImmediateMainThreadDispatcher());
+            using CancellationTokenSource requestCancellation = new CancellationTokenSource();
+
+            try
+            {
+                Task<UnityCliLoopToolResponse> runningTask = executionService.ExecuteToolAsync(
+                    registry,
+                    ManuallyCancelledTool.ToolNameValue,
+                    null,
+                    requestCancellation.Token);
+
+                executionService.CancelRunningTool();
+                requestCancellation.Cancel();
+                tool.EndWithCancellation();
+                await AwaitCompletionWithTimeout(runningTask);
+
+                Assert.CatchAsync<OperationCanceledException>(() => runningTask);
+            }
+            finally
+            {
+                RestoreEditorMainThreadDispatcher();
+            }
+        }
+
+        /// <summary>
+        /// Verifies a client disconnect alone still ends the request with OperationCanceledException,
+        /// not with the uloop cancel error.
+        /// </summary>
+        [Test]
+        public async Task ExecuteToolAsync_WhenOnlyRequestTokenIsCancelled_ThrowsOperationCanceled()
+        {
+            ToolExecutionSession session = new ToolExecutionSession();
+            UnityCliLoopToolRegistry registry = ToolRegistryTestFactory.Create();
+            registry.RegisterTool(new CooperativeTool());
+            UnityCliLoopToolExecutionService executionService =
+                new UnityCliLoopToolExecutionService(new NoOpEditorRuntimeStatePort(), session);
+            MainThreadSwitcher.RegisterService(new ImmediateMainThreadDispatcher());
+            using CancellationTokenSource requestCancellation = new CancellationTokenSource();
+
+            try
+            {
+                Task<UnityCliLoopToolResponse> runningTask = executionService.ExecuteToolAsync(
+                    registry,
+                    CooperativeTool.ToolNameValue,
+                    null,
+                    requestCancellation.Token);
+
+                requestCancellation.Cancel();
+                await AwaitCompletionWithTimeout(runningTask);
+
+                Exception exception = Assert.CatchAsync<OperationCanceledException>(() => runningTask);
+                Assert.That(exception, Is.Not.InstanceOf<UnityCliLoopToolCancelledException>());
+            }
+            finally
+            {
+                RestoreEditorMainThreadDispatcher();
+            }
+        }
+
+        /// <summary>
+        /// Verifies a tool started through the public registrar entry point, which Editor code uses
+        /// with its own token, is reported NotCancellable and keeps running when uloop cancel arrives.
+        /// </summary>
+        [Test]
+        public async Task CancelRunningTool_WhenToolRunsThroughPublicRegistrarEntryPoint_ReportsNotCancellable()
+        {
+            PendingTypedTool tool = new PendingTypedTool();
+            UnityCliLoopToolRegistrarService registrarService = new UnityCliLoopToolRegistrarService(
+                new EmptyInternalToolNameProvider(),
+                new AlwaysEnabledToolSettingsPort(),
+                new UnityCliLoopToolExecutionService(new NoOpEditorRuntimeStatePort(), new ToolExecutionSession()),
+                () => new IUnityCliLoopTool[] { tool });
+            MainThreadSwitcher.RegisterService(new ImmediateMainThreadDispatcher());
+
+            try
+            {
+                Task<UnityCliLoopToolResponse> runningTask = registrarService.ExecuteToolAsync(
+                    PendingTypedTool.Name,
+                    null,
+                    CancellationToken.None);
+
+                UnityCliLoopCancelRequestResult cancelResult = registrarService.CancelRunningTool();
+
+                Assert.That(cancelResult.Outcome, Is.EqualTo("NotCancellable"));
+                Assert.That(cancelResult.RunningToolName, Is.EqualTo(PendingTypedTool.Name));
+                Assert.That(runningTask.IsCompleted, Is.False);
+
+                tool.Complete();
+                UnityCliLoopToolResponse response = await AwaitResponseWithTimeout(runningTask, CancellationToken.None);
+                Assert.That(response, Is.InstanceOf<PendingTypedResponse>());
+            }
+            finally
+            {
+                RestoreEditorMainThreadDispatcher();
+            }
+        }
+
         [Test]
         public void ScreenshotUseCase_CreateTimedOutResult_PreservesTimeoutDetails()
         {
@@ -328,6 +518,15 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             Task completedTask = await Task.WhenAny(task, timeoutTask);
             Assert.That(completedTask, Is.SameAs(task), "Tool execution did not complete before the test timeout.");
             return await task;
+        }
+
+        // Waits at most one second so a tool that ignores the cancellation fails the test instead of
+        // hanging the Editor. The task's own outcome is asserted by the caller.
+        private static async Task AwaitCompletionWithTimeout(Task<UnityCliLoopToolResponse> task)
+        {
+            Task timeoutTask = Task.Delay(TimeSpan.FromSeconds(1));
+            Task completedTask = await Task.WhenAny(task, timeoutTask);
+            Assert.That(completedTask, Is.SameAs(task), "Tool execution did not complete before the test timeout.");
         }
 
         private sealed class CapturingMainThreadDispatcher : IMainThreadDispatcher
@@ -451,6 +650,50 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             public void Complete()
             {
                 _completionSource.TrySetResult(new PendingTypedResponse());
+            }
+        }
+
+        // Ends with a cancellation as soon as the token it receives fires, as a tool that honours ct does.
+        private sealed class CooperativeTool : IUnityCliLoopTool
+        {
+            public const string ToolNameValue = "cooperative-tool";
+
+            public string ToolName => ToolNameValue;
+
+            public ToolParameterSchema ParameterSchema => new();
+
+            public Task<UnityCliLoopToolResponse> ExecuteAsync(JToken paramsToken, CancellationToken ct)
+            {
+                TaskCompletionSource<UnityCliLoopToolResponse> completion =
+                    new TaskCompletionSource<UnityCliLoopToolResponse>(TaskCreationOptions.RunContinuationsAsynchronously);
+                ct.Register(() => completion.TrySetCanceled(ct));
+                return completion.Task;
+            }
+        }
+
+        // Ends with a cancellation only when the test says so, so the test can change the request
+        // token between the cancel and the moment the tool gives up.
+        private sealed class ManuallyCancelledTool : IUnityCliLoopTool
+        {
+            public const string ToolNameValue = "manually-cancelled-tool";
+
+            private readonly TaskCompletionSource<UnityCliLoopToolResponse> _completion =
+                new TaskCompletionSource<UnityCliLoopToolResponse>(TaskCreationOptions.RunContinuationsAsynchronously);
+            private CancellationToken _receivedToken;
+
+            public string ToolName => ToolNameValue;
+
+            public ToolParameterSchema ParameterSchema => new();
+
+            public Task<UnityCliLoopToolResponse> ExecuteAsync(JToken paramsToken, CancellationToken ct)
+            {
+                _receivedToken = ct;
+                return _completion.Task;
+            }
+
+            public void EndWithCancellation()
+            {
+                _completion.TrySetCanceled(_receivedToken);
             }
         }
 
