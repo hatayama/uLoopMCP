@@ -49,7 +49,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
                 if (method.Kind == HotReloadMethodOutcomeKind.Skipped
                     && !activePatchSiblingFiles.Contains(method.FilePath)
-                    && !IsBodylessRowThatWasNotCompared(method))
+                    && !method.IsBodylessNotCompared)
                 {
                     return true;
                 }
@@ -69,12 +69,6 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             }
 
             return false;
-        }
-
-        private static bool IsBodylessRowThatWasNotCompared(HotReloadMethodOutcome method)
-        {
-            return method.WorkerReason != null
-                && method.WorkerReason.Code == HotReloadWorkerReasonCode.MethodTransformBodylessNotCompared;
         }
 
         /// <summary>

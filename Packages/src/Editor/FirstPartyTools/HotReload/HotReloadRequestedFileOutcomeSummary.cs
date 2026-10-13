@@ -43,6 +43,13 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                     continue;
                 }
 
+                // Why left out: such a row has no body to apply, so a run whose other rows all
+                // applied, or that has no other rows, did not leave an asked-for edit unapplied.
+                if (outcome.IsBodylessNotCompared)
+                {
+                    continue;
+                }
+
                 requestedCount++;
                 if (outcome.Kind != HotReloadMethodOutcomeKind.Skipped)
                 {

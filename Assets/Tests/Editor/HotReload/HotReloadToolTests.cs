@@ -2804,6 +2804,112 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         }
 
         /// <summary>
+        /// What: a run whose requested-file rows are all bodyless members that could not be
+        /// compared has nothing to apply, so neither its outcome, its message, its next action nor
+        /// the compile fallback asks for a compile.
+        /// </summary>
+        [Test]
+        public void BuildApplyResponse_RequestedFileOnlyHasBodylessNotComparedRows_ReportsNothingToApply()
+        {
+            HotReloadOrchestratorResult result = new HotReloadOrchestratorResult(
+                new List<HotReloadMethodOutcome>
+                {
+                    SkippedBodylessNotCompared("IA.Ping(System.Int32)", "Assets/Requested.cs"),
+                    SkippedBodylessNotCompared("IA.Pong()", "Assets/Requested.cs")
+                },
+                new List<string>(),
+                patchedTotal: 0,
+                activePatchTotal: 0);
+            HotReloadResponse response = HotReloadTool.BuildApplyResponse(result);
+            HotReloadTool.ApplyCompileFallbackDecision(
+                response,
+                result,
+                HotReloadCompileOnSkip.auto,
+                isPlaying: false,
+                compileRefusedDuringPlay: false,
+                activePatchSiblingFiles: NoActivePatchSiblings());
+
+            Assert.That(response.Success, Is.True);
+            Assert.That(response.Outcome, Is.EqualTo("NothingToApply"));
+            Assert.That(response.SkippedTotal, Is.EqualTo(2));
+            Assert.That(response.Message, Does.Not.Contain("Run 'uloop compile' to apply"));
+            Assert.That(response.RecommendedNextAction, Is.Empty);
+            Assert.That(response.CompileFallback, Is.EqualTo("NotNeeded"));
+        }
+
+        /// <summary>
+        /// What: a run that patched a method beside a bodyless member that could not be compared
+        /// reports Applied, because the bodyless row is not a skipped edit.
+        /// </summary>
+        [Test]
+        public void BuildApplyResponse_PatchedRowBesideABodylessNotComparedRow_ReportsApplied()
+        {
+            HotReloadResponse response = HotReloadTool.BuildApplyResponse(
+                new HotReloadOrchestratorResult(
+                    new List<HotReloadMethodOutcome>
+                    {
+                        HotReloadMethodOutcome.Patched("T.M()", "Assets/Requested.cs"),
+                        SkippedBodylessNotCompared("T.Shape(System.Int32)", "Assets/Requested.cs")
+                    },
+                    new List<string>(),
+                    patchedTotal: 1,
+                    activePatchTotal: 1));
+
+            Assert.That(response.Outcome, Is.EqualTo("Applied"));
+            Assert.That(response.RecommendedNextAction, Is.Empty);
+        }
+
+        /// <summary>
+        /// What: a bodyless row that could not be compared does not hide another Skipped row of
+        /// the requested file: the run still reports NothingApplied and recommends the fix or a
+        /// compile.
+        /// </summary>
+        [Test]
+        public void BuildApplyResponse_BodylessNotComparedRowBesideAnotherSkippedRow_StillReportsNothingApplied()
+        {
+            HotReloadResponse response = HotReloadTool.BuildApplyResponse(
+                new HotReloadOrchestratorResult(
+                    new List<HotReloadMethodOutcome>
+                    {
+                        SkippedBodylessNotCompared("T.Shape(System.Int32)", "Assets/Requested.cs"),
+                        HotReloadMethodOutcome.Skipped("T.M()", "reason", "Assets/Requested.cs")
+                    },
+                    new List<string>(),
+                    patchedTotal: 0,
+                    activePatchTotal: 0));
+
+            Assert.That(response.Outcome, Is.EqualTo("NothingApplied"));
+            Assert.That(
+                response.Message,
+                Does.StartWith(HotReloadConstants.RequestedFilesAllSkippedMessage));
+            Assert.That(
+                response.RecommendedNextAction,
+                Is.EqualTo(HotReloadConstants.RequestedFilesAllSkippedRecommendedNextAction));
+        }
+
+        /// <summary>
+        /// What: a patched row, a bodyless row that could not be compared and another Skipped row
+        /// report PartiallyApplied.
+        /// </summary>
+        [Test]
+        public void BuildApplyResponse_PatchedBodylessAndSkippedRows_ReportsPartiallyApplied()
+        {
+            HotReloadResponse response = HotReloadTool.BuildApplyResponse(
+                new HotReloadOrchestratorResult(
+                    new List<HotReloadMethodOutcome>
+                    {
+                        HotReloadMethodOutcome.Patched("T.N()", "Assets/Requested.cs"),
+                        SkippedBodylessNotCompared("T.Shape(System.Int32)", "Assets/Requested.cs"),
+                        HotReloadMethodOutcome.Skipped("T.M()", "reason", "Assets/Requested.cs")
+                    },
+                    new List<string>(),
+                    patchedTotal: 1,
+                    activePatchTotal: 1));
+
+            Assert.That(response.Outcome, Is.EqualTo("PartiallyApplied"));
+        }
+
+        /// <summary>
         /// What: a run that bound an introduced type keeps the type message and no next action,
         /// even though the only method outcome of the requested file was Skipped.
         /// </summary>
@@ -3189,6 +3295,15 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor.HotReload
         }
 
         // One skipped method: the smallest run that leaves a requested edit unapplied.
+        private static HotReloadMethodOutcome SkippedBodylessNotCompared(string method, string filePath)
+        {
+            return HotReloadMethodOutcome.Skipped(method, "reason", filePath)
+                .WithWorkerReason(HotReloadWorkerReasonFacts.From(new TransformWorkerReasonDto
+                {
+                    code = HotReloadWorkerReasonCode.MethodTransformBodylessNotCompared
+                }));
+        }
+
         private static HotReloadReappliedSiblingFiles NoActivePatchSiblings()
         {
             return new HotReloadReappliedSiblingFiles(Array.Empty<string>(), path => path);
