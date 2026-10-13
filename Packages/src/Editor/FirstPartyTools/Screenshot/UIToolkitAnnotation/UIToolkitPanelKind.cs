@@ -16,7 +16,15 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         // version defines cannot tell patch versions apart. 2022.3 has no such property and no world-space panels.
         internal static bool IsWorldSpace(PanelSettings settings)
         {
-            PropertyInfo? property = typeof(PanelSettings).GetProperty(
+            return HasWorldSpaceRenderMode(settings);
+        }
+
+        // Takes any object and looks the property up on its runtime type so tests can check the lookup and the
+        // comparison with stand-in types: the project's Unity has no renderMode, and CI's Unity 6 legs skip
+        // these tests.
+        internal static bool HasWorldSpaceRenderMode(object settings)
+        {
+            PropertyInfo? property = settings.GetType().GetProperty(
                 RENDER_MODE_PROPERTY,
                 BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
             if (property == null)
