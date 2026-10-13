@@ -649,7 +649,6 @@ namespace io.github.hatayama.UnityCliLoop.Tests.PlayMode
             return eventSystemObject;
         }
 
-        // Offset from the Canvas centre, which is the Game View centre in PlayMode; Canvas y grows upwards.
         // A uGUI drag target laid exactly over the slider, so the drag start point hits both.
         private IEnumerator DragOverlap(int canvasSortingOrder, float panelSortingOrder)
         {
@@ -665,6 +664,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.PlayMode
             yield return RunTool(DragParameters(SliderLeft(), SliderRight(), 0f));
         }
 
+        // Offset from the Canvas centre, which is the Game View centre in PlayMode; Canvas y grows upwards.
         private GameObject CreateCanvasElement(string name, Vector2 offset)
         {
             GameObject element = new GameObject(name);
