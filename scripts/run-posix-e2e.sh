@@ -10,6 +10,7 @@ TIMEOUT_SECONDS=120
 LAUNCH_TIMEOUT_SECONDS=240
 SKIP_RECOVERY_READINESS=false
 SKIP_SIMULATE_MOUSE=false
+SKIP_UITOOLKIT_ANNOTATION=false
 
 fail() {
     printf 'ERROR: %s\n' "$1" >&2
@@ -27,6 +28,7 @@ Options:
   --launch-timeout <seconds>         Launch/reuse smoke timeout. Default: 240.
   --skip-recovery-readiness          Skip recovery/readiness smoke.
   --skip-simulate-mouse              Skip simulate-mouse UI E2E.
+  --skip-uitoolkit-annotation        Skip UI Toolkit screenshot annotation E2E.
   -h, --help                         Show this help.
 EOF
 }
@@ -59,6 +61,10 @@ while [ "$#" -gt 0 ]; do
             ;;
         --skip-simulate-mouse)
             SKIP_SIMULATE_MOUSE=true
+            shift
+            ;;
+        --skip-uitoolkit-annotation)
+            SKIP_UITOOLKIT_ANNOTATION=true
             shift
             ;;
         -h|--help)
@@ -138,6 +144,12 @@ fi
 if [ "$SKIP_SIMULATE_MOUSE" = false ]; then
     run_step "Simulate mouse UI" \
         sh "$ROOT_DIR/scripts/test-simulate-mouse-demo.sh" \
+            --project-path "$PROJECT_PATH"
+fi
+
+if [ "$SKIP_UITOOLKIT_ANNOTATION" = false ]; then
+    run_step "Screenshot UI Toolkit annotation" \
+        sh "$ROOT_DIR/scripts/test-screenshot-uitoolkit-annotation.sh" \
             --project-path "$PROJECT_PATH"
 fi
 

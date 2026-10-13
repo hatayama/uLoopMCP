@@ -9,6 +9,7 @@ $ErrorActionPreference = "Stop"
 [string[]]$ScriptPaths = @(
     "scripts/run-windows-e2e.ps1",
     "scripts/test-simulate-mouse-demo.ps1",
+    "scripts/test-screenshot-uitoolkit-annotation.ps1",
     "Assets/Tests/Demo/scripts/verify-replay-via-cli.ps1"
 )
 
