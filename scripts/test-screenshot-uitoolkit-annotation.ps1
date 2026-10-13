@@ -1,7 +1,8 @@
 <#
-E2E verification that screenshot --annotate-elements lists UI Toolkit controls, using the uloop CLI against
-UIToolkitAnnotationDemoScene. Safe to run repeatedly: it stops PlayMode and restores the Game View size on exit,
-and never saves the scene.
+E2E verification that screenshot --annotate-elements lists UI Toolkit controls and that simulate-mouse-ui and
+simulate-mouse-input press them at the annotated points, using the uloop CLI against UIToolkitAnnotationDemoScene.
+Safe to run repeatedly: it stops PlayMode and restores the Game View size on exit, and never saves the scene, so
+the listener and EventSystem changes made in PlayMode are discarded.
 
 Usage:
   powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-screenshot-uitoolkit-annotation.ps1
@@ -376,7 +377,8 @@ function Test-ElementsOnlyCapture {
     )
 
     [object[]]$first = Get-UiToolkitElements -Response $AnnotatedResponse
-    [object[]]$second = Get-UiToolkitElements -Response (Invoke-ElementsOnlyCapture)
+    [pscustomobject]$elementsOnly = Invoke-ElementsOnlyCapture
+    [object[]]$second = Get-UiToolkitElements -Response $elementsOnly
     [string]$firstPaths = (@($first | ForEach-Object { $_.Path }) | Sort-Object) -join "|"
     [string]$secondPaths = (@($second | ForEach-Object { $_.Path }) | Sort-Object) -join "|"
     Assert-EqualText -Actual $secondPaths -Expected $firstPaths -Context "UI Toolkit element paths in the elements-only capture"
@@ -387,48 +389,219 @@ function Test-ElementsOnlyCapture {
             Assert-Near -Actual $element.$field -Expected $match.$field -Context "$($element.Path) $field"
         }
     }
+
+    return $elementsOnly
 }
 
-function Get-PlayClickCount {
+function Get-ClickCount {
+    param(
+        [string]$Name
+    )
+
     [string]$code = @"
 UIToolkitAnnotationDemo demo = UnityEngine.Object.FindObjectOfType<UIToolkitAnnotationDemo>();
 if (demo == null) { return "ERROR: UIToolkitAnnotationDemo not found"; }
-return demo.GetClickCount("play");
+return demo.GetClickCount("$Name");
 "@
 
     [pscustomobject]$result = Invoke-UloopJson -CommandArguments @("execute-dynamic-code", "--code", $code)
-    Assert-Condition -Condition ($result.Success -eq $true) -Message "Read play click count failed: $($result.ErrorMessage)"
+    Assert-Condition -Condition ($result.Success -eq $true) -Message "Read $Name click count failed: $($result.ErrorMessage)"
     [string]$count = [string]$result.Result
     if ($count.StartsWith("ERROR:")) {
-        throw "Read play click count failed: $($count.Substring(6).Trim())"
+        throw "Read $Name click count failed: $($count.Substring(6).Trim())"
     }
 
     return $count
 }
 
-# simulate-mouse-input reaches UI Toolkit buttons through the EventSystem; simulate-mouse-ui does not.
-function Test-Click {
+function Invoke-DynamicCodeText {
     param(
-        [pscustomobject]$AnnotatedResponse
+        [string]$Code,
+        [string]$Context
     )
 
-    [object[]]$elements = Get-UiToolkitElements -Response $AnnotatedResponse
-    [pscustomobject]$play = @($elements | Where-Object { $_.Name -eq "play" })[0]
-    [int]$before = [int](Get-PlayClickCount)
+    [pscustomobject]$result = Invoke-UloopJson -CommandArguments @("execute-dynamic-code", "--code", $Code)
+    Assert-Condition -Condition ($result.Success -eq $true) -Message "$Context failed: $($result.ErrorMessage)"
+    return [string]$result.Result
+}
+
+function Format-Coordinate {
+    param(
+        [double]$Value
+    )
+
+    return $Value.ToString([Globalization.CultureInfo]::InvariantCulture)
+}
+
+function Get-AnnotatedElement {
+    param(
+        [pscustomobject]$Response,
+        [string]$UiSystem,
+        [string]$Name
+    )
+
+    return @($Response.Screenshots[0].AnnotatedElements | Where-Object { $_.UiSystem -eq $UiSystem -and $_.Name -eq $Name })[0]
+}
+
+# Returns the simulate-mouse-ui response after checking it succeeded.
+function Invoke-SimulateUi {
+    param(
+        [string]$Context,
+        [string[]]$Arguments
+    )
+
+    [pscustomobject]$response = Invoke-UloopJson -CommandArguments (@("simulate-mouse-ui") + $Arguments)
+    Assert-Condition -Condition ($response.Success -eq $true) -Message "$Context failed: $($response.Message)"
+    return $response
+}
+
+function Invoke-SimulateUiClick {
+    param(
+        [string]$Context,
+        [double]$X,
+        [double]$Y
+    )
+
+    return Invoke-SimulateUi -Context $Context -Arguments @("--action", "Click", "--x", (Format-Coordinate $X), "--y", (Format-Coordinate $Y))
+}
+
+# simulate-mouse-ui reaches the UI Toolkit button directly and reports it, including for a click inside a
+# scrollbar, where it must report the scrollbar rather than the part inside it.
+function Test-UiClick {
+    param(
+        [pscustomobject]$ElementsOnly
+    )
+
+    [pscustomobject]$play = Get-AnnotatedElement -Response $ElementsOnly -UiSystem "UIToolkit" -Name "play"
+    [int]$before = [int](Get-ClickCount -Name "play")
+
+    [pscustomobject]$response = Invoke-SimulateUiClick -Context "simulate-mouse-ui click on play" -X $play.SimX -Y $play.SimY
+    Assert-EqualText -Actual $response.UiSystem -Expected "UIToolkit" -Context "simulate-mouse-ui click on play UiSystem"
+    Assert-EqualText -Actual $response.HitPath -Expected "UIToolkitAnnotationDemo/BackDocument#play" -Context "simulate-mouse-ui click on play HitPath"
+    Assert-EqualText -Actual $response.HitGameObjectName -Expected "play" -Context "simulate-mouse-ui click on play HitGameObjectName"
+    Assert-EqualText -Actual (Get-ClickCount -Name "play") -Expected ([string]($before + 1)) -Context "play click count after simulate-mouse-ui"
+
+    [pscustomobject]$scrollbar = @($ElementsOnly.Screenshots[0].AnnotatedElements | Where-Object { $_.UiSystem -eq "UIToolkit" -and $_.Type -eq "Scrollbar" })[0]
+    $response = Invoke-SimulateUiClick -Context "simulate-mouse-ui click on the scrollbar" -X $scrollbar.SimX -Y $scrollbar.SimY
+    Assert-EqualText -Actual $response.HitPath -Expected $scrollbar.Path -Context "simulate-mouse-ui click on the scrollbar HitPath"
+}
+
+# simulate-mouse-input reaches UI Toolkit buttons through the EventSystem's Input System UI module.
+function Test-InputClick {
+    param(
+        [pscustomobject]$ElementsOnly
+    )
+
+    [pscustomobject]$play = Get-AnnotatedElement -Response $ElementsOnly -UiSystem "UIToolkit" -Name "play"
+    [int]$before = [int](Get-ClickCount -Name "play")
 
     [pscustomobject]$response = Invoke-UloopJson -CommandArguments @(
         "simulate-mouse-input",
         "--action",
         "Click",
         "--x",
-        ([double]$play.SimX).ToString([Globalization.CultureInfo]::InvariantCulture),
+        (Format-Coordinate $play.SimX),
         "--y",
-        ([double]$play.SimY).ToString([Globalization.CultureInfo]::InvariantCulture)
+        (Format-Coordinate $play.SimY)
     )
-    Assert-Condition -Condition ($response.Success -eq $true) -Message "Click play failed: $($response.Message)"
+    Assert-Condition -Condition ($response.Success -eq $true) -Message "simulate-mouse-input click on play failed: $($response.Message)"
     Start-Sleep -Seconds 1
 
-    Assert-EqualText -Actual (Get-PlayClickCount) -Expected ([string]($before + 1)) -Context "play click count"
+    Assert-EqualText -Actual (Get-ClickCount -Name "play") -Expected ([string]($before + 1)) -Context "play click count after simulate-mouse-input"
+}
+
+# The front panel takes a click on the covered part; the uncovered annotated point reaches the button.
+function Test-CoveredClick {
+    param(
+        [pscustomobject]$ElementsOnly
+    )
+
+    [pscustomobject]$partlyCovered = Get-AnnotatedElement -Response $ElementsOnly -UiSystem "UIToolkit" -Name "partly-covered"
+    [double]$coveredX = $partlyCovered.BoundsMinX + ($partlyCovered.BoundsMaxX - $partlyCovered.BoundsMinX) * 0.3
+    [double]$coveredY = ($partlyCovered.BoundsMinY + $partlyCovered.BoundsMaxY) / 2
+    [string]$before = Get-ClickCount -Name "partly-covered"
+
+    [pscustomobject]$response = Invoke-SimulateUiClick -Context "simulate-mouse-ui click on the covered part" -X $coveredX -Y $coveredY
+    Assert-EqualText -Actual $response.HitPath -Expected "UIToolkitAnnotationDemo/FrontDocument#cover" -Context "simulate-mouse-ui click on the covered part HitPath"
+    Assert-EqualText -Actual (Get-ClickCount -Name "partly-covered") -Expected $before -Context "partly-covered click count after clicking its cover"
+
+    Invoke-SimulateUiClick -Context "simulate-mouse-ui click on partly-covered" -X $partlyCovered.SimX -Y $partlyCovered.SimY | Out-Null
+    Assert-EqualText -Actual (Get-ClickCount -Name "partly-covered") -Expected ([string]([int]$before + 1)) -Context "partly-covered click count"
+}
+
+# The disabled button is not annotated, so its layout centre in the demo (100,440 200x50) is used. The press is
+# delivered but, as with real input, the disabled button does not react.
+function Test-DisabledClick {
+    [pscustomobject]$response = Invoke-SimulateUiClick -Context "simulate-mouse-ui click on locked" -X 200 -Y 465
+    Assert-EqualText -Actual $response.HitPath -Expected "UIToolkitAnnotationDemo/BackDocument#locked" -Context "simulate-mouse-ui click on locked HitPath"
+    Assert-EqualText -Actual (Get-ClickCount -Name "locked") -Expected "0" -Context "locked click count"
+}
+
+function Test-LongPress {
+    param(
+        [pscustomobject]$ElementsOnly
+    )
+
+    [pscustomobject]$play = Get-AnnotatedElement -Response $ElementsOnly -UiSystem "UIToolkit" -Name "play"
+    [int]$before = [int](Get-ClickCount -Name "play")
+
+    Invoke-SimulateUi -Context "simulate-mouse-ui long press on play" -Arguments @(
+        "--action", "LongPress", "--duration", "0.5", "--x", (Format-Coordinate $play.SimX), "--y", (Format-Coordinate $play.SimY)) | Out-Null
+
+    Assert-EqualText -Actual (Get-ClickCount -Name "play") -Expected ([string]($before + 1)) -Context "play click count after long press"
+}
+
+# The demo does not count uGUI clicks, so a listener added in PlayMode writes the count into the button label.
+function Test-UguiClick {
+    param(
+        [pscustomobject]$ElementsOnly
+    )
+
+    [string]$listenerCode = @'
+using UnityEngine;
+using UnityEngine.UI;
+GameObject buttonObject = GameObject.Find("ugui-button");
+if (buttonObject == null) { return "ERROR: ugui-button not found"; }
+Text label = buttonObject.GetComponentInChildren<Text>();
+if (label == null) { return "ERROR: ugui-button has no Text"; }
+int clicks = 0;
+buttonObject.GetComponent<Button>().onClick.AddListener(() => { clicks++; label.text = "clicked " + clicks; });
+label.text = "clicked 0";
+return label.text;
+'@
+    Assert-EqualText -Actual (Invoke-DynamicCodeText -Code $listenerCode -Context "Add ugui-button listener") -Expected "clicked 0" -Context "ugui-button listener"
+
+    [pscustomobject]$button = Get-AnnotatedElement -Response $ElementsOnly -UiSystem "UGUI" -Name "ugui-button"
+    [pscustomobject]$response = Invoke-SimulateUiClick -Context "simulate-mouse-ui click on ugui-button" -X $button.SimX -Y $button.SimY
+    Assert-EqualText -Actual $response.UiSystem -Expected "UGUI" -Context "simulate-mouse-ui click on ugui-button UiSystem"
+
+    [string]$labelCode = @'
+using UnityEngine;
+using UnityEngine.UI;
+return GameObject.Find("ugui-button").GetComponentInChildren<Text>().text;
+'@
+    Assert-EqualText -Actual (Invoke-DynamicCodeText -Code $labelCode -Context "Read ugui-button label") -Expected "clicked 1" -Context "ugui-button label"
+}
+
+# Runs last: the EventSystem stays disabled until PlayMode stops on exit.
+function Test-ClickWithoutEventSystem {
+    param(
+        [pscustomobject]$ElementsOnly
+    )
+
+    [string]$disableCode = @'
+using UnityEngine.EventSystems;
+if (EventSystem.current == null) { return "ERROR: no EventSystem"; }
+EventSystem.current.gameObject.SetActive(false);
+return EventSystem.current == null ? "disabled" : "ERROR: still active";
+'@
+    Assert-EqualText -Actual (Invoke-DynamicCodeText -Code $disableCode -Context "Disable EventSystem") -Expected "disabled" -Context "EventSystem"
+    [pscustomobject]$play = Get-AnnotatedElement -Response $ElementsOnly -UiSystem "UIToolkit" -Name "play"
+    [int]$before = [int](Get-ClickCount -Name "play")
+
+    Invoke-SimulateUiClick -Context "simulate-mouse-ui click on play without an EventSystem" -X $play.SimX -Y $play.SimY | Out-Null
+
+    Assert-EqualText -Actual (Get-ClickCount -Name "play") -Expected ([string]($before + 1)) -Context "play click count without an EventSystem"
 }
 
 if (Test-Path -LiteralPath $TempDirectory) {
@@ -445,25 +618,43 @@ Wait-UnityReady
 [pscustomobject]$originalGameViewSize = $null
 
 try {
-    Write-Host "[1/6] Loading UI Toolkit annotation demo scene..."
+    Write-Host "[1/12] Loading UI Toolkit annotation demo scene..."
     Initialize-DemoScene
 
-    Write-Host "[2/6] Selecting Full HD Game View resolution..."
+    Write-Host "[2/12] Selecting Full HD Game View resolution..."
     $originalGameViewSize = Select-FullHdGameView
 
-    Write-Host "[3/6] Starting PlayMode and waiting for UI Toolkit controls..."
+    Write-Host "[3/12] Starting PlayMode and waiting for UI Toolkit controls..."
     Invoke-UloopJson -CommandArguments @("control-play-mode", "--action", "Play") | Out-Null
     Wait-PlayMode
     Wait-UiToolkitPlay
 
-    Write-Host "[4/6] Checking the annotated capture..."
+    Write-Host "[4/12] Checking the annotated capture..."
     [pscustomobject]$annotated = Test-AnnotatedCapture
 
-    Write-Host "[5/6] Checking the elements-only capture matches..."
-    Test-ElementsOnlyCapture -AnnotatedResponse $annotated
+    Write-Host "[5/12] Checking the elements-only capture matches..."
+    [pscustomobject]$elementsOnly = Test-ElementsOnlyCapture -AnnotatedResponse $annotated
 
-    Write-Host "[6/6] Clicking a UI Toolkit button at its annotated point..."
-    Test-Click -AnnotatedResponse $annotated
+    Write-Host "[6/12] Clicking UI Toolkit controls with simulate-mouse-ui..."
+    Test-UiClick -ElementsOnly $elementsOnly
+
+    Write-Host "[7/12] Clicking a UI Toolkit button with simulate-mouse-input..."
+    Test-InputClick -ElementsOnly $elementsOnly
+
+    Write-Host "[8/12] Clicking a partly covered UI Toolkit button..."
+    Test-CoveredClick -ElementsOnly $elementsOnly
+
+    Write-Host "[9/12] Clicking a disabled UI Toolkit button..."
+    Test-DisabledClick
+
+    Write-Host "[10/12] Long-pressing a UI Toolkit button..."
+    Test-LongPress -ElementsOnly $elementsOnly
+
+    Write-Host "[11/12] Clicking the uGUI button with simulate-mouse-ui..."
+    Test-UguiClick -ElementsOnly $elementsOnly
+
+    Write-Host "[12/12] Clicking a UI Toolkit button without an EventSystem..."
+    Test-ClickWithoutEventSystem -ElementsOnly $elementsOnly
 
     Write-Host ""
     Write-Host "========================================="
