@@ -44,6 +44,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
         public bool IsTargetDestroyed => _target == null;
 
+        public bool UsesEventSystem => true;
+
         // User input during a CLI drag can cause Unity's StandaloneInputModule to
         // release or reassign the drag, leaving the stored session stale.
         public string? CheckStillActive()

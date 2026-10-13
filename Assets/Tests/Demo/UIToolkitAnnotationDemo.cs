@@ -21,6 +21,13 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Demo
             return _clickCounts.TryGetValue(elementName, out int count) ? count : 0;
         }
 
+        // NaN when the back panel has no slider by that name, so a missing control cannot pass as a value.
+        public float GetSliderValue(string elementName)
+        {
+            Slider? slider = backDocument.rootVisualElement?.Q<Slider>(elementName);
+            return slider != null ? slider.value : float.NaN;
+        }
+
         // Start runs after every Awake and OnEnable, so both documents have created their roots by now
         // regardless of component order.
         private void Start()

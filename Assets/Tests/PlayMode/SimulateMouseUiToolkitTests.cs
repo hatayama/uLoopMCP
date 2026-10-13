@@ -252,29 +252,6 @@ namespace io.github.hatayama.UnityCliLoop.Tests.PlayMode
         }
 
         /// <summary>
-        /// Verifies a drag with no EventSystem still fails with the existing message.
-        /// </summary>
-        [UnityTest]
-        public IEnumerator Drag_WithoutEventSystem_FailsAsBefore()
-        {
-            CreateDocumentWithCenteredButton(0f, out ClickCounter _);
-            yield return WaitForLayout();
-            Vector2 point = GameViewCenter();
-
-            yield return RunTool(new JObject
-            {
-                ["action"] = MouseAction.Drag.ToString(),
-                ["fromX"] = point.x,
-                ["fromY"] = point.y,
-                ["x"] = point.x + 10f,
-                ["y"] = point.y
-            });
-
-            Assert.IsFalse(_lastResponse.Success);
-            Assert.AreEqual(NoEventSystemMessage, _lastResponse.Message);
-        }
-
-        /// <summary>
         /// Verifies a right click reaches the UI Toolkit button as button 1 and does not click it (#20).
         /// </summary>
         [UnityTest]

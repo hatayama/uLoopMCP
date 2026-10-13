@@ -49,6 +49,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         public bool IsAvailable =>
             _document != null && _document.isActiveAndEnabled && _document.rootVisualElement?.panel == _panel;
 
+        /// <summary>True once the document that owns the panel has been destroyed, not merely disabled.</summary>
+        public bool IsDocumentDestroyed => _document == null;
+
         /// <summary>Presses a mouse button (0 left, 1 right, 2 middle) at a Game View point.</summary>
         /// <remarks>Does nothing once the target is no longer available.</remarks>
         public void PressDown(Vector2 gameViewTopLeft, int button)

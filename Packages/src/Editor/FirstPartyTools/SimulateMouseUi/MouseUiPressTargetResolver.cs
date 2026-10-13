@@ -12,7 +12,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
     /// </summary>
     internal static class MouseUiPressTargetResolver
     {
-        private const string NoEventSystemMessage = "No EventSystem found in the scene. Ensure an EventSystem GameObject exists.";
+        internal const string NoEventSystemMessage = "No EventSystem found in the scene. Ensure an EventSystem GameObject exists.";
         private const string UIToolkitPathHint =
             " UI Toolkit element paths are not accepted here; click the element at its SimX/SimY without --bypass-raycast.";
 
@@ -48,7 +48,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 {
                     return (null, MouseUiSimulationResponseFactory.CreateFailure(
                         parameters,
-                        $"No EventSystem found in the scene, and no UI Toolkit element is at ({inputPos.x:F1}, {inputPos.y:F1}). Ensure an EventSystem GameObject exists for uGUI."));
+                        NoEventSystemNorUIToolkitMessage(inputPos)));
                 }
 
                 return (new UguiPressTarget(ResolvedPointerTargets.Empty, uguiPointerData), null);
@@ -90,6 +90,11 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             }
 
             return (null, failure);
+        }
+
+        internal static string NoEventSystemNorUIToolkitMessage(Vector2 inputPos)
+        {
+            return $"No EventSystem found in the scene, and no UI Toolkit element is at ({inputPos.x:F1}, {inputPos.y:F1}). Ensure an EventSystem GameObject exists for uGUI.";
         }
 
         // The press data carries the uGUI raycast hit, whose raycaster decides the order against the panel.

@@ -109,7 +109,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             };
         }
 
-        private static string DescribeHit(MouseUiHitReport hit)
+        internal static string DescribeHit(MouseUiHitReport hit)
         {
             return hit.UiSystem == MouseUiHitSystem.UIToolkit
                 ? $"UI Toolkit element '{hit.Name}'"
@@ -120,16 +120,18 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             MouseUiSimulationCommand parameters,
             Vector2 inputStart,
             Vector2 inputEnd,
-            string targetName)
+            MouseUiHitReport hit)
         {
             return new SimulateMouseUiResponse
             {
                 Success = true,
                 Message = parameters.BypassRaycast
-                    ? $"Bypass-dragged '{targetName}' from ({inputStart.x:F1}, {inputStart.y:F1}) to ({inputEnd.x:F1}, {inputEnd.y:F1}) via '{parameters.TargetPath}' at {parameters.DragSpeed:F0} px/s"
-                    : $"Dragged '{targetName}' from ({inputStart.x:F1}, {inputStart.y:F1}) to ({inputEnd.x:F1}, {inputEnd.y:F1}) at {parameters.DragSpeed:F0} px/s",
+                    ? $"Bypass-dragged '{hit.Name}' from ({inputStart.x:F1}, {inputStart.y:F1}) to ({inputEnd.x:F1}, {inputEnd.y:F1}) via '{parameters.TargetPath}' at {parameters.DragSpeed:F0} px/s"
+                    : $"Dragged {DescribeHit(hit)} from ({inputStart.x:F1}, {inputStart.y:F1}) to ({inputEnd.x:F1}, {inputEnd.y:F1}) at {parameters.DragSpeed:F0} px/s",
                 Action = MouseAction.Drag.ToString(),
-                HitGameObjectName = targetName,
+                HitGameObjectName = hit.Name,
+                UiSystem = hit.UiSystem,
+                HitPath = hit.Path,
                 PositionX = inputStart.x,
                 PositionY = inputStart.y,
                 EndPositionX = inputEnd.x,
@@ -140,14 +142,16 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         internal static SimulateMouseUiResponse CreateDragEndResult(
             MouseUiSimulationCommand parameters,
             Vector2 inputEnd,
-            string targetName)
+            MouseUiHitReport hit)
         {
             return new SimulateMouseUiResponse
             {
                 Success = true,
-                Message = $"Drag ended on '{targetName}' at ({inputEnd.x:F1}, {inputEnd.y:F1}) at {parameters.DragSpeed:F0} px/s",
+                Message = $"Drag ended on {DescribeHit(hit)} at ({inputEnd.x:F1}, {inputEnd.y:F1}) at {parameters.DragSpeed:F0} px/s",
                 Action = MouseAction.DragEnd.ToString(),
-                HitGameObjectName = targetName,
+                HitGameObjectName = hit.Name,
+                UiSystem = hit.UiSystem,
+                HitPath = hit.Path,
                 PositionX = inputEnd.x,
                 PositionY = inputEnd.y
             };

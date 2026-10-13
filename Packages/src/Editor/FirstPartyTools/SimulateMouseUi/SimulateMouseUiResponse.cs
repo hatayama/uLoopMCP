@@ -14,8 +14,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         public string Message { get; set; } = "";
         public string Action { get; set; } = "";
         /// <summary>
-        /// Name of what received the press: the uGUI or physics GameObject that handles it, or the UI Toolkit
-        /// control under the point (its name, or its type name when it has none). Null when nothing was hit.
+        /// Name of what received the press or drag: the uGUI or physics GameObject that handles it, or the UI
+        /// Toolkit control under the point (its name, or its type name when it has none). Null when nothing was
+        /// hit.
         /// </summary>
         public string? HitGameObjectName { get; set; }
 

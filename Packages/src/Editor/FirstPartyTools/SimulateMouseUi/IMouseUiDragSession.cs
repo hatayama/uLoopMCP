@@ -18,6 +18,11 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         /// <summary>True once the target is destroyed; the drag then counts as no longer in progress.</summary>
         bool IsTargetDestroyed { get; }
 
+        /// <summary>
+        /// True when the drag goes through the EventSystem, which then must exist and alone handles drop targets.
+        /// </summary>
+        bool UsesEventSystem { get; }
+
         /// <summary>Returns why the drag cannot continue, or null when it can.</summary>
         string? CheckStillActive();
 
