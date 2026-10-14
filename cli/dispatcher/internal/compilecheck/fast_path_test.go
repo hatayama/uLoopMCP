@@ -93,7 +93,7 @@ func TestMissingBaselineFallsBackAndRecords(t *testing.T) {
 
 	outcome := project.run(t, recorder, false)
 
-	assertFallback(t, outcome, recorder, "no baseline from an earlier full compile")
+	assertFallback(t, outcome, recorder, "no baseline: compile-check has not finished a full compile of this assembly")
 	record := project.readBaseline(t)
 	if record.WorkerKey != "worker-a" || len(record.Files) != fastPathMinimumSources {
 		t.Errorf("expected a baseline of every source from worker-a, got key %s with %d files", record.WorkerKey, len(record.Files))
@@ -147,7 +147,7 @@ func TestFailedFullCompileLeavesNoBaseline(t *testing.T) {
 	recorder := newCachedSchedulerRecorder("Alpha", "Beta")
 	outcome := project.run(t, recorder, false)
 
-	assertFallback(t, outcome, recorder, "no baseline from an earlier full compile")
+	assertFallback(t, outcome, recorder, "no baseline: the last full compile had errors")
 }
 
 // Verifies that a change to an input other than source contents, such as a new source, compiles in full.
@@ -161,7 +161,7 @@ func TestNonSourceKeyMismatchFallsBack(t *testing.T) {
 
 	outcome := project.run(t, recorder, false)
 
-	assertFallback(t, outcome, recorder, "inputs other than source contents changed")
+	assertFallback(t, outcome, recorder, "inputs other than source contents changed: source list")
 }
 
 // Verifies that an assembly with fewer sources than the minimum is never tried, so it compiles in
@@ -192,7 +192,7 @@ func TestNonSourceInputChangedDuringCompileLeavesNoBaseline(t *testing.T) {
 
 	outcome := project.run(t, recorder, false)
 
-	if note := resultOf(t, outcome.Units, "Alpha").FastPathNote; note != "baseline not recorded: inputs other than source contents changed during the compile" {
+	if note := resultOf(t, outcome.Units, "Alpha").FastPathNote; note != "baseline not recorded: inputs other than source contents changed during the compile: compiler" {
 		t.Errorf("unexpected note %q", note)
 	}
 	if project.hasBaseline() {
@@ -201,7 +201,7 @@ func TestNonSourceInputChangedDuringCompileLeavesNoBaseline(t *testing.T) {
 
 	project.editBody(t, 0, "edited")
 	second := newCachedSchedulerRecorder("Alpha", "Beta")
-	assertFallback(t, project.run(t, second, false), second, "no baseline from an earlier full compile")
+	assertFallback(t, project.run(t, second, false), second, "no baseline: the last full compile did not record one")
 }
 
 // Verifies that a baseline whose saved generator output was deleted or changed is not used, since
@@ -252,7 +252,7 @@ func TestTooManyChangedFilesFallsBack(t *testing.T) {
 
 	outcome := project.run(t, recorder, false)
 
-	assertFallback(t, outcome, recorder, "too many changed files")
+	assertFallback(t, outcome, recorder, "too many changed files (31, limit 30)")
 }
 
 // Verifies that a declaration change compiles in full and records a baseline with the new fingerprint.

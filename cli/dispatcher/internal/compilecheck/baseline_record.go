@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/hatayama/unity-cli-loop/dispatcher/internal/compilecheck/fastcheck"
 )
@@ -18,7 +19,7 @@ type baselineRecord struct {
 	// InputKey is the key of the full compile this baseline describes; its manifest carries the same.
 	InputKey string
 	// NonSourceKey covers every input but the source contents, so any other change compiles in full.
-	NonSourceKey string
+	NonSourceKey nonSourceIdentity
 	// WorkerKey names the worker build that computed the fingerprints.
 	WorkerKey          string
 	GeneratedDirectory string // relative to the project root
@@ -41,17 +42,19 @@ type baselineFile struct {
 // during the compile would otherwise enter the baseline as if that compile had seen it, and its
 // effect would never be checked by the next run.
 func (runner *fastPathRunner) RecordBaseline(
-	ctx context.Context, c Compiler, plan BuildPlan, unit CompileUnit, keyResult inputKeyResult, nonSourceKey string,
+	ctx context.Context, c Compiler, plan BuildPlan, unit CompileUnit, keyResult inputKeyResult,
+	nonSourceKey nonSourceIdentity,
 ) error {
-	if nonSourceKey == "" {
+	if nonSourceKey.Key == "" {
 		return errors.New("inputs other than source contents could not be read before the compile")
 	}
 	currentNonSourceKey, err := computeNonSourceKey(c.ProjectRoot, c.Paths, plan, unit)
 	if err != nil {
 		return err
 	}
-	if currentNonSourceKey != nonSourceKey {
-		return errors.New("inputs other than source contents changed during the compile")
+	if currentNonSourceKey.Key != nonSourceKey.Key {
+		return errors.New("inputs other than source contents changed during the compile: " +
+			strings.Join(changedInputKinds(currentNonSourceKey, nonSourceKey), ", "))
 	}
 
 	worker, err := runner.Worker.Ensure(ctx)

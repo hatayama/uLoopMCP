@@ -263,7 +263,7 @@ func TestRecordBaselineRefusesAMissingNonSourceKey(t *testing.T) {
 	}
 	compiler := Compiler{Paths: project.paths, ProjectRoot: project.root}
 
-	err = project.runner(false).RecordBaseline(context.Background(), compiler, project.plan, unit, keyResult, "")
+	err = project.runner(false).RecordBaseline(context.Background(), compiler, project.plan, unit, keyResult, nonSourceIdentity{})
 
 	if err == nil || project.hasBaseline() {
 		t.Errorf("expected no baseline without a non-source key, got %v", err)
@@ -287,4 +287,20 @@ func TestHashGeneratedFilesRecordsOnlyCSharpFiles(t *testing.T) {
 	if missing, err := hashGeneratedFiles(filepath.Join(directory, "missing")); err != nil || len(missing) != 0 {
 		t.Errorf("expected a missing directory to hold no files, got %v (%v)", missing, err)
 	}
+}
+
+// Verifies that a baseline another version of compile-check wrote is not used, and says so rather
+// than reporting that no full compile ran.
+func TestBaselineOfAnotherFormatFallsBack(t *testing.T) {
+	project := newFastPathProject(t, fastPathMinimumSources)
+	project.recordBaseline(t)
+	record := project.readBaseline(t)
+	record.FormatVersion = baselineRecordFormatVersion - 1
+	project.writeJSON(t, project.baselinePath(), record)
+	project.editBody(t, 0, "edited")
+	recorder := newCachedSchedulerRecorder("Alpha", "Beta")
+
+	outcome := project.run(t, recorder, false)
+
+	assertFallback(t, outcome, recorder, "no baseline: it was recorded by another version of compile-check")
 }
