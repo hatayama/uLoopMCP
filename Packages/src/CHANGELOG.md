@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.17.0](https://github.com/hatayama/unity-cli-loop/compare/v3.16.0...v3.17.0) (2026-10-14)
+
+
+### Features
+
+* Screenshot annotation lists UI Toolkit controls, and simulate-mouse-ui clicks and drags them ([#3310](https://github.com/hatayama/unity-cli-loop/issues/3310)) ([044c333](https://github.com/hatayama/unity-cli-loop/commit/044c333745080252f1f13ccd2b4f9efa845633b1))
+
 ## [3.16.0](https://github.com/hatayama/unity-cli-loop/compare/v3.15.4...v3.16.0) (2026-10-13)
 
 
