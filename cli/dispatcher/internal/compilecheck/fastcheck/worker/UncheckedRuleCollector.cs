@@ -55,9 +55,14 @@ namespace UnityCliLoop.CompileCheckWorker
 
         private static bool RunsOnlyOnTheWholeCompilation(CompilationWithAnalyzers withAnalyzers, DiagnosticAnalyzer analyzer)
         {
-            // Semantic model actions count too: a per-file analysis without /doc never runs them.
+            // Semantic model actions count too: a per-file analysis without /doc never runs them. So do
+            // symbol start actions, for the symbol end actions they register: a partial type declared
+            // across files is not finished by analyzing only the changed ones. Why symbol start rather
+            // than symbol end: symbol end actions are registered inside symbol start, and the telemetry
+            // does not count them, so an analyzer that uses one reports zero symbol end actions.
             AnalyzerTelemetryInfo info = withAnalyzers.GetAnalyzerTelemetryInfoAsync(analyzer, CancellationToken.None).Result;
-            return info.CompilationActionsCount + info.CompilationEndActionsCount + info.SemanticModelActionsCount > 0;
+            return info.CompilationActionsCount + info.CompilationEndActionsCount
+                + info.SemanticModelActionsCount + info.SymbolStartActionsCount > 0;
         }
 
         private static bool IsReportedAsErrorOrWarning(DiagnosticDescriptor descriptor, CompilationOptions options)

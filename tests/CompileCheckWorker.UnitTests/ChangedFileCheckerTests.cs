@@ -192,23 +192,24 @@ namespace UnityCliLoop.CompileCheckWorker.UnitTests
         }
 
         /// <summary>
-        /// Verifies that the rules a per-file check cannot run are listed: CompilationEnd analyzer rules and
-        /// the unused-member compiler warnings, minus those turned off with -nowarn.
+        /// Verifies that the rules a per-file check cannot run are listed: CompilationEnd and SymbolEnd
+        /// analyzer rules and the unused-member compiler warnings, minus those turned off with -nowarn.
         /// </summary>
         [Test]
         public void UncheckedCodesListCompilationEndAndUnusedFieldRules()
         {
             fixture.AddAnalyzer(TestAnalyzerSources.CompilationEndAnalyzerAssemblyName, TestAnalyzerSources.CompilationEndAnalyzer);
+            fixture.AddAnalyzer(TestAnalyzerSources.SymbolEndAnalyzerAssemblyName, TestAnalyzerSources.SymbolEndAnalyzer);
             string probe = fixture.AddSource("Probe.cs", Probe("System.GC.KeepAlive(1);"));
 
             CheckResponse response = CheckWithCurrentBaseline(probe);
 
-            Assert.That(response.UncheckedCodes, Is.EqualTo(new[] { "CS0067", "CS0169", "CS0414", "CS0649", "TSA002" }));
+            Assert.That(response.UncheckedCodes, Is.EqualTo(new[] { "CS0067", "CS0169", "CS0414", "CS0649", "TSA002", "TSA003" }));
 
             fixture.AddArgument("-nowarn:CS0414");
             CheckResponse withNowarn = CheckWithCurrentBaseline(probe);
 
-            Assert.That(withNowarn.UncheckedCodes, Is.EqualTo(new[] { "CS0067", "CS0169", "CS0649", "TSA002" }));
+            Assert.That(withNowarn.UncheckedCodes, Is.EqualTo(new[] { "CS0067", "CS0169", "CS0649", "TSA002", "TSA003" }));
         }
 
         /// <summary>

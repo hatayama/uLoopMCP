@@ -91,5 +91,33 @@ public sealed class WholeAssemblyAnalyzer : DiagnosticAnalyzer
     }
 }
 ";
+
+        // Registers a SymbolEnd action, which a per-file analysis cannot finish for a type declared
+        // across several files.
+        public const string SymbolEndAnalyzerAssemblyName = "CompileCheckTestSymbolEndAnalyzer";
+
+        public const string SymbolEndAnalyzer = @"
+using System.Collections.Immutable;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.Diagnostics;
+
+[DiagnosticAnalyzer(LanguageNames.CSharp)]
+public sealed class WholeTypeAnalyzer : DiagnosticAnalyzer
+{
+    private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(""TSA003"", ""whole type"", ""whole type"", ""Test"", DiagnosticSeverity.Warning, true);
+
+    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
+
+    public override void Initialize(AnalysisContext context)
+    {
+        context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
+        context.EnableConcurrentExecution();
+        context.RegisterSymbolStartAction(startContext =>
+        {
+            startContext.RegisterSymbolEndAction(endContext => { });
+        }, SymbolKind.NamedType);
+    }
+}
+";
     }
 }

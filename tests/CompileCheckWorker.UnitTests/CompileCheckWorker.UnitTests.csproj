@@ -8,6 +8,8 @@
     <IsPackable>false</IsPackable>
     <!-- Roslyn 4.3.1, the oldest compiler that builds the worker on a user's machine, defaults to C# 10. -->
     <LangVersion>10.0</LangVersion>
+    <!-- The worker's own Main is the entry point, so Program.cs gets the same TFM and C# version checks. -->
+    <GenerateProgramFile>false</GenerateProgramFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,7 +22,5 @@
 
   <ItemGroup>
     <Compile Include="../../cli/dispatcher/internal/compilecheck/fastcheck/worker/*.cs" LinkBase="Production" />
-    <!-- The worker's Main would collide with the test host's entry point. -->
-    <Compile Remove="../../cli/dispatcher/internal/compilecheck/fastcheck/worker/Program.cs" />
   </ItemGroup>
 </Project>
