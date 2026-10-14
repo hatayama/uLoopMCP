@@ -233,15 +233,18 @@ func loadBaseline(outputDirectoryPath string, unit CompileUnit) (baselineRecord,
 // missingBaselineReason says why a unit has no baseline, from the manifest of its last full compile.
 // Why the reasons are told apart: a full compile with errors drops the baseline an earlier compile
 // left, and a reason that read as "never compiled" sent users looking for a compile that had run.
+// Why a missing manifest says nothing about what happened: a run that skips or blocks the unit
+// removes the manifest and the baseline alike, so nothing on disk tells that apart from no compile.
 func missingBaselineReason(outputDirectoryPath string, unit CompileUnit) string {
+	const notOnRecord = "no baseline: no full compile of this assembly is on record"
 	content, err := os.ReadFile(manifestPath(outputDirectoryPath, unit))
 	if err != nil {
-		return "no baseline: compile-check has not finished a full compile of this assembly"
+		return notOnRecord
 	}
 
 	var manifest unitResultManifest
-	if err := json.Unmarshal(content, &manifest); err != nil || manifest.FormatVersion != resultManifestFormatVersion {
-		return "no baseline: compile-check has not finished a full compile of this assembly"
+	if err := json.Unmarshal(content, &manifest); err != nil {
+		return notOnRecord
 	}
 	if !manifest.Succeeded {
 		return "no baseline: the last full compile had errors"
