@@ -437,6 +437,12 @@ try {
             $ResolvedProjectPath
         )
     }
+    Invoke-Step -Name "Screenshot UI Toolkit Annotation E2E" -Body {
+        Invoke-ScriptChecked -ScriptPath (Resolve-ProjectRelativePath -RelativePath "scripts\test-screenshot-uitoolkit-annotation.ps1") -Arguments @(
+            "-ProjectPath",
+            $ResolvedProjectPath
+        )
+    }
     Invoke-Step -Name "Compile Get Logs Stress" -Body { Invoke-CompileGetLogsStress }
     Invoke-Step -Name "Final Console Check" -Body {
         [pscustomobject]$logs = Invoke-UloopJsonChecked -CommandArguments @("get-logs", "--log-type", "All", "--max-count", "200")

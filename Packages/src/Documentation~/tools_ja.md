@@ -158,7 +158,7 @@ Unity Editor内で動的にC#コードを実行します。
 ### 14. simulate-mouse-ui - PlayMode UI要素のマウス操作シミュレーション
 PlayMode中のUI要素に対してマウスクリック・長押し・ドラッグをシミュレーションします。EventSystemとExecuteEventsを使ってポインタイベントを直接ディスパッチするため、旧Input System・新Input Systemの両方に依存せず動作します。ゲームロジックがInput Systemを直接読み取る場合（例：`Mouse.current.leftButton.wasPressedThisFrame`）は、`simulate-mouse-input` を使用してください。
 
-6つのアクションに対応: Click、LongPress、Drag（ワンショット）、DragStart/DragMove/DragEnd（分割ドラッグ）
+6つのアクションに対応: Click、LongPress、Drag（ワンショット）、DragStart/DragMove/DragEnd（分割ドラッグ）。Click・LongPress・ドラッグは、注釈の座標で UI Toolkit のコントロールにも届きます（EventSystem は不要）。
 
 ```text
 → screenshot (CaptureMode: rendering, AnnotateElements: true)
@@ -221,4 +221,4 @@ sh scripts/run-posix-e2e.sh --project-path /path/to/unity-project
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\run-windows-e2e.ps1
 ```
 
-`run-posix-e2e.sh` は、デフォルトでチェックイン済みのネイティブCLIバイナリを使い、すべての `uloop` 呼び出しに明示的な `--project-path` を渡します。CLI recovery/readiness と simulate-mouse UI を1つの流れで検証します。Recordingsウィンドウで作成したJSONの replay-input 検証は `verify-replay-via-cli.sh` を個別に実行します。
+`run-posix-e2e.sh` は、デフォルトでチェックイン済みのネイティブCLIバイナリを使い、すべての `uloop` 呼び出しに明示的な `--project-path` を渡します。CLI recovery/readiness、simulate-mouse UI、UI Toolkit のスクリーンショット注釈とクリックを1つの流れで検証します（最後のものは `--skip-uitoolkit-annotation` で省けます）。Recordingsウィンドウで作成したJSONの replay-input 検証は `verify-replay-via-cli.sh` を個別に実行します。

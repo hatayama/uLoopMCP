@@ -72,6 +72,28 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
         }
 
         /// <summary>
+        /// Verifies a GameObject whose name contains '#' still resolves by its path, so the UI Toolkit hint for
+        /// '#' paths only applies when nothing matches.
+        /// </summary>
+        [Test]
+        public void ResolveGameObjectPath_WithHashInGameObjectName_ReturnsTarget()
+        {
+            GameObject root = CreateGameObject("MouseUiTargetResolverTests_HashRoot");
+            GameObject expectedTarget = CreateGameObject("Menu#Play", root.transform);
+            string targetPath = GameObjectPathUtility.GetFullPath(expectedTarget);
+
+            (GameObject? target, SimulateMouseUiResponse? failureResponse) =
+                MouseUiPointerTargetResolver.ResolveGameObjectPath(
+                    targetPath,
+                    "TargetPath",
+                    MouseAction.Click,
+                    new Vector2(10f, 20f));
+
+            Assert.That(target, Is.SameAs(expectedTarget));
+            Assert.That(failureResponse, Is.Null);
+        }
+
+        /// <summary>
         /// Verifies a missing hierarchy path returns the exact wire-visible failure response.
         /// </summary>
         [Test]

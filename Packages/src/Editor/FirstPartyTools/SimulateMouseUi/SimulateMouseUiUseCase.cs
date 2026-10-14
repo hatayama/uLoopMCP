@@ -50,15 +50,14 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             EventSystem? eventSystem = EventSystem.current;
             SimulateMouseUiResponse? validationFailure = MouseUiSimulationValidator.ValidateSimulationStart(
                 parameters,
-                eventSystem,
                 PausedActionDescription);
             if (validationFailure != null)
             {
                 return validationFailure;
             }
-            Debug.Assert(eventSystem != null, "ValidateSimulationStart must reject a missing EventSystem.");
-            EventSystem activeEventSystem = eventSystem!;
 
+            // UI Toolkit targets need no EventSystem, so each action checks for one only once it knows it is
+            // going through uGUI.
             MouseUiSimulationActivityLogger.LogSimulationStart(parameters, correlationId);
             OverlayCanvasFactory.EnsureExists();
 
@@ -70,7 +69,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             }
 
             SimulateMouseUiResponse response =
-                await ExecuteMouseAction(parameters, activeEventSystem, ct).ConfigureAwait(false);
+                await ExecuteMouseAction(parameters, eventSystem, ct).ConfigureAwait(false);
             MouseUiSimulationActivityLogger.LogSimulationComplete(parameters, response, correlationId);
 
             return response;
@@ -78,7 +77,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
         private async Task<SimulateMouseUiResponse> ExecuteMouseAction(
             MouseUiSimulationCommand parameters,
-            EventSystem eventSystem,
+            EventSystem? eventSystem,
             CancellationToken ct)
         {
             switch (parameters.Action)

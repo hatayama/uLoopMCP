@@ -862,6 +862,42 @@ namespace io.github.hatayama.UnityCliLoop.Tests.PlayMode
             Assert.IsTrue(tracker.EndDragCalled, "EndDrag should be fired");
         }
 
+        /// <summary>
+        /// Verifies a split drag whose uGUI target was destroyed counts as ended: DragMove reports no drag, and
+        /// neither a click nor a new DragStart is refused as overlapping an active drag.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator SplitDrag_WhenUguiTargetDestroyed_TreatsDragAsEnded()
+        {
+            ClickTracker clickTracker = CreateClickableElement("ClickTarget", new Vector2(0, 150), new Vector2(200, 80));
+            yield return StartDragOnNewElement();
+
+            Object.Destroy(lastDragTracker.gameObject);
+            yield return null;
+
+            yield return RunTool(new JObject
+            {
+                ["action"] = MouseAction.DragMove.ToString(),
+                ["x"] = lastDragScreenPos.x + 50f,
+                ["y"] = lastDragScreenPos.y
+            });
+            Assert.IsFalse(lastResponse.Success);
+            Assert.AreEqual("No drag in progress. Call DragStart first.", lastResponse.Message);
+
+            Vector2 clickPos = ScreenToInput(GetScreenPosition(clickTracker.gameObject));
+            yield return RunTool(new JObject
+            {
+                ["action"] = MouseAction.Click.ToString(),
+                ["x"] = clickPos.x,
+                ["y"] = clickPos.y
+            });
+            Assert.IsTrue(lastResponse.Success, lastResponse.Message);
+            Assert.IsTrue(clickTracker.PointerClickCalled, "the click must reach its target");
+
+            yield return StartDragOnNewElement();
+            Assert.AreEqual("DragTarget", lastResponse.HitGameObjectName);
+        }
+
         [UnityTest]
         public IEnumerator DragStart_WhenAlreadyDragging_Should_ReturnFailure()
         {

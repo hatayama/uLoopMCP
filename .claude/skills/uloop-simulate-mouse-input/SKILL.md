@@ -67,7 +67,7 @@ All rows below assume the New Input System is installed.
 
 | Scenario | Tool |
 |----------|------|
-| Click a Unity UI Button (IPointerClickHandler) | `simulate-mouse-ui` |
+| Click a uGUI or UI Toolkit button | `simulate-mouse-ui` |
 | Runtime logic reads `Mouse.current.leftButton` | `simulate-mouse-input` |
 | Runtime logic reads right-click | `simulate-mouse-input --button Right` |
 | Drag a UI slider | `simulate-mouse-ui --action Drag` |
@@ -110,7 +110,7 @@ uloop simulate-mouse-input --action SmoothDelta --delta-x 300 --delta-y 0 --dura
 ## Coordinate System
 
 `--x`/`--y` use top-left Game View coordinates: pass `AnnotatedElements[].SimX/SimY`
-directly, convert raw screenshot pixels with `ScreenshotToInputFormula`, and never flip Y
+directly (UI Toolkit entries need an EventSystem with an Input System UI module here; `simulate-mouse-ui` reaches them without one), convert raw screenshot pixels with `ScreenshotToInputFormula`, and never flip Y
 in the caller (the tool converts internally). Conversion formula, Device Simulator
 notes, and how the injected position reads back inside Unity are in
 `references/output-and-coordinates.md`.

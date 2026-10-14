@@ -47,7 +47,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
                 GameObjectPathUtility.GetFullPath(rawTarget));
             Vector2 position = new(10f, 20f);
 
-            (RaycastResult startRaycast, GameObject? target, SimulateMouseUiResponse? failureResponse) =
+            (MouseUiDragStartTarget start, SimulateMouseUiResponse? failureResponse) =
                 MouseUiDragTargetResolver.Resolve(
                     command,
                     eventSystem,
@@ -55,8 +55,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
                     position,
                     position);
 
-            Assert.That(startRaycast.gameObject, Is.SameAs(rawTarget));
-            Assert.That(target, Is.SameAs(expectedTarget));
+            Assert.That(start.StartRaycast.gameObject, Is.SameAs(rawTarget));
+            Assert.That(start.UguiTarget, Is.SameAs(expectedTarget));
             Assert.That(failureResponse, Is.Null);
         }
 
@@ -73,7 +73,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
                 GameObjectPathUtility.GetFullPath(rawTarget));
             Vector2 position = new(30f, 40f);
 
-            (RaycastResult startRaycast, GameObject? target, SimulateMouseUiResponse? failureResponse) =
+            (MouseUiDragStartTarget start, SimulateMouseUiResponse? failureResponse) =
                 MouseUiDragTargetResolver.Resolve(
                     command,
                     eventSystem,
@@ -81,8 +81,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
                     position,
                     position);
 
-            Assert.That(startRaycast.gameObject, Is.SameAs(rawTarget));
-            Assert.That(target, Is.Null);
+            Assert.That(start.StartRaycast.gameObject, Is.SameAs(rawTarget));
+            Assert.That(start.UguiTarget, Is.Null);
             Assert.That(failureResponse, Is.Null);
         }
 
@@ -99,7 +99,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
                 targetPath);
             Vector2 position = new(50f, 60f);
 
-            (RaycastResult startRaycast, GameObject? target, SimulateMouseUiResponse? failureResponse) =
+            (MouseUiDragStartTarget start, SimulateMouseUiResponse? failureResponse) =
                 MouseUiDragTargetResolver.Resolve(
                     command,
                     eventSystem,
@@ -107,8 +107,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
                     position,
                     position);
 
-            Assert.That(startRaycast.gameObject, Is.Null);
-            Assert.That(target, Is.Null);
+            Assert.That(start.StartRaycast.gameObject, Is.Null);
+            Assert.That(start.UguiTarget, Is.Null);
             Assert.That(failureResponse, Is.Not.Null);
             Assert.That(failureResponse!.Message, Is.EqualTo($"TargetPath '{targetPath}' was not found."));
             Assert.That(failureResponse.Action, Is.EqualTo(MouseAction.DragStart.ToString()));

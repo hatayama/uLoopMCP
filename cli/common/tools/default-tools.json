@@ -289,7 +289,7 @@
           },
           "AnnotateElements": {
             "type": "boolean",
-            "description": "Annotate interactive UI elements with index labels and interaction hints (A / CLICK, B / DRAG, ...). The response includes an AnnotatedElements array with element metadata sorted by SortingOrder then SiblingIndex (an approximation of z-order, not the guaranteed draw order). Only works when the resolved capture mode is rendering (auto during Play Mode resolves to rendering) in PlayMode.",
+            "description": "Annotate interactive uGUI elements and UI Toolkit controls on screen-space panels with index labels and interaction hints (A / CLICK, B / DRAG, ...). The response includes an AnnotatedElements array with element metadata sorted by SortingOrder then SiblingIndex (an approximation of z-order, not the guaranteed draw order). Only works when the resolved capture mode is rendering (auto during Play Mode resolves to rendering) in PlayMode.",
             "default": false
           },
           "ElementsOnly": {
@@ -521,7 +521,7 @@
     },
     {
       "name": "simulate-mouse-ui",
-      "description": "Simulate PlayMode EventSystem UI mouse actions using screen coordinates. Use for UI clicks, long-presses, or drags from annotated screenshots.",
+      "description": "Simulate PlayMode UI mouse actions on uGUI and UI Toolkit using screen coordinates. Use for UI clicks, long-presses, or drags from annotated screenshots.",
       "inputSchema": {
         "type": "object",
         "properties": {
