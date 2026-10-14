@@ -148,6 +148,13 @@ func (b *Bootstrap) build(ctx context.Context, temporaryDirectory string, worker
 		return fmt.Errorf("the changed-files check worker build was stopped: %w", contextErr)
 	}
 
+	// Why only a compiler that ran is recorded: dotnet failing to start (too many processes or open
+	// files) says nothing about whether the worker builds, and recording it would turn the check off
+	// until the sources change.
+	if runErr != nil && !isExitError(runErr) {
+		return fmt.Errorf("failed to start the changed-files check worker build: %w: %s", runErr, strings.TrimSpace(stderr))
+	}
+
 	if runErr != nil || exitCode != 0 {
 		return recordBuildFailure(workerDirectory, stdout+stderr, runErr)
 	}
@@ -348,6 +355,12 @@ func truncate(text string, limit int) string {
 	}
 
 	return text[:limit]
+}
+
+// isExitError reports whether the process ran and exited with a non-zero code, as opposed to not starting.
+func isExitError(err error) bool {
+	var exitError *exec.ExitError
+	return errors.As(err, &exitError)
 }
 
 // errWorkerNotBuilt is returned by callers that need a worker but were given none.

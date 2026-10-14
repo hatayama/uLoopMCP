@@ -209,3 +209,17 @@ func TestMalformedResponseIsError(t *testing.T) {
 
 	assertNoRequestFilesLeft(t, client.TempDirectory)
 }
+
+// Verifies that a response whose outcome is none of the three the worker defines is an error.
+func TestUnknownOutcomeIsError(t *testing.T) {
+	for _, response := range []string{`{"Outcome":""}`, `{"Outcome":null}`, `{}`, `{"Outcome":"Skipped"}`} {
+		client := newTestClient(t, func(_ context.Context, cmd *exec.Cmd) (string, string, int, error) {
+			return "", "", 0, os.WriteFile(cmd.Args[len(cmd.Args)-1], []byte(response), cacheFilePermissions)
+		})
+
+		_, err := client.Check(context.Background(), CheckRequest{})
+		if err == nil || !strings.Contains(err.Error(), "unknown outcome") {
+			t.Fatalf("expected an unknown outcome error for %s, got %v", response, err)
+		}
+	}
+}

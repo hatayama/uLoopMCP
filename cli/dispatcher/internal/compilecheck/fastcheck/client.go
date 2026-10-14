@@ -99,7 +99,13 @@ func (c Client) Check(ctx context.Context, request CheckRequest) (CheckResponse,
 		return CheckResponse{}, err
 	}
 
-	return response, nil
+	// Rejected here so callers can rely on the three outcomes the worker defines.
+	switch response.Outcome {
+	case CheckedOutcome, DeclarationChangedOutcome, UnsupportedOutcome:
+		return response, nil
+	default:
+		return CheckResponse{}, fmt.Errorf("changed-files check worker returned an unknown outcome %q", response.Outcome)
+	}
 }
 
 // invoke writes the request, runs the worker command, and reads its response into response.

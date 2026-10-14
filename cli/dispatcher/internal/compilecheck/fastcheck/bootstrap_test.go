@@ -454,3 +454,32 @@ func TestEnsureReportsUnwritableCacheDirectory(t *testing.T) {
 		t.Fatalf("expected a build directory error, got %v", err)
 	}
 }
+
+// Verifies that dotnet failing to start records no failure, so the next run builds again.
+func TestEnsureDoesNotRecordStartFailure(t *testing.T) {
+	root := t.TempDir()
+	starts := 0
+	bootstrap := Bootstrap{
+		CompilerPaths: newTestToolchain(t, root, "editor"),
+		CacheRoot:     filepath.Join(root, "cache"),
+		Run: func(_ context.Context, _ *exec.Cmd) (string, string, int, error) {
+			starts++
+			return "", "", 0, errors.New("fork/exec dotnet: resource temporarily unavailable")
+		},
+	}
+
+	_, err := bootstrap.Ensure(context.Background())
+	if err == nil || !strings.Contains(err.Error(), "failed to start") {
+		t.Fatalf("expected a start failure, got %v", err)
+	}
+
+	compiler := &fakeCompiler{}
+	bootstrap.Run = compiler.run
+	if _, err := bootstrap.Ensure(context.Background()); err != nil {
+		t.Fatalf("expected the next Ensure to build, got error: %v", err)
+	}
+
+	if starts != 1 || compiler.calls != 1 {
+		t.Fatalf("expected one failed start and one build, got %d and %d", starts, compiler.calls)
+	}
+}
