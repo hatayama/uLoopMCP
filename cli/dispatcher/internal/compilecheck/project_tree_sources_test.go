@@ -216,3 +216,29 @@ func TestGlobAssemblySourcesFallsBackToTheDiskOutsideTheListing(t *testing.T) {
 		t.Fatalf("err = %v, want the missing directory reported", missingErr)
 	}
 }
+
+// Verifies the disk glob, which answers for directories outside the listing, applies the same rules
+// as the listing: ignored names are left out and a nested .asmdef or .asmref ends the glob.
+func TestGlobAssemblySourcesGivesTheSameSourcesFromTheDiskAndTheListing(t *testing.T) {
+	projectRoot := newAssemblyProject(t)
+	writeFileAt(t, filepath.Join(projectRoot, "Assets", "Foo", "._A.cs"), "")
+	writeFileAt(t, filepath.Join(projectRoot, "Assets", "Foo", ".hidden", "H.cs"), "")
+	writeFileAt(t, filepath.Join(projectRoot, "Assets", "Foo", "Ref", "Ref.asmref"), `{"reference":"Nested"}`)
+	writeFileAt(t, filepath.Join(projectRoot, "Assets", "Foo", "Ref", "R.cs"), "")
+	writeFileAt(t, filepath.Join(projectRoot, "Assets", "Foo", "Sub", "Deep", "E.cs"), "")
+	fromListing := newOwnerIndexForProject(t, projectRoot)
+	fromDisk := fromListing
+	fromDisk.tree = projectTree{}
+	directory := filepath.Join(projectRoot, "Assets", "Foo")
+
+	listed, listedErr := globAssemblySources(projectRoot, directory, fromListing)
+	walked, walkedErr := globAssemblySources(projectRoot, directory, fromDisk)
+
+	if listedErr != nil || walkedErr != nil {
+		t.Fatalf("errors: listing %v, disk %v", listedErr, walkedErr)
+	}
+	want := []string{"Assets/Foo/A.cs", "Assets/Foo/Sub/B.cs", "Assets/Foo/Sub/Deep/E.cs"}
+	if !reflect.DeepEqual(listed, want) || !reflect.DeepEqual(walked, want) {
+		t.Fatalf("listing %v, disk %v, want both %v", listed, walked, want)
+	}
+}
