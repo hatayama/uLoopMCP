@@ -106,6 +106,14 @@ func (c Compiler) CompileUnit(
 		return UnitResult{}, err
 	}
 
+	// Why the generator output directory is created here: the csc of Roslyn 4.3 (Unity 2022.3) creates
+	// the folder of each generator under it but not the directory itself, and fails every generated
+	// file with CS0016 when it is missing. Newer Roslyn creates it either way.
+	generatedPath := filepath.Join(c.ProjectRoot, generatedDirectory(plan, unit))
+	if err := os.MkdirAll(generatedPath, outputDirPermissions); err != nil {
+		return UnitResult{}, fmt.Errorf("failed to create %s: %w", generatedPath, err)
+	}
+
 	// Why the generator output is saved: a later fast check reads it instead of running the generators.
 	responseFilePath, err := writeRewrittenResponseFile(c.ProjectRoot, plan, unit,
 		unit.Assembly.AssemblyName+responseFileExtension,

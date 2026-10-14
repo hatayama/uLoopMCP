@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hatayama/unity-cli-loop/dispatcher/internal/compilecheck/fastcheck"
 )
@@ -219,5 +220,33 @@ func TestMergeDiagnosticsSpellsOtherFilesRelativeToTheProjectRoot(t *testing.T) 
 
 	if len(merged) != 1 || merged[0].File != "Library/Gen/G.cs" {
 		t.Errorf("expected the generated file relative to the project root, got %+v", merged)
+	}
+}
+
+// Verifies that the directory csc saves generator output to exists before csc starts, because the
+// csc of Roslyn 4.3 creates the per-generator folders under it but not the directory itself.
+func TestCompileUnitCreatesGeneratedFilesOutDirectory(t *testing.T) {
+	projectRoot := t.TempDir()
+	plan := newCompilerPlan()
+	makeOutputDirectory(t, projectRoot, plan)
+	writeFileAt(t, filepath.Join(projectRoot, plan.OutputDir, "A.ref.dll"), "")
+	existed := false
+	compiler := Compiler{
+		Paths:       EditorCompilerPaths{DotnetHostPath: "/dotnet", CompilerDllPath: "/csc.dll"},
+		ProjectRoot: projectRoot,
+		Timeout:     time.Minute,
+		Run: func(_ context.Context, _ *exec.Cmd) (string, string, int, error) {
+			info, err := os.Stat(filepath.Join(projectRoot, generatedDirectory(plan, plan.Units[1])))
+			existed = err == nil && info.IsDir()
+			return "", "", 0, nil
+		},
+	}
+
+	if _, err := compiler.CompileUnit(context.Background(), plan, plan.Units[1]); err != nil {
+		t.Fatalf("expected the unit to compile, got error: %v", err)
+	}
+
+	if !existed {
+		t.Error("expected the generator output directory to exist when csc starts")
 	}
 }
