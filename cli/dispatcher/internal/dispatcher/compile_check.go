@@ -18,6 +18,7 @@ import (
 const (
 	compileCheckNoChangeMessage = "No assemblies changed since the last Unity build."
 	compileCheckAllFlag         = "--all"
+	compileCheckFullFlag        = "--full"
 	compileCheckEditorFlag      = "--editor-version"
 	compileCheckMaxDepthFlag    = "--max-depth"
 	compileCheckJobsFlag        = "--jobs"
@@ -27,6 +28,7 @@ const (
 type compileCheckOptions struct {
 	projectPath   string
 	all           bool
+	full          bool // compile changed assemblies in full instead of checking only their changed files
 	editorVersion string
 	maxDepth      int
 	jobs          int // how many assemblies compile at once; 0 leaves the choice to the compiler
@@ -58,10 +60,37 @@ type compileCheckResponse struct {
 	// has errors, which is where Unity's own build stops as well. Fixing those errors and running
 	// again is what carries the check on past them.
 	BlockedAssemblies []string `json:"BlockedAssemblies"`
-	SkippedAssemblies int      `json:"SkippedAssemblies"`
-	ResponseFileSet   string   `json:"ResponseFileSet"`
-	ProjectRoot       string   `json:"ProjectRoot"`
-	Message           string   `json:"Message"`
+	// FastCheckedAssemblies names the assemblies this run checked on their changed files only,
+	// against the last successful full compile, instead of running csc. They are in neither
+	// CompiledAssemblies nor ReusedAssemblies.
+	FastCheckedAssemblies []string `json:"FastCheckedAssemblies"`
+	// FastChecks says, for each fast-checked assembly, which files were checked and what was not.
+	FastChecks []compileCheckFastCheck `json:"FastChecks"`
+	// FastPathFallbacks says why each assembly the changed-files check was tried on compiled in full.
+	FastPathFallbacks []compileCheckFastPathFallback `json:"FastPathFallbacks"`
+	// FastPathBaselineNotes says why a successful full compile left no baseline for the next run's
+	// changed-files check, so the next fallback for lack of one is not a mystery.
+	FastPathBaselineNotes []compileCheckFastPathFallback `json:"FastPathBaselineNotes"`
+	SkippedAssemblies     int                            `json:"SkippedAssemblies"`
+	ResponseFileSet       string                         `json:"ResponseFileSet"`
+	ProjectRoot           string                         `json:"ProjectRoot"`
+	Message               string                         `json:"Message"`
+}
+
+// compileCheckFastCheck describes one assembly checked on its changed files only.
+type compileCheckFastCheck struct {
+	Assembly     string   `json:"Assembly"`
+	ChangedFiles []string `json:"ChangedFiles"`
+	// UncheckedCodes lists the diagnostic IDs only a full compile reports.
+	UncheckedCodes []string `json:"UncheckedCodes"`
+	// GeneratorsNotRerun is set when the source generators were not run again.
+	GeneratorsNotRerun bool `json:"GeneratorsNotRerun"`
+}
+
+// compileCheckFastPathFallback says why one assembly compiled in full instead of being fast-checked.
+type compileCheckFastPathFallback struct {
+	Assembly string `json:"Assembly"`
+	Reason   string `json:"Reason"`
 }
 
 // tryHandleCompileCheckRequest answers `uloop compile-check` inside the dispatcher process, because
@@ -115,12 +144,7 @@ func runCompileCheck(
 		return 1
 	}
 
-	result, err := compilecheck.Run(ctx, compilecheck.Options{
-		ProjectRoot:          projectRoot,
-		EditorExecutablePath: editorPath,
-		All:                  options.all,
-		Jobs:                 options.jobs,
-	})
+	result, err := compilecheck.Run(ctx, newCompileCheckRunOptions(options, projectRoot, editorPath))
 	if err != nil {
 		clierrors.WriteClassifiedError(stderr, err, clierrors.ErrorContext{
 			Command: clicore.CompileCheckCommandName, ProjectRoot: projectRoot,
@@ -143,6 +167,19 @@ func runCompileCheck(
 	}
 
 	return 0
+}
+
+// newCompileCheckRunOptions hands the parsed command line to the offline compile.
+func newCompileCheckRunOptions(
+	options compileCheckOptions, projectRoot string, editorPath string,
+) compilecheck.Options {
+	return compilecheck.Options{
+		ProjectRoot:          projectRoot,
+		EditorExecutablePath: editorPath,
+		All:                  options.all,
+		Jobs:                 options.jobs,
+		DisableFastPath:      options.full,
+	}
 }
 
 // resolveCompileCheckProjectRoot finds the project the same way `launch` does, without connecting.
@@ -178,18 +215,18 @@ func buildCompileCheckResponse(result compilecheck.Result, projectRoot string) c
 		ReusedAssemblies:   make([]string, 0, len(result.Units)),
 		// Why the names are copied rather than taken as they are: a run that blocked nothing must
 		// still serialize as an empty list, and the result of such a run carries no list at all.
-		BlockedAssemblies: append(make([]string, 0, len(result.Blocked)), result.Blocked...),
-		SkippedAssemblies: result.Skipped,
-		ResponseFileSet:   filepath.Base(result.DagDir),
-		ProjectRoot:       projectRoot,
+		BlockedAssemblies:     append(make([]string, 0, len(result.Blocked)), result.Blocked...),
+		FastCheckedAssemblies: make([]string, 0),
+		FastChecks:            make([]compileCheckFastCheck, 0),
+		FastPathFallbacks:     make([]compileCheckFastPathFallback, 0),
+		FastPathBaselineNotes: make([]compileCheckFastPathFallback, 0),
+		SkippedAssemblies:     result.Skipped,
+		ResponseFileSet:       filepath.Base(result.DagDir),
+		ProjectRoot:           projectRoot,
 	}
 
 	for _, unit := range result.Units {
-		if unit.Reused {
-			response.ReusedAssemblies = append(response.ReusedAssemblies, unit.Assembly)
-		} else {
-			response.CompiledAssemblies = append(response.CompiledAssemblies, unit.Assembly)
-		}
+		addCompileCheckUnitKind(&response, unit)
 		// Why a reused unit's diagnostics go in with the rest: the run reports what the assembly
 		// is, not how the answer was arrived at, and dropping them would turn a broken assembly
 		// into a clean one for every run after the one that compiled it.
@@ -218,6 +255,36 @@ func buildCompileCheckResponse(result compilecheck.Result, projectRoot string) c
 	return response
 }
 
+// addCompileCheckUnitKind lists a unit under how this run answered for it: reused, fast-checked, or
+// compiled, and records why a fast check fell back when it did.
+func addCompileCheckUnitKind(response *compileCheckResponse, unit compilecheck.UnitResult) {
+	switch {
+	case unit.Reused:
+		response.ReusedAssemblies = append(response.ReusedAssemblies, unit.Assembly)
+	case unit.FastChecked:
+		response.FastCheckedAssemblies = append(response.FastCheckedAssemblies, unit.Assembly)
+		response.FastChecks = append(response.FastChecks, compileCheckFastCheck{
+			Assembly:           unit.Assembly,
+			ChangedFiles:       append(make([]string, 0, len(unit.FastCheckChangedFiles)), unit.FastCheckChangedFiles...),
+			UncheckedCodes:     append(make([]string, 0, len(unit.UncheckedCodes)), unit.UncheckedCodes...),
+			GeneratorsNotRerun: unit.GeneratorsNotRerun,
+		})
+	default:
+		response.CompiledAssemblies = append(response.CompiledAssemblies, unit.Assembly)
+	}
+
+	if unit.FastPathFallbackReason != "" {
+		response.FastPathFallbacks = append(response.FastPathFallbacks, compileCheckFastPathFallback{
+			Assembly: unit.Assembly, Reason: unit.FastPathFallbackReason,
+		})
+	}
+	if unit.FastPathNote != "" {
+		response.FastPathBaselineNotes = append(response.FastPathBaselineNotes, compileCheckFastPathFallback{
+			Assembly: unit.Assembly, Reason: unit.FastPathNote,
+		})
+	}
+}
+
 // newCompileCheckIssue shapes one diagnostic the way `uloop compile` shapes its own.
 func newCompileCheckIssue(assembly string, diagnostic compilecheck.Diagnostic) compileCheckIssue {
 	return compileCheckIssue{
@@ -233,36 +300,63 @@ func newCompileCheckIssue(assembly string, diagnostic compilecheck.Diagnostic) c
 // compileCheckMessage states what the run did in one line.
 // Why the blocked assemblies are added rather than folded in: without them a run that reports one
 // error and hundreds of assemblies it never got to reads as a run that lost them.
+// Why the fast-checked ones get a reminder: the check skipped rules only a full compile runs, and
+// the caller has to know to run --full before finishing.
 func compileCheckMessage(response compileCheckResponse) string {
 	message := compileCheckRunSummary(response)
-	if len(response.BlockedAssemblies) == 0 {
-		return message
+	if len(response.BlockedAssemblies) > 0 {
+		message += fmt.Sprintf(
+			" %d assemblies were not compiled because an assembly they reference has errors.",
+			len(response.BlockedAssemblies))
+	}
+	if len(response.FastCheckedAssemblies) > 0 {
+		message += fmt.Sprintf(
+			" %d assemblies were checked on their changed files only; run with --full before finishing to cover assembly-wide rules.",
+			len(response.FastCheckedAssemblies))
 	}
 
-	return message + fmt.Sprintf(
-		" %d assemblies were not compiled because an assembly they reference has errors.",
-		len(response.BlockedAssemblies))
+	return message
 }
 
-// compileCheckRunSummary states what the run compiled and reused.
-// Why three forms rather than always naming both counts: a run that reused nothing reads exactly
-// as it did before reuse existed, and a run that compiled nothing should not open by saying so.
+// compileCheckRunSummary states what the run compiled, reused, and fast-checked.
+// Why only the non-zero counts are named: a run that reused nothing reads exactly as it did before
+// reuse existed, and a run that compiled nothing should not open by saying so.
 func compileCheckRunSummary(response compileCheckResponse) string {
-	compiled := len(response.CompiledAssemblies)
-	reused := len(response.ReusedAssemblies)
-	switch {
-	case compiled == 0 && reused == 0:
+	counts := []struct {
+		verb  string
+		count int
+	}{
+		{"compiled", len(response.CompiledAssemblies)},
+		{"reused", len(response.ReusedAssemblies)},
+		{"fast-checked", len(response.FastCheckedAssemblies)},
+	}
+	parts := []string{}
+	for _, entry := range counts {
+		if entry.count == 0 {
+			continue
+		}
+		if len(parts) == 0 {
+			parts = append(parts, fmt.Sprintf("%s%s %d assemblies",
+				strings.ToUpper(entry.verb[:1]), entry.verb[1:], entry.count))
+			continue
+		}
+		parts = append(parts, fmt.Sprintf("%s %d", entry.verb, entry.count))
+	}
+	if len(parts) == 0 {
 		return compileCheckNoChangeMessage
-	case reused == 0:
-		return fmt.Sprintf("Compiled %d assemblies with %d errors and %d warnings.",
-			compiled, response.ErrorCount, response.WarningCount)
-	case compiled == 0:
-		return fmt.Sprintf("Reused %d assemblies with %d errors and %d warnings.",
-			reused, response.ErrorCount, response.WarningCount)
 	}
 
-	return fmt.Sprintf("Compiled %d assemblies and reused %d with %d errors and %d warnings.",
-		compiled, reused, response.ErrorCount, response.WarningCount)
+	return fmt.Sprintf("%s with %d errors and %d warnings.",
+		joinCompileCheckSummaryParts(parts), response.ErrorCount, response.WarningCount)
+}
+
+// joinCompileCheckSummaryParts joins the summary parts as "A and b" or "A, b and c".
+func joinCompileCheckSummaryParts(parts []string) string {
+	if len(parts) == 1 {
+		return parts[0]
+	}
+
+	return strings.Join(parts[:len(parts)-1], ", ") + " and " + parts[len(parts)-1]
 }
 
 // printCompileCheckHelp documents the command and the build it replays.
@@ -272,6 +366,7 @@ func printCompileCheckHelp(stdout io.Writer) {
 	clicore.WriteLine(stdout, "")
 	clicore.WriteLine(stdout, "Options:")
 	clicore.WriteLine(stdout, "      --all                Compile every assembly instead of only the changed ones")
+	clicore.WriteLine(stdout, "      --full               Compile changed assemblies in full instead of checking only their changed files")
 	clicore.WriteLine(stdout, "      --editor-version <version>")
 	clicore.WriteLine(stdout, "                           Use this Unity Editor version instead of ProjectVersion.txt")
 	clicore.WriteLine(stdout, "      --jobs <n>           Compile up to n assemblies at once, 1 = sequential (default: half the CPUs, at least 1)")
@@ -310,6 +405,9 @@ func applyCompileCheckOption(options *compileCheckOptions, args []string, index 
 	switch {
 	case arg == compileCheckAllFlag:
 		options.all = true
+		return index, nil
+	case arg == compileCheckFullFlag:
+		options.full = true
 		return index, nil
 	case isCompileCheckKeyedOption(arg, compileCheckEditorFlag):
 		return applyCompileCheckEditorVersion(options, args, index)

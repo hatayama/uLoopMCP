@@ -21,6 +21,9 @@ func TestParseCompileCheckOptionsDefaultsToTheChangedScope(t *testing.T) {
 	if options.all {
 		t.Fatalf("expected the changed scope, got --all")
 	}
+	if options.full {
+		t.Fatalf("expected the changed-files check to be on by default, got --full")
+	}
 	if options.projectPath != "/projects/sample" {
 		t.Fatalf("expected the global project path, got %q", options.projectPath)
 	}
@@ -357,6 +360,9 @@ func TestBuildCompileCheckResponseReportsNoBlockedAssembliesAsAnEmptyList(t *tes
 
 	if response.BlockedAssemblies == nil {
 		t.Fatal("BlockedAssemblies should be an empty list rather than null in the JSON")
+	}
+	if response.FastCheckedAssemblies == nil || response.FastChecks == nil || response.FastPathFallbacks == nil || response.FastPathBaselineNotes == nil {
+		t.Fatal("the fast-check lists should be empty lists rather than null in the JSON")
 	}
 }
 

@@ -32,6 +32,9 @@ type Options struct {
 	Jobs                 int // how many assemblies compile at once; 0 asks for the default
 	// LockTimeout bounds the wait for another run on the same project; 0 asks for the default.
 	LockTimeout time.Duration
+	// DisableFastPath compiles every changed assembly in full instead of checking only its changed
+	// files. Successful full compiles still record the baseline the next run checks against.
+	DisableFastPath bool
 }
 
 // Result is everything one compile-check run produced.
@@ -75,6 +78,12 @@ func Run(ctx context.Context, options Options) (Result, error) {
 		ProjectRoot: options.ProjectRoot,
 		Timeout:     unitCompileTimeout,
 		Run:         defaultRun,
+		FastPath: &fastPathRunner{
+			TryDisabled: options.DisableFastPath,
+			Worker: newBootstrappedWorker(paths,
+				filepath.Join(options.ProjectRoot, filepath.FromSlash(compileCheckOutputRoot)),
+				filepath.Join(options.ProjectRoot, plan.OutputDir), defaultRun),
+		},
 	}
 
 	jobs := options.Jobs

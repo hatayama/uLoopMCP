@@ -41,7 +41,8 @@ func (c Compiler) reuseOrCompile(
 	outputDirectoryPath := filepath.Join(c.ProjectRoot, plan.OutputDir)
 	// Why an unreadable input is not an error here: the compile that follows reads the same files and
 	// reports what is wrong with them in its own way. All this loses is the chance to reuse.
-	key, keyErr := computeInputKey(c.ProjectRoot, c.Paths, plan, unit)
+	keyResult, keyErr := computeInputKey(c.ProjectRoot, c.Paths, plan, unit)
+	key := keyResult.Key
 	if keyErr != nil {
 		key = ""
 	}
@@ -53,10 +54,23 @@ func (c Compiler) reuseOrCompile(
 		}
 	}
 
+	// Why a fast check that was used touches nothing on disk: the outputs, the manifest and the
+	// baseline still describe the last full compile, which is what the next fast check compares against.
+	nonSourceKey := c.nonSourceKeyBeforeCompile(plan, unit, key)
+	fallbackReason := ""
+	if c.FastPath.shouldTry(plan, unit, key) {
+		attempt := c.FastPath.Try(ctx, c, plan, unit, keyResult, nonSourceKey)
+		if attempt.Err != nil || attempt.Used {
+			return attempt.Result, attempt.Err
+		}
+		fallbackReason = attempt.Reason
+	}
+
 	// Why nothing is recorded unless csc ran to completion: a compile that was cancelled or never
 	// started says nothing about the inputs, and CompileUnit has already removed the manifest of the
 	// compile this one replaces, so an interrupted run leaves no record at all rather than a stale one.
 	result, err := c.CompileUnit(ctx, plan, unit)
+	result.FastPathFallbackReason = fallbackReason
 	if err != nil || key == "" || result.RawOutput != "" {
 		return result, err
 	}
@@ -64,7 +78,33 @@ func (c Compiler) reuseOrCompile(
 		return UnitResult{}, writeErr
 	}
 
+	// Why --full records too: running --full before finishing would otherwise drop the baseline, and
+	// the first check after the next edit would always compile in full.
+	// Why a failure to record does not fail the run: the compile itself succeeded, and all it costs
+	// is a full compile next time.
+	if c.FastPath.shouldRecord(unit, result) {
+		if recordErr := c.FastPath.RecordBaseline(ctx, c, plan, unit, keyResult, nonSourceKey); recordErr != nil {
+			result.FastPathNote = "baseline not recorded: " + recordErr.Error()
+		}
+	}
+
 	return result, nil
+}
+
+// nonSourceKeyBeforeCompile reads a unit's non-source key for the changed-files check, or "" when
+// there is no check or no key.
+// Why it is read before anything runs: a baseline must describe the inputs the compile saw, and
+// reading it after the compile would let a change made during it in unchecked.
+func (c Compiler) nonSourceKeyBeforeCompile(plan BuildPlan, unit CompileUnit, key string) string {
+	if c.FastPath == nil || key == "" {
+		return ""
+	}
+	nonSourceKey, err := computeNonSourceKey(c.ProjectRoot, c.Paths, plan, unit)
+	if err != nil {
+		return ""
+	}
+
+	return nonSourceKey
 }
 
 // manifestPath names where one unit's manifest lives.
@@ -98,10 +138,14 @@ func writeUnitResultManifest(
 		return fmt.Errorf("failed to record the result of %s: %w", unit.Assembly.AssemblyName, err)
 	}
 
-	path := manifestPath(outputDirectoryPath, unit)
+	return writeFileAtomically(outputDirectoryPath, manifestPath(outputDirectoryPath, unit), content)
+}
+
+// writeFileAtomically writes content to path through a temporary file in directoryPath.
+func writeFileAtomically(directoryPath string, path string, content []byte) error {
 	// Why the temporary name is unique per writer: two runs of the same project writing the same
-	// manifest at once must not rename each other's half-written file into place.
-	temporary, err := os.CreateTemp(outputDirectoryPath, filepath.Base(path)+".*"+resultManifestTempSuffix)
+	// file at once must not rename each other's half-written file into place.
+	temporary, err := os.CreateTemp(directoryPath, filepath.Base(path)+".*"+resultManifestTempSuffix)
 	if err != nil {
 		return fmt.Errorf("failed to write %s: %w", path, err)
 	}
