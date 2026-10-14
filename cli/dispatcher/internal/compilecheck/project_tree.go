@@ -143,6 +143,25 @@ func (tree projectTree) hasRegularFile(path string) bool {
 	return found && entry.isRegular
 }
 
+// fileExists answers what fileExists answers on the disk, from the listing when it holds a regular
+// file under exactly this spelling. Every other case - a name the listing lacks, a path outside it,
+// an entry that is a symbolic link - asks the disk, because only the disk knows whether a differently
+// spelled or linked name resolves to a file.
+func (tree projectTree) fileExists(path string) bool {
+	return tree.hasRegularFile(path) || fileExists(path)
+}
+
+// directoryHoldsAssemblyDefinition reports whether a directory declares an assembly of its own, from
+// the listing when the walk went through the directory and from the disk otherwise.
+func (tree projectTree) directoryHoldsAssemblyDefinition(path string) bool {
+	listing, listed := tree.directory(path)
+	if !listed {
+		return directoryHoldsAssemblyDefinition(path)
+	}
+
+	return listing.holdsAssemblyDefinition()
+}
+
 // holdsAssemblyDefinition reports whether a listed directory holds an .asmdef. Any entry that is not
 // a directory counts, as it did when the directory was read from the disk.
 func (directory projectTreeDirectory) holdsAssemblyDefinition() bool {

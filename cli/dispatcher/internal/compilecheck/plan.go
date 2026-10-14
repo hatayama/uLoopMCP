@@ -183,7 +183,7 @@ func selectChangedAssemblies(
 	}
 
 	context := NewAssemblyContext(graph, assemblyDefinitions)
-	owners := newAssemblyOwnerIndex(assemblyDefinitions, references, context)
+	owners := newAssemblyOwnerIndex(assemblyDefinitions, references, context, tree)
 	if referenceErr := DetectAssemblyReferenceChange(
 		projectRoot, graph, context, references, owners); referenceErr != nil {
 		return nil, referenceErr

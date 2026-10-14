@@ -141,7 +141,7 @@ func RebuildSources(
 ) ([]string, error) {
 	existing := make([]string, 0, len(rsp.Sources))
 	for _, source := range rsp.Sources {
-		if fileExists(sourcePath(projectRoot, source)) {
+		if owners.tree.fileExists(sourcePath(projectRoot, source)) {
 			existing = append(existing, source)
 		}
 	}
@@ -230,7 +230,40 @@ func rescueRecordedSources(
 }
 
 // globAssemblySources lists the .cs files an assembly owns, stopping at nested assembly boundaries.
+// It reads the listing the run took of the project, and the disk for a directory the listing does
+// not hold, which keeps the answer for a directory outside the index roots what it always was.
 func globAssemblySources(
+	projectRoot string, assemblyDirectory string, owners assemblyOwnerIndex,
+) ([]string, error) {
+	listing, listed := owners.tree.directory(assemblyDirectory)
+	if !listed {
+		return globAssemblySourcesOnDisk(projectRoot, assemblyDirectory, owners)
+	}
+
+	sources := []string{}
+	for _, entry := range listing.entries {
+		path := filepath.Join(assemblyDirectory, entry.name)
+		if !entry.isDirectory {
+			if filepath.Ext(entry.name) == cSharpSourceExtension {
+				sources = append(sources, recordSourcePath(projectRoot, path))
+			}
+			continue
+		}
+		if owners.startsAnotherAssembly(path) {
+			continue
+		}
+		nested, err := globAssemblySources(projectRoot, path, owners)
+		if err != nil {
+			return nil, err
+		}
+		sources = append(sources, nested...)
+	}
+
+	return sources, nil
+}
+
+// globAssemblySourcesOnDisk lists the .cs files an assembly owns by walking the disk.
+func globAssemblySourcesOnDisk(
 	projectRoot string, assemblyDirectory string, owners assemblyOwnerIndex,
 ) ([]string, error) {
 	sources := []string{}
@@ -265,7 +298,8 @@ func globAssemblySources(
 	return sources, nil
 }
 
-// directoryHoldsAssemblyDefinition reports whether a directory declares an assembly of its own.
+// directoryHoldsAssemblyDefinition reports whether a directory declares an assembly of its own, by
+// reading it from the disk.
 func directoryHoldsAssemblyDefinition(path string) bool {
 	entries, err := os.ReadDir(path)
 	if err != nil {
