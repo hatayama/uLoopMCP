@@ -250,3 +250,41 @@ func TestCompileUnitCreatesGeneratedFilesOutDirectory(t *testing.T) {
 		t.Error("expected the generator output directory to exist when csc starts")
 	}
 }
+
+// Verifies that a baseline is not recorded when the non-source key could not be read before the
+// compile, since nothing then says which inputs the compile saw.
+func TestRecordBaselineRefusesAMissingNonSourceKey(t *testing.T) {
+	project := newFastPathProject(t, fastPathMinimumSources)
+	makeOutputDirectory(t, project.root, project.plan)
+	unit := project.plan.Units[0]
+	keyResult, err := computeInputKey(project.root, project.paths, project.plan, unit)
+	if err != nil {
+		t.Fatalf("expected a key, got error: %v", err)
+	}
+	compiler := Compiler{Paths: project.paths, ProjectRoot: project.root}
+
+	err = project.runner(false).RecordBaseline(context.Background(), compiler, project.plan, unit, keyResult, "")
+
+	if err == nil || project.hasBaseline() {
+		t.Errorf("expected no baseline without a non-source key, got %v", err)
+	}
+}
+
+// Verifies that only generated C# files are recorded, keyed relative to the generator output directory.
+func TestHashGeneratedFilesRecordsOnlyCSharpFiles(t *testing.T) {
+	directory := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(directory, "Gen"), outputDirPermissions); err != nil {
+		t.Fatalf("failed to create the generator folder: %v", err)
+	}
+	writeOutputFile(t, filepath.Join(directory, "Gen"), "A.g.cs", "class A { }")
+	writeOutputFile(t, filepath.Join(directory, "Gen"), "notes.txt", "not code")
+
+	hashes, err := hashGeneratedFiles(directory)
+
+	if err != nil || len(hashes) != 1 || hashes["Gen/A.g.cs"] == "" {
+		t.Errorf("expected only Gen/A.g.cs, got %v (%v)", hashes, err)
+	}
+	if missing, err := hashGeneratedFiles(filepath.Join(directory, "missing")); err != nil || len(missing) != 0 {
+		t.Errorf("expected a missing directory to hold no files, got %v (%v)", missing, err)
+	}
+}

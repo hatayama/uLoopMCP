@@ -56,14 +56,12 @@ func (c Compiler) reuseOrCompile(
 
 	// Why a fast check that was used touches nothing on disk: the outputs, the manifest and the
 	// baseline still describe the last full compile, which is what the next fast check compares against.
+	nonSourceKey := c.nonSourceKeyBeforeCompile(plan, unit, key)
 	fallbackReason := ""
 	if c.FastPath.shouldTry(plan, unit, key) {
-		attempt := c.FastPath.Try(ctx, c, plan, unit, keyResult)
-		if attempt.Err != nil {
-			return UnitResult{}, attempt.Err
-		}
-		if attempt.Used {
-			return attempt.Result, nil
+		attempt := c.FastPath.Try(ctx, c, plan, unit, keyResult, nonSourceKey)
+		if attempt.Err != nil || attempt.Used {
+			return attempt.Result, attempt.Err
 		}
 		fallbackReason = attempt.Reason
 	}
@@ -85,12 +83,28 @@ func (c Compiler) reuseOrCompile(
 	// Why a failure to record does not fail the run: the compile itself succeeded, and all it costs
 	// is a full compile next time.
 	if c.FastPath.shouldRecord(unit, result) {
-		if recordErr := c.FastPath.RecordBaseline(ctx, c, plan, unit, keyResult); recordErr != nil {
+		if recordErr := c.FastPath.RecordBaseline(ctx, c, plan, unit, keyResult, nonSourceKey); recordErr != nil {
 			result.FastPathNote = "baseline not recorded: " + recordErr.Error()
 		}
 	}
 
 	return result, nil
+}
+
+// nonSourceKeyBeforeCompile reads a unit's non-source key for the changed-files check, or "" when
+// there is no check or no key.
+// Why it is read before anything runs: a baseline must describe the inputs the compile saw, and
+// reading it after the compile would let a change made during it in unchecked.
+func (c Compiler) nonSourceKeyBeforeCompile(plan BuildPlan, unit CompileUnit, key string) string {
+	if c.FastPath == nil || key == "" {
+		return ""
+	}
+	nonSourceKey, err := computeNonSourceKey(c.ProjectRoot, c.Paths, plan, unit)
+	if err != nil {
+		return ""
+	}
+
+	return nonSourceKey
 }
 
 // manifestPath names where one unit's manifest lives.

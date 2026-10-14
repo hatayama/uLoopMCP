@@ -164,29 +164,81 @@ func TestNonSourceKeyMismatchFallsBack(t *testing.T) {
 	assertFallback(t, outcome, recorder, "inputs other than source contents changed")
 }
 
-// Verifies that an assembly with fewer sources than the minimum compiles in full even with a baseline.
-func TestSmallAssemblyFallsBack(t *testing.T) {
-	project := newFastPathProject(t, 2)
+// Verifies that an assembly with fewer sources than the minimum is never tried, so it compiles in
+// full without a fallback reason on every run.
+func TestSmallAssemblyIsNotTried(t *testing.T) {
+	project := newFastPathProject(t, fastPathMinimumSources-1)
 	project.run(t, newCachedSchedulerRecorder("Alpha", "Beta"), false)
-	if project.hasBaseline() {
-		t.Fatal("expected no baseline for a small assembly")
-	}
-	// A baseline written by hand, since a full compile of a small assembly records none.
-	compiler := Compiler{Paths: project.paths, ProjectRoot: project.root}
-	unit := project.plan.Units[0]
-	keyResult, err := computeInputKey(project.root, project.paths, project.plan, unit)
-	if err != nil {
-		t.Fatalf("expected a key, got error: %v", err)
-	}
-	if err := project.runner(false).RecordBaseline(context.Background(), compiler, project.plan, unit, keyResult); err != nil {
-		t.Fatalf("expected the baseline to be recorded, got error: %v", err)
-	}
 	project.editBody(t, 0, "edited")
+
+	outcome := project.run(t, newCachedSchedulerRecorder("Alpha", "Beta"), false)
+
+	assertNotTried(t, outcome, project.worker)
+	if project.worker.ensures != 0 || project.hasBaseline() {
+		t.Errorf("expected no worker and no baseline, got %d builds", project.worker.ensures)
+	}
+}
+
+// Verifies that an input other than source contents that changed while csc compiled leaves no
+// baseline, and says why, so the next body edit compiles in full.
+func TestNonSourceInputChangedDuringCompileLeavesNoBaseline(t *testing.T) {
+	project := newFastPathProject(t, fastPathMinimumSources)
 	recorder := newCachedSchedulerRecorder("Alpha", "Beta")
+	recorder.during = func(name string) {
+		if name == "Alpha" {
+			touchProjectFile(t, project.root, filepath.Join("Editor", "csc.dll"))
+		}
+	}
 
 	outcome := project.run(t, recorder, false)
 
-	assertFallback(t, outcome, recorder, "assembly is small enough to compile in full")
+	if note := resultOf(t, outcome.Units, "Alpha").FastPathNote; note != "baseline not recorded: inputs other than source contents changed during the compile" {
+		t.Errorf("unexpected note %q", note)
+	}
+	if project.hasBaseline() {
+		t.Fatal("expected no baseline when an input changed during the compile")
+	}
+
+	project.editBody(t, 0, "edited")
+	second := newCachedSchedulerRecorder("Alpha", "Beta")
+	assertFallback(t, project.run(t, second, false), second, "no baseline from an earlier full compile")
+}
+
+// Verifies that a baseline whose saved generator output was deleted or changed is not used, since
+// checking without that output reports errors wherever code uses what the generators produce.
+func TestMissingOrChangedGeneratorOutputFallsBack(t *testing.T) {
+	for name, damage := range map[string]func(t *testing.T, generatedPath string){
+		"deleted": func(t *testing.T, generatedPath string) {
+			if err := os.RemoveAll(generatedPath); err != nil {
+				t.Fatalf("failed to remove the generator output: %v", err)
+			}
+		},
+		"changed": func(t *testing.T, generatedPath string) {
+			writeOutputFile(t, filepath.Join(generatedPath, "Gen"), "G.g.cs", "class G { int x; }")
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			project := newFastPathProject(t, fastPathMinimumSources)
+			generatedPath := filepath.Join(project.root, generatedDirectory(project.plan, project.plan.Units[0]))
+			recorder := newCachedSchedulerRecorder("Alpha", "Beta")
+			recorder.during = func(unit string) {
+				if unit == "Alpha" {
+					project.writeFile(t, filepath.Join(generatedDirectory(project.plan, project.plan.Units[0]), "Gen", "G.g.cs"), "class G { }")
+				}
+			}
+			project.run(t, recorder, false)
+			if record := project.readBaseline(t); len(record.GeneratedFiles) != 1 {
+				t.Fatalf("expected the generated file in the baseline, got %v", record.GeneratedFiles)
+			}
+			damage(t, generatedPath)
+			project.editBody(t, 0, "edited")
+			second := newCachedSchedulerRecorder("Alpha", "Beta")
+
+			outcome := project.run(t, second, false)
+
+			assertFallback(t, outcome, second, "generator output of the baseline is gone")
+		})
+	}
 }
 
 // Verifies that more changed files than the maximum compile in full.

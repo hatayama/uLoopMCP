@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -15,7 +16,7 @@ import (
 )
 
 const (
-	baselineRecordFormatVersion = 1
+	baselineRecordFormatVersion = 2
 	baselineRecordExtension     = ".fastcheck.json"
 	generatedDirectoryExtension = ".generated"
 	fastCheckResponseFileSuffix = ".fastcheck.rsp"
@@ -56,7 +57,10 @@ type baselineRecord struct {
 	// WorkerKey names the worker build that computed the fingerprints.
 	WorkerKey          string
 	GeneratedDirectory string // relative to the project root
-	Files              map[string]baselineFile
+	// GeneratedFiles maps each generated file, relative to GeneratedDirectory, to its content hash,
+	// so a check never runs without the generator output its baseline compile had.
+	GeneratedFiles map[string]string
+	Files          map[string]baselineFile
 }
 
 // baselineFile describes one source as the full compile saw it.
@@ -81,8 +85,11 @@ func fallBack(reason string) fastPathAttempt {
 // shouldTry reports whether the changed-files check is worth trying on a unit before compiling it.
 // Why a unit picked only as a dependent is left out: nothing it compiles from changed, so it has no
 // changed file to check, and what moved under it is a reference the check does not follow.
+// Why a small assembly is left out without a reason: it never gets a baseline, so listing it as a
+// fallback on every run would only bury the fallbacks that say something.
 func (runner *fastPathRunner) shouldTry(plan BuildPlan, unit CompileUnit, key string) bool {
-	return runner != nil && !runner.TryDisabled && key != "" && !plan.All && !unit.SelectedAsDependent
+	return runner != nil && !runner.TryDisabled && key != "" && !plan.All && !unit.SelectedAsDependent &&
+		len(unit.Sources) >= fastPathMinimumSources
 }
 
 // shouldRecord reports whether a full compile of a unit should leave a baseline.
@@ -93,8 +100,9 @@ func (runner *fastPathRunner) shouldRecord(unit CompileUnit, result UnitResult) 
 
 // Try checks only the changed files of a unit when the last full compile left a usable baseline,
 // and otherwise says why the unit has to be compiled in full.
+// nonSourceKey is the unit's non-source key computed before anything ran, or "" when it could not be.
 func (runner *fastPathRunner) Try(
-	ctx context.Context, c Compiler, plan BuildPlan, unit CompileUnit, keyResult inputKeyResult,
+	ctx context.Context, c Compiler, plan BuildPlan, unit CompileUnit, keyResult inputKeyResult, nonSourceKey string,
 ) fastPathAttempt {
 	outputDirectoryPath := filepath.Join(c.ProjectRoot, plan.OutputDir)
 	record, manifest, reason := loadBaseline(outputDirectoryPath, unit)
@@ -102,13 +110,12 @@ func (runner *fastPathRunner) Try(
 		return fallBack(reason)
 	}
 
-	nonSourceKey, err := computeNonSourceKey(c.ProjectRoot, c.Paths, plan, unit)
-	if err != nil || nonSourceKey != record.NonSourceKey {
+	if nonSourceKey == "" || nonSourceKey != record.NonSourceKey {
 		return fallBack("inputs other than source contents changed")
 	}
 
-	if len(unit.Sources) < fastPathMinimumSources {
-		return fallBack("assembly is small enough to compile in full")
+	if !generatedFilesMatch(projectPath(c.ProjectRoot, record.GeneratedDirectory), record.GeneratedFiles) {
+		return fallBack("generator output of the baseline is gone")
 	}
 
 	changed := changedSources(unit, keyResult, record)
@@ -331,16 +338,23 @@ func normalizeDiagnosticPath(projectRoot string, path string) string {
 }
 
 // RecordBaseline records what the next changed-files check of a unit compares against, after a
-// successful full compile.
-// Why every content hash must match the one the input key read: the manifest describes the bytes
-// csc compiled, and a source edited during the compile would otherwise enter the baseline unchecked
-// and never be checked by the next run.
+// successful full compile. nonSourceKey is the unit's non-source key computed before the compile.
+// Why every content hash must match the one the input key read, and the non-source key the one
+// computed before the compile: the manifest describes the inputs csc compiled, and an input changed
+// during the compile would otherwise enter the baseline as if that compile had seen it, and its
+// effect would never be checked by the next run.
 func (runner *fastPathRunner) RecordBaseline(
-	ctx context.Context, c Compiler, plan BuildPlan, unit CompileUnit, keyResult inputKeyResult,
+	ctx context.Context, c Compiler, plan BuildPlan, unit CompileUnit, keyResult inputKeyResult, nonSourceKey string,
 ) error {
-	nonSourceKey, err := computeNonSourceKey(c.ProjectRoot, c.Paths, plan, unit)
+	if nonSourceKey == "" {
+		return errors.New("inputs other than source contents could not be read before the compile")
+	}
+	currentNonSourceKey, err := computeNonSourceKey(c.ProjectRoot, c.Paths, plan, unit)
 	if err != nil {
 		return err
+	}
+	if currentNonSourceKey != nonSourceKey {
+		return errors.New("inputs other than source contents changed during the compile")
 	}
 
 	worker, err := runner.Worker.Ensure(ctx)
@@ -367,14 +381,72 @@ func (runner *fastPathRunner) RecordBaseline(
 		return err
 	}
 
+	generatedFiles, err := hashGeneratedFiles(filepath.Join(c.ProjectRoot, generatedDirectory(plan, unit)))
+	if err != nil {
+		return err
+	}
+
 	return writeBaselineRecord(filepath.Join(c.ProjectRoot, plan.OutputDir), unit, baselineRecord{
 		FormatVersion:      baselineRecordFormatVersion,
 		InputKey:           keyResult.Key,
 		NonSourceKey:       nonSourceKey,
 		WorkerKey:          worker.Key,
 		GeneratedDirectory: filepath.ToSlash(generatedDirectory(plan, unit)),
+		GeneratedFiles:     generatedFiles,
 		Files:              files,
 	})
+}
+
+// hashGeneratedFiles hashes every generated C# file under directoryPath, keyed by its slash-separated
+// path relative to it. A missing directory holds no files.
+func hashGeneratedFiles(directoryPath string) (map[string]string, error) {
+	hashes := map[string]string{}
+	err := filepath.WalkDir(directoryPath, func(path string, entry fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			if os.IsNotExist(walkErr) && path == directoryPath {
+				return filepath.SkipDir
+			}
+
+			return walkErr
+		}
+		if entry.IsDir() || filepath.Ext(path) != ".cs" {
+			return nil
+		}
+		relative, err := filepath.Rel(directoryPath, path)
+		if err != nil {
+			return err
+		}
+		hash, err := hashFile(path)
+		if err != nil {
+			return err
+		}
+		hashes[filepath.ToSlash(relative)] = hash
+
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to read the generator output: %w", err)
+	}
+
+	return hashes, nil
+}
+
+// generatedFilesMatch reports whether the generator output on disk is exactly what the baseline
+// recorded: no file missing, added, or changed.
+// Why: the worker reads this output instead of running the generators, and checking without it
+// reports errors wherever code uses what the generators produce.
+func generatedFilesMatch(directoryPath string, recorded map[string]string) bool {
+	current, err := hashGeneratedFiles(directoryPath)
+	if err != nil || len(current) != len(recorded) {
+		return false
+	}
+	for name, hash := range recorded {
+		if current[name] != hash {
+			return false
+		}
+	}
+
+	return true
 }
 
 // baselineFiles pairs each source's content hash, as the input key read it, with its fingerprint.
