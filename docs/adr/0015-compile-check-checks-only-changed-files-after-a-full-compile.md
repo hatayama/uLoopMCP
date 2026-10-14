@@ -14,10 +14,13 @@ whole assembly with csc, when both of these hold:
   bodies, accessor bodies, expression bodies, non-constant initializers, comments, or whitespace
   changed. Anything another file or assembly can see (signatures, constants, attributes,
   parameter defaults, `using` directives, preprocessor directives outside bodies, `#nullable`
-  anywhere) is part of the fingerprint.
+  anywhere) is part of the fingerprint. So are the initializers of fields and properties of a
+  partial type: the nullable analysis of a constructor reads every initializer of the type, and
+  its warnings land in whichever file declares the constructor or the field.
 
-In every other case it compiles the assembly in full, as before, and reports why. `--full`
-turns the changed-files check off for one run.
+In every other case it compiles the assembly in full, as before, and reports why. It also falls
+back to a full compile when an analyzer throws while checking a changed file, because csc then
+reports that failure as AD0001. `--full` turns the changed-files check off for one run.
 
 The check runs in a C# worker built on the user's machine with the Roslyn that ships with the
 Editor, so the worker uses only the public Roslyn API that Roslyn 4.3.1 already has.
@@ -27,17 +30,25 @@ Editor, so the worker uses only the public Roslyn API that Roslyn 4.3.1 already 
 - The compiler diagnostics and the analyzer diagnostics of the changed files, with the
   suppressions of `DiagnosticSuppressor`s applied, and with the options of the response file
   (`-nowarn`, `-warnaserror`, `-ruleset`, `-define`, `-nullable`) applied.
-- For the files that did not change, the diagnostics of the last full compile. A body-only edit
-  cannot change how another file compiles.
+- For the files that did not change, the diagnostics of the last full compile. An edit the
+  fingerprint accepts does not change what the compiler binds or analyzes in another file, so
+  their binding and flow-analysis diagnostics stay as they were. The exceptions are the
+  assembly-wide diagnostics listed below.
 
 ## What It Does Not Guarantee
 
-The output names these explicitly, so the caller knows to run `--full` before finishing:
+The output tells the caller to run `--full` before finishing whenever an assembly was checked
+this way, and lists by ID the diagnostics of the first two items below:
 
 - CS0067, CS0169, CS0414, and CS0649. The compiler reports these unused-member warnings only
   after it has seen the whole assembly.
-- The rules of analyzers that use Compilation, CompilationEnd, or SemanticModel actions. A
-  per-file analysis does not run them.
+- The rules of analyzers that use Compilation, CompilationEnd, SemanticModel, or SymbolStart
+  actions. A per-file analysis does not run them, or cannot finish a symbol declared across
+  files.
+- Errors the compiler reports only while emitting the assembly, after binding: for example
+  CS8178 (`await` in an expression that also calls a method returning by reference) and CS0656
+  (a missing compiler-required member, such as the runtime binder `dynamic` needs). The check
+  does not emit, because emitting the whole assembly would cost the time it saves.
 - Source generators. The check reads the generator output saved by the last full compile
   instead of running them again, and does not report their diagnostics. A generator that reads
   method bodies can produce different output after a body-only edit.
