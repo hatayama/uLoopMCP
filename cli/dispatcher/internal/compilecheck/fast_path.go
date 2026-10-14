@@ -160,7 +160,7 @@ func (runner *fastPathRunner) check(
 	}
 
 	if response.Outcome != fastcheck.CheckedOutcome {
-		return fallBack(response.Outcome + ": " + response.Reason)
+		return fallBack(response.Outcome + ": " + projectRelativeReason(c.ProjectRoot, response.Reason, changed))
 	}
 
 	diagnostics := mergeDiagnostics(c.ProjectRoot, unit, manifest.Diagnostics, response.Diagnostics, changed)
@@ -175,6 +175,17 @@ func (runner *fastPathRunner) check(
 		UncheckedCodes:        response.UncheckedCodes,
 		GeneratorsNotRerun:    response.GeneratorsNotRerun,
 	}}
+}
+
+// projectRelativeReason rewrites the absolute paths the worker put in a reason the way the output
+// spells files. Why: callers paste the output into pull requests and logs, and an absolute path
+// would carry the local machine's layout with it.
+func projectRelativeReason(projectRoot string, reason string, changed []string) string {
+	for _, source := range changed {
+		reason = strings.ReplaceAll(reason, projectPath(projectRoot, source), source)
+	}
+
+	return strings.ReplaceAll(reason, projectRoot+string(filepath.Separator), "")
 }
 
 // buildCheckRequest names, in absolute paths, what the worker checks and against which baseline.

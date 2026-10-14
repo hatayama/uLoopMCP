@@ -212,7 +212,7 @@ func TestDeclarationChangeFallsBackAndRerecords(t *testing.T) {
 
 	outcome := project.run(t, recorder, false)
 
-	assertFallback(t, outcome, recorder, fastcheck.DeclarationChangedOutcome+": ")
+	assertFallback(t, outcome, recorder, fastcheck.DeclarationChangedOutcome+": "+project.sourceName(0))
 	if file := project.readBaseline(t).Files[project.sourceName(0)]; file.Fingerprint != "class File000 : Base " {
 		t.Errorf("expected the new declaration in the baseline, got %+v", file)
 	}
@@ -412,4 +412,24 @@ func TestCancelledFastPathLeavesBaselineUntouched(t *testing.T) {
 	if after := project.fileHashes(t); !reflect.DeepEqual(after, before) {
 		t.Errorf("expected the outputs, manifest, and baseline to stay, got %v then %v", before, after)
 	}
+}
+
+// Verifies that a reason the worker gives with absolute paths reaches the output with the paths
+// spelled relative to the project root, so no local path leaks into it.
+func TestFallbackReasonHasNoAbsolutePath(t *testing.T) {
+	project := newFastPathProject(t, fastPathMinimumSources)
+	project.recordBaseline(t)
+	project.editBody(t, 0, "edited")
+	project.worker.outcome = fastcheck.UnsupportedOutcome
+	project.worker.reason = "changed file is not a source: " + project.absoluteSource(0) + " near " +
+		filepath.Join(project.root, "Library", "Other.cs")
+	recorder := newCachedSchedulerRecorder("Alpha", "Beta")
+
+	outcome := project.run(t, recorder, false)
+
+	reason := resultOf(t, outcome.Units, "Alpha").FastPathFallbackReason
+	if strings.Contains(reason, project.root) {
+		t.Errorf("expected no absolute path in the reason, got %q", reason)
+	}
+	assertFallback(t, outcome, recorder, "Unsupported: changed file is not a source: "+project.sourceName(0)+" near Library")
 }
