@@ -41,7 +41,8 @@ func (c Compiler) reuseOrCompile(
 	outputDirectoryPath := filepath.Join(c.ProjectRoot, plan.OutputDir)
 	// Why an unreadable input is not an error here: the compile that follows reads the same files and
 	// reports what is wrong with them in its own way. All this loses is the chance to reuse.
-	key, keyErr := computeInputKey(c.ProjectRoot, c.Paths, plan, unit)
+	keyResult, keyErr := computeInputKey(c.ProjectRoot, c.Paths, plan, unit)
+	key := keyResult.Key
 	if keyErr != nil {
 		key = ""
 	}

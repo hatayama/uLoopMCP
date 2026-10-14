@@ -1,8 +1,11 @@
 package compilecheck
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -71,7 +74,8 @@ func newInputKeyProject(t *testing.T) *inputKeyProject {
 // key computes the key of the unit under test.
 func (project *inputKeyProject) key(t *testing.T) string {
 	t.Helper()
-	key, err := computeInputKey(project.root, project.paths, project.plan, project.plan.Units[0])
+	keyResult, err := computeInputKey(project.root, project.paths, project.plan, project.plan.Units[0])
+	key := keyResult.Key
 	if err != nil {
 		t.Fatalf("expected a key, got error: %v", err)
 	}
@@ -241,7 +245,8 @@ func TestComputeInputKeyRefusesAFlagWhoseFileItDoesNotFollow(t *testing.T) {
 		project := newInputKeyProject(t)
 		project.plan.Units[0].Assembly.OtherFlags = []string{flag}
 
-		key, err := computeInputKey(project.root, project.paths, project.plan, project.plan.Units[0])
+		keyResult, err := computeInputKey(project.root, project.paths, project.plan, project.plan.Units[0])
+		key := keyResult.Key
 		if err == nil {
 			t.Errorf("%s names a file that is not followed, so it should refuse a key", flag)
 		}
@@ -313,7 +318,8 @@ func TestComputeInputKeyRefusesAnUnfollowedFlagInTheCompanionResponseFile(t *tes
 	project := newInputKeyProject(t)
 	project.plan.Units[0].Assembly.CompanionFlags = []string{`/keyfile:"Keys/Sign.snk"`}
 
-	key, err := computeInputKey(project.root, project.paths, project.plan, project.plan.Units[0])
+	keyResult, err := computeInputKey(project.root, project.paths, project.plan, project.plan.Units[0])
+	key := keyResult.Key
 	if err == nil {
 		t.Error("a keyfile in the companion response file should refuse a key")
 	}
@@ -336,11 +342,89 @@ func TestComputeInputKeyRefusesAKeyWhenTheResponseFileIsGone(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	key, err := computeInputKey(project.root, project.paths, project.plan, project.plan.Units[0])
+	keyResult, err := computeInputKey(project.root, project.paths, project.plan, project.plan.Units[0])
+	key := keyResult.Key
 	if err == nil {
 		t.Error("a missing response file should refuse a key")
 	}
 	if key != "" {
 		t.Errorf("expected no key, got %q", key)
+	}
+}
+
+// nonSourceKey computes the non-source key of the unit under test.
+func (project *inputKeyProject) nonSourceKey(t *testing.T) string {
+	t.Helper()
+	key, err := computeNonSourceKey(project.root, project.paths, project.plan, project.plan.Units[0])
+	if err != nil {
+		t.Fatalf("expected a non-source key, got error: %v", err)
+	}
+
+	return key
+}
+
+// Verifies the non-source key ignores what the sources hold, so a body edit leaves it alone.
+func TestNonSourceKeyIgnoresSourceContent(t *testing.T) {
+	project := newInputKeyProject(t)
+	original := project.nonSourceKey(t)
+
+	writeProjectFile(t, project.root, filepath.Join("Assets", "Alpha", "Alpha.cs"), "class Alpha { void M() {} }")
+
+	if edited := project.nonSourceKey(t); edited != original {
+		t.Error("editing a source should leave the non-source key alone")
+	}
+}
+
+// Verifies the non-source key moves when a source is added or removed, so a changed source set
+// falls back to a full compile.
+func TestNonSourceKeyChangesWhenSourceAddedOrRemoved(t *testing.T) {
+	project := newInputKeyProject(t)
+	original := project.nonSourceKey(t)
+	added := filepath.Join("Assets", "Alpha", "Added.cs")
+	writeProjectFile(t, project.root, added, "class Added {}")
+
+	project.plan.Units[0].Sources = append(project.plan.Units[0].Sources, added)
+	if withAdded := project.nonSourceKey(t); withAdded == original {
+		t.Error("adding a source should move the non-source key")
+	}
+
+	project.plan.Units[0].Sources = []string{added}
+	if withRemoved := project.nonSourceKey(t); withRemoved == original {
+		t.Error("removing a source should move the non-source key")
+	}
+}
+
+// Verifies the non-source key follows the inputs other than source contents: a reference and the
+// response file.
+func TestNonSourceKeyChangesWithReferenceAndRsp(t *testing.T) {
+	project := newInputKeyProject(t)
+	original := project.nonSourceKey(t)
+
+	touchProjectFile(t, project.root, filepath.Join(planDagDirectory, "Gamma"+referenceAssemblyExtension))
+	touched := project.nonSourceKey(t)
+	if touched == original {
+		t.Error("a rebuilt reference should move the non-source key")
+	}
+
+	writeProjectFile(t, project.root, filepath.Join(planDagDirectory, "Alpha.rsp"), "-out:\"Alpha.dll\"\n-define:EXTRA\n")
+	if edited := project.nonSourceKey(t); edited == touched {
+		t.Error("a changed response file should move the non-source key")
+	}
+}
+
+// Verifies the input key returns the sha256 of each source it read, keyed as unit.Sources spells it.
+func TestInputKeyReturnsHashesOfContentItRead(t *testing.T) {
+	project := newInputKeyProject(t)
+	source := filepath.Join("Assets", "Alpha", "Alpha.cs")
+
+	result, err := computeInputKey(project.root, project.paths, project.plan, project.plan.Units[0])
+	if err != nil {
+		t.Fatalf("expected a key, got error: %v", err)
+	}
+
+	sum := sha256.Sum256([]byte("class Alpha {}"))
+	expected := map[string]string{source: hex.EncodeToString(sum[:])}
+	if !reflect.DeepEqual(result.SourceHashes, expected) {
+		t.Errorf("expected source hashes %v, got %v", expected, result.SourceHashes)
 	}
 }

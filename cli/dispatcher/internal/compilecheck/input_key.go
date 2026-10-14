@@ -26,19 +26,59 @@ var untrackedFileInputFlagNames = []string{
 	"embed", "link", "addmodule", "appconfig", "sourcelink",
 }
 
+// inputKeyResult is an input key together with the content hash of each source it was computed from.
+type inputKeyResult struct {
+	Key string
+	// SourceHashes maps each source, spelled as unit.Sources spells it, to the sha256 of the bytes
+	// the key read from it.
+	SourceHashes map[string]string
+}
+
 // computeInputKey digests everything that decides what csc reports for one assembly, so that two
 // runs agreeing on this key would get the same diagnostics out of the compiler.
 // Why an error rather than a key when an input cannot be read: a key built from what happens to be
 // readable would match a later run that reads the same subset, and the compile it stands for never
 // ran. The caller compiles such a unit instead of reusing anything.
+// Why the source hashes come back with the key: a baseline recorded for the changed-files check
+// must describe the very bytes this key, and so the compile it stands for, saw. Reading the sources
+// again after the compile would let an edit made during it into the baseline unchecked.
 func computeInputKey(
 	projectRoot string, paths EditorCompilerPaths, plan BuildPlan, unit CompileUnit,
+) (inputKeyResult, error) {
+	sourceHashes := map[string]string{}
+	key, err := computeKeyWith(projectRoot, paths, plan, unit, func(digest hash.Hash) error {
+		return writeSourceIdentity(digest, projectRoot, unit.Sources, sourceHashes)
+	})
+	if err != nil {
+		return inputKeyResult{}, err
+	}
+
+	return inputKeyResult{Key: key, SourceHashes: sourceHashes}, nil
+}
+
+// computeNonSourceKey digests the same inputs as the input key except the source contents, which it
+// replaces with the list of source paths. Two runs agreeing on it differ at most in what the
+// sources hold; adding or removing a source changes it.
+func computeNonSourceKey(
+	projectRoot string, paths EditorCompilerPaths, plan BuildPlan, unit CompileUnit,
+) (string, error) {
+	return computeKeyWith(projectRoot, paths, plan, unit, func(digest hash.Hash) error {
+		writeSourceNames(digest, unit.Sources)
+
+		return nil
+	})
+}
+
+// computeKeyWith digests every input of one unit, letting the caller decide how the sources go in.
+func computeKeyWith(
+	projectRoot string, paths EditorCompilerPaths, plan BuildPlan, unit CompileUnit,
+	sourceWriter func(hash.Hash) error,
 ) (string, error) {
 	digest := sha256.New()
 	writers := []func() error{
 		func() error { return writeCompilerIdentity(digest, paths) },
 		func() error { return writeResponseFileIdentity(digest, unit.Assembly) },
-		func() error { return writeSourceIdentity(digest, projectRoot, unit.Sources) },
+		func() error { return sourceWriter(digest) },
 		func() error { return writeReferenceIdentity(digest, projectRoot, plan, unit.Assembly.References) },
 		func() error { return writeAnalyzerIdentity(digest, projectRoot, unit.Assembly.Analyzers) },
 		func() error { return writeAnalyzerInputIdentity(digest, projectRoot, unit.Assembly) },
@@ -87,20 +127,36 @@ func writeResponseFileIdentity(digest hash.Hash, rsp ResponseFile) error {
 	return nil
 }
 
-// writeSourceIdentity records what the assembly compiles, by content and in a fixed order.
+// writeSourceIdentity records what the assembly compiles, by content and in a fixed order, and
+// fills hashes with the content hash of each source it read.
 // Why the content rather than the modification time: a checkout that puts a file back the way it
 // was leaves it newer than the build, and recompiling it would report the diagnostics it already
 // reported. The whole source set of the largest assembly hashes in tens of milliseconds.
-func writeSourceIdentity(digest hash.Hash, projectRoot string, sources []string) error {
+func writeSourceIdentity(
+	digest hash.Hash, projectRoot string, sources []string, hashes map[string]string,
+) error {
 	ordered := append([]string{}, sources...)
 	sort.Strings(ordered)
 	for _, source := range ordered {
-		if err := writeFileContentEntry(digest, "source", source, projectPath(projectRoot, source)); err != nil {
-			return err
+		path := projectPath(projectRoot, source)
+		contentHash, err := hashFile(path)
+		if err != nil {
+			return fmt.Errorf("failed to read %s: %w", path, err)
 		}
+		hashes[source] = contentHash
+		_, _ = fmt.Fprintf(digest, "source\x00%s\x00%s\n", filepath.ToSlash(source), contentHash)
 	}
 
 	return nil
+}
+
+// writeSourceNames records which sources the assembly compiles, without what they hold.
+func writeSourceNames(digest hash.Hash, sources []string) {
+	ordered := append([]string{}, sources...)
+	sort.Strings(ordered)
+	for _, source := range ordered {
+		_, _ = fmt.Fprintf(digest, "source-name\x00%s\n", filepath.ToSlash(source))
+	}
 }
 
 // writeReferenceIdentity records the assemblies this one compiles against, resolved the way the
