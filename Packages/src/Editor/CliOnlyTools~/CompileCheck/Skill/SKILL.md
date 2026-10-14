@@ -53,11 +53,16 @@ An assembly whose inputs are all exactly as the previous `compile-check` read th
 again: the run reports the diagnostics recorded then, errors included. `--all` compiles
 everything from scratch, which is the way out if a reused result ever looks wrong.
 
+In a large assembly whose last compile-check compile succeeded, an edit that keeps every
+declaration is checked on the changed files only, in a few seconds. Such a check skips a few
+assembly-wide rules, so run once with `--full` before finishing.
+
 ## Parameters
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `--all` | flag | Compile every assembly instead of only the changed ones and their dependents |
+| `--full` | flag | Compile changed assemblies in full instead of checking only their changed files |
 | `--editor-version <version>` | string | Use this Unity Editor version's compiler instead of ProjectVersion.txt |
 | `--jobs <N>` | number | Compile up to N assemblies at once (default: half the CPUs, at least 1; `1` compiles sequentially) |
 | `--max-depth <N>` | number | Search depth when locating the project (default: 3, -1 for unlimited) |
@@ -73,6 +78,9 @@ A JSON payload:
 - `CompiledAssemblies`: the assemblies this run compiled, in dependency order
 - `ReusedAssemblies`: the assemblies reported from the previous run's recorded result, without compiling
 - `BlockedAssemblies`: the assemblies not compiled because an assembly they reference has errors, as Unity's own build would stop there; fix those errors and run again
+- `FastCheckedAssemblies`: the assemblies checked on their changed files only
+- `FastChecks`: per fast-checked assembly, `ChangedFiles`, `UncheckedCodes` (rules only `--full` runs), and `GeneratorsNotRerun`
+- `FastPathFallbacks`: `Assembly` and `Reason` for each assembly that was compiled in full instead
 - `SkippedAssemblies`: how many assemblies were left out: nothing they compile from changed, or every assembly they reference kept the same public surface
 - `ResponseFileSet`: the Bee build the run replayed
 - `ProjectRoot`: resolved project root
