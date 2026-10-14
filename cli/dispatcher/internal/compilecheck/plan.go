@@ -163,7 +163,10 @@ func listResponseFiles(dagDirectoryPath string) ([]string, error) {
 func selectChangedAssemblies(
 	projectRoot string, dagDir string, graph assemblyGraph, all bool,
 ) (map[string]string, error) {
-	assemblyDefinitions, err := IndexAssemblyDefinitions(projectRoot)
+	// Why the project is walked once here: the .asmdef index, the .asmref index and every source
+	// rebuild below all read the same directories, and walking them for each would repeat the walk.
+	tree := walkProjectTree(projectRoot)
+	assemblyDefinitions, err := IndexAssemblyDefinitions(tree)
 	if err != nil {
 		return nil, err
 	}
@@ -173,14 +176,14 @@ func selectChangedAssemblies(
 	}
 
 	// Why the .asmref files are indexed here: both the reference check and every source rebuild need
-	// them, and walking the project once per assembly would repeat the same walk for each of them.
-	references, referenceIndexErr := IndexAssemblyReferences(projectRoot)
+	// them.
+	references, referenceIndexErr := IndexAssemblyReferences(tree)
 	if referenceIndexErr != nil {
 		return nil, referenceIndexErr
 	}
 
 	context := NewAssemblyContext(graph, assemblyDefinitions)
-	owners := newAssemblyOwnerIndex(assemblyDefinitions, references, context)
+	owners := newAssemblyOwnerIndex(assemblyDefinitions, references, context, tree)
 	if referenceErr := DetectAssemblyReferenceChange(
 		projectRoot, graph, context, references, owners); referenceErr != nil {
 		return nil, referenceErr

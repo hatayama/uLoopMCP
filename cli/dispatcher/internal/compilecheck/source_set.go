@@ -49,56 +49,42 @@ func projectIndexRoots(projectRoot string) []string {
 }
 
 // IndexAssemblyDefinitions maps every assembly name in the project to the .asmdef that declares it.
-func IndexAssemblyDefinitions(projectRoot string) (map[string]AssemblyDefinition, error) {
+// Each root's .asmdef files are read in walk order before that root's walk error is reported, which
+// is the order the errors surfaced in when each file was read as the walk met it.
+func IndexAssemblyDefinitions(tree projectTree) (map[string]AssemblyDefinition, error) {
 	index := map[string]AssemblyDefinition{}
-	for _, root := range projectIndexRoots(projectRoot) {
-		if !directoryExists(root) {
-			continue
+	for _, root := range tree.roots {
+		for _, path := range root.definitionFiles {
+			if err := addAssemblyDefinition(path, index); err != nil {
+				return nil, fmt.Errorf(assemblyDefinitionIndexError, root.path, err)
+			}
 		}
-		if err := indexAssemblyDefinitionsUnder(root, index); err != nil {
-			return nil, fmt.Errorf(assemblyDefinitionIndexError, root, err)
+		if root.walkErr != nil {
+			return nil, fmt.Errorf(assemblyDefinitionIndexError, root.path, root.walkErr)
 		}
 	}
 
 	return index, nil
 }
 
-// indexAssemblyDefinitionsUnder adds every .asmdef found below one project root to the index.
-func indexAssemblyDefinitionsUnder(root string, index map[string]AssemblyDefinition) error {
-	return filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
-		if err != nil {
-			return err
+// addAssemblyDefinition adds one .asmdef to the index unless an earlier one declared the same name.
+func addAssemblyDefinition(path string, index map[string]AssemblyDefinition) error {
+	name, readErr := readAssemblyDefinitionName(path)
+	if readErr != nil {
+		return readErr
+	}
+	// Why the first wins: Unity itself rejects duplicate assembly names, so a second one means a
+	// stale copy, and taking it would point the rebuild at the wrong directory.
+	if _, exists := index[name]; !exists {
+		index[name] = AssemblyDefinition{
+			Name:      name,
+			Path:      path,
+			Directory: filepath.Dir(path),
+			GUID:      readAssemblyDefinitionGUID(path),
 		}
-		if entry.IsDir() {
-			if path != root && isUnityIgnoredName(entry.Name()) {
-				return filepath.SkipDir
-			}
+	}
 
-			return nil
-		}
-		if isUnityIgnoredName(entry.Name()) {
-			return nil
-		}
-		if filepath.Ext(path) != assemblyDefinitionExtension {
-			return nil
-		}
-		name, readErr := readAssemblyDefinitionName(path)
-		if readErr != nil {
-			return readErr
-		}
-		// Why the first wins: Unity itself rejects duplicate assembly names, so a second one means a
-		// stale copy, and taking it would point the rebuild at the wrong directory.
-		if _, exists := index[name]; !exists {
-			index[name] = AssemblyDefinition{
-				Name:      name,
-				Path:      path,
-				Directory: filepath.Dir(path),
-				GUID:      readAssemblyDefinitionGUID(path),
-			}
-		}
-
-		return nil
-	})
+	return nil
 }
 
 // readUnityJSONFile reads one of Unity's JSON files into target.
@@ -155,7 +141,7 @@ func RebuildSources(
 ) ([]string, error) {
 	existing := make([]string, 0, len(rsp.Sources))
 	for _, source := range rsp.Sources {
-		if fileExists(sourcePath(projectRoot, source)) {
+		if owners.tree.fileExists(sourcePath(projectRoot, source)) {
 			existing = append(existing, source)
 		}
 	}
@@ -244,7 +230,40 @@ func rescueRecordedSources(
 }
 
 // globAssemblySources lists the .cs files an assembly owns, stopping at nested assembly boundaries.
+// It reads the listing the run took of the project, and the disk for a directory the listing does
+// not hold, which keeps the answer for a directory outside the index roots what it always was.
 func globAssemblySources(
+	projectRoot string, assemblyDirectory string, owners assemblyOwnerIndex,
+) ([]string, error) {
+	listing, listed := owners.tree.directory(assemblyDirectory)
+	if !listed {
+		return globAssemblySourcesOnDisk(projectRoot, assemblyDirectory, owners)
+	}
+
+	sources := []string{}
+	for _, entry := range listing.entries {
+		path := filepath.Join(assemblyDirectory, entry.name)
+		if !entry.isDirectory {
+			if filepath.Ext(entry.name) == cSharpSourceExtension {
+				sources = append(sources, recordSourcePath(projectRoot, path))
+			}
+			continue
+		}
+		if owners.startsAnotherAssembly(path) {
+			continue
+		}
+		nested, err := globAssemblySources(projectRoot, path, owners)
+		if err != nil {
+			return nil, err
+		}
+		sources = append(sources, nested...)
+	}
+
+	return sources, nil
+}
+
+// globAssemblySourcesOnDisk lists the .cs files an assembly owns by walking the disk.
+func globAssemblySourcesOnDisk(
 	projectRoot string, assemblyDirectory string, owners assemblyOwnerIndex,
 ) ([]string, error) {
 	sources := []string{}
@@ -279,7 +298,8 @@ func globAssemblySources(
 	return sources, nil
 }
 
-// directoryHoldsAssemblyDefinition reports whether a directory declares an assembly of its own.
+// directoryHoldsAssemblyDefinition reports whether a directory declares an assembly of its own, by
+// reading it from the disk.
 func directoryHoldsAssemblyDefinition(path string) bool {
 	entries, err := os.ReadDir(path)
 	if err != nil {

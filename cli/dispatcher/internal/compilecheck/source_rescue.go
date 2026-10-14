@@ -19,6 +19,7 @@ type directoryOwner struct {
 type assemblyOwnerIndex struct {
 	definitionDirectories map[string]bool
 	referencesByDirectory map[string]string
+	tree                  projectTree // the listing the run took, which the source globs read
 }
 
 // newAssemblyOwnerIndex maps every directory that starts an assembly to what it starts.
@@ -29,7 +30,7 @@ type assemblyOwnerIndex struct {
 // own editor assembly.
 func newAssemblyOwnerIndex(
 	assemblyDefinitions map[string]AssemblyDefinition, references []AssemblyReference,
-	context AssemblyContext,
+	context AssemblyContext, tree projectTree,
 ) assemblyOwnerIndex {
 	definitionDirectories := make(map[string]bool, len(assemblyDefinitions))
 	for _, definition := range assemblyDefinitions {
@@ -48,6 +49,7 @@ func newAssemblyOwnerIndex(
 	return assemblyOwnerIndex{
 		definitionDirectories: definitionDirectories,
 		referencesByDirectory: referencesByDirectory,
+		tree:                  tree,
 	}
 }
 
@@ -108,8 +110,8 @@ func (index assemblyOwnerIndex) startsAnotherAssembly(directory string) bool {
 		return true
 	}
 
-	// Why the .asmdef is still looked for on disk rather than in the index: the index keeps one
-	// directory per assembly name, so a stale duplicate .asmdef is absent from it while Unity still
+	// Why the .asmdef is looked for in the directory listing rather than in the index: the index keeps
+	// one directory per assembly name, so a stale duplicate .asmdef is absent from it while Unity still
 	// stops there.
-	return directoryHoldsAssemblyDefinition(current)
+	return index.tree.directoryHoldsAssemblyDefinition(current)
 }
