@@ -19,6 +19,8 @@ namespace UnityCliLoop.CompileCheckWorker
     /// </summary>
     internal static class ResponseFileCompilationLoader
     {
+        private static readonly IReadOnlyDictionary<string, byte[]> EmptySources = ImmutableDictionary<string, byte[]>.Empty;
+
         internal static CSharpCommandLineArguments ParseArguments(string projectRoot, string responseFilePath)
         {
             // The same arguments compile-check passes to csc, so options such as -nowarn,
@@ -39,7 +41,12 @@ namespace UnityCliLoop.CompileCheckWorker
             return CSharpSyntaxTree.ParseText(text, arguments.ParseOptions, path);
         }
 
-        internal static LoadResult Load(string projectRoot, string responseFilePath, string generatedDirectory)
+        /// <param name="preloadedSources">Bytes to use instead of reading the file, keyed by full path.</param>
+        internal static LoadResult Load(
+            string projectRoot,
+            string responseFilePath,
+            string generatedDirectory,
+            IReadOnlyDictionary<string, byte[]> preloadedSources)
         {
             CSharpCommandLineArguments arguments = ParseArguments(projectRoot, responseFilePath);
             string argumentError = FirstArgumentError(arguments);
@@ -55,8 +62,8 @@ namespace UnityCliLoop.CompileCheckWorker
             }
 
             string[] sourcePaths = arguments.SourceFiles.Select(source => source.Path).ToArray();
-            SyntaxTree[] sourceTrees = ParseFiles(sourcePaths, arguments);
-            SyntaxTree[] generatedTrees = ParseFiles(ListGeneratedFiles(generatedDirectory), arguments);
+            SyntaxTree[] sourceTrees = ParseFiles(sourcePaths, arguments, preloadedSources);
+            SyntaxTree[] generatedTrees = ParseFiles(ListGeneratedFiles(generatedDirectory), arguments, EmptySources);
             MetadataReference[] references = CreateReferences(projectRoot, arguments);
 
             AnalyzerAssemblyLoader loader = new AnalyzerAssemblyLoader();
@@ -86,13 +93,22 @@ namespace UnityCliLoop.CompileCheckWorker
             return LoadResult.Loaded(compilation, analyzers, additionalTexts, generatorCount, sourceTreesByPath, arguments);
         }
 
-        private static SyntaxTree[] ParseFiles(string[] paths, CSharpCommandLineArguments arguments)
+        private static SyntaxTree[] ParseFiles(
+            string[] paths,
+            CSharpCommandLineArguments arguments,
+            IReadOnlyDictionary<string, byte[]> preloadedSources)
         {
             // Keeps the order of the paths: the order of the trees decides the order csc binds them.
             SyntaxTree[] trees = new SyntaxTree[paths.Length];
             Parallel.For(0, paths.Length, index =>
             {
-                trees[index] = ParseSource(paths[index], File.ReadAllBytes(paths[index]), arguments);
+                byte[] bytes;
+                if (!preloadedSources.TryGetValue(Path.GetFullPath(paths[index]), out bytes))
+                {
+                    bytes = File.ReadAllBytes(paths[index]);
+                }
+
+                trees[index] = ParseSource(paths[index], bytes, arguments);
             });
             return trees;
         }

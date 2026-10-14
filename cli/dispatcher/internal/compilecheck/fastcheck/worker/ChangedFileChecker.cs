@@ -17,17 +17,23 @@ namespace UnityCliLoop.CompileCheckWorker
     /// </summary>
     internal static class ChangedFileChecker
     {
+        private const string AnalyzerExceptionDiagnosticId = "AD0001";
+
         internal static CheckResponse Check(CheckRequest request)
         {
             // The declaration check runs first: a changed declaration means a full compile anyway,
             // and finding that out costs one parse instead of loading every reference and source.
-            CheckResponse declarationChange = FindDeclarationChange(request);
+            Dictionary<string, byte[]> changedBytes = new Dictionary<string, byte[]>(StringComparer.Ordinal);
+            CheckResponse declarationChange = FindDeclarationChange(request, changedBytes);
             if (declarationChange != null)
             {
                 return declarationChange;
             }
 
-            LoadResult load = ResponseFileCompilationLoader.Load(request.ProjectRoot, request.ResponseFilePath, request.GeneratedDirectory);
+            // The changed files are compiled from the bytes their fingerprints were computed from, so
+            // an edit made after the fingerprint check cannot slip into the result unchecked.
+            LoadResult load = ResponseFileCompilationLoader.Load(
+                request.ProjectRoot, request.ResponseFilePath, request.GeneratedDirectory, changedBytes);
             if (load.UnsupportedReason != null)
             {
                 return CheckResponse.Unsupported(load.UnsupportedReason);
@@ -62,6 +68,14 @@ namespace UnityCliLoop.CompileCheckWorker
             }
 
             CultureInfo culture = load.Arguments.PreferredUILang ?? CultureInfo.CurrentUICulture;
+            // csc reports an analyzer that threw as AD0001 without a source location, which the
+            // per-file result would drop; a full compile reports it as csc does.
+            Diagnostic analyzerFailure = collected.FirstOrDefault(diagnostic => diagnostic.Id == AnalyzerExceptionDiagnosticId);
+            if (analyzerFailure != null)
+            {
+                return CheckResponse.Unsupported(FirstLine(analyzerFailure.GetMessage(culture)));
+            }
+
             return new CheckResponse
             {
                 Outcome = CheckResponse.CheckedOutcome,
@@ -71,7 +85,7 @@ namespace UnityCliLoop.CompileCheckWorker
             };
         }
 
-        private static CheckResponse FindDeclarationChange(CheckRequest request)
+        private static CheckResponse FindDeclarationChange(CheckRequest request, Dictionary<string, byte[]> changedBytes)
         {
             CSharpCommandLineArguments arguments = ResponseFileCompilationLoader.ParseArguments(request.ProjectRoot, request.ResponseFilePath);
             string argumentError = ResponseFileCompilationLoader.FirstArgumentError(arguments);
@@ -88,7 +102,9 @@ namespace UnityCliLoop.CompileCheckWorker
                     return CheckResponse.DeclarationChanged("no baseline fingerprint for " + changed);
                 }
 
-                SyntaxTree tree = ResponseFileCompilationLoader.ParseSource(changed, File.ReadAllBytes(changed), arguments);
+                byte[] bytes = File.ReadAllBytes(changed);
+                changedBytes[Path.GetFullPath(changed)] = bytes;
+                SyntaxTree tree = ResponseFileCompilationLoader.ParseSource(changed, bytes, arguments);
                 if (!string.Equals(DeclarationFingerprint.Compute(tree), baseline, StringComparison.Ordinal))
                 {
                     return CheckResponse.DeclarationChanged(changed);
@@ -121,6 +137,12 @@ namespace UnityCliLoop.CompileCheckWorker
                 .Concat(treeResult.GetAllDiagnostics())
                 .Concat(modelResult.GetAllDiagnostics())
                 .ToList();
+        }
+
+        private static string FirstLine(string text)
+        {
+            int lineEnd = text.IndexOfAny(new char[] { '\r', '\n' });
+            return lineEnd < 0 ? text : text.Substring(0, lineEnd);
         }
 
         private static List<WorkerDiagnostic> ToWorkerDiagnostics(IEnumerable<Diagnostic> diagnostics, CultureInfo culture)

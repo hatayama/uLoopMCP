@@ -192,24 +192,26 @@ namespace UnityCliLoop.CompileCheckWorker.UnitTests
         }
 
         /// <summary>
-        /// Verifies that the rules a per-file check cannot run are listed: CompilationEnd and SymbolEnd
-        /// analyzer rules and the unused-member compiler warnings, minus those turned off with -nowarn.
+        /// Verifies that the rules a per-file check cannot run are listed: the rules of analyzers with
+        /// CompilationEnd, SymbolEnd, SemanticModel, or Compilation actions and the unused-member compiler
+        /// warnings, minus those turned off with -nowarn.
         /// </summary>
         [Test]
         public void UncheckedCodesListCompilationEndAndUnusedFieldRules()
         {
             fixture.AddAnalyzer(TestAnalyzerSources.CompilationEndAnalyzerAssemblyName, TestAnalyzerSources.CompilationEndAnalyzer);
             fixture.AddAnalyzer(TestAnalyzerSources.SymbolEndAnalyzerAssemblyName, TestAnalyzerSources.SymbolEndAnalyzer);
+            fixture.AddAnalyzer(TestAnalyzerSources.WholeFileAnalyzersAssemblyName, TestAnalyzerSources.WholeFileAnalyzers);
             string probe = fixture.AddSource("Probe.cs", Probe("System.GC.KeepAlive(1);"));
 
             CheckResponse response = CheckWithCurrentBaseline(probe);
 
-            Assert.That(response.UncheckedCodes, Is.EqualTo(new[] { "CS0067", "CS0169", "CS0414", "CS0649", "TSA002", "TSA003" }));
+            Assert.That(response.UncheckedCodes, Is.EqualTo(new[] { "CS0067", "CS0169", "CS0414", "CS0649", "TSA002", "TSA003", "TSA004", "TSA005" }));
 
             fixture.AddArgument("-nowarn:CS0414");
             CheckResponse withNowarn = CheckWithCurrentBaseline(probe);
 
-            Assert.That(withNowarn.UncheckedCodes, Is.EqualTo(new[] { "CS0067", "CS0169", "CS0649", "TSA002", "TSA003" }));
+            Assert.That(withNowarn.UncheckedCodes, Is.EqualTo(new[] { "CS0067", "CS0169", "CS0649", "TSA002", "TSA003", "TSA004", "TSA005" }));
         }
 
         /// <summary>
@@ -259,6 +261,38 @@ namespace UnityCliLoop.CompileCheckWorker.UnitTests
             Assert.That(response.ContentHashes[probe], Is.EqualTo(expectedHash));
             SyntaxTree tree = Microsoft.CodeAnalysis.CSharp.CSharpSyntaxTree.ParseText("class Probe\n{\n    void M() { }\n}\n");
             Assert.That(response.Fingerprints[probe], Is.EqualTo(DeclarationFingerprint.Compute(tree)));
+        }
+
+        /// <summary>
+        /// Verifies that an analyzer throwing while a changed file is checked sends the assembly to a full
+        /// compile, naming the analyzer, instead of reporting a clean result.
+        /// </summary>
+        [Test]
+        public void AnalyzerExceptionReturnsUnsupported()
+        {
+            fixture.AddAnalyzer(TestAnalyzerSources.ThrowingAnalyzerAssemblyName, TestAnalyzerSources.ThrowingAnalyzer);
+            string probe = fixture.AddSource("Probe.cs", Probe("int boom = 1; System.GC.KeepAlive(boom);"));
+
+            CheckResponse response = CheckWithCurrentBaseline(probe);
+
+            Assert.That(response.Outcome, Is.EqualTo(CheckResponse.UnsupportedOutcome));
+            Assert.That(response.Reason, Does.Contain("ThrowingAnalyzer"));
+        }
+
+        /// <summary>
+        /// Verifies that the response says generators were not run again exactly when the assembly has one.
+        /// </summary>
+        [Test]
+        public void GeneratorsNotRerunFollowsTheAssemblyGenerators()
+        {
+            string probe = fixture.AddSource("Probe.cs", Probe("System.GC.KeepAlive(1);"));
+
+            CheckResponse withoutGenerator = CheckWithCurrentBaseline(probe);
+            fixture.AddAnalyzer(TestAnalyzerSources.GeneratorAssemblyName, TestAnalyzerSources.Generator);
+            CheckResponse withGenerator = CheckWithCurrentBaseline(probe);
+
+            Assert.That(withoutGenerator.GeneratorsNotRerun, Is.False);
+            Assert.That(withGenerator.GeneratorsNotRerun, Is.True);
         }
 
         private CheckResponse CheckWithCurrentBaseline(string changedFile)

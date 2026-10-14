@@ -116,7 +116,7 @@ namespace UnityCliLoop.CompileCheckWorker
                     property = property.WithExpressionBody(EmptyExpressionBody(node.ExpressionBody));
                 }
 
-                if (node.Initializer != null)
+                if (node.Initializer != null && !IsInPartialType(node))
                 {
                     property = property.WithInitializer(EmptyInitializer(node.Initializer));
                 }
@@ -138,7 +138,7 @@ namespace UnityCliLoop.CompileCheckWorker
             public override SyntaxNode VisitFieldDeclaration(FieldDeclarationSyntax node)
             {
                 // A constant's value is part of its declaration: other files can fold it.
-                if (node.Modifiers.Any(SyntaxKind.ConstKeyword))
+                if (node.Modifiers.Any(SyntaxKind.ConstKeyword) || IsInPartialType(node))
                 {
                     return node;
                 }
@@ -151,6 +151,16 @@ namespace UnityCliLoop.CompileCheckWorker
             public override SyntaxNode VisitEventFieldDeclaration(EventFieldDeclarationSyntax node)
             {
                 return node;
+            }
+
+            private static bool IsInPartialType(SyntaxNode member)
+            {
+                // The nullable analysis of a constructor reads every field and property initializer of
+                // its type, and reports at the constructor or the field. In a partial type those can be
+                // in other files, so there an initializer edit counts as a declaration edit.
+                return member.Ancestors()
+                    .OfType<TypeDeclarationSyntax>()
+                    .Any(type => type.Modifiers.Any(SyntaxKind.PartialKeyword));
             }
 
             private static SyntaxNode StripMethodBody(BaseMethodDeclarationSyntax original, SyntaxNode visited)

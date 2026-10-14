@@ -207,6 +207,20 @@ namespace UnityCliLoop.CompileCheckWorker.UnitTests
             AssertDifferent("enum E { A = 1 }", "enum E { A = 2 }");
         }
 
+        /// <summary>
+        /// Verifies that editing a field or property initializer of a partial type, or of a type nested in
+        /// one, changes the fingerprint, because the nullable analysis of a constructor in another file of
+        /// that type reads it.
+        /// </summary>
+        [TestCase("static partial class C { static int seed = 1; }", "static partial class C { static int seed = 2; }")]
+        [TestCase("partial class C { int guard = 1; }", "partial class C { int guard = Stop(); }")]
+        [TestCase("partial class C { int P { get; } = 1; }", "partial class C { int P { get; } = 2; }")]
+        [TestCase("partial class Outer { class C { int x = 1; } }", "partial class Outer { class C { int x = 2; } }")]
+        public void PartialTypeInitializerEditChangesFingerprint(string before, string after)
+        {
+            AssertDifferent(before, after);
+        }
+
         private static void AssertSame(string before, string after)
         {
             Assert.That(Fingerprint(after), Is.EqualTo(Fingerprint(before)));

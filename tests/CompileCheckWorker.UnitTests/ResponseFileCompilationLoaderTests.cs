@@ -1,5 +1,7 @@
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using NUnit.Framework;
@@ -41,7 +43,8 @@ namespace UnityCliLoop.CompileCheckWorker.UnitTests
             fixture.AddArgument("-additionalfile:\"" + settingsPath + "\"");
             fixture.WriteResponseFile();
 
-            LoadResult load = ResponseFileCompilationLoader.Load(fixture.Root, fixture.ResponseFilePath, generatedDirectory);
+            LoadResult load = ResponseFileCompilationLoader.Load(
+                fixture.Root, fixture.ResponseFilePath, generatedDirectory, new Dictionary<string, byte[]>());
 
             Assert.That(load.UnsupportedReason, Is.Null);
             CSharpCompilationOptions options = load.Compilation.Options;
@@ -52,6 +55,24 @@ namespace UnityCliLoop.CompileCheckWorker.UnitTests
             Assert.That(load.Compilation.SyntaxTrees.Count(), Is.EqualTo(3));
             Assert.That(load.SourceTreesByPath.Count, Is.EqualTo(2));
             Assert.That(load.AdditionalTexts.Select(text => text.Path), Is.EqualTo(new[] { settingsPath }));
+        }
+
+        /// <summary>
+        /// Verifies that a source given as preloaded bytes is parsed from those bytes, not read again from disk.
+        /// </summary>
+        [Test]
+        public void LoadParsesPreloadedBytesInsteadOfRereading()
+        {
+            string probe = fixture.AddSource("Probe.cs", "class OnDisk { }");
+            fixture.WriteResponseFile();
+            Dictionary<string, byte[]> preloaded = new Dictionary<string, byte[]>
+            {
+                { Path.GetFullPath(probe), Encoding.UTF8.GetBytes("class Preloaded { }") },
+            };
+
+            LoadResult load = ResponseFileCompilationLoader.Load(fixture.Root, fixture.ResponseFilePath, "", preloaded);
+
+            Assert.That(load.SourceTreesByPath[Path.GetFullPath(probe)].ToString(), Is.EqualTo("class Preloaded { }"));
         }
     }
 }

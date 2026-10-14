@@ -119,5 +119,95 @@ public sealed class WholeTypeAnalyzer : DiagnosticAnalyzer
     }
 }
 ";
+
+        // Throws on every local declaration that contains "boom".
+        public const string ThrowingAnalyzerAssemblyName = "CompileCheckTestThrowingAnalyzer";
+
+        public const string ThrowingAnalyzer = @"
+using System;
+using System.Collections.Immutable;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.Diagnostics;
+
+[DiagnosticAnalyzer(LanguageNames.CSharp)]
+public sealed class ThrowingAnalyzer : DiagnosticAnalyzer
+{
+    private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(""TSA006"", ""throws"", ""throws"", ""Test"", DiagnosticSeverity.Warning, true);
+
+    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
+
+    public override void Initialize(AnalysisContext context)
+    {
+        context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
+        context.EnableConcurrentExecution();
+        context.RegisterSyntaxNodeAction(nodeContext =>
+        {
+            if (nodeContext.Node.ToString().Contains(""boom""))
+            {
+                throw new InvalidOperationException(""boom"");
+            }
+        }, SyntaxKind.LocalDeclarationStatement);
+    }
+}
+";
+
+        // Registers a semantic model action and a compilation action, which a per-file analysis never runs.
+        public const string WholeFileAnalyzersAssemblyName = "CompileCheckTestWholeFileAnalyzers";
+
+        public const string WholeFileAnalyzers = @"
+using System.Collections.Immutable;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.Diagnostics;
+
+[DiagnosticAnalyzer(LanguageNames.CSharp)]
+public sealed class SemanticModelAnalyzer : DiagnosticAnalyzer
+{
+    private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(""TSA004"", ""model"", ""model"", ""Test"", DiagnosticSeverity.Warning, true);
+
+    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
+
+    public override void Initialize(AnalysisContext context)
+    {
+        context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
+        context.EnableConcurrentExecution();
+        context.RegisterSemanticModelAction(modelContext => { });
+    }
+}
+
+[DiagnosticAnalyzer(LanguageNames.CSharp)]
+public sealed class CompilationAnalyzer : DiagnosticAnalyzer
+{
+    private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(""TSA005"", ""compilation"", ""compilation"", ""Test"", DiagnosticSeverity.Warning, true);
+
+    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
+
+    public override void Initialize(AnalysisContext context)
+    {
+        context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
+        context.EnableConcurrentExecution();
+        context.RegisterCompilationAction(compilationContext => { });
+    }
+}
+";
+
+        // A source generator, which the check counts but never runs.
+        public const string GeneratorAssemblyName = "CompileCheckTestGenerator";
+
+        public const string Generator = @"
+using Microsoft.CodeAnalysis;
+
+[Generator]
+public sealed class EmptyGenerator : ISourceGenerator
+{
+    public void Initialize(GeneratorInitializationContext context)
+    {
+    }
+
+    public void Execute(GeneratorExecutionContext context)
+    {
+    }
+}
+";
     }
 }
