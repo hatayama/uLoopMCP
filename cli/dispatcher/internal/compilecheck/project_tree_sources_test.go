@@ -218,7 +218,8 @@ func TestGlobAssemblySourcesFallsBackToTheDiskOutsideTheListing(t *testing.T) {
 }
 
 // Verifies the disk glob, which answers for directories outside the listing, applies the same rules
-// as the listing: ignored names are left out and a nested .asmdef or .asmref ends the glob.
+// as the listing: ignored names are left out, a nested .asmdef or .asmref ends the glob, and a
+// directory merely named like an .asmdef does not.
 func TestGlobAssemblySourcesGivesTheSameSourcesFromTheDiskAndTheListing(t *testing.T) {
 	projectRoot := newAssemblyProject(t)
 	writeFileAt(t, filepath.Join(projectRoot, "Assets", "Foo", "._A.cs"), "")
@@ -226,6 +227,7 @@ func TestGlobAssemblySourcesGivesTheSameSourcesFromTheDiskAndTheListing(t *testi
 	writeFileAt(t, filepath.Join(projectRoot, "Assets", "Foo", "Ref", "Ref.asmref"), `{"reference":"Nested"}`)
 	writeFileAt(t, filepath.Join(projectRoot, "Assets", "Foo", "Ref", "R.cs"), "")
 	writeFileAt(t, filepath.Join(projectRoot, "Assets", "Foo", "Sub", "Deep", "E.cs"), "")
+	writeFileAt(t, filepath.Join(projectRoot, "Assets", "Foo", "Sub", "Fake.asmdef", "F.cs"), "")
 	fromListing := newOwnerIndexForProject(t, projectRoot)
 	fromDisk := fromListing
 	fromDisk.tree = projectTree{}
@@ -237,7 +239,7 @@ func TestGlobAssemblySourcesGivesTheSameSourcesFromTheDiskAndTheListing(t *testi
 	if listedErr != nil || walkedErr != nil {
 		t.Fatalf("errors: listing %v, disk %v", listedErr, walkedErr)
 	}
-	want := []string{"Assets/Foo/A.cs", "Assets/Foo/Sub/B.cs", "Assets/Foo/Sub/Deep/E.cs"}
+	want := []string{"Assets/Foo/A.cs", "Assets/Foo/Sub/B.cs", "Assets/Foo/Sub/Deep/E.cs", "Assets/Foo/Sub/Fake.asmdef/F.cs"}
 	if !reflect.DeepEqual(listed, want) || !reflect.DeepEqual(walked, want) {
 		t.Fatalf("listing %v, disk %v, want both %v", listed, walked, want)
 	}

@@ -53,6 +53,22 @@ func TestIndexAssemblyDefinitionsReportsAnEarlierRootsBrokenAsmdefFirst(t *testi
 	}
 }
 
+// Verifies that inside one root a broken .asmdef the walk meets before a directory it cannot read is
+// reported, not the unreadable directory.
+func TestIndexAssemblyDefinitionsReportsABrokenAsmdefMetBeforeAnUnreadableDirectory(t *testing.T) {
+	projectRoot := t.TempDir()
+	broken := filepath.Join(projectRoot, "Assets", "A", "Broken.asmdef")
+	writeFileAt(t, broken, "not json")
+	lockDirectory(t, filepath.Join(projectRoot, "Assets", "Z_Locked"))
+
+	_, err := IndexAssemblyDefinitions(walkProjectTree(projectRoot))
+
+	wantPrefix := "failed to index assembly definitions under " + filepath.Join(projectRoot, "Assets") + ": failed to read " + broken
+	if err == nil || !strings.HasPrefix(err.Error(), wantPrefix) {
+		t.Fatalf("err = %v, want it to start with %q", err, wantPrefix)
+	}
+}
+
 // Verifies a directory an earlier root cannot read is reported ahead of a broken .asmdef in a later
 // root, which indexing never reached.
 func TestIndexAssemblyDefinitionsReportsAnEarlierRootsWalkErrorFirst(t *testing.T) {

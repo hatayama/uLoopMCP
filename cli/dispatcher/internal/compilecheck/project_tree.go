@@ -109,11 +109,17 @@ func newProjectTreeDirectory() projectTreeDirectory {
 	return projectTreeDirectory{byName: map[string]projectTreeEntry{}}
 }
 
-// addProjectTreeEntry records one name in the listing of its parent, which the walk always lists
-// before any of its children.
+// addProjectTreeEntry records one name in the listing of its parent.
+// Why a missing parent listing is started here: the walk lists a parent before its children, but
+// the parent's key is derived by cleaning the child's path, which need not match the key the root
+// was stored under - a Windows share root is one such spelling - and writing to a listing that was
+// never started would panic.
 func addProjectTreeEntry(directories map[string]projectTreeDirectory, path string, entry fs.DirEntry) {
 	parentPath := filepath.Dir(filepath.Clean(path))
-	parent := directories[parentPath]
+	parent, started := directories[parentPath]
+	if !started {
+		parent = newProjectTreeDirectory()
+	}
 	listed := projectTreeEntry{
 		name:        entry.Name(),
 		isDirectory: entry.IsDir(),
