@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -171,5 +172,52 @@ func TestOnceWithContextSharesTheAnswerButNotACancellation(t *testing.T) {
 	}
 	if calls != 2 {
 		t.Errorf("expected two builds, got %d", calls)
+	}
+}
+
+// Verifies that the worker the run builds is built at most once, even when the build fails, and that
+// a failing worker call is an error.
+func TestBootstrappedWorkerBuildsAtMostOncePerRun(t *testing.T) {
+	root := t.TempDir()
+	starts := 0
+	run := func(_ context.Context, _ *exec.Cmd) (string, string, int, error) {
+		starts++
+		return "", "", 0, errors.New("fork/exec dotnet: resource temporarily unavailable")
+	}
+	worker := newBootstrappedWorker(
+		EditorCompilerPaths{DotnetHostPath: "/dotnet", CompilerDllPath: "/csc.dll", CompilerDirectory: root, SharedFrameworkPath: root},
+		filepath.Join(root, "cache"), root, run)
+
+	for range 2 {
+		if _, err := worker.Ensure(context.Background()); err == nil {
+			t.Fatal("expected the worker build to fail")
+		}
+	}
+	if starts != 1 {
+		t.Fatalf("expected one build attempt per run, got %d", starts)
+	}
+
+	paths := fastcheck.WorkerPaths{Key: "k", DllPath: "/worker.dll", DotnetHostPath: "/dotnet"}
+	if _, err := worker.Fingerprint(context.Background(), paths, fastcheck.FingerprintRequest{}); err == nil {
+		t.Error("expected a failing fingerprint call to be an error")
+	}
+	if _, err := worker.Check(context.Background(), paths, fastcheck.CheckRequest{}); err == nil {
+		t.Error("expected a failing check call to be an error")
+	}
+}
+
+// Verifies that a worker diagnostic in a file that is not a source of the assembly, such as saved
+// generator output, is spelled relative to the project root.
+func TestMergeDiagnosticsSpellsOtherFilesRelativeToTheProjectRoot(t *testing.T) {
+	projectRoot := t.TempDir()
+	unit := CompileUnit{Sources: []string{"Assets/A.cs"}}
+	fresh := []fastcheck.WorkerDiagnostic{{
+		File: filepath.Join(projectRoot, "Library", "Gen", "G.cs"), Line: 1, Column: 1, Severity: severityWarning, Code: "CS0168",
+	}}
+
+	merged := mergeDiagnostics(projectRoot, unit, nil, fresh, []string{"Assets/A.cs"})
+
+	if len(merged) != 1 || merged[0].File != "Library/Gen/G.cs" {
+		t.Errorf("expected the generated file relative to the project root, got %+v", merged)
 	}
 }
