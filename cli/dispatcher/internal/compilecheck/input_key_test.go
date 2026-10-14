@@ -353,7 +353,7 @@ func TestComputeInputKeyRefusesAKeyWhenTheResponseFileIsGone(t *testing.T) {
 }
 
 // nonSourceKey computes the non-source key of the unit under test.
-func (project *inputKeyProject) nonSourceKey(t *testing.T) string {
+func (project *inputKeyProject) nonSourceKey(t *testing.T) nonSourceIdentity {
 	t.Helper()
 	key, err := computeNonSourceKey(project.root, project.paths, project.plan, project.plan.Units[0])
 	if err != nil {
@@ -370,7 +370,7 @@ func TestNonSourceKeyIgnoresSourceContent(t *testing.T) {
 
 	writeProjectFile(t, project.root, filepath.Join("Assets", "Alpha", "Alpha.cs"), "class Alpha { void M() {} }")
 
-	if edited := project.nonSourceKey(t); edited != original {
+	if edited := project.nonSourceKey(t); edited.Key != original.Key {
 		t.Error("editing a source should leave the non-source key alone")
 	}
 }
@@ -384,31 +384,74 @@ func TestNonSourceKeyChangesWhenSourceAddedOrRemoved(t *testing.T) {
 	writeProjectFile(t, project.root, added, "class Added {}")
 
 	project.plan.Units[0].Sources = append(project.plan.Units[0].Sources, added)
-	if withAdded := project.nonSourceKey(t); withAdded == original {
+	if withAdded := project.nonSourceKey(t); withAdded.Key == original.Key {
 		t.Error("adding a source should move the non-source key")
 	}
 
 	project.plan.Units[0].Sources = []string{added}
-	if withRemoved := project.nonSourceKey(t); withRemoved == original {
+	if withRemoved := project.nonSourceKey(t); withRemoved.Key == original.Key {
 		t.Error("removing a source should move the non-source key")
 	}
 }
 
-// Verifies the non-source key follows the inputs other than source contents: a reference and the
-// response file.
+// Verifies the non-source key follows the inputs other than source contents, a reference and the
+// response file, and names which kind of input moved.
 func TestNonSourceKeyChangesWithReferenceAndRsp(t *testing.T) {
 	project := newInputKeyProject(t)
 	original := project.nonSourceKey(t)
 
 	touchProjectFile(t, project.root, filepath.Join(planDagDirectory, "Gamma"+referenceAssemblyExtension))
 	touched := project.nonSourceKey(t)
-	if touched == original {
+	if touched.Key == original.Key {
 		t.Error("a rebuilt reference should move the non-source key")
+	}
+	if kinds := changedInputKinds(touched, original); !reflect.DeepEqual(kinds, []string{"references"}) {
+		t.Errorf("changed kinds = %v, want [references]", kinds)
 	}
 
 	writeProjectFile(t, project.root, filepath.Join(planDagDirectory, "Alpha.rsp"), "-out:\"Alpha.dll\"\n-define:EXTRA\n")
-	if edited := project.nonSourceKey(t); edited == touched {
+	edited := project.nonSourceKey(t)
+	if edited.Key == touched.Key {
 		t.Error("a changed response file should move the non-source key")
+	}
+	if kinds := changedInputKinds(edited, touched); !reflect.DeepEqual(kinds, []string{"response file"}) {
+		t.Errorf("changed kinds = %v, want [response file]", kinds)
+	}
+}
+
+// Verifies the input key still digests every input into one stream in the order it always did, so
+// manifests written before the non-source key was split into parts stay reusable.
+func TestInputKeyDigestsEveryPartInOneStream(t *testing.T) {
+	project := newInputKeyProject(t)
+	unit := project.plan.Units[0]
+	result, err := computeInputKey(project.root, project.paths, project.plan, unit)
+	if err != nil {
+		t.Fatalf("expected a key, got error: %v", err)
+	}
+
+	digest := sha256.New()
+	if err := writeCompilerIdentity(digest, project.paths); err != nil {
+		t.Fatalf("compiler: %v", err)
+	}
+	if err := writeResponseFileIdentity(digest, unit.Assembly); err != nil {
+		t.Fatalf("response file: %v", err)
+	}
+	if err := writeSourceIdentity(digest, project.root, unit.Sources, map[string]string{}); err != nil {
+		t.Fatalf("sources: %v", err)
+	}
+	if err := writeReferenceIdentity(digest, project.root, project.plan, unit.Assembly.References); err != nil {
+		t.Fatalf("references: %v", err)
+	}
+	if err := writeAnalyzerIdentity(digest, project.root, unit.Assembly.Analyzers); err != nil {
+		t.Fatalf("analyzers: %v", err)
+	}
+	if err := writeAnalyzerInputIdentity(digest, project.root, unit.Assembly); err != nil {
+		t.Fatalf("analyzer inputs: %v", err)
+	}
+	writeOutputIdentity(digest, unit.Assembly)
+
+	if want := hex.EncodeToString(digest.Sum(nil)); result.Key != want {
+		t.Errorf("input key = %s, want %s", result.Key, want)
 	}
 }
 

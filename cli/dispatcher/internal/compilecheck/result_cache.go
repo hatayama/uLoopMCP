@@ -91,17 +91,17 @@ func (c Compiler) reuseOrCompile(
 	return result, nil
 }
 
-// nonSourceKeyBeforeCompile reads a unit's non-source key for the changed-files check, or "" when
-// there is no check or no key.
+// nonSourceKeyBeforeCompile reads a unit's non-source key for the changed-files check, or an empty
+// one when there is no check or no key.
 // Why it is read before anything runs: a baseline must describe the inputs the compile saw, and
 // reading it after the compile would let a change made during it in unchecked.
-func (c Compiler) nonSourceKeyBeforeCompile(plan BuildPlan, unit CompileUnit, key string) string {
+func (c Compiler) nonSourceKeyBeforeCompile(plan BuildPlan, unit CompileUnit, key string) nonSourceIdentity {
 	if c.FastPath == nil || key == "" {
-		return ""
+		return nonSourceIdentity{}
 	}
 	nonSourceKey, err := computeNonSourceKey(c.ProjectRoot, c.Paths, plan, unit)
 	if err != nil {
-		return ""
+		return nonSourceIdentity{}
 	}
 
 	return nonSourceKey

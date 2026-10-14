@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	baselineRecordFormatVersion = 2
+	baselineRecordFormatVersion = 3
 	baselineRecordExtension     = ".fastcheck.json"
 	generatedDirectoryExtension = ".generated"
 	fastCheckResponseFileSuffix = ".fastcheck.rsp"
@@ -77,9 +77,10 @@ func (runner *fastPathRunner) shouldRecord(unit CompileUnit, result UnitResult) 
 
 // Try checks only the changed files of a unit when the last full compile left a usable baseline,
 // and otherwise says why the unit has to be compiled in full.
-// nonSourceKey is the unit's non-source key computed before anything ran, or "" when it could not be.
+// nonSourceKey is the unit's non-source key computed before anything ran, empty when it could not be.
 func (runner *fastPathRunner) Try(
-	ctx context.Context, c Compiler, plan BuildPlan, unit CompileUnit, keyResult inputKeyResult, nonSourceKey string,
+	ctx context.Context, c Compiler, plan BuildPlan, unit CompileUnit, keyResult inputKeyResult,
+	nonSourceKey nonSourceIdentity,
 ) fastPathAttempt {
 	outputDirectoryPath := filepath.Join(c.ProjectRoot, plan.OutputDir)
 	record, manifest, reason := loadBaseline(outputDirectoryPath, unit)
@@ -87,8 +88,12 @@ func (runner *fastPathRunner) Try(
 		return fallBack(reason)
 	}
 
-	if nonSourceKey == "" || nonSourceKey != record.NonSourceKey {
-		return fallBack("inputs other than source contents changed")
+	if nonSourceKey.Key == "" {
+		return fallBack("inputs other than source contents could not be read")
+	}
+	if nonSourceKey.Key != record.NonSourceKey.Key {
+		return fallBack("inputs other than source contents changed: " +
+			strings.Join(changedInputKinds(nonSourceKey, record.NonSourceKey), ", "))
 	}
 
 	if !generatedFilesMatch(projectPath(c.ProjectRoot, record.GeneratedDirectory), record.GeneratedFiles) {
@@ -104,7 +109,7 @@ func (runner *fastPathRunner) Try(
 	}
 
 	if len(changed) > fastPathMaximumChangedFiles {
-		return fallBack("too many changed files")
+		return fallBack(fmt.Sprintf("too many changed files (%d, limit %d)", len(changed), fastPathMaximumChangedFiles))
 	}
 
 	return runner.check(ctx, c, plan, unit, record, manifest, changed)
@@ -197,15 +202,14 @@ func buildCheckRequest(
 // loadBaseline reads the baseline of a unit and the manifest of the full compile it describes, or
 // says why there is none to use.
 func loadBaseline(outputDirectoryPath string, unit CompileUnit) (baselineRecord, unitResultManifest, string) {
-	const noBaseline = "no baseline from an earlier full compile"
 	content, err := os.ReadFile(baselineRecordPath(outputDirectoryPath, unit))
 	if err != nil {
-		return baselineRecord{}, unitResultManifest{}, noBaseline
+		return baselineRecord{}, unitResultManifest{}, missingBaselineReason(outputDirectoryPath, unit)
 	}
 
 	var record baselineRecord
 	if err := json.Unmarshal(content, &record); err != nil || record.FormatVersion != baselineRecordFormatVersion {
-		return baselineRecord{}, unitResultManifest{}, noBaseline
+		return baselineRecord{}, unitResultManifest{}, "no baseline: it was recorded by another version of compile-check"
 	}
 
 	// In the normal flow the record and the manifest are written together under one key, and a full
@@ -224,6 +228,29 @@ func loadBaseline(outputDirectoryPath string, unit CompileUnit) (baselineRecord,
 	}
 
 	return record, manifest, ""
+}
+
+// missingBaselineReason says why a unit has no baseline, from the manifest of its last full compile.
+// Why the reasons are told apart: a full compile with errors drops the baseline an earlier compile
+// left, and a reason that read as "never compiled" sent users looking for a compile that had run.
+// Why a missing manifest says nothing about what happened: a run that skips or blocks the unit
+// removes the manifest and the baseline alike, so nothing on disk tells that apart from no compile.
+func missingBaselineReason(outputDirectoryPath string, unit CompileUnit) string {
+	const notOnRecord = "no baseline: no full compile of this assembly is on record"
+	content, err := os.ReadFile(manifestPath(outputDirectoryPath, unit))
+	if err != nil {
+		return notOnRecord
+	}
+
+	var manifest unitResultManifest
+	if err := json.Unmarshal(content, &manifest); err != nil {
+		return notOnRecord
+	}
+	if !manifest.Succeeded {
+		return "no baseline: the last full compile had errors"
+	}
+
+	return "no baseline: the last full compile did not record one"
 }
 
 // changedSources lists the sources whose content differs from the baseline, using the hashes the

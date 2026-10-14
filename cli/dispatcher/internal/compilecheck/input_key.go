@@ -56,39 +56,105 @@ func computeInputKey(
 	return inputKeyResult{Key: key, SourceHashes: sourceHashes}, nil
 }
 
+// nonSourceIdentity is the non-source key of a unit together with a digest of each kind of input it
+// covers, so a fallback can say which kind changed.
+type nonSourceIdentity struct {
+	Key string
+	// Parts maps each kind of input, named as a fallback reason names it, to its digest.
+	Parts map[string]string
+}
+
+// keyPart is one kind of input of a unit and how it goes into a digest.
+type keyPart struct {
+	name  string
+	write func(hash.Hash) error
+}
+
 // computeNonSourceKey digests the same inputs as the input key except the source contents, which it
 // replaces with the list of source paths. Two runs agreeing on it differ at most in what the
 // sources hold; adding or removing a source changes it.
 func computeNonSourceKey(
 	projectRoot string, paths EditorCompilerPaths, plan BuildPlan, unit CompileUnit,
-) (string, error) {
-	return computeKeyWith(projectRoot, paths, plan, unit, func(digest hash.Hash) error {
+) (nonSourceIdentity, error) {
+	parts := keyParts(projectRoot, paths, plan, unit, func(digest hash.Hash) error {
 		writeSourceNames(digest, unit.Sources)
 
 		return nil
 	})
+	identity := nonSourceIdentity{Parts: make(map[string]string, len(parts))}
+	digest := sha256.New()
+	for _, part := range parts {
+		partDigest := sha256.New()
+		if err := part.write(partDigest); err != nil {
+			return nonSourceIdentity{}, err
+		}
+		partKey := hex.EncodeToString(partDigest.Sum(nil))
+		identity.Parts[part.name] = partKey
+		_, _ = fmt.Fprintf(digest, "%s\x00%s\n", part.name, partKey)
+	}
+	identity.Key = hex.EncodeToString(digest.Sum(nil))
+
+	return identity, nil
 }
 
-// computeKeyWith digests every input of one unit, letting the caller decide how the sources go in.
+// changedInputKinds names, in a fixed order, the kinds of input whose digest differs between two
+// non-source identities of the same unit.
+func changedInputKinds(current nonSourceIdentity, recorded nonSourceIdentity) []string {
+	kinds := []string{}
+	for _, name := range keyPartNames {
+		if current.Parts[name] != recorded.Parts[name] {
+			kinds = append(kinds, name)
+		}
+	}
+
+	return kinds
+}
+
+// keyPartNames lists the kinds of input in the order keyParts digests them.
+var keyPartNames = []string{
+	"compiler", "response file", "source list", "references", "analyzers", "analyzer inputs", "output name",
+}
+
+// keyParts lists every kind of input of one unit, letting the caller decide how the sources go in.
+func keyParts(
+	projectRoot string, paths EditorCompilerPaths, plan BuildPlan, unit CompileUnit,
+	sourceWriter func(hash.Hash) error,
+) []keyPart {
+	return []keyPart{
+		{keyPartNames[0], func(digest hash.Hash) error { return writeCompilerIdentity(digest, paths) }},
+		{keyPartNames[1], func(digest hash.Hash) error { return writeResponseFileIdentity(digest, unit.Assembly) }},
+		{keyPartNames[2], sourceWriter},
+		{keyPartNames[3], func(digest hash.Hash) error {
+			return writeReferenceIdentity(digest, projectRoot, plan, unit.Assembly.References)
+		}},
+		{keyPartNames[4], func(digest hash.Hash) error {
+			return writeAnalyzerIdentity(digest, projectRoot, unit.Assembly.Analyzers)
+		}},
+		{keyPartNames[5], func(digest hash.Hash) error {
+			return writeAnalyzerInputIdentity(digest, projectRoot, unit.Assembly)
+		}},
+		{keyPartNames[6], func(digest hash.Hash) error {
+			writeOutputIdentity(digest, unit.Assembly)
+
+			return nil
+		}},
+	}
+}
+
+// computeKeyWith digests every input of one unit into one digest, letting the caller decide how the
+// sources go in.
+// Why one digest rather than the parts: the input key names manifests that earlier runs wrote, and
+// keeping its bytes as they were keeps those manifests reusable.
 func computeKeyWith(
 	projectRoot string, paths EditorCompilerPaths, plan BuildPlan, unit CompileUnit,
 	sourceWriter func(hash.Hash) error,
 ) (string, error) {
 	digest := sha256.New()
-	writers := []func() error{
-		func() error { return writeCompilerIdentity(digest, paths) },
-		func() error { return writeResponseFileIdentity(digest, unit.Assembly) },
-		func() error { return sourceWriter(digest) },
-		func() error { return writeReferenceIdentity(digest, projectRoot, plan, unit.Assembly.References) },
-		func() error { return writeAnalyzerIdentity(digest, projectRoot, unit.Assembly.Analyzers) },
-		func() error { return writeAnalyzerInputIdentity(digest, projectRoot, unit.Assembly) },
-	}
-	for _, write := range writers {
-		if err := write(); err != nil {
+	for _, part := range keyParts(projectRoot, paths, plan, unit, sourceWriter) {
+		if err := part.write(digest); err != nil {
 			return "", err
 		}
 	}
-	writeOutputIdentity(digest, unit.Assembly)
 
 	return hex.EncodeToString(digest.Sum(nil)), nil
 }

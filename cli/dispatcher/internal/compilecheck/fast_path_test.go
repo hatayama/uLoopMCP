@@ -3,6 +3,7 @@ package compilecheck
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -93,7 +94,7 @@ func TestMissingBaselineFallsBackAndRecords(t *testing.T) {
 
 	outcome := project.run(t, recorder, false)
 
-	assertFallback(t, outcome, recorder, "no baseline from an earlier full compile")
+	assertFallback(t, outcome, recorder, "no baseline: no full compile of this assembly is on record")
 	record := project.readBaseline(t)
 	if record.WorkerKey != "worker-a" || len(record.Files) != fastPathMinimumSources {
 		t.Errorf("expected a baseline of every source from worker-a, got key %s with %d files", record.WorkerKey, len(record.Files))
@@ -147,7 +148,7 @@ func TestFailedFullCompileLeavesNoBaseline(t *testing.T) {
 	recorder := newCachedSchedulerRecorder("Alpha", "Beta")
 	outcome := project.run(t, recorder, false)
 
-	assertFallback(t, outcome, recorder, "no baseline from an earlier full compile")
+	assertFallback(t, outcome, recorder, "no baseline: the last full compile had errors")
 }
 
 // Verifies that a change to an input other than source contents, such as a new source, compiles in full.
@@ -161,7 +162,7 @@ func TestNonSourceKeyMismatchFallsBack(t *testing.T) {
 
 	outcome := project.run(t, recorder, false)
 
-	assertFallback(t, outcome, recorder, "inputs other than source contents changed")
+	assertFallback(t, outcome, recorder, "inputs other than source contents changed: source list")
 }
 
 // Verifies that an assembly with fewer sources than the minimum is never tried, so it compiles in
@@ -192,7 +193,7 @@ func TestNonSourceInputChangedDuringCompileLeavesNoBaseline(t *testing.T) {
 
 	outcome := project.run(t, recorder, false)
 
-	if note := resultOf(t, outcome.Units, "Alpha").FastPathNote; note != "baseline not recorded: inputs other than source contents changed during the compile" {
+	if note := resultOf(t, outcome.Units, "Alpha").FastPathNote; note != "baseline not recorded: inputs other than source contents changed during the compile: compiler" {
 		t.Errorf("unexpected note %q", note)
 	}
 	if project.hasBaseline() {
@@ -201,7 +202,7 @@ func TestNonSourceInputChangedDuringCompileLeavesNoBaseline(t *testing.T) {
 
 	project.editBody(t, 0, "edited")
 	second := newCachedSchedulerRecorder("Alpha", "Beta")
-	assertFallback(t, project.run(t, second, false), second, "no baseline from an earlier full compile")
+	assertFallback(t, project.run(t, second, false), second, "no baseline: the last full compile did not record one")
 }
 
 // Verifies that a baseline whose saved generator output was deleted or changed is not used, since
@@ -252,7 +253,7 @@ func TestTooManyChangedFilesFallsBack(t *testing.T) {
 
 	outcome := project.run(t, recorder, false)
 
-	assertFallback(t, outcome, recorder, "too many changed files")
+	assertFallback(t, outcome, recorder, "too many changed files (31, limit 30)")
 }
 
 // Verifies that a declaration change compiles in full and records a baseline with the new fingerprint.
@@ -484,4 +485,59 @@ func TestFallbackReasonHasNoAbsolutePath(t *testing.T) {
 		t.Errorf("expected no absolute path in the reason, got %q", reason)
 	}
 	assertFallback(t, outcome, recorder, "Unsupported: changed file is not a source: "+project.sourceName(0)+" near Library")
+}
+
+// Verifies that an assembly whose baseline was removed because a reference failed and blocked it
+// falls back without claiming it was never compiled in full, since nothing on disk tells the two apart.
+func TestBaselineRemovedByBlockedRunIsNotCalledNeverCompiled(t *testing.T) {
+	project := &fastPathProject{
+		cachedSchedulerProject: newCachedSchedulerProject(t, map[string][]string{"Beta": {"Alpha"}}, "Alpha", "Beta"),
+		worker:                 newFakeFastCheckWorker(),
+	}
+	sources := make([]string, 0, fastPathMinimumSources)
+	for index := 0; index < fastPathMinimumSources; index++ {
+		source := fmt.Sprintf("Assets/Beta/File%03d.cs", index)
+		project.writeFile(t, source, fmt.Sprintf("class File%03d %s body", index, fakeDeclarationSeparator))
+		sources = append(sources, source)
+	}
+	project.plan.Units[1].Sources = sources
+	project.run(t, newCachedSchedulerRecorder("Alpha", "Beta"), false)
+	if _, err := os.Stat(filepath.Join(project.outputDirectory(), "Beta"+baselineRecordExtension)); err != nil {
+		t.Fatalf("expected the first run to record Beta's baseline: %v", err)
+	}
+
+	project.editSource(t, "Alpha", "class Alpha { broken }")
+	failing := newCachedSchedulerRecorder("Alpha", "Beta")
+	failing.output["Alpha"] = failingCompilerOutput("Alpha")
+	assertStrings(t, "blocked", project.run(t, failing, false).Blocked, []string{"Beta"})
+
+	project.editSource(t, "Alpha", "class Alpha { }")
+	project.writeFile(t, sources[0], fmt.Sprintf("class File000 %s edited", fakeDeclarationSeparator))
+	recorder := newCachedSchedulerRecorder("Alpha", "Beta")
+	outcome := project.run(t, recorder, false)
+
+	if reason := resultOf(t, outcome.Units, "Beta").FastPathFallbackReason; reason != "no baseline: no full compile of this assembly is on record" {
+		t.Errorf("Beta fallback reason = %q", reason)
+	}
+}
+
+// Verifies that a unit whose non-source key could not be read before the run falls back with a
+// reason of its own rather than listing every kind of input as changed.
+func TestUnreadableNonSourceKeyFallsBack(t *testing.T) {
+	project := newFastPathProject(t, fastPathMinimumSources)
+	project.recordBaseline(t)
+	project.editBody(t, 0, "edited")
+	makeOutputDirectory(t, project.root, project.plan)
+	unit := project.plan.Units[0]
+	keyResult, err := computeInputKey(project.root, project.paths, project.plan, unit)
+	if err != nil {
+		t.Fatalf("expected a key, got error: %v", err)
+	}
+	compiler := Compiler{Paths: project.paths, ProjectRoot: project.root}
+
+	attempt := project.runner(false).Try(context.Background(), compiler, project.plan, unit, keyResult, nonSourceIdentity{})
+
+	if attempt.Used || attempt.Reason != "inputs other than source contents could not be read" {
+		t.Errorf("expected the unreadable-inputs fallback, got %+v", attempt)
+	}
 }

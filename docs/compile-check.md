@@ -148,12 +148,21 @@ are left as they were.
 
 Otherwise the assembly is compiled in full as before, and `FastPathFallbacks` says why:
 
-- `no baseline from an earlier full compile`
+- `no baseline: no full compile of this assembly is on record` (none ran yet, or a later run
+  skipped or blocked the assembly, which removes its result and baseline)
+- `no baseline: the last full compile had errors` (a full compile that fails drops the baseline an
+  earlier one left)
+- `no baseline: the last full compile did not record one` (`FastPathBaselineNotes` of that run
+  says why, or the assembly was compiled only because a reference changed)
+- `no baseline: it was recorded by another version of compile-check`
 - `baseline compile is no longer on disk`
-- `inputs other than source contents changed`
+- `inputs other than source contents could not be read`
+- `inputs other than source contents changed: <kinds>`, naming which of `compiler`,
+  `response file`, `source list`, `references`, `analyzers`, `analyzer inputs`, and `output name`
+  changed
 - `generator output of the baseline is gone`
 - `baseline record does not match its compile result`
-- `too many changed files`
+- `too many changed files (<count>, limit 30)`
 - `worker unavailable: ...` (the worker could not be built; a build that failed is not retried
   until the worker sources or the toolchain change)
 - `baseline was fingerprinted by another worker build`
@@ -166,11 +175,28 @@ A full compile that succeeds records a new baseline, `--full` runs included, so 
 use the check again. A source or another input edited while csc was compiling leaves no baseline,
 and `FastPathBaselineNotes` says why a successful full compile left none.
 
+So the first body edit is compiled in full more often than it looks:
+
+- Right after a Unity build, compile-check finds nothing to compile and records nothing. The first
+  body edit after that is compiled in full and records the baseline; the edits after it are checked.
+- A run with `--all` records baselines too, but it rebuilds the assemblies the next ordinary run
+  takes from Unity's build instead, so references to them are read differently. In an assembly
+  that references another assembly of the project, the first body edit after `--all` falls back
+  with `inputs other than source contents changed: references`; an assembly that references none
+  is checked as usual.
+- A run that skips an assembly because nothing it compiles from changed, or blocks it because an
+  assembly it references has errors, removes its result and baseline, so its next body edit is
+  compiled in full.
+- `--full` while the assembly still has errors drops its baseline, so the run after the fix is
+  compiled in full. Running `--full` once the errors are fixed keeps it.
+
 What the check does not guarantee, so run `--full` before finishing:
 
 - CS0067, CS0169, CS0414, and CS0649, which the compiler reports only after it has seen the whole
   assembly, and the rules of analyzers that use Compilation, CompilationEnd, SemanticModel, or
-  SymbolStart actions. `FastChecks[].UncheckedCodes` lists the IDs it could not run.
+  SymbolStart actions. `FastChecks[].UncheckedCodes` lists the IDs it could not run, leaving out
+  the ones the response file already turns off (with `-nowarn` or a ruleset) and analyzer rules
+  that are disabled, so an assembly may list fewer than these four.
 - Errors the compiler reports only while emitting, such as CS8178 and CS0656.
 - Source generators. The check reads the generator output saved by the last full compile and does
   not run them again; `FastChecks[].GeneratorsNotRerun` says so.
