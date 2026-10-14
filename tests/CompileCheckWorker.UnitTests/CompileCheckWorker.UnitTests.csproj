@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- Unity 2022.3 and 6000.3 run the worker on .NET 6, so a newer BCL API must fail this build. -->
+    <TargetFramework>net6.0</TargetFramework>
+    <RollForward>Major</RollForward>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <IsPackable>false</IsPackable>
+    <!-- Roslyn 4.3.1, the oldest compiler that builds the worker on a user's machine, defaults to C# 10. -->
+    <LangVersion>10.0</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="NUnit" Version="3.14.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+    <!-- The oldest Roslyn the worker runs on, so an API added later fails this build. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.3.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="../../cli/dispatcher/internal/compilecheck/fastcheck/worker/*.cs" LinkBase="Production" />
+    <!-- The worker's Main would collide with the test host's entry point. -->
+    <Compile Remove="../../cli/dispatcher/internal/compilecheck/fastcheck/worker/Program.cs" />
+  </ItemGroup>
+</Project>

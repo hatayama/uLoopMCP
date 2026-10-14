@@ -62,7 +62,7 @@ jobs:
           echo "$CHANGED"
 
           # Plugin import settings decide which precompiled assemblies a script assembly references.
-          if echo "$CHANGED" | grep -qE '^(Packages/src/Editor/.*\.cs|Packages/src/Runtime/.*\.cs|Assets/.*\.cs|tests/.*\.cs|tests/.*\.csproj|Packages/.*\.asmdef|Assets/.*\.asmdef|Packages/src/.*\.dll\.meta|Packages/manifest\.json|Packages/packages-lock\.json|ci/unity-projects/.*|\.github/workflows/unity-compile-check-and-test-runner\.yml)$'; then
+          if echo "$CHANGED" | grep -qE '^(Packages/src/Editor/.*\.cs|cli/dispatcher/internal/compilecheck/fastcheck/worker/.*\.cs|Packages/src/Runtime/.*\.cs|Assets/.*\.cs|tests/.*\.cs|tests/.*\.csproj|Packages/.*\.asmdef|Assets/.*\.asmdef|Packages/src/.*\.dll\.meta|Packages/manifest\.json|Packages/packages-lock\.json|ci/unity-projects/.*|\.github/workflows/unity-compile-check-and-test-runner\.yml)$'; then
             echo "csharp=true" >> "$GITHUB_OUTPUT"
           else
             echo "csharp=false" >> "$GITHUB_OUTPUT"
@@ -85,6 +85,7 @@ jobs:
           dotnet test tests/SharedRoslynCompilerWorker.UnitTests/SharedRoslynCompilerWorker.UnitTests.csproj --configuration Release
           dotnet test tests/OutputFileRetention.UnitTests/OutputFileRetention.UnitTests.csproj --configuration Release
           dotnet test tests/RunTestsExecutionTimeout.UnitTests/RunTestsExecutionTimeout.UnitTests.csproj --configuration Release
+          dotnet test tests/CompileCheckWorker.UnitTests/CompileCheckWorker.UnitTests.csproj --configuration Release
 
       - name: Cache Library folder
         if: env.HAS_UNITY_LICENSE == 'true'
