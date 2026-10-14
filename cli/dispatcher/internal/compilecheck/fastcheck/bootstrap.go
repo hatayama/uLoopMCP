@@ -3,7 +3,7 @@ package fastcheck
 import (
 	"context"
 	"crypto/sha256"
-	"debug/pe"
+	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -36,6 +36,23 @@ const (
 	cacheDirectoryPermissions      = 0o755
 	cacheFilePermissions           = 0o644
 	temporaryDirectoryInfix        = ".tmp-"
+	staleDirectoryInfix            = ".stale-"
+
+	// workerBuildRecipeVersion names how this file builds the worker: which shared framework files
+	// it references, the csc arguments, and the runtime config and sidecar it writes. Raise it
+	// whenever any of those changes, so a failure recorded by an older recipe is not returned for
+	// a build the new recipe would get right.
+	workerBuildRecipeVersion = 2
+
+	peSignatureOffsetPosition  = 0x3c
+	peSignatureSize            = 4
+	coffHeaderSize             = 20
+	sizeOfOptionalHeaderOffset = 16
+	pe32Magic                  = 0x10b
+	pe32PlusMagic              = 0x20b
+	pe32RvaCountOffset         = 92
+	pe32PlusRvaCountOffset     = 108
+	dataDirectoryEntrySize     = 8
 )
 
 // CommandRunner runs one process, so tests can stand in for dotnet. It has the same shape as the
@@ -69,7 +86,7 @@ type Bootstrap struct {
 // that failed once is not retried for the same sources and toolchain: it returns the recorded
 // failure instead, so an environment the worker cannot build in pays the build only once.
 func (b *Bootstrap) Ensure(ctx context.Context) (WorkerPaths, error) {
-	key := b.computeKey()
+	key := b.computeKey(workerBuildRecipeVersion)
 	cacheDirectory := filepath.Join(b.CacheRoot, workerCacheDirectoryName)
 	workerDirectory := filepath.Join(cacheDirectory, key)
 	paths := WorkerPaths{
@@ -102,15 +119,41 @@ func (b *Bootstrap) Ensure(ctx context.Context) (WorkerPaths, error) {
 		return WorkerPaths{}, err
 	}
 
-	if err := os.Rename(temporaryDirectory, workerDirectory); err != nil {
-		if isCompleteWorker(workerDirectory) {
-			return paths, nil
-		}
-
-		return WorkerPaths{}, fmt.Errorf("failed to move the built worker into the cache: %w", err)
+	if err := placeWorker(temporaryDirectory, workerDirectory, key); err != nil {
+		return WorkerPaths{}, err
 	}
 
 	return paths, nil
+}
+
+// placeWorker moves a built worker into its final directory. When that directory already holds a
+// complete worker, another run finished first and its worker is used.
+// Why a directory that is neither a worker nor a failure record is set aside and replaced: a rename
+// onto an existing directory always fails, so leaving it would make every later run build the
+// worker and then fail to move it, with nothing that ever clears it. That happens when someone
+// deletes only the failure record to retry, or a run died while writing one.
+func placeWorker(temporaryDirectory string, workerDirectory string, key string) error {
+	renameErr := os.Rename(temporaryDirectory, workerDirectory)
+	if renameErr == nil || isCompleteWorker(workerDirectory) {
+		return nil
+	}
+
+	if _, err := os.Stat(filepath.Join(workerDirectory, buildFailedFileName)); err == nil {
+		return fmt.Errorf("failed to move the built worker into the cache: %w", renameErr)
+	}
+
+	// The temporary directory's random suffix makes the set-aside name unique to this run.
+	suffix := strings.TrimPrefix(filepath.Base(temporaryDirectory), key+temporaryDirectoryInfix)
+	staleDirectory := workerDirectory + staleDirectoryInfix + suffix
+	if err := os.Rename(workerDirectory, staleDirectory); err == nil {
+		_ = os.RemoveAll(staleDirectory)
+	}
+
+	if err := os.Rename(temporaryDirectory, workerDirectory); err != nil && !isCompleteWorker(workerDirectory) {
+		return fmt.Errorf("failed to move the built worker into the cache: %w", err)
+	}
+
+	return nil
 }
 
 // build compiles the worker into temporaryDirectory, recording a failed compile in workerDirectory.
@@ -155,6 +198,12 @@ func (b *Bootstrap) build(ctx context.Context, temporaryDirectory string, worker
 		return fmt.Errorf("failed to start the changed-files check worker build: %w: %s", runErr, strings.TrimSpace(stderr))
 	}
 
+	// Why a compiler killed by a signal is not recorded either: the out-of-memory killer or a user
+	// stopping dotnet ends one build, and says nothing about the next.
+	if runErr != nil && !exitedOnItsOwn(runErr) {
+		return fmt.Errorf("the changed-files check worker build was killed: %w", runErr)
+	}
+
 	if runErr != nil || exitCode != 0 {
 		return recordBuildFailure(workerDirectory, stdout+stderr, runErr)
 	}
@@ -162,10 +211,12 @@ func (b *Bootstrap) build(ctx context.Context, temporaryDirectory string, worker
 	return finishWorkerDirectory(temporaryDirectory, b.CompilerPaths.CompilerDirectory)
 }
 
-// computeKey hashes the embedded sources and the toolchain paths: a change to either is a new worker.
-func (b *Bootstrap) computeKey() string {
+// computeKey hashes the build recipe version, the embedded sources, and the toolchain paths: a
+// change to any of them is a new worker.
+func (b *Bootstrap) computeKey(recipeVersion int) string {
 	sources := readWorkerSources()
 	hash := sha256.New()
+	_, _ = fmt.Fprintf(hash, "recipe\x00%d\n", recipeVersion)
 	for _, source := range sources {
 		_, _ = fmt.Fprintf(hash, "source\x00%s\x00%d\x00", source.name, len(source.content))
 		_, _ = hash.Write(source.content)
@@ -250,25 +301,74 @@ func managedAssembliesIn(sharedFrameworkPath string) ([]string, error) {
 	return managed, nil
 }
 
-// isManagedAssembly reports whether the PE file has a CLR runtime header.
+// isManagedAssembly reports whether the PE file has a CLR runtime header. A file too short or
+// malformed to hold one is not managed.
+// Why the headers are read here instead of with debug/pe: debug/pe refuses machine types it does not
+// list, and the ReadyToRun images of the macOS and Linux shared frameworks XOR the machine with an
+// OS mask (ARM64 on macOS reads 0xEC20). Leaving those out drops System.Private.CoreLib from the
+// references, and every worker build fails. The machine says nothing about managed code, so it is
+// not read.
 func isManagedAssembly(filePath string) bool {
-	file, err := pe.Open(filePath)
+	file, err := os.Open(filePath)
 	if err != nil {
 		return false
 	}
 	defer func() { _ = file.Close() }()
 
-	if header, is64 := file.OptionalHeader.(*pe.OptionalHeader64); is64 {
-		return hasRuntimeHeader(header.NumberOfRvaAndSizes, header.DataDirectory)
+	optionalHeader, ok := readOptionalHeader(file)
+	if !ok {
+		return false
 	}
 
-	header, is32 := file.OptionalHeader.(*pe.OptionalHeader32)
-	return is32 && hasRuntimeHeader(header.NumberOfRvaAndSizes, header.DataDirectory)
+	return hasRuntimeHeader(optionalHeader)
 }
 
-func hasRuntimeHeader(directoryCount uint32, directories [16]pe.DataDirectory) bool {
-	return directoryCount > clrRuntimeHeaderDirectoryIndex &&
-		directories[clrRuntimeHeaderDirectoryIndex].VirtualAddress != 0
+// readOptionalHeader reads the PE optional header, following the DOS header to the PE signature.
+func readOptionalHeader(file *os.File) ([]byte, bool) {
+	signatureOffsetBytes := make([]byte, 4)
+	if _, err := file.ReadAt(signatureOffsetBytes, peSignatureOffsetPosition); err != nil {
+		return nil, false
+	}
+
+	signatureOffset := int64(binary.LittleEndian.Uint32(signatureOffsetBytes))
+	headers := make([]byte, peSignatureSize+coffHeaderSize)
+	if _, err := file.ReadAt(headers, signatureOffset); err != nil || string(headers[:peSignatureSize]) != "PE\x00\x00" {
+		return nil, false
+	}
+
+	optionalHeaderSize := binary.LittleEndian.Uint16(headers[peSignatureSize+sizeOfOptionalHeaderOffset:])
+	optionalHeader := make([]byte, optionalHeaderSize)
+	if _, err := file.ReadAt(optionalHeader, signatureOffset+int64(len(headers))); err != nil {
+		return nil, false
+	}
+
+	return optionalHeader, true
+}
+
+// hasRuntimeHeader reports whether an optional header has a non-empty CLR runtime header directory.
+func hasRuntimeHeader(optionalHeader []byte) bool {
+	if len(optionalHeader) < 2 {
+		return false
+	}
+
+	rvaCountOffset := 0
+	switch binary.LittleEndian.Uint16(optionalHeader) {
+	case pe32Magic:
+		rvaCountOffset = pe32RvaCountOffset
+	case pe32PlusMagic:
+		rvaCountOffset = pe32PlusRvaCountOffset
+	default:
+		return false
+	}
+
+	// The data directories follow the count, one entry of address and size each.
+	entryOffset := rvaCountOffset + 4 + clrRuntimeHeaderDirectoryIndex*dataDirectoryEntrySize
+	if len(optionalHeader) < entryOffset+dataDirectoryEntrySize {
+		return false
+	}
+
+	directoryCount := binary.LittleEndian.Uint32(optionalHeader[rvaCountOffset:])
+	return directoryCount > clrRuntimeHeaderDirectoryIndex && binary.LittleEndian.Uint32(optionalHeader[entryOffset:]) != 0
 }
 
 func workerResponseFile(outputPath string, references []string, sourcePaths []string) string {
@@ -361,6 +461,13 @@ func truncate(text string, limit int) string {
 func isExitError(err error) bool {
 	var exitError *exec.ExitError
 	return errors.As(err, &exitError)
+}
+
+// exitedOnItsOwn reports whether a process that ran returned an exit code itself, as opposed to
+// being ended by a signal.
+func exitedOnItsOwn(err error) bool {
+	var exitError *exec.ExitError
+	return errors.As(err, &exitError) && exitError.ProcessState != nil && exitError.Exited()
 }
 
 // errWorkerNotBuilt is returned by callers that need a worker but were given none.

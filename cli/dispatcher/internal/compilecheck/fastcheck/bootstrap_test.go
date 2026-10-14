@@ -35,7 +35,7 @@ func (f *fakeCompiler) run(_ context.Context, cmd *exec.Cmd) (string, string, in
 
 	f.responseFiles = append(f.responseFiles, string(content))
 	if f.exitCode != 0 {
-		return f.output, "", f.exitCode, &exec.ExitError{}
+		return f.output, "", f.exitCode, exitErrorWithCode(f.exitCode)
 	}
 
 	for _, line := range strings.Split(string(content), "\n") {
@@ -77,9 +77,15 @@ func writeTestFile(t *testing.T, filePath string, content []byte) {
 	}
 }
 
-// peImage builds a PE32+ image with headers only. clrHeaderAddress is the CLR runtime header
+// peImage builds an AMD64 PE32+ image with headers only. clrHeaderAddress is the CLR runtime header
 // directory entry: non-zero for a managed assembly, zero for a native image.
 func peImage(t *testing.T, clrHeaderAddress uint32) []byte {
+	t.Helper()
+	return peImageForMachine(t, pe.IMAGE_FILE_MACHINE_AMD64, clrHeaderAddress)
+}
+
+// peImageForMachine builds a PE32+ image with headers only for the given COFF machine value.
+func peImageForMachine(t *testing.T, machine uint16, clrHeaderAddress uint32) []byte {
 	t.Helper()
 	const peHeaderOffset = 0x40
 	buffer := bytes.Buffer{}
@@ -92,7 +98,7 @@ func peImage(t *testing.T, clrHeaderAddress uint32) []byte {
 	optionalHeader := pe.OptionalHeader64{Magic: 0x20b, NumberOfRvaAndSizes: 16}
 	optionalHeader.DataDirectory[clrRuntimeHeaderDirectoryIndex] = pe.DataDirectory{VirtualAddress: clrHeaderAddress, Size: 72}
 	fileHeader := pe.FileHeader{
-		Machine:              pe.IMAGE_FILE_MACHINE_AMD64,
+		Machine:              machine,
 		SizeOfOptionalHeader: uint16(binary.Size(optionalHeader)),
 		Characteristics:      pe.IMAGE_FILE_DLL,
 	}
@@ -221,7 +227,12 @@ func TestEnsureSkipsNativeImagesInSharedFramework(t *testing.T) {
 	toolchain := newTestToolchain(t, root, "editor")
 	writeTestFile(t, filepath.Join(toolchain.SharedFrameworkPath, "System.Runtime.dll"), peImage(t, 0x2008))
 	writeTestFile(t, filepath.Join(toolchain.SharedFrameworkPath, "System.Private.Uri.dll"), peImage32(t))
+	// ReadyToRun images of the macOS shared framework XOR the machine with an OS mask: ARM64 reads
+	// 0xEC20 and AMD64 reads 0xC020.
+	writeTestFile(t, filepath.Join(toolchain.SharedFrameworkPath, "System.Private.CoreLib.dll"), peImageForMachine(t, 0xEC20, 0x2008))
+	writeTestFile(t, filepath.Join(toolchain.SharedFrameworkPath, "System.Collections.Immutable.dll"), peImageForMachine(t, 0xC020, 0x2008))
 	writeTestFile(t, filepath.Join(toolchain.SharedFrameworkPath, "NativeHelper.dll"), peImage(t, 0))
+	writeTestFile(t, filepath.Join(toolchain.SharedFrameworkPath, "NativeMasked.dll"), peImageForMachine(t, 0xEC20, 0))
 	writeTestFile(t, filepath.Join(toolchain.SharedFrameworkPath, "NotAnImage.dll"), []byte("text"))
 	bootstrap := Bootstrap{CompilerPaths: toolchain, CacheRoot: filepath.Join(root, "cache"), Run: compiler.run}
 
@@ -230,13 +241,15 @@ func TestEnsureSkipsNativeImagesInSharedFramework(t *testing.T) {
 	}
 
 	responseFile := compiler.responseFiles[0]
-	for _, managed := range []string{"System.Runtime.dll", "System.Private.Uri.dll"} {
+	for _, managed := range []string{
+		"System.Runtime.dll", "System.Private.Uri.dll", "System.Private.CoreLib.dll", "System.Collections.Immutable.dll",
+	} {
 		if !strings.Contains(responseFile, managed) {
 			t.Fatalf("expected the managed assembly %s as a reference, got:\n%s", managed, responseFile)
 		}
 	}
 
-	for _, rejected := range []string{"NativeHelper.dll", "NotAnImage.dll"} {
+	for _, rejected := range []string{"NativeHelper.dll", "NativeMasked.dll", "NotAnImage.dll"} {
 		if strings.Contains(responseFile, rejected) {
 			t.Fatalf("expected %s to be left out, got:\n%s", rejected, responseFile)
 		}
@@ -308,7 +321,7 @@ func TestEnsureUsesWorkerAnotherRunFinishedFirst(t *testing.T) {
 	root := t.TempDir()
 	compiler := &fakeCompiler{}
 	bootstrap := Bootstrap{CompilerPaths: newTestToolchain(t, root, "editor"), CacheRoot: filepath.Join(root, "cache"), Run: nil}
-	finalDirectory := filepath.Join(bootstrap.CacheRoot, workerCacheDirectoryName, bootstrap.computeKey())
+	finalDirectory := filepath.Join(bootstrap.CacheRoot, workerCacheDirectoryName, bootstrap.computeKey(workerBuildRecipeVersion))
 	bootstrap.Run = func(ctx context.Context, cmd *exec.Cmd) (string, string, int, error) {
 		// The other run renames its directory into place while this one is still compiling.
 		if err := os.MkdirAll(finalDirectory, cacheDirectoryPermissions); err != nil {
@@ -390,20 +403,104 @@ func TestRecordBuildFailureFallsBackToRunErrorAndTruncates(t *testing.T) {
 	}
 }
 
-// Verifies that a cache directory holding something other than a worker under the key is an error,
-// not a worker.
-func TestEnsureRejectsIncompleteWorkerDirectory(t *testing.T) {
+// Verifies that a leftover worker directory that is neither a worker nor a failure record is
+// replaced by the built worker, and that the next Ensure reuses it without building.
+func TestEnsureReplacesIncompleteWorkerDirectory(t *testing.T) {
 	root := t.TempDir()
 	compiler := &fakeCompiler{}
 	bootstrap := Bootstrap{CompilerPaths: newTestToolchain(t, root, "editor"), CacheRoot: filepath.Join(root, "cache"), Run: compiler.run}
-	finalDirectory := filepath.Join(bootstrap.CacheRoot, workerCacheDirectoryName, bootstrap.computeKey())
+	finalDirectory := filepath.Join(bootstrap.CacheRoot, workerCacheDirectoryName, bootstrap.computeKey(workerBuildRecipeVersion))
 	if err := os.MkdirAll(finalDirectory, cacheDirectoryPermissions); err != nil {
 		t.Fatalf("failed to create the worker directory: %v", err)
 	}
 
 	writeTestFile(t, filepath.Join(finalDirectory, "leftover.txt"), []byte("leftover"))
-	if _, err := bootstrap.Ensure(context.Background()); err == nil {
-		t.Fatal("expected an error when the worker cannot be moved into place")
+	worker, err := bootstrap.Ensure(context.Background())
+	if err != nil {
+		t.Fatalf("expected the incomplete directory to be replaced, got error: %v", err)
+	}
+
+	if !isCompleteWorker(filepath.Dir(worker.DllPath)) {
+		t.Fatalf("expected a complete worker at %s", worker.DllPath)
+	}
+
+	if _, err := os.Stat(filepath.Join(finalDirectory, "leftover.txt")); !os.IsNotExist(err) {
+		t.Fatalf("expected the leftover file to be gone, got %v", err)
+	}
+
+	entries, err := os.ReadDir(filepath.Join(bootstrap.CacheRoot, workerCacheDirectoryName))
+	if err != nil || len(entries) != 1 {
+		t.Fatalf("expected only the worker directory in the cache, got %v (%v)", entries, err)
+	}
+
+	if _, err := bootstrap.Ensure(context.Background()); err != nil || compiler.calls != 1 {
+		t.Fatalf("expected the replaced worker to be reused, got %v after %d builds", err, compiler.calls)
+	}
+}
+
+// Verifies that a worker directory holding a failure record is not replaced by a build that
+// finished later: the record is the answer for this key.
+func TestEnsureKeepsFailureRecordAgainstLaterBuild(t *testing.T) {
+	root := t.TempDir()
+	compiler := &fakeCompiler{}
+	bootstrap := Bootstrap{CompilerPaths: newTestToolchain(t, root, "editor"), CacheRoot: filepath.Join(root, "cache"), Run: nil}
+	finalDirectory := filepath.Join(bootstrap.CacheRoot, workerCacheDirectoryName, bootstrap.computeKey(workerBuildRecipeVersion))
+	bootstrap.Run = func(ctx context.Context, cmd *exec.Cmd) (string, string, int, error) {
+		// Another run records a failure while this build is running.
+		_ = recordBuildFailure(finalDirectory, "error CS0001", nil)
+		return compiler.run(ctx, cmd)
+	}
+
+	if _, err := bootstrap.Ensure(context.Background()); err == nil || !strings.Contains(err.Error(), "failed to move") {
+		t.Fatalf("expected the move to fail against the failure record, got %v", err)
+	}
+
+	if _, err := os.Stat(filepath.Join(finalDirectory, buildFailedFileName)); err != nil {
+		t.Fatalf("expected the failure record to stay, got %v", err)
+	}
+}
+
+// Verifies that the worker key changes with the build recipe version, so a failure recorded by an
+// older recipe is not returned to a newer one.
+func TestEnsureKeyChangesWithBuildRecipeVersion(t *testing.T) {
+	root := t.TempDir()
+	bootstrap := Bootstrap{CompilerPaths: newTestToolchain(t, root, "editor"), CacheRoot: filepath.Join(root, "cache")}
+
+	if bootstrap.computeKey(1) == bootstrap.computeKey(2) {
+		t.Fatal("expected different keys for different build recipe versions")
+	}
+}
+
+// Verifies that a compiler killed by a signal records no failure, so the next run builds again.
+func TestEnsureDoesNotRecordSignaledBuild(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("a killed process on Windows reports an exit code, not a signal")
+	}
+
+	root := t.TempDir()
+	killed := 0
+	bootstrap := Bootstrap{
+		CompilerPaths: newTestToolchain(t, root, "editor"),
+		CacheRoot:     filepath.Join(root, "cache"),
+		Run: func(_ context.Context, _ *exec.Cmd) (string, string, int, error) {
+			killed++
+			return "", "", -1, signaledExitError()
+		},
+	}
+
+	_, err := bootstrap.Ensure(context.Background())
+	if err == nil || !strings.Contains(err.Error(), "was killed") {
+		t.Fatalf("expected a killed build error, got %v", err)
+	}
+
+	compiler := &fakeCompiler{}
+	bootstrap.Run = compiler.run
+	if _, err := bootstrap.Ensure(context.Background()); err != nil {
+		t.Fatalf("expected the next Ensure to build, got error: %v", err)
+	}
+
+	if killed != 1 || compiler.calls != 1 {
+		t.Fatalf("expected one killed and one completed build, got %d and %d", killed, compiler.calls)
 	}
 }
 
@@ -481,5 +578,43 @@ func TestEnsureDoesNotRecordStartFailure(t *testing.T) {
 
 	if starts != 1 || compiler.calls != 1 {
 		t.Fatalf("expected one failed start and one build, got %d and %d", starts, compiler.calls)
+	}
+}
+
+// Verifies that the CoreLib of every shared framework bundled with an installed Unity Editor is
+// taken for a managed assembly. Skipped where no Editor is installed.
+func TestIsManagedAssemblyAcceptsInstalledSharedFrameworkCoreLib(t *testing.T) {
+	coreLibs, err := filepath.Glob(filepath.Join(
+		"/Applications/Unity/Hub/Editor", "*", "Unity.app", "Contents", "Resources", "Scripting",
+		"NetCoreRuntime", "shared", "Microsoft.NETCore.App", "*", "System.Private.CoreLib.dll"))
+	if err != nil || len(coreLibs) == 0 {
+		t.Skip("no Unity Editor with a bundled shared framework is installed here")
+	}
+
+	for _, coreLib := range coreLibs {
+		if !isManagedAssembly(coreLib) {
+			t.Errorf("expected %s to be a managed assembly", coreLib)
+		}
+	}
+}
+
+// Verifies that files too short or malformed to hold a CLR runtime header are not taken for managed
+// assemblies: a truncated DOS header, a missing PE signature, and an unknown optional header magic.
+func TestIsManagedAssemblyRejectsMalformedImages(t *testing.T) {
+	const optionalHeaderOffset = 0x40 + 4 + 20
+	noSignature := peImage(t, 0x2008)
+	copy(noSignature[0x40:], "XX\x00\x00")
+	unknownMagic := peImage(t, 0x2008)
+	binary.LittleEndian.PutUint16(unknownMagic[optionalHeaderOffset:], 0x107)
+	for name, image := range map[string][]byte{
+		"Truncated.dll":    []byte("MZ"),
+		"NoSignature.dll":  noSignature,
+		"UnknownMagic.dll": unknownMagic,
+	} {
+		imagePath := filepath.Join(t.TempDir(), name)
+		writeTestFile(t, imagePath, image)
+		if isManagedAssembly(imagePath) {
+			t.Errorf("expected %s to be rejected", name)
+		}
 	}
 }
