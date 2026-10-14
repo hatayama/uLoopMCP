@@ -128,14 +128,15 @@ guarantees are recorded in `docs/adr/0015-compile-check-checks-only-changed-file
 
 The check is used when all of these hold:
 
-- The run is not `--all` or `--full`, the assembly has an input key, and it was picked because its
-  own sources changed, not only because an assembly it references changed.
+- The run is not `--all` or `--full`, the assembly has an input key and at least 300 sources, and
+  it was picked because its own sources changed, not only because an assembly it references
+  changed. Smaller assemblies are always compiled in full and are not listed as fallbacks.
 - The last full compile of the assembly by compile-check succeeded and left a baseline, and its
-  outputs and result are still on disk as it wrote them.
+  outputs, result, and saved generator output are still on disk as it wrote them.
 - Every input other than the source contents is the same as at that compile: the compiler, the
   response files, the references, the analyzers and the files they read, the output names, and the
   list of source paths.
-- The assembly has at least 300 sources, and 1 to 30 of them changed.
+- 1 to 30 of its sources changed.
 - Every changed file keeps its declarations: only method bodies, accessor bodies, expression
   bodies, non-constant initializers outside partial types, comments, or whitespace changed.
 
@@ -150,7 +151,7 @@ Otherwise the assembly is compiled in full as before, and `FastPathFallbacks` sa
 - `no baseline from an earlier full compile`
 - `baseline compile is no longer on disk`
 - `inputs other than source contents changed`
-- `assembly is small enough to compile in full`
+- `generator output of the baseline is gone`
 - `baseline record does not match its compile result`
 - `too many changed files`
 - `worker unavailable: ...` (the worker could not be built; a build that failed is not retried
@@ -162,7 +163,8 @@ Otherwise the assembly is compiled in full as before, and `FastPathFallbacks` sa
   not support)
 
 A full compile that succeeds records a new baseline, `--full` runs included, so the run after it can
-use the check again. A source edited while csc was compiling it leaves no baseline.
+use the check again. A source or another input edited while csc was compiling leaves no baseline,
+and `FastPathBaselineNotes` says why a successful full compile left none.
 
 What the check does not guarantee, so run `--full` before finishing:
 
@@ -174,9 +176,9 @@ What the check does not guarantee, so run `--full` before finishing:
   not run them again; `FastChecks[].GeneratorsNotRerun` says so.
 
 The check keeps its state next to the compile outputs: `<Assembly>.fastcheck.json` (the baseline),
-`<Assembly>.generated/` (the saved generator output), and the worker build in
-`Library/uloop/compile-check/fastcheck-worker/<key>/`. Deleting any of them only costs a full
-compile.
+`<Assembly>.generated/` (the saved generator output, whose files the baseline records by content
+hash), and the worker build in `Library/uloop/compile-check/fastcheck-worker/<key>/`. Deleting or
+changing any of them only costs a full compile.
 
 ## One run per project at a time
 
@@ -201,7 +203,7 @@ CPUs and never less than one, and `--jobs 1` compiles them one after another.
 The command prints a JSON payload with `Success`, `ErrorCount`, `WarningCount`, `Errors`,
 `Warnings` (each diagnostic carrying `Message`, `Code`, `File`, `Line`, `Column`, `Assembly`),
 `CompiledAssemblies`, `ReusedAssemblies`, `BlockedAssemblies`, `FastCheckedAssemblies`,
-`FastChecks`, `FastPathFallbacks`, `SkippedAssemblies`,
+`FastChecks`, `FastPathFallbacks`, `FastPathBaselineNotes`, `SkippedAssemblies`,
 `ResponseFileSet`, `ProjectRoot` and
 a one-line `Message`. `CompiledAssemblies` names the assemblies this run handed to the compiler and
 `ReusedAssemblies` the ones it reported on without compiling; the diagnostics of both are in
@@ -212,7 +214,9 @@ and the ones left out because every assembly they reference kept the same public
 `FastCheckedAssemblies` names the assemblies checked on their changed files only, which are in
 neither `CompiledAssemblies` nor `ReusedAssemblies`; `FastChecks` gives each one's `ChangedFiles`,
 `UncheckedCodes`, and `GeneratorsNotRerun`, and `FastPathFallbacks` gives the `Assembly` and
-`Reason` of each assembly the check was tried on and compiled in full. The process exits 1 when
+`Reason` of each assembly the check was tried on and compiled in full. `FastPathBaselineNotes`
+gives the `Assembly` and `Reason` of each successful full compile that left no baseline. The
+process exits 1 when
 `ErrorCount` is greater than zero.
 
 ## Limitations

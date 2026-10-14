@@ -68,10 +68,13 @@ type compileCheckResponse struct {
 	FastChecks []compileCheckFastCheck `json:"FastChecks"`
 	// FastPathFallbacks says why each assembly the changed-files check was tried on compiled in full.
 	FastPathFallbacks []compileCheckFastPathFallback `json:"FastPathFallbacks"`
-	SkippedAssemblies int                            `json:"SkippedAssemblies"`
-	ResponseFileSet   string                         `json:"ResponseFileSet"`
-	ProjectRoot       string                         `json:"ProjectRoot"`
-	Message           string                         `json:"Message"`
+	// FastPathBaselineNotes says why a successful full compile left no baseline for the next run's
+	// changed-files check, so the next fallback for lack of one is not a mystery.
+	FastPathBaselineNotes []compileCheckFastPathFallback `json:"FastPathBaselineNotes"`
+	SkippedAssemblies     int                            `json:"SkippedAssemblies"`
+	ResponseFileSet       string                         `json:"ResponseFileSet"`
+	ProjectRoot           string                         `json:"ProjectRoot"`
+	Message               string                         `json:"Message"`
 }
 
 // compileCheckFastCheck describes one assembly checked on its changed files only.
@@ -216,6 +219,7 @@ func buildCompileCheckResponse(result compilecheck.Result, projectRoot string) c
 		FastCheckedAssemblies: make([]string, 0),
 		FastChecks:            make([]compileCheckFastCheck, 0),
 		FastPathFallbacks:     make([]compileCheckFastPathFallback, 0),
+		FastPathBaselineNotes: make([]compileCheckFastPathFallback, 0),
 		SkippedAssemblies:     result.Skipped,
 		ResponseFileSet:       filepath.Base(result.DagDir),
 		ProjectRoot:           projectRoot,
@@ -272,6 +276,11 @@ func addCompileCheckUnitKind(response *compileCheckResponse, unit compilecheck.U
 	if unit.FastPathFallbackReason != "" {
 		response.FastPathFallbacks = append(response.FastPathFallbacks, compileCheckFastPathFallback{
 			Assembly: unit.Assembly, Reason: unit.FastPathFallbackReason,
+		})
+	}
+	if unit.FastPathNote != "" {
+		response.FastPathBaselineNotes = append(response.FastPathBaselineNotes, compileCheckFastPathFallback{
+			Assembly: unit.Assembly, Reason: unit.FastPathNote,
 		})
 	}
 }

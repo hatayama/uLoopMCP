@@ -81,6 +81,7 @@ A JSON payload:
 - `FastCheckedAssemblies`: the assemblies checked on their changed files only
 - `FastChecks`: per fast-checked assembly, `ChangedFiles`, `UncheckedCodes` (rules only `--full` runs), and `GeneratorsNotRerun`
 - `FastPathFallbacks`: `Assembly` and `Reason` for each assembly that was compiled in full instead
+- `FastPathBaselineNotes`: `Assembly` and `Reason` for each successful full compile that left no baseline for the next changed-files check
 - `SkippedAssemblies`: how many assemblies were left out: nothing they compile from changed, or every assembly they reference kept the same public surface
 - `ResponseFileSet`: the Bee build the run replayed
 - `ProjectRoot`: resolved project root

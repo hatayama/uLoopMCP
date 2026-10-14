@@ -39,7 +39,10 @@ func fastCheckedResult() compilecheck.Result {
 	return compilecheck.Result{
 		DagDir: "Library/Bee/artifacts/1234.dag",
 		Units: []compilecheck.UnitResult{
-			{Assembly: "Compiled", Succeeded: true, FastPathFallbackReason: "too many changed files"},
+			{
+				Assembly: "Compiled", Succeeded: true, FastPathFallbackReason: "too many changed files",
+				FastPathNote: "baseline not recorded: source changed during the compile: Assets/A.cs",
+			},
 			{Assembly: "Reused", Succeeded: true, Reused: true},
 			{
 				Assembly: "Fast", Succeeded: true, FastChecked: true,
@@ -111,5 +114,18 @@ func assertCompileCheckNames(t *testing.T, label string, got []string, want []st
 	t.Helper()
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("%s = %v, want %v", label, got, want)
+	}
+}
+
+// Verifies that a baseline that was not recorded is reported with its reason, so the next run's
+// fallback for lack of a baseline can be traced back.
+func TestResponseListsBaselineNotes(t *testing.T) {
+	response := buildCompileCheckResponse(fastCheckedResult(), "/projects/sample")
+
+	want := []compileCheckFastPathFallback{{
+		Assembly: "Compiled", Reason: "baseline not recorded: source changed during the compile: Assets/A.cs",
+	}}
+	if !reflect.DeepEqual(response.FastPathBaselineNotes, want) {
+		t.Errorf("baseline notes = %+v, want %+v", response.FastPathBaselineNotes, want)
 	}
 }
