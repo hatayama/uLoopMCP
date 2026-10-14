@@ -148,13 +148,15 @@ are left as they were.
 
 Otherwise the assembly is compiled in full as before, and `FastPathFallbacks` says why:
 
-- `no baseline: compile-check has not finished a full compile of this assembly`
+- `no baseline: no full compile of this assembly is on record` (none ran yet, or a later run
+  skipped or blocked the assembly, which removes its result and baseline)
 - `no baseline: the last full compile had errors` (a full compile that fails drops the baseline an
   earlier one left)
 - `no baseline: the last full compile did not record one` (`FastPathBaselineNotes` of that run
   says why, or the assembly was compiled only because a reference changed)
 - `no baseline: it was recorded by another version of compile-check`
 - `baseline compile is no longer on disk`
+- `inputs other than source contents could not be read`
 - `inputs other than source contents changed: <kinds>`, naming which of `compiler`,
   `response file`, `source list`, `references`, `analyzers`, `analyzer inputs`, and `output name`
   changed
@@ -178,8 +180,13 @@ So the first body edit is compiled in full more often than it looks:
 - Right after a Unity build, compile-check finds nothing to compile and records nothing. The first
   body edit after that is compiled in full and records the baseline; the edits after it are checked.
 - A run with `--all` records baselines too, but it rebuilds the assemblies the next ordinary run
-  takes from Unity's build instead, so their references are read differently. The first body edit
-  after `--all` falls back with `inputs other than source contents changed: references`.
+  takes from Unity's build instead, so references to them are read differently. In an assembly
+  that references another assembly of the project, the first body edit after `--all` falls back
+  with `inputs other than source contents changed: references`; an assembly that references none
+  is checked as usual.
+- A run that skips an assembly because nothing it compiles from changed, or blocks it because an
+  assembly it references has errors, removes its result and baseline, so its next body edit is
+  compiled in full.
 - `--full` while the assembly still has errors drops its baseline, so the run after the fix is
   compiled in full. Running `--full` once the errors are fixed keeps it.
 
