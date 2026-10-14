@@ -51,11 +51,11 @@ func detectReferenceChange(
 	t *testing.T, projectRoot string, graph assemblyGraph, context AssemblyContext,
 ) error {
 	t.Helper()
-	references, err := IndexAssemblyReferences(projectRoot)
+	references, err := IndexAssemblyReferences(walkProjectTree(projectRoot))
 	if err != nil {
 		t.Fatalf("failed to index the assembly references: %v", err)
 	}
-	definitions, definitionErr := IndexAssemblyDefinitions(projectRoot)
+	definitions, definitionErr := IndexAssemblyDefinitions(walkProjectTree(projectRoot))
 	if definitionErr != nil {
 		t.Fatalf("failed to index the assembly definitions: %v", definitionErr)
 	}

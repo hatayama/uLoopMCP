@@ -26,11 +26,11 @@ func newAssemblyProject(t *testing.T) string {
 // an assembly that was never built owns nothing, which the unbuilt-target test covers on its own.
 func newOwnerIndexForProject(t *testing.T, projectRoot string) assemblyOwnerIndex {
 	t.Helper()
-	definitions, err := IndexAssemblyDefinitions(projectRoot)
+	definitions, err := IndexAssemblyDefinitions(walkProjectTree(projectRoot))
 	if err != nil {
 		t.Fatalf("failed to index the assembly definitions: %v", err)
 	}
-	references, referenceErr := IndexAssemblyReferences(projectRoot)
+	references, referenceErr := IndexAssemblyReferences(walkProjectTree(projectRoot))
 	if referenceErr != nil {
 		t.Fatalf("failed to index the assembly references: %v", referenceErr)
 	}
@@ -146,7 +146,7 @@ func TestIndexAssemblyDefinitionsCoversEveryProjectRoot(t *testing.T) {
 		`{"name":"Pkg"}`)
 	writeFileAt(t, filepath.Join(projectRoot, "Assets", "Foo", "Tmp~", "Hidden.asmdef"), `{"name":"Hidden"}`)
 
-	index, err := IndexAssemblyDefinitions(projectRoot)
+	index, err := IndexAssemblyDefinitions(walkProjectTree(projectRoot))
 	if err != nil {
 		t.Fatalf("expected the index to build, got error: %v", err)
 	}
@@ -172,7 +172,7 @@ func TestIndexAssemblyDefinitionsSkipsFilesUnityIgnores(t *testing.T) {
 		filepath.Join(projectRoot, "Assets", "Foo", "._Foo.asmdef"),
 		"\x00\x05\x16\x07\x00\x02\x00\x00Mac OS X")
 
-	index, err := IndexAssemblyDefinitions(projectRoot)
+	index, err := IndexAssemblyDefinitions(walkProjectTree(projectRoot))
 	if err != nil {
 		t.Fatalf("expected the index to build, got error: %v", err)
 	}
