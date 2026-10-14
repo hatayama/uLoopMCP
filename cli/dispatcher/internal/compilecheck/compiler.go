@@ -59,6 +59,20 @@ type UnitResult struct {
 	// Reused marks a result this run replayed from the previous one rather than compiled, because
 	// every input the previous compile read is still exactly as it read it.
 	Reused bool
+	// FastChecked marks a result that came from checking only the changed files against the last
+	// successful full compile, instead of compiling the assembly.
+	FastChecked bool
+	// FastCheckChangedFiles lists the files a fast check checked, spelled as the response file does.
+	FastCheckChangedFiles []string
+	// UncheckedCodes lists the diagnostic IDs a fast check could not run; only a full compile does.
+	UncheckedCodes []string
+	// GeneratorsNotRerun is set when a fast check read the generator output of the last full
+	// compile instead of running the source generators.
+	GeneratorsNotRerun bool
+	// FastPathFallbackReason says why a unit the fast check was tried on was compiled in full.
+	FastPathFallbackReason string
+	// FastPathNote says why a successful full compile left no baseline for the next fast check.
+	FastPathNote string
 }
 
 // CommandRunner runs one compiler invocation, so tests can stand in for the real process.
@@ -70,6 +84,8 @@ type Compiler struct {
 	ProjectRoot string
 	Timeout     time.Duration
 	Run         CommandRunner
+	// FastPath checks only the changed files when it can; nil compiles every unit in full.
+	FastPath *fastPathRunner
 }
 
 // CompileUnit compiles one assembly and reports the diagnostics csc produced for it.
@@ -90,7 +106,10 @@ func (c Compiler) CompileUnit(
 		return UnitResult{}, err
 	}
 
-	responseFilePath, err := writeRewrittenResponseFile(c.ProjectRoot, plan, unit)
+	// Why the generator output is saved: a later fast check reads it instead of running the generators.
+	responseFilePath, err := writeRewrittenResponseFile(c.ProjectRoot, plan, unit,
+		unit.Assembly.AssemblyName+responseFileExtension,
+		[]string{quoteFlag(generatedFilesOutFlagPrefix, filepath.ToSlash(generatedDirectory(plan, unit)))})
 	if err != nil {
 		return UnitResult{}, err
 	}
@@ -136,12 +155,19 @@ func removeUnitOutputs(outputDirectoryPath string, unit CompileUnit) error {
 		// Why the manifest goes with them: it describes those very files, so leaving it behind would
 		// let a later run replay diagnostics for outputs this one removed.
 		unit.Assembly.AssemblyName + resultManifestExtension,
+		// The baseline and the generator output describe the same compile as the manifest.
+		unit.Assembly.AssemblyName + baselineRecordExtension,
 	}
 	for _, name := range names {
 		path := filepath.Join(outputDirectoryPath, name)
 		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
 			return fmt.Errorf("failed to remove %s: %w", path, err)
 		}
+	}
+
+	generatedPath := filepath.Join(outputDirectoryPath, unit.Assembly.AssemblyName+generatedDirectoryExtension)
+	if err := os.RemoveAll(generatedPath); err != nil {
+		return fmt.Errorf("failed to remove %s: %w", generatedPath, err)
 	}
 
 	return nil
@@ -234,9 +260,10 @@ func parseDiagnosticLine(line string) (Diagnostic, bool) {
 }
 
 // writeRewrittenResponseFile writes the response file that compiles one unit into the check's own
-// output directory, so nothing this run produces can reach the assemblies Unity loads.
+// output directory, so nothing this run produces can reach the assemblies Unity loads. It is named
+// fileName inside that directory, and extraLines are appended after Bee's own flags.
 func writeRewrittenResponseFile(
-	projectRoot string, plan BuildPlan, unit CompileUnit,
+	projectRoot string, plan BuildPlan, unit CompileUnit, fileName string, extraLines []string,
 ) (string, error) {
 	rsp := unit.Assembly
 	lines := []string{
@@ -279,8 +306,9 @@ func writeRewrittenResponseFile(
 	// own; synthesizing the flag instead would be wrong for every assembly Bee left it out of. The
 	// diagnostics are untouched: csc prints the paths the response file lists, already project-relative.
 	lines = append(lines, rsp.CompanionFlags...)
+	lines = append(lines, extraLines...)
 
-	path := filepath.Join(projectRoot, plan.OutputDir, rsp.AssemblyName+responseFileExtension)
+	path := filepath.Join(projectRoot, plan.OutputDir, fileName)
 	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")), responseFilePermissions); err != nil {
 		return "", fmt.Errorf("failed to write %s: %w", path, err)
 	}

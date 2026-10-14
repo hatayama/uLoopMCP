@@ -54,15 +54,40 @@ func (c Compiler) reuseOrCompile(
 		}
 	}
 
+	// Why a fast check that was used touches nothing on disk: the outputs, the manifest and the
+	// baseline still describe the last full compile, which is what the next fast check compares against.
+	fallbackReason := ""
+	if c.FastPath.shouldTry(plan, unit, key) {
+		attempt := c.FastPath.Try(ctx, c, plan, unit, keyResult)
+		if attempt.Err != nil {
+			return UnitResult{}, attempt.Err
+		}
+		if attempt.Used {
+			return attempt.Result, nil
+		}
+		fallbackReason = attempt.Reason
+	}
+
 	// Why nothing is recorded unless csc ran to completion: a compile that was cancelled or never
 	// started says nothing about the inputs, and CompileUnit has already removed the manifest of the
 	// compile this one replaces, so an interrupted run leaves no record at all rather than a stale one.
 	result, err := c.CompileUnit(ctx, plan, unit)
+	result.FastPathFallbackReason = fallbackReason
 	if err != nil || key == "" || result.RawOutput != "" {
 		return result, err
 	}
 	if writeErr := writeUnitResultManifest(outputDirectoryPath, unit, key, result); writeErr != nil {
 		return UnitResult{}, writeErr
+	}
+
+	// Why --full records too: running --full before finishing would otherwise drop the baseline, and
+	// the first check after the next edit would always compile in full.
+	// Why a failure to record does not fail the run: the compile itself succeeded, and all it costs
+	// is a full compile next time.
+	if c.FastPath.shouldRecord(unit, result) {
+		if recordErr := c.FastPath.RecordBaseline(ctx, c, plan, unit, keyResult); recordErr != nil {
+			result.FastPathNote = "baseline not recorded: " + recordErr.Error()
+		}
 	}
 
 	return result, nil
@@ -99,10 +124,14 @@ func writeUnitResultManifest(
 		return fmt.Errorf("failed to record the result of %s: %w", unit.Assembly.AssemblyName, err)
 	}
 
-	path := manifestPath(outputDirectoryPath, unit)
+	return writeFileAtomically(outputDirectoryPath, manifestPath(outputDirectoryPath, unit), content)
+}
+
+// writeFileAtomically writes content to path through a temporary file in directoryPath.
+func writeFileAtomically(directoryPath string, path string, content []byte) error {
 	// Why the temporary name is unique per writer: two runs of the same project writing the same
-	// manifest at once must not rename each other's half-written file into place.
-	temporary, err := os.CreateTemp(outputDirectoryPath, filepath.Base(path)+".*"+resultManifestTempSuffix)
+	// file at once must not rename each other's half-written file into place.
+	temporary, err := os.CreateTemp(directoryPath, filepath.Base(path)+".*"+resultManifestTempSuffix)
 	if err != nil {
 		return fmt.Errorf("failed to write %s: %w", path, err)
 	}
