@@ -45,6 +45,31 @@ namespace UnityCliLoop.CompileCheckWorker
     }
 
     /// <summary>
+    /// Result of a surface comparison. "same" only when every dependent would compile against either
+    /// reference assembly the same way; anything the comparison cannot vouch for is "different".
+    /// </summary>
+    internal sealed class CompareSurfaceResponse
+    {
+        public const string SameOutcome = "same";
+        public const string DifferentOutcome = "different";
+
+        public string Outcome { get; set; }
+
+        // The first line the two descriptions disagree on, or why they could not be read; empty for "same".
+        public string Detail { get; set; } = "";
+
+        public static CompareSurfaceResponse Same()
+        {
+            return new CompareSurfaceResponse { Outcome = SameOutcome };
+        }
+
+        public static CompareSurfaceResponse Different(string detail)
+        {
+            return new CompareSurfaceResponse { Outcome = DifferentOutcome, Detail = detail };
+        }
+    }
+
+    /// <summary>
     /// One error or warning, located the way csc reports it (1-based line and column).
     /// </summary>
     internal sealed class WorkerDiagnostic
