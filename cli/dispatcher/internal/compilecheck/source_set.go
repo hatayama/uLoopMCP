@@ -51,12 +51,44 @@ func projectIndexRoots(projectRoot string) []string {
 // IndexAssemblyDefinitions maps every assembly name in the project to the .asmdef that declares it.
 // Each root's .asmdef files are read in walk order before that root's walk error is reported, which
 // is the order the errors surfaced in when each file was read as the walk met it.
+// Why the files are read side by side first: a large project holds hundreds of them, and the
+// decisions below - which of two same-named files wins, which error is reported - only need the
+// results in walk order, not the reads.
 func IndexAssemblyDefinitions(tree projectTree) (map[string]AssemblyDefinition, error) {
+	return indexAssemblyDefinitionsReading(tree, readAssemblyDefinition)
+}
+
+// indexAssemblyDefinitionsReading is IndexAssemblyDefinitions with the read of one .asmdef given.
+// The index it returns does not depend on the order the reads finish in.
+func indexAssemblyDefinitionsReading(
+	tree projectTree, read func(path string) assemblyDefinitionRead,
+) (map[string]AssemblyDefinition, error) {
+	paths := []string{}
+	for _, root := range tree.roots {
+		paths = append(paths, root.definitionFiles...)
+	}
+	reads := computeInParallel(len(paths), func(index int) assemblyDefinitionRead {
+		return read(paths[index])
+	})
+
 	index := map[string]AssemblyDefinition{}
+	next := 0
 	for _, root := range tree.roots {
 		for _, path := range root.definitionFiles {
-			if err := addAssemblyDefinition(path, index); err != nil {
-				return nil, fmt.Errorf(assemblyDefinitionIndexError, root.path, err)
+			read := reads[next]
+			next++
+			if read.err != nil {
+				return nil, fmt.Errorf(assemblyDefinitionIndexError, root.path, read.err)
+			}
+			// Why the first wins: Unity itself rejects duplicate assembly names, so a second one means
+			// a stale copy, and taking it would point the rebuild at the wrong directory.
+			if _, exists := index[read.name]; !exists {
+				index[read.name] = AssemblyDefinition{
+					Name:      read.name,
+					Path:      path,
+					Directory: filepath.Dir(path),
+					GUID:      read.guid,
+				}
 			}
 		}
 		if root.walkErr != nil {
@@ -67,24 +99,21 @@ func IndexAssemblyDefinitions(tree projectTree) (map[string]AssemblyDefinition, 
 	return index, nil
 }
 
-// addAssemblyDefinition adds one .asmdef to the index unless an earlier one declared the same name.
-func addAssemblyDefinition(path string, index map[string]AssemblyDefinition) error {
-	name, readErr := readAssemblyDefinitionName(path)
-	if readErr != nil {
-		return readErr
-	}
-	// Why the first wins: Unity itself rejects duplicate assembly names, so a second one means a
-	// stale copy, and taking it would point the rebuild at the wrong directory.
-	if _, exists := index[name]; !exists {
-		index[name] = AssemblyDefinition{
-			Name:      name,
-			Path:      path,
-			Directory: filepath.Dir(path),
-			GUID:      readAssemblyDefinitionGUID(path),
-		}
+// assemblyDefinitionRead is what one .asmdef and its .meta say, or why the .asmdef could not be read.
+type assemblyDefinitionRead struct {
+	name string
+	guid string
+	err  error
+}
+
+// readAssemblyDefinition reads the name one .asmdef declares and the GUID its .meta records.
+func readAssemblyDefinition(path string) assemblyDefinitionRead {
+	name, err := readAssemblyDefinitionName(path)
+	if err != nil {
+		return assemblyDefinitionRead{err: err}
 	}
 
-	return nil
+	return assemblyDefinitionRead{name: name, guid: readAssemblyDefinitionGUID(path)}
 }
 
 // readUnityJSONFile reads one of Unity's JSON files into target.

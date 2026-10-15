@@ -192,27 +192,32 @@ func selectChangedAssemblies(
 		return nil, referenceErr
 	}
 
-	failedLastBuild := inputs.failedLastBuild
+	return decideAssembliesInNameOrder(graph, inputs.failedLastBuild, all, func(name string) assemblyCheck {
+		return checkAssembly(projectRoot, dagDir, graph.byName[name],
+			lookupAssemblyDefinition(assemblyDefinitions, name), context, owners)
+	})
+}
+
+// decideAssembliesInNameOrder checks every assembly, then records each one's sources and why it needs
+// compiling, in name order, returning the first error in that order.
+// Why every assembly is checked side by side first: each check only reads the disk and the indexes
+// built before it, while the order below decides which error is reported, so only the checks may
+// run in any order and the result does not depend on the order they finish in.
+func decideAssembliesInNameOrder(
+	graph assemblyGraph, failedLastBuild map[string]bool, all bool, check func(name string) assemblyCheck,
+) (map[string]string, error) {
+	checks := computeInParallel(len(graph.names), func(index int) assemblyCheck {
+		return check(graph.names[index])
+	})
 
 	reasons := map[string]string{}
-	for _, name := range graph.names {
-		rsp := graph.byName[name]
-		asmdef := lookupAssemblyDefinition(assemblyDefinitions, name)
-		if structuralErr := DetectStructuralChange(
-			projectRoot, rsp, asmdef, dagDir, context); structuralErr != nil {
-			return nil, structuralErr
+	for index, name := range graph.names {
+		result := checks[index]
+		if result.err != nil {
+			return nil, result.err
 		}
-
-		sources, sourceErr := RebuildSources(projectRoot, rsp, asmdef, owners)
-		if sourceErr != nil {
-			return nil, sourceErr
-		}
-		graph.sources[name] = sources
-
-		report, changeErr := DetectSourceChange(projectRoot, rsp, sources, dagDir)
-		if changeErr != nil {
-			return nil, changeErr
-		}
+		graph.sources[name] = result.sources
+		report := result.report
 		// Why a failed build only speaks for an assembly nothing else selected: when a source did
 		// move, that is what this run found itself, and it says more about why the assembly needs
 		// compiling than what the previous build made of it.
@@ -231,6 +236,35 @@ func selectChangedAssemblies(
 	}
 
 	return reasons, nil
+}
+
+// assemblyCheck is what checking one assembly found: its sources and whether they changed, or the
+// first error the checks met.
+type assemblyCheck struct {
+	sources []string
+	report  ChangeReport
+	err     error
+}
+
+// checkAssembly runs one assembly's checks in the order whose first error is the one to report: its
+// structure, then its sources, then whether they changed since Unity built it.
+func checkAssembly(
+	projectRoot string, dagDir string, rsp ResponseFile, asmdef *AssemblyDefinition,
+	context AssemblyContext, owners assemblyOwnerIndex,
+) assemblyCheck {
+	if err := DetectStructuralChange(projectRoot, rsp, asmdef, dagDir, context); err != nil {
+		return assemblyCheck{err: err}
+	}
+	sources, err := RebuildSources(projectRoot, rsp, asmdef, owners)
+	if err != nil {
+		return assemblyCheck{err: err}
+	}
+	report, err := DetectSourceChange(projectRoot, rsp, sources, dagDir)
+	if err != nil {
+		return assemblyCheck{err: err}
+	}
+
+	return assemblyCheck{sources: sources, report: report}
 }
 
 // lookupAssemblyDefinition finds the .asmdef for an assembly, if the assembly has one at all.

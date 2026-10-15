@@ -6,11 +6,6 @@ import (
 	"sync"
 )
 
-// projectTreeReadConcurrency is how many directories the walk reads at once.
-// Why 8: reading a large project's directories with 8 readers took well under half the time of
-// one, and 16 took no less than 8; a small CI runner is not crowded by 8 either.
-const projectTreeReadConcurrency = 8
-
 // projectTreeListing is one directory as read from the disk, or the error reading it gave.
 type projectTreeListing struct {
 	directory projectTreeDirectory
@@ -57,7 +52,7 @@ func readProjectTreeListings(rootPaths []string) map[string]projectTreeListing {
 	}
 
 	var workers sync.WaitGroup
-	for range projectTreeReadConcurrency {
+	for range planReadConcurrency {
 		workers.Go(reader.work)
 	}
 	workers.Wait()

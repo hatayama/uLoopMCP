@@ -1,6 +1,7 @@
 package compilecheck
 
 import (
+	"errors"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -129,5 +130,48 @@ func TestIndexAssemblyReferencesReportsAnUnreadableDirectory(t *testing.T) {
 	wantPrefix := "failed to index assembly references under " + filepath.Join(projectRoot, "Assets") + ": "
 	if err == nil || !strings.HasPrefix(err.Error(), wantPrefix) {
 		t.Fatalf("err = %v, want the unreadable Assets directory reported", err)
+	}
+}
+
+// Verifies that of two broken .asmdef files in one root, the one the walk meets first is reported,
+// which is not the one whose full path sorts first.
+func TestIndexAssemblyDefinitionsReportsTheFirstBrokenAsmdefInWalkOrder(t *testing.T) {
+	projectRoot := t.TempDir()
+	first := filepath.Join(projectRoot, "Assets", "a", "X.asmdef")
+	writeFileAt(t, first, "not json")
+	writeFileAt(t, filepath.Join(projectRoot, "Assets", "a.b", "Y.asmdef"), "not json")
+
+	_, err := IndexAssemblyDefinitions(walkProjectTree(projectRoot))
+
+	wantPrefix := "failed to index assembly definitions under " + filepath.Join(projectRoot, "Assets") + ": failed to read " + first
+	if err == nil || !strings.HasPrefix(err.Error(), wantPrefix) {
+		t.Fatalf("err = %v, want it to start with %q", err, wantPrefix)
+	}
+}
+
+// Verifies the first broken .asmdef in walk order is reported even when a later file's read finishes
+// first: the earlier read is held until the later one has returned its error.
+func TestIndexAssemblyDefinitionsReportsTheFirstErrorWhateverFinishesFirst(t *testing.T) {
+	projectRoot := t.TempDir()
+	first := filepath.Join(projectRoot, "Assets", "a", "X.asmdef")
+	later := filepath.Join(projectRoot, "Assets", "a.b", "Y.asmdef")
+	writeFileAt(t, first, "")
+	writeFileAt(t, later, "")
+	laterReturned := make(chan struct{})
+	errFirst := errors.New("first failed")
+
+	_, err := indexAssemblyDefinitionsReading(walkProjectTree(projectRoot), func(path string) assemblyDefinitionRead {
+		if path == first {
+			<-laterReturned
+
+			return assemblyDefinitionRead{err: errFirst}
+		}
+		defer close(laterReturned)
+
+		return assemblyDefinitionRead{err: errors.New("later failed")}
+	})
+
+	if !errors.Is(err, errFirst) {
+		t.Fatalf("err = %v, want the error of the file met first", err)
 	}
 }
