@@ -54,13 +54,33 @@ func (state *schedule) enqueue(index int) {
 	state.ready = append(state.ready, index)
 }
 
-// takeNext removes the next unit to start from the ready queue.
+// takeNext removes the next unit to start from the ready queue: the one with the most sources, and
+// among those the one first in the plan.
+// Why the most sources first: how long a compile takes follows its source count closely, and
+// starting the longest compiles first keeps them from finishing last while the other jobs sit idle.
+// Why plan order breaks a tie rather than the order units became ready: it keeps the start order the
+// same from run to run.
 func (state *schedule) takeNext() int {
-	index := state.ready[0]
-	state.ready = state.ready[1:]
+	best := 0
+	for position := 1; position < len(state.ready); position++ {
+		if state.startsBefore(state.ready[position], state.ready[best]) {
+			best = position
+		}
+	}
+	index := state.ready[best]
+	state.ready = append(state.ready[:best], state.ready[best+1:]...)
 	state.queued[index] = false
 
 	return index
+}
+
+// startsBefore reports whether unit a should start before unit b when both are ready.
+func (state *schedule) startsBefore(a int, b int) bool {
+	if state.sourceCounts[a] != state.sourceCounts[b] {
+		return state.sourceCounts[a] > state.sourceCounts[b]
+	}
+
+	return a < b
 }
 
 // mayStartEarly reports whether a unit with references still lacking a final state may start before
@@ -111,11 +131,16 @@ func (run *schedulerRun) releaseAndOffer(index int, changed bool) {
 	}
 }
 
-// startAndSettle starts what is ready and decides the final state of what finished, until neither
+// startAndSettle decides the final state of what finished and starts what is ready, until neither
 // moves anything.
 // Why the two alternate: a skip decided while starting units gives a reference its final state,
 // which can let a unit that already finished be decided, and deciding one can make others ready.
+// Why it decides before it starts: the units a finished one releases then compete for the free jobs
+// with the ones already waiting, instead of queuing behind whatever started first.
 func (run *schedulerRun) startAndSettle(jobs int) error {
+	if _, err := run.settleFinished(); err != nil {
+		return err
+	}
 	for {
 		if err := run.startReadyUnits(jobs); err != nil {
 			return err

@@ -33,7 +33,9 @@ type schedule struct {
 	pendingOwn []int
 	// ownSources marks, per unit, that it was selected for its own sources.
 	ownSources []bool
-	dependents [][]int
+	// sourceCounts holds, per unit, how many sources it compiles.
+	sourceCounts []int
+	dependents   [][]int
 	// references lists, per unit, the units of the plan it references.
 	references [][]int
 	ready      []int
@@ -353,6 +355,7 @@ func newSchedule(plan BuildPlan) *schedule {
 		pending:       make([]int, len(plan.Units)),
 		pendingOwn:    make([]int, len(plan.Units)),
 		ownSources:    make([]bool, len(plan.Units)),
+		sourceCounts:  make([]int, len(plan.Units)),
 		dependents:    make([][]int, len(plan.Units)),
 		references:    make([][]int, len(plan.Units)),
 		ready:         []int{},
@@ -363,6 +366,7 @@ func newSchedule(plan BuildPlan) *schedule {
 	}
 	for index, unit := range plan.Units {
 		state.ownSources[index] = !unit.SelectedAsDependent
+		state.sourceCounts[index] = len(unit.Sources)
 	}
 	for index, unit := range plan.Units {
 		for _, reference := range unit.PlanReferences {
