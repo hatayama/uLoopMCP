@@ -140,11 +140,7 @@ func (run *schedulerRun) startReadyUnits(jobs int) error {
 		run.state.ready = run.state.ready[1:]
 		// Why the block is read before the skip: a blocked unit has no result to compare against
 		// anything, so asking whether its references kept their surface answers nothing.
-		blocked, err := run.skipBlockedUnit(index)
-		if err != nil {
-			return err
-		}
-		if blocked {
+		if run.skipBlockedUnit(index) {
 			continue
 		}
 		skipped, err := run.skipUnchangedDependent(index)
@@ -165,19 +161,21 @@ func (run *schedulerRun) startReadyUnits(jobs int) error {
 // to what waits on this one, which is where Unity's own build stops as well: the reference assembly
 // this unit compiles against was never produced, so all it could report is the metadata it cannot
 // find rather than anything about itself.
-// Why its earlier outputs are removed, as for a skipped dependent: a reference assembly an earlier
-// run wrote would otherwise be picked up as this run's own output.
-func (run *schedulerRun) skipBlockedUnit(index int) (bool, error) {
+// Why its earlier outputs and records are kept: nothing in this run reads them, since every unit
+// that references this one is blocked too, and a later run uses them only when the records still
+// match: a replayed compile needs its input key, which reads every reference this run rebuilds by
+// content and the others by timestamp, and outputs that still hash as recorded; a changed-files
+// check needs the baseline's compile result on disk and the same non-source key.
+// Removing them made the first successful run after an error compile every dependent again even
+// when the assembly with errors came back with the same reference assembly.
+func (run *schedulerRun) skipBlockedUnit(index int) bool {
 	if !run.state.blocked[index] {
-		return false, nil
-	}
-	if err := run.compiler.removeUnitOutputs(run.plan, run.plan.Units[index]); err != nil {
-		return false, err
+		return false
 	}
 	run.state.blockDependents(index)
 	run.state.release(index, false)
 
-	return true, nil
+	return true
 }
 
 // skipUnchangedDependent leaves out a unit this run picked up only because something it references

@@ -56,7 +56,7 @@ everything from scratch, which is the way out if a reused result ever looks wron
 In a large assembly whose last compile-check compile succeeded, an edit that keeps every
 declaration is checked on the changed files only, in a few seconds. Such a check skips a few
 assembly-wide rules, so run once with `--full` before finishing. The first body edit after a Unity
-build, after a `--full` that had errors, after a run that skipped or blocked the assembly, or after
+build, after a `--full` that had errors, after a run that skipped the assembly, or after
 `--all` in an assembly that references another of the project is compiled in full and records what
 the next check compares against; `FastPathFallbacks` says why.
 

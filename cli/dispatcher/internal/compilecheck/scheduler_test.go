@@ -494,8 +494,10 @@ func TestCompileUnitsBlocksTheDependentsOfAnAssemblyThatFailedToCompile(t *testi
 			t.Errorf("%s should not have compiled against an assembly that failed", name)
 		}
 	}
-	if _, statErr := os.Stat(staleOutput); !os.IsNotExist(statErr) {
-		t.Error("the blocked unit's earlier output should have been removed")
+	// Why the earlier output stays: nothing in this run reads it, and a later run checks it against
+	// the unit's record before using it.
+	if _, statErr := os.Stat(staleOutput); statErr != nil {
+		t.Errorf("the blocked unit's earlier output should have been kept, got %v", statErr)
 	}
 }
 
