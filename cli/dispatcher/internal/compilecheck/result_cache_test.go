@@ -31,10 +31,14 @@ func writeOutputFile(t *testing.T, outputDirectoryPath string, name string, cont
 	}
 }
 
+// manifestStore opens the records kept directly in outputDirectoryPath.
+func manifestStore(outputDirectoryPath string) recordStore {
+	return openRecordStore(outputDirectoryPath, "")
+}
+
 // storedResult is the result the tests record and expect to read back unchanged.
-func storedResult() UnitResult {
-	return UnitResult{
-		Assembly:  "Alpha",
+func storedResult() recordedCompile {
+	return recordedCompile{
 		Succeeded: false,
 		Diagnostics: []Diagnostic{{
 			Severity: severityError,
@@ -50,7 +54,8 @@ func storedResult() UnitResult {
 // recordResult stores one compile's outcome under a key.
 func recordResult(t *testing.T, outputDirectoryPath string, unit CompileUnit, key string) {
 	t.Helper()
-	if err := writeUnitResultManifest(outputDirectoryPath, unit, key, storedResult()); err != nil {
+	if err := manifestStore(outputDirectoryPath).recordCompile(
+		unit.Assembly.AssemblyName, key, storedResult(), unitOutputNames(unit)); err != nil {
 		t.Fatalf("failed to write the manifest: %v", err)
 	}
 }
@@ -61,19 +66,13 @@ func TestLoadReusableResultReplaysTheRecordedDiagnostics(t *testing.T) {
 	outputDirectoryPath, unit := newManifestUnit(t)
 	recordResult(t, outputDirectoryPath, unit, "key")
 
-	result, reusable := loadReusableResult(outputDirectoryPath, unit, "key")
+	result, reusable := manifestStore(outputDirectoryPath).reusableResult(unit.Assembly.AssemblyName, "key")
 
 	if !reusable {
 		t.Fatal("expected the recorded result to be reusable")
 	}
 	if result.Succeeded {
 		t.Error("a failed compile must not come back as a successful one")
-	}
-	if !result.Reused {
-		t.Error("a replayed result should say it was reused")
-	}
-	if result.Assembly != "Alpha" {
-		t.Errorf("assembly = %q, want Alpha", result.Assembly)
 	}
 	if len(result.Diagnostics) != 1 || result.Diagnostics[0].Code != "CS0103" {
 		t.Errorf("diagnostics = %+v, want the recorded CS0103", result.Diagnostics)
@@ -85,7 +84,7 @@ func TestLoadReusableResultRejectsAnotherKey(t *testing.T) {
 	outputDirectoryPath, unit := newManifestUnit(t)
 	recordResult(t, outputDirectoryPath, unit, "key")
 
-	if _, reusable := loadReusableResult(outputDirectoryPath, unit, "other key"); reusable {
+	if _, reusable := manifestStore(outputDirectoryPath).reusableResult(unit.Assembly.AssemblyName, "other key"); reusable {
 		t.Error("a result recorded for other inputs should not be reused")
 	}
 }
@@ -98,7 +97,7 @@ func TestLoadReusableResultRejectsAChangedOutput(t *testing.T) {
 
 	writeOutputFile(t, outputDirectoryPath, "Alpha"+referenceAssemblyExtension, "another surface")
 
-	if _, reusable := loadReusableResult(outputDirectoryPath, unit, "key"); reusable {
+	if _, reusable := manifestStore(outputDirectoryPath).reusableResult(unit.Assembly.AssemblyName, "key"); reusable {
 		t.Error("a changed output should stop the reuse")
 	}
 }
@@ -112,7 +111,7 @@ func TestLoadReusableResultRejectsAMissingOutput(t *testing.T) {
 		t.Fatalf("failed to remove the output: %v", err)
 	}
 
-	if _, reusable := loadReusableResult(outputDirectoryPath, unit, "key"); reusable {
+	if _, reusable := manifestStore(outputDirectoryPath).reusableResult(unit.Assembly.AssemblyName, "key"); reusable {
 		t.Error("a missing output should stop the reuse")
 	}
 }
@@ -123,7 +122,7 @@ func TestLoadReusableResultRejectsAnUnreadableManifest(t *testing.T) {
 	outputDirectoryPath, unit := newManifestUnit(t)
 	writeOutputFile(t, outputDirectoryPath, "Alpha.result.json", "{not json")
 
-	if _, reusable := loadReusableResult(outputDirectoryPath, unit, "key"); reusable {
+	if _, reusable := manifestStore(outputDirectoryPath).reusableResult(unit.Assembly.AssemblyName, "key"); reusable {
 		t.Error("an unreadable manifest should not be reused")
 	}
 }
@@ -132,7 +131,7 @@ func TestLoadReusableResultRejectsAnUnreadableManifest(t *testing.T) {
 func TestLoadReusableResultRejectsAnotherFormatVersion(t *testing.T) {
 	outputDirectoryPath, unit := newManifestUnit(t)
 	recordResult(t, outputDirectoryPath, unit, "key")
-	path := manifestPath(outputDirectoryPath, unit)
+	path := manifestPath(outputDirectoryPath, unit.Assembly.AssemblyName)
 	content, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("failed to read the manifest: %v", err)
@@ -150,7 +149,7 @@ func TestLoadReusableResultRejectsAnotherFormatVersion(t *testing.T) {
 		t.Fatalf("failed to write the manifest back: %v", err)
 	}
 
-	if _, reusable := loadReusableResult(outputDirectoryPath, unit, "key"); reusable {
+	if _, reusable := manifestStore(outputDirectoryPath).reusableResult(unit.Assembly.AssemblyName, "key"); reusable {
 		t.Error("a manifest of another format version should not be reused")
 	}
 }
@@ -165,7 +164,7 @@ func TestRemoveUnitOutputsRemovesTheManifest(t *testing.T) {
 		t.Fatalf("failed to remove the outputs: %v", err)
 	}
 
-	if _, err := os.Stat(manifestPath(outputDirectoryPath, unit)); !os.IsNotExist(err) {
+	if _, err := os.Stat(manifestPath(outputDirectoryPath, unit.Assembly.AssemblyName)); !os.IsNotExist(err) {
 		t.Error("the manifest should have been removed with the outputs")
 	}
 }
@@ -181,7 +180,7 @@ func TestWriteUnitResultManifestRecordsACompileThatWroteNothing(t *testing.T) {
 	}
 	recordResult(t, outputDirectoryPath, unit, "key")
 
-	result, reusable := loadReusableResult(outputDirectoryPath, unit, "key")
+	result, reusable := manifestStore(outputDirectoryPath).reusableResult(unit.Assembly.AssemblyName, "key")
 
 	if !reusable {
 		t.Fatal("expected a compile that wrote nothing to be reusable")

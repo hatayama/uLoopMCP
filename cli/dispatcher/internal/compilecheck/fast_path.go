@@ -215,7 +215,7 @@ func loadBaseline(outputDirectoryPath string, unit CompileUnit) (baselineRecord,
 	// In the normal flow the record and the manifest are written together under one key, and a full
 	// compile removes both, so the checks below only catch a state someone changed by hand.
 	const goneFromDisk = "baseline compile is no longer on disk"
-	manifestContent, err := os.ReadFile(manifestPath(outputDirectoryPath, unit))
+	manifestContent, err := os.ReadFile(manifestPath(outputDirectoryPath, unit.Assembly.AssemblyName))
 	if err != nil {
 		return baselineRecord{}, unitResultManifest{}, goneFromDisk
 	}
@@ -237,7 +237,7 @@ func loadBaseline(outputDirectoryPath string, unit CompileUnit) (baselineRecord,
 // removes the manifest and the baseline alike, so nothing on disk tells that apart from no compile.
 func missingBaselineReason(outputDirectoryPath string, unit CompileUnit) string {
 	const notOnRecord = "no baseline: no full compile of this assembly is on record"
-	content, err := os.ReadFile(manifestPath(outputDirectoryPath, unit))
+	content, err := os.ReadFile(manifestPath(outputDirectoryPath, unit.Assembly.AssemblyName))
 	if err != nil {
 		return notOnRecord
 	}

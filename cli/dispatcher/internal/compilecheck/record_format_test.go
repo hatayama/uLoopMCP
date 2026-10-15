@@ -27,7 +27,7 @@ func TestLoadBaselineReportsAnotherFormatBeforeAMissingManifest(t *testing.T) {
 // Verifies the bytes a compile result is recorded as, so moving the record keeps its format.
 func TestWriteUnitResultManifestWritesTheRecordedFormat(t *testing.T) {
 	outputDirectoryPath, unit := newManifestUnit(t)
-	result := UnitResult{
+	result := recordedCompile{
 		Succeeded: false,
 		Diagnostics: []Diagnostic{{
 			Severity: severityError,
@@ -39,11 +39,12 @@ func TestWriteUnitResultManifestWritesTheRecordedFormat(t *testing.T) {
 		}},
 	}
 
-	if err := writeUnitResultManifest(outputDirectoryPath, unit, "key", result); err != nil {
+	if err := manifestStore(outputDirectoryPath).recordCompile(
+		unit.Assembly.AssemblyName, "key", result, unitOutputNames(unit)); err != nil {
 		t.Fatalf("failed to write the manifest: %v", err)
 	}
 
-	assertFileContent(t, manifestPath(outputDirectoryPath, unit), `{"FormatVersion":1,"InputKey":"key","Succeeded":false,`+
+	assertFileContent(t, manifestPath(outputDirectoryPath, unit.Assembly.AssemblyName), `{"FormatVersion":1,"InputKey":"key","Succeeded":false,`+
 		`"Diagnostics":[{"Severity":"error","Code":"CS0103","Message":"The name 'Missing' does not exist in the current context",`+
 		`"File":"Assets/Alpha/Alpha.cs","Line":3,"Column":9}],`+
 		`"Outputs":{"Alpha.dll":"e020bdf568793dee747a220086c5e53c8b3af5abd959383a31297f303577efe6",`+
