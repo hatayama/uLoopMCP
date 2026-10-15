@@ -209,3 +209,32 @@ func TestCompileCheckVibeLogRecordsAnEditorResolutionFailure(t *testing.T) {
 	complete := assertCompileCheckVibeRun(t, readCompileCheckVibeLog(t, projectRoot))
 	assertVibeContextJSON(t, complete, "outcome", `"failed"`)
 }
+
+// Verifies the units entries say which references a unit assumed kept Unity's surface, which one
+// made it compile again and how long the discarded compile took, and that it waited for a record,
+// each only on the units it applies to.
+func TestCompileCheckVibeLogRecordsUnitsCompiledAgain(t *testing.T) {
+	t.Setenv(vibelog.CLIVibeLogEnvName, "1")
+	projectRoot := t.TempDir()
+	result := compilecheck.Result{Units: []compilecheck.UnitResult{
+		{Assembly: "Alpha", Succeeded: true, Duration: 100 * time.Millisecond},
+		{
+			Assembly: "Beta", Succeeded: true, Duration: 200 * time.Millisecond,
+			AssumedReferences: []string{"Gamma", "Delta"},
+		},
+		{
+			Assembly: "Epsilon", Succeeded: true, Duration: 300 * time.Millisecond,
+			CompiledAgainAfter: "Gamma", DiscardedDuration: 50 * time.Millisecond, WaitedForRecord: true,
+		},
+	}}
+
+	logRun := startCompileCheckVibeLog(projectRoot, compileCheckOptions{})
+	logRun.completed(buildCompileCheckResponse(result, projectRoot), result)
+
+	complete := assertCompileCheckVibeRun(t, readCompileCheckVibeLog(t, projectRoot))
+	assertVibeContextJSON(t, complete, "units",
+		`[{"assembly":"Alpha","duration_ms":100,"succeeded":true},`+
+			`{"assembly":"Beta","assumed_kept":["Gamma","Delta"],"duration_ms":200,"succeeded":true},`+
+			`{"assembly":"Epsilon","compiled_again_after":"Gamma","discarded_ms":50,"duration_ms":300,`+
+			`"succeeded":true,"waited_for_record":true}]`)
+}
