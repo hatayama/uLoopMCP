@@ -38,6 +38,12 @@ type fakeFastCheckWorker struct {
 	fingerprints       int
 	checks             int
 	lastCheck          fastcheck.CheckRequest
+	// surfaceOutcome is what CompareSurface answers; empty answers different, so a test that does
+	// not care about the comparison sees every differing reference assembly as a changed surface.
+	surfaceOutcome string
+	surfaceErr     error
+	// surfaceComparisons lists the produced reference assembly of every comparison, in call order.
+	surfaceComparisons []string
 }
 
 func newFakeFastCheckWorker() *fakeFastCheckWorker {
@@ -105,6 +111,22 @@ func (worker *fakeFastCheckWorker) Check(
 		UncheckedCodes:     worker.uncheckedCodes,
 		GeneratorsNotRerun: worker.generatorsNotRerun,
 	}, nil
+}
+
+func (worker *fakeFastCheckWorker) CompareSurface(
+	_ context.Context, _ fastcheck.WorkerPaths, request fastcheck.CompareSurfaceRequest,
+) (fastcheck.CompareSurfaceResponse, error) {
+	worker.mutex.Lock()
+	defer worker.mutex.Unlock()
+	worker.surfaceComparisons = append(worker.surfaceComparisons, request.ProducedPath)
+	if worker.surfaceErr != nil {
+		return fastcheck.CompareSurfaceResponse{}, worker.surfaceErr
+	}
+	if worker.surfaceOutcome == "" {
+		return fastcheck.CompareSurfaceResponse{Outcome: fastcheck.DifferentSurfaceOutcome, Detail: "fake difference"}, nil
+	}
+
+	return fastcheck.CompareSurfaceResponse{Outcome: worker.surfaceOutcome}, nil
 }
 
 // fakeDeclarationOf is the fake fingerprint: everything before the separator.

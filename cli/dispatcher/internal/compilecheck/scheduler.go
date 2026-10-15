@@ -226,20 +226,20 @@ func (run *schedulerRun) startingUnit(index int) CompileUnit {
 
 // compileOneUnit produces one unit's result - by compiling it, or by replaying the previous run's
 // answer when nothing it reads has moved - and reports whether its public surface stayed the same.
-// Why the comparison happens here rather than in the loop: it reads two files, and the loop has to
-// stay free to start the next unit. Why a replayed unit is compared just the same: it kept the
+// Why the comparison happens here rather than in the loop: it reads two files and may ask the
+// worker, and the loop has to stay free to start the next unit. Why a replayed unit is compared just the same: it kept the
 // outputs of the previous run, so the reference assembly on disk is still the one to hold against
 // Unity's.
 // Why only a successful unit that something in the plan references is compared: nothing reads the
 // answer of any other unit - the dependents of a failed one are blocked whatever it wrote - and
-// comparing costs a read of two reference assemblies for every edit of a leaf assembly.
+// comparing costs a read of two reference assemblies, and possibly a worker call, for every edit of
+// a leaf assembly.
 func (run *schedulerRun) compileOneUnit(index int, unit CompileUnit, readByDependents bool) {
 	result, err := run.compiler.reuseOrCompile(run.runContext, run.plan, unit)
-	keptSurface := false
 	if err == nil && readByDependents && result.Succeeded {
-		keptSurface = run.compiler.keptSurface(run.plan, unit)
+		result.Surface = run.compiler.surfaceVerdict(run.runContext, run.plan, unit)
 	}
-	run.completions <- unitCompletion{index: index, result: result, keptSurface: keptSurface, err: err}
+	run.completions <- unitCompletion{index: index, result: result, keptSurface: result.Surface.Kept, err: err}
 }
 
 // collectOneCompletion waits for one unit to finish and hands what it produced to the schedule.

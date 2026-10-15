@@ -77,6 +77,9 @@ type UnitResult struct {
 	FastPathFallbackReason string
 	// FastPathNote says why a successful full compile left no baseline for the next fast check.
 	FastPathNote string
+	// Surface says whether the unit's reference assembly kept the API of the last Unity build, for a
+	// successful unit something in the plan references; zero for any other unit.
+	Surface SurfaceVerdict
 }
 
 // CommandRunner runs one compiler invocation, so tests can stand in for the real process.
@@ -91,19 +94,19 @@ type Compiler struct {
 	// FastPath checks only the changed files when it can; nil compiles every unit in full.
 	FastPath *fastPathRunner
 	// compareSurface stands in for the comparison of a unit's reference assembly with Unity's; nil
-	// compares the two files. Why it can be replaced: the tests have to see which units the run
-	// compares at all, and reading two files leaves nothing behind to count.
+	// compares the two. Why it can be replaced: the tests have to see which units the run compares at
+	// all, and a byte comparison leaves nothing behind to count.
 	compareSurface func(projectRoot string, plan BuildPlan, unit CompileUnit) bool
 }
 
-// keptSurface reports whether compiling this unit left its reference assembly describing the same
-// public surface as the one the last Unity build produced.
-func (c Compiler) keptSurface(plan BuildPlan, unit CompileUnit) bool {
+// surfaceVerdict says whether compiling this unit left its reference assembly showing its dependents
+// the public surface the last Unity build showed them.
+func (c Compiler) surfaceVerdict(ctx context.Context, plan BuildPlan, unit CompileUnit) SurfaceVerdict {
 	if c.compareSurface != nil {
-		return c.compareSurface(c.ProjectRoot, plan, unit)
+		return SurfaceVerdict{Kept: c.compareSurface(c.ProjectRoot, plan, unit)}
 	}
 
-	return referenceSurfaceUnchanged(c.ProjectRoot, plan, unit)
+	return c.referenceSurfaceVerdict(ctx, plan, unit)
 }
 
 // CompileUnit compiles one assembly and reports the diagnostics csc produced for it.

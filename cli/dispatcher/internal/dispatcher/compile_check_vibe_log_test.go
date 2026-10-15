@@ -71,7 +71,8 @@ func assertVibeContextJSON(t *testing.T, entry vibelog.CLIVibeLogEntry, key stri
 }
 
 // loggedCompileCheckResult is a run that compiled, fast-checked, replayed a fast check of, reused,
-// and blocked one assembly each, so a field the log drops or mixes up shows.
+// and blocked one assembly each, and settled the surface of three of them three ways, so a field the
+// log drops or mixes up shows.
 func loggedCompileCheckResult() compilecheck.Result {
 	return compilecheck.Result{
 		DagDir:  "Library/Bee/artifacts/1300b0aE.dag",
@@ -82,22 +83,33 @@ func loggedCompileCheckResult() compilecheck.Result {
 				Assembly: "Alpha", Succeeded: true, Duration: 1500 * time.Millisecond,
 				FastPathFallbackReason: "no baseline: no full compile of this assembly is on record",
 				FastPathNote:           "baseline not recorded: source changed during the compile: Assets/A.cs",
+				Surface: compilecheck.SurfaceVerdict{
+					Kept: true, Reason: compilecheck.SurfaceSameAPI, Asked: true, Duration: 400 * time.Millisecond,
+				},
 			},
 			{
 				Assembly: "Beta", Succeeded: true, Duration: 250 * time.Millisecond, FastChecked: true,
 				FastCheckChangedFiles: []string{"Assets/B1.cs", "Assets/B2.cs"},
+				Surface:               compilecheck.SurfaceVerdict{Kept: true, Reason: compilecheck.SurfaceSameBytes},
 			},
 			{
 				Assembly: "Epsilon", Succeeded: true, FastChecked: true, FastCheckReused: true,
 				FastCheckChangedFiles: []string{"Assets/E.cs"},
 			},
-			{Assembly: "Gamma", Succeeded: true, Reused: true},
+			{
+				Assembly: "Gamma", Succeeded: true, Reused: true,
+				Surface: compilecheck.SurfaceVerdict{
+					Reason: compilecheck.SurfaceChanged, Detail: "produced: a / Unity build: b", Asked: true, FromRecord: true,
+					Duration: 2 * time.Millisecond,
+				},
+			},
 		},
 	}
 }
 
 // Verifies a run writes a start and a complete entry with one correlation id, and the complete
-// entry carries what the response reported and how long each compiled or checked unit took.
+// entry carries what the response reported, how long each compiled or checked unit took, and every
+// surface the worker or its record settled, including that of a replayed unit.
 func TestCompileCheckVibeLogRecordsASucceededRun(t *testing.T) {
 	t.Setenv(vibelog.CLIVibeLogEnvName, "1")
 	projectRoot := t.TempDir()
@@ -130,6 +142,9 @@ func TestCompileCheckVibeLogRecordsASucceededRun(t *testing.T) {
 		`[{"assembly":"Alpha","reason":"baseline not recorded: source changed during the compile: Assets/A.cs"}]`)
 	assertVibeContextJSON(t, complete, "units",
 		`[{"assembly":"Alpha","duration_ms":1500,"succeeded":true},{"assembly":"Beta","duration_ms":250,"succeeded":true}]`)
+	assertVibeContextJSON(t, complete, "surface_checks",
+		`[{"assembly":"Alpha","detail":"","duration_ms":400,"from_record":false,"verdict":"same API"},`+
+			`{"assembly":"Gamma","detail":"produced: a / Unity build: b","duration_ms":2,"from_record":true,"verdict":"changed"}]`)
 	if _, found := complete.Context["duration_ms"]; !found {
 		t.Error("expected the run's duration to be logged")
 	}

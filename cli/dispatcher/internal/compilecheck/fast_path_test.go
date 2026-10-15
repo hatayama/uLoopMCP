@@ -171,10 +171,16 @@ func TestNonSourceKeyMismatchFallsBack(t *testing.T) {
 // full without a fallback reason on every run.
 func TestSmallAssemblyIsNotTried(t *testing.T) {
 	project := newFastPathProject(t, fastPathMinimumSources-1)
-	project.run(t, newCachedSchedulerRecorder("Alpha", "Beta"), false)
+	// Why Alpha keeps Unity's reference assembly: a differing one is compared by the worker, which
+	// would build it for a reason other than the changed-files check.
+	first := newCachedSchedulerRecorder("Alpha", "Beta")
+	first.surfaces["Alpha"] = keptSurfaceOf("Alpha")
+	project.run(t, first, false)
 	project.editBody(t, 0, "edited")
 
-	outcome := project.run(t, newCachedSchedulerRecorder("Alpha", "Beta"), false)
+	recorder := newCachedSchedulerRecorder("Alpha", "Beta")
+	recorder.surfaces["Alpha"] = keptSurfaceOf("Alpha")
+	outcome := project.run(t, recorder, false)
 
 	assertNotTried(t, outcome, project.worker)
 	if project.worker.ensures != 0 || project.hasBaseline() {

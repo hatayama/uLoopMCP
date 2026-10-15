@@ -223,3 +223,57 @@ func TestUnknownOutcomeIsError(t *testing.T) {
 		}
 	}
 }
+
+// Verifies that CompareSurface runs the compare-surface command with both reference assembly paths
+// and parses the worker's answer.
+func TestCompareSurfaceParsesResponse(t *testing.T) {
+	request := CompareSurfaceRequest{ProducedPath: "/project/out/Sample.ref.dll", UnityBuildPath: "/project/Library/Sample.ref.dll"}
+	var sentArguments []string
+	var sentRequest map[string]any
+	client := newTestClient(t, func(_ context.Context, cmd *exec.Cmd) (string, string, int, error) {
+		sentArguments = cmd.Args
+		content, err := os.ReadFile(cmd.Args[len(cmd.Args)-2])
+		if err != nil {
+			return "", err.Error(), 1, err
+		}
+		if err := json.Unmarshal(content, &sentRequest); err != nil {
+			return "", err.Error(), 1, err
+		}
+
+		response := `{"Outcome":"different","Detail":"produced: a / Unity build: b"}`
+		return "", "", 0, os.WriteFile(cmd.Args[len(cmd.Args)-1], []byte(response), cacheFilePermissions)
+	})
+
+	got, err := client.CompareSurface(context.Background(), request)
+	if err != nil {
+		t.Fatalf("expected the comparison to succeed, got error: %v", err)
+	}
+
+	want := CompareSurfaceResponse{Outcome: DifferentSurfaceOutcome, Detail: "produced: a / Unity build: b"}
+	if got != want {
+		t.Errorf("expected %+v, got %+v", want, got)
+	}
+	if sentArguments[len(sentArguments)-3] != "compare-surface" {
+		t.Errorf("expected the compare-surface command, got arguments %v", sentArguments)
+	}
+	wantRequest := map[string]any{"ProducedPath": request.ProducedPath, "UnityBuildPath": request.UnityBuildPath}
+	if !reflect.DeepEqual(sentRequest, wantRequest) {
+		t.Errorf("expected the request %v, got %v", wantRequest, sentRequest)
+	}
+	assertNoRequestFilesLeft(t, client.TempDirectory)
+}
+
+// Verifies that a comparison answer other than same or different is an error, so a caller never
+// reads an unexpected answer as either.
+func TestCompareSurfaceUnknownOutcomeIsError(t *testing.T) {
+	for _, response := range []string{`{"Outcome":""}`, `{}`, `{"Outcome":"Same"}`} {
+		client := newTestClient(t, func(_ context.Context, cmd *exec.Cmd) (string, string, int, error) {
+			return "", "", 0, os.WriteFile(cmd.Args[len(cmd.Args)-1], []byte(response), cacheFilePermissions)
+		})
+
+		_, err := client.CompareSurface(context.Background(), CompareSurfaceRequest{})
+		if err == nil || !strings.Contains(err.Error(), "unknown outcome") {
+			t.Fatalf("expected an unknown outcome error for %s, got %v", response, err)
+		}
+	}
+}
