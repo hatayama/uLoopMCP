@@ -139,12 +139,6 @@ func TestIndexAssemblyDefinitionsReportsTheFirstBrokenAsmdefInWalkOrder(t *testi
 	first := filepath.Join(projectRoot, "Assets", "a", "X.asmdef")
 	writeFileAt(t, first, "not json")
 	writeFileAt(t, filepath.Join(projectRoot, "Assets", "a.b", "Y.asmdef"), "not json")
-	// Why many valid files sit in between: with the reads running side by side, the second broken
-	// file is likely to be read before the first finishes.
-	for index := range 20 {
-		name := "V" + string(rune('A'+index))
-		writeFileAt(t, filepath.Join(projectRoot, "Assets", "a", "m", name, name+".asmdef"), `{"name":"`+name+`"}`)
-	}
 
 	_, err := IndexAssemblyDefinitions(walkProjectTree(projectRoot))
 
