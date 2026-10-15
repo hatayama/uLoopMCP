@@ -96,9 +96,9 @@ func loggedCompileCheckResult() compilecheck.Result {
 	}
 }
 
+// Verifies a run writes a start and a complete entry with one correlation id, and the complete
+// entry carries what the response reported and how long each compiled or checked unit took.
 func TestCompileCheckVibeLogRecordsASucceededRun(t *testing.T) {
-	// Verifies a run writes a start and a complete entry with one correlation id, and the complete
-	// entry carries what the response reported and how long each compiled or checked unit took.
 	t.Setenv(vibelog.CLIVibeLogEnvName, "1")
 	projectRoot := t.TempDir()
 	result := loggedCompileCheckResult()
@@ -135,8 +135,8 @@ func TestCompileCheckVibeLogRecordsASucceededRun(t *testing.T) {
 	}
 }
 
+// Verifies a run that found compile errors is logged as a warning with the errors counted.
 func TestCompileCheckVibeLogRecordsARunWithErrors(t *testing.T) {
-	// Verifies a run that found compile errors is logged as a warning with the errors counted.
 	t.Setenv(vibelog.CLIVibeLogEnvName, "1")
 	projectRoot := t.TempDir()
 	result := compilecheck.Result{Units: []compilecheck.UnitResult{{
@@ -157,8 +157,8 @@ func TestCompileCheckVibeLogRecordsARunWithErrors(t *testing.T) {
 	assertVibeContextJSON(t, complete, "error_count", "2")
 }
 
+// Verifies a run that could not finish is logged as an error with what stopped it.
 func TestCompileCheckVibeLogRecordsAFailedRun(t *testing.T) {
-	// Verifies a run that could not finish is logged as an error with what stopped it.
 	t.Setenv(vibelog.CLIVibeLogEnvName, "1")
 	projectRoot := t.TempDir()
 
@@ -175,9 +175,9 @@ func TestCompileCheckVibeLogRecordsAFailedRun(t *testing.T) {
 	assertVibeContextJSON(t, complete, "error_code", `"`+wantCode+`"`)
 }
 
+// Verifies runCompileCheck logs the run that stopped because the project's Editor is not
+// installed, as a start and a failed complete of the same run.
 func TestCompileCheckVibeLogRecordsAnEditorResolutionFailure(t *testing.T) {
-	// Verifies runCompileCheck logs the run that stopped because the project's Editor is not
-	// installed, as a start and a failed complete of the same run.
 	t.Setenv(vibelog.CLIVibeLogEnvName, "1")
 	isolateCompileCheckEditorLookup(t)
 	projectRoot := createDispatcherUnityProject(t)
