@@ -13,7 +13,7 @@ import (
 // matches the baseline, and the check that it is gone could run anywhere in the order unnoticed.
 func (project *fastPathProject) recordBaselineWithGeneratorOutput(t *testing.T) string {
 	t.Helper()
-	generatedDirectoryPath := openRecordStore(project.root, project.plan.OutputDir).generatedDirectory("Alpha")
+	generatedDirectoryPath := project.records().generatedDirectory("Alpha")
 	recorder := newCachedSchedulerRecorder("Alpha", "Beta")
 	recorder.during = func(unit string) {
 		if unit == "Alpha" {
@@ -21,8 +21,8 @@ func (project *fastPathProject) recordBaselineWithGeneratorOutput(t *testing.T) 
 		}
 	}
 	project.run(t, recorder, false)
-	if record := project.readBaseline(t); len(record.GeneratedFiles) != 1 {
-		t.Fatalf("expected the generated file in the baseline, got %v", record.GeneratedFiles)
+	if count := project.generatedFileCount(t, project.baseline(t)); count != 1 {
+		t.Fatalf("expected the generated file in the baseline, got %d files", count)
 	}
 
 	return filepath.Join(project.root, generatedDirectoryPath)

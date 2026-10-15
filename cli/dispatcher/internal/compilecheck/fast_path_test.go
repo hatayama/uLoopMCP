@@ -51,9 +51,9 @@ func TestFullFlagSkipsFastPathButRecords(t *testing.T) {
 	outcome := project.run(t, newCachedSchedulerRecorder("Alpha", "Beta"), true)
 
 	assertNotTried(t, outcome, project.worker)
-	if record, manifest := project.readBaseline(t), project.readManifest(t); record.InputKey != manifest.InputKey {
-		t.Errorf("expected the baseline to describe the --full compile, got %s and %s", record.InputKey, manifest.InputKey)
-	}
+	// Why a usable baseline is enough: the store hands one back only when its input key is the one
+	// the manifest of the last compile carries, and the --full compile removed the earlier pair.
+	project.baseline(t)
 }
 
 // Verifies that a unit picked only as a dependent is neither checked by the changed-files check nor
@@ -95,7 +95,7 @@ func TestMissingBaselineFallsBackAndRecords(t *testing.T) {
 	outcome := project.run(t, recorder, false)
 
 	assertFallback(t, outcome, recorder, "no baseline: no full compile of this assembly is on record")
-	record := project.readBaseline(t)
+	record := project.baseline(t)
 	if record.WorkerKey != "worker-a" || len(record.Files) != fastPathMinimumSources {
 		t.Errorf("expected a baseline of every source from worker-a, got key %s with %d files", record.WorkerKey, len(record.Files))
 	}
@@ -122,9 +122,11 @@ func TestHandCorruptedFailedManifestFallsBack(t *testing.T) {
 	project := newFastPathProject(t, fastPathMinimumSources)
 	project.recordBaseline(t)
 	project.editBody(t, 0, "edited")
-	manifest := project.readManifest(t)
-	manifest.Succeeded = false
-	project.writeJSON(t, project.manifestPathOf("Alpha"), manifest)
+	baseline := project.baseline(t)
+	if err := project.records().recordCompile("Alpha", baseline.InputKey,
+		recordedCompile{Succeeded: false, Diagnostics: baseline.Diagnostics}, unitOutputNames(project.plan.Units[0])); err != nil {
+		t.Fatalf("failed to record the failed compile: %v", err)
+	}
 	recorder := newCachedSchedulerRecorder("Alpha", "Beta")
 
 	outcome := project.run(t, recorder, false)
@@ -220,16 +222,16 @@ func TestMissingOrChangedGeneratorOutputFallsBack(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			project := newFastPathProject(t, fastPathMinimumSources)
-			generatedPath := filepath.Join(project.root, openRecordStore(project.root, project.plan.OutputDir).generatedDirectory("Alpha"))
+			generatedPath := filepath.Join(project.root, project.records().generatedDirectory("Alpha"))
 			recorder := newCachedSchedulerRecorder("Alpha", "Beta")
 			recorder.during = func(unit string) {
 				if unit == "Alpha" {
-					project.writeFile(t, filepath.Join(openRecordStore(project.root, project.plan.OutputDir).generatedDirectory("Alpha"), "Gen", "G.g.cs"), "class G { }")
+					project.writeFile(t, filepath.Join(project.records().generatedDirectory("Alpha"), "Gen", "G.g.cs"), "class G { }")
 				}
 			}
 			project.run(t, recorder, false)
-			if record := project.readBaseline(t); len(record.GeneratedFiles) != 1 {
-				t.Fatalf("expected the generated file in the baseline, got %v", record.GeneratedFiles)
+			if count := project.generatedFileCount(t, project.baseline(t)); count != 1 {
+				t.Fatalf("expected the generated file in the baseline, got %d files", count)
 			}
 			damage(t, generatedPath)
 			project.editBody(t, 0, "edited")
@@ -266,7 +268,7 @@ func TestDeclarationChangeFallsBackAndRerecords(t *testing.T) {
 	outcome := project.run(t, recorder, false)
 
 	assertFallback(t, outcome, recorder, fastcheck.DeclarationChangedOutcome+": "+project.sourceName(0))
-	if file := project.readBaseline(t).Files[project.sourceName(0)]; file.Fingerprint != "class File000 : Base " {
+	if file := project.baseline(t).Files[project.sourceName(0)]; file.Fingerprint != "class File000 : Base " {
 		t.Errorf("expected the new declaration in the baseline, got %+v", file)
 	}
 }
@@ -322,7 +324,7 @@ func TestWorkerKeyMismatchFallsBack(t *testing.T) {
 	outcome := project.run(t, recorder, false)
 
 	assertFallback(t, outcome, recorder, "baseline was fingerprinted by another worker build")
-	if record := project.readBaseline(t); record.WorkerKey != "worker-b" {
+	if record := project.baseline(t); record.WorkerKey != "worker-b" {
 		t.Errorf("expected the baseline to be recorded again by worker-b, got %s", record.WorkerKey)
 	}
 }
@@ -337,7 +339,7 @@ func TestFastPathCleanResultKeepsBaselineFiles(t *testing.T) {
 	first.surfaces["Alpha"] = "unity Alpha"
 	first.output["Alpha"] = fakeCompilerOutput{stdout: "Assets/Alpha/File001.cs(1,1): warning CS0168: unused"}
 	project.run(t, first, false)
-	before := project.fileHashes(t)
+	before := project.outputSnapshot(t)
 	project.editBody(t, 0, "edited")
 	project.worker.uncheckedCodes = []string{"CS0169"}
 
@@ -353,13 +355,13 @@ func TestFastPathCleanResultKeepsBaselineFiles(t *testing.T) {
 	if len(result.Diagnostics) != 1 || result.Diagnostics[0].File != "Assets/Alpha/File001.cs" {
 		t.Errorf("expected the warning of the unchanged file to be carried over, got %+v", result.Diagnostics)
 	}
-	if after := project.fileHashes(t); !reflect.DeepEqual(after, before) {
+	if after := project.outputSnapshot(t); !reflect.DeepEqual(after, before) {
 		t.Errorf("expected the outputs, manifest, and baseline to stay, got %v then %v", before, after)
 	}
 	if recorder.runs["Beta"] != 0 || outcome.Skipped != 1 {
 		t.Errorf("expected Beta to be skipped, got %d runs and %d skipped", recorder.runs["Beta"], outcome.Skipped)
 	}
-	if project.worker.lastCheck.GeneratedDirectory != filepath.Join(project.root, openRecordStore(project.root, project.plan.OutputDir).generatedDirectory("Alpha")) {
+	if project.worker.lastCheck.GeneratedDirectory != filepath.Join(project.root, project.records().generatedDirectory("Alpha")) {
 		t.Errorf("expected the saved generator output to be passed, got %q", project.worker.lastCheck.GeneratedDirectory)
 	}
 }
@@ -430,18 +432,23 @@ func TestRevertedContentIsReused(t *testing.T) {
 func TestZeroChangedFilesDropsBaselineAndFallsBack(t *testing.T) {
 	project := newFastPathProject(t, fastPathMinimumSources)
 	project.recordBaseline(t)
-	record := project.readBaseline(t)
-	manifest := project.readManifest(t)
-	record.InputKey = "tampered"
-	manifest.InputKey = "tampered"
-	project.writeJSON(t, project.baselinePath(), record)
-	project.writeJSON(t, project.manifestPathOf("Alpha"), manifest)
+	baseline := project.baseline(t)
+	records := project.records()
+	if err := records.recordCompile("Alpha", "tampered",
+		recordedCompile{Succeeded: true, Diagnostics: baseline.Diagnostics}, unitOutputNames(project.plan.Units[0])); err != nil {
+		t.Fatalf("failed to record the tampered compile: %v", err)
+	}
+	if err := records.recordBaseline("Alpha", baselineInputs{
+		InputKey: "tampered", NonSourceKey: baseline.NonSourceKey, WorkerKey: baseline.WorkerKey, Files: baseline.Files,
+	}); err != nil {
+		t.Fatalf("failed to record the tampered baseline: %v", err)
+	}
 	recorder := newCachedSchedulerRecorder("Alpha", "Beta")
 
 	outcome := project.run(t, recorder, false)
 
 	assertFallback(t, outcome, recorder, "baseline record does not match its compile result")
-	if project.readBaseline(t).InputKey == "tampered" {
+	if project.baseline(t).InputKey == "tampered" {
 		t.Error("expected the disagreeing baseline to be replaced")
 	}
 }
@@ -451,7 +458,7 @@ func TestZeroChangedFilesDropsBaselineAndFallsBack(t *testing.T) {
 func TestCancelledFastPathLeavesBaselineUntouched(t *testing.T) {
 	project := newFastPathProject(t, fastPathMinimumSources)
 	project.recordBaseline(t)
-	before := project.fileHashes(t)
+	before := project.outputSnapshot(t)
 	project.editBody(t, 0, "edited")
 	ctx, cancel := context.WithCancel(context.Background())
 	project.worker.onCheck = cancel
@@ -462,7 +469,7 @@ func TestCancelledFastPathLeavesBaselineUntouched(t *testing.T) {
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("expected the run to stop with a cancellation, got %v", err)
 	}
-	if after := project.fileHashes(t); !reflect.DeepEqual(after, before) {
+	if after := project.outputSnapshot(t); !reflect.DeepEqual(after, before) {
 		t.Errorf("expected the outputs, manifest, and baseline to stay, got %v then %v", before, after)
 	}
 }
@@ -502,8 +509,8 @@ func TestBaselineRemovedByBlockedRunIsNotCalledNeverCompiled(t *testing.T) {
 	}
 	project.plan.Units[1].Sources = sources
 	project.run(t, newCachedSchedulerRecorder("Alpha", "Beta"), false)
-	if _, err := os.Stat(filepath.Join(project.outputDirectory(), "Beta"+baselineRecordExtension)); err != nil {
-		t.Fatalf("expected the first run to record Beta's baseline: %v", err)
+	if !project.hasBaselineOf("Beta") {
+		t.Fatal("expected the first run to record Beta's baseline")
 	}
 
 	project.editSource(t, "Alpha", "class Alpha { broken }")

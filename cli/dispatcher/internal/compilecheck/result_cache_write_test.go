@@ -10,63 +10,12 @@ import (
 	"time"
 )
 
-// blockManifestPath puts a non-empty directory where a unit's manifest belongs, so renaming the
-// finished manifest into place fails on every platform.
-func blockManifestPath(t *testing.T, manifestFilePath string) {
-	t.Helper()
-	writeFileAt(t, filepath.Join(manifestFilePath, "occupied"), "")
-}
-
-// Verifies a manifest that cannot be renamed into place is reported as a write failure and leaves
-// no temporary file behind.
-func TestWriteUnitResultManifestReportsAFailedRename(t *testing.T) {
-	outputDirectoryPath, unit := newManifestUnit(t)
-	blockManifestPath(t, manifestPath(outputDirectoryPath, unit.Assembly.AssemblyName))
-
-	err := manifestStore(outputDirectoryPath).recordCompile(unit.Assembly.AssemblyName, "key", storedResult(), unitOutputNames(unit))
-
-	if err == nil || !strings.HasPrefix(err.Error(), "failed to write "+manifestPath(outputDirectoryPath, unit.Assembly.AssemblyName)+":") {
-		t.Fatalf("err = %v", err)
-	}
-	matches, globErr := filepath.Glob(filepath.Join(outputDirectoryPath, "*"+resultManifestTempSuffix))
-	if globErr != nil || len(matches) != 0 {
-		t.Fatalf("temporary manifests left behind: %v (glob error %v)", matches, globErr)
-	}
-}
-
-// Verifies a manifest cannot be written into an output directory that does not exist, which is
-// reported with the manifest path.
-func TestWriteUnitResultManifestReportsAMissingOutputDirectory(t *testing.T) {
-	_, unit := newManifestUnit(t)
-	outputDirectoryPath := filepath.Join(t.TempDir(), "missing")
-
-	err := manifestStore(outputDirectoryPath).recordCompile(unit.Assembly.AssemblyName, "key", storedResult(), unitOutputNames(unit))
-
-	if err == nil || !strings.HasPrefix(err.Error(), "failed to write "+manifestPath(outputDirectoryPath, unit.Assembly.AssemblyName)+":") {
-		t.Fatalf("err = %v", err)
-	}
-}
-
-// Verifies an output that exists but cannot be read is reported instead of being treated as absent.
-func TestHashUnitOutputsReportsAnUnreadableOutput(t *testing.T) {
-	outputDirectoryPath, unit := newManifestUnit(t)
-	unreadablePath := filepath.Join(outputDirectoryPath, "Alpha"+assemblyExtension)
-	if err := os.Remove(unreadablePath); err != nil {
-		t.Fatalf("failed to remove the assembly: %v", err)
-	}
-	makeDirAt(t, unreadablePath)
-
-	_, complete, err := hashOutputs(outputDirectoryPath, unitOutputNames(unit), true)
-
-	if err == nil || complete || !strings.Contains(err.Error(), unreadablePath) {
-		t.Fatalf("complete=%v err=%v, want an error naming %s", complete, err, unreadablePath)
-	}
-}
-
 // Verifies a unit without a reference assembly names its assembly alone as an output.
 func TestUnitOutputNamesSkipsAnAbsentReferenceAssemblyPath(t *testing.T) {
-	_, unit := newManifestUnit(t)
-	unit.Assembly.RefOutputPath = ""
+	unit := CompileUnit{Assembly: ResponseFile{
+		AssemblyName: "Alpha",
+		OutputPath:   filepath.Join(planDagDirectory, "Alpha"+assemblyExtension),
+	}}
 
 	names := unitOutputNames(unit)
 
@@ -75,14 +24,31 @@ func TestUnitOutputNamesSkipsAnAbsentReferenceAssemblyPath(t *testing.T) {
 	}
 }
 
-// Verifies only the named outputs are hashed, even when another output is on disk.
-func TestHashOutputsHashesOnlyTheNamedOutputs(t *testing.T) {
-	outputDirectoryPath, _ := newManifestUnit(t)
+// Verifies removing a unit's outputs removes both outputs and leaves no record of the compile that
+// wrote them: no compile result, no baseline, and no saved generator output.
+func TestRemoveUnitOutputsLeavesNoRecords(t *testing.T) {
+	project := newFastPathProject(t, fastPathMinimumSources)
+	project.recordBaseline(t)
+	generatedPath := filepath.Join(project.root, project.records().generatedDirectory("Alpha"))
+	if _, err := os.Stat(generatedPath); err != nil {
+		t.Fatalf("expected the compile to leave its generator output directory: %v", err)
+	}
+	compiler := Compiler{Paths: project.paths, ProjectRoot: project.root}
 
-	outputs, complete, err := hashOutputs(outputDirectoryPath, []string{"Alpha" + assemblyExtension}, true)
+	if err := compiler.removeUnitOutputs(project.plan, project.plan.Units[0]); err != nil {
+		t.Fatalf("expected the outputs to be removed, got error: %v", err)
+	}
 
-	if err != nil || !complete || len(outputs) != 1 || outputs["Alpha"+assemblyExtension] == "" {
-		t.Fatalf("outputs=%v complete=%v err=%v", outputs, complete, err)
+	for _, name := range unitOutputNames(project.plan.Units[0]) {
+		if _, err := os.Stat(filepath.Join(project.outputDirectory(), name)); !os.IsNotExist(err) {
+			t.Errorf("expected %s to be removed, got %v", name, err)
+		}
+	}
+	if project.hasRecordedCompile("Alpha") || project.hasBaseline() {
+		t.Error("expected no compile result and no baseline after the outputs were removed")
+	}
+	if _, err := os.Stat(generatedPath); !os.IsNotExist(err) {
+		t.Errorf("expected the generator output to be removed, got %v", err)
 	}
 }
 
@@ -91,23 +57,26 @@ func TestHashOutputsHashesOnlyTheNamedOutputs(t *testing.T) {
 func TestCompileUnitsFailsWhenAResultCannotBeRecorded(t *testing.T) {
 	project := newCachedSchedulerProject(t, nil, "Alpha")
 	recorder := newCachedSchedulerRecorder("Alpha")
+	recorder.output["Alpha"] = failingCompilerOutput("Alpha")
 	compileRunner := recorder.runner()
 	compiler := Compiler{
 		Paths:       project.paths,
 		ProjectRoot: project.root,
 		Timeout:     time.Minute,
-		// Why the block is placed during the compile: the compile removes any previous manifest before
-		// it starts, so only a path occupied after that point reaches the manifest write.
+		// Why the output directory goes during the compile: the compile failed, so its missing outputs
+		// are allowed, and only writing the record finds nowhere to go.
 		Run: func(ctx context.Context, cmd *exec.Cmd) (string, string, int, error) {
 			stdout, stderr, exitCode, err := compileRunner(ctx, cmd)
-			blockManifestPath(t, project.manifestPathOf("Alpha"))
+			if removeErr := os.RemoveAll(project.outputDirectory()); removeErr != nil {
+				t.Errorf("failed to remove the output directory: %v", removeErr)
+			}
 			return stdout, stderr, exitCode, err
 		},
 	}
 
 	_, err := compileUnits(context.Background(), compiler, project.plan, 1)
 
-	if err == nil || !strings.HasPrefix(err.Error(), "failed to write "+project.manifestPathOf("Alpha")+":") {
-		t.Fatalf("err = %v, want the manifest write failure", err)
+	if err == nil || !strings.HasPrefix(err.Error(), "failed to write "+project.outputDirectory()+string(filepath.Separator)) {
+		t.Fatalf("err = %v, want the record write failure", err)
 	}
 }

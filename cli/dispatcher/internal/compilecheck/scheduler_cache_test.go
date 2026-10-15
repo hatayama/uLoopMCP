@@ -108,16 +108,38 @@ func (project *cachedSchedulerProject) outputDirectory() string {
 	return filepath.Join(project.root, project.plan.OutputDir)
 }
 
-// manifestPathOf names one assembly's result manifest.
-func (project *cachedSchedulerProject) manifestPathOf(name string) string {
-	return filepath.Join(project.outputDirectory(), name+resultManifestExtension)
+// writeOutputFile writes one file into the check's own output directory.
+func writeOutputFile(t *testing.T, outputDirectoryPath string, name string, content string) {
+	t.Helper()
+	if err := os.WriteFile(
+		filepath.Join(outputDirectoryPath, name), []byte(content), 0o600); err != nil {
+		t.Fatalf("failed to write %s: %v", name, err)
+	}
 }
 
-// hasManifest reports whether one assembly has a recorded result right now.
-func (project *cachedSchedulerProject) hasManifest(name string) bool {
-	_, err := os.Stat(project.manifestPathOf(name))
+// records opens the store the runs of this test project write to.
+func (project *cachedSchedulerProject) records() recordStore {
+	return openRecordStore(project.root, project.plan.OutputDir)
+}
 
-	return err == nil
+// hasBaselineOf reports whether a baseline of the current format is on disk for the assembly.
+// Why the "no baseline:" prefix tells: the store gives it only when the baseline file is missing or
+// was written by another version; a baseline file that disagrees with its compile result is
+// reported as "baseline compile is no longer on disk" instead.
+func (project *cachedSchedulerProject) hasBaselineOf(name string) bool {
+	_, reason := project.records().loadBaseline(name)
+
+	return !strings.HasPrefix(reason, "no baseline:")
+}
+
+// hasRecordedCompile reports whether a compile result of the assembly is on record.
+// Why the baseline reason tells: these assemblies have fewer sources than the changed-files check
+// needs, so they never get a baseline, and the store explains the missing baseline from the
+// compile result alone - this reason is the one it gives when there is no compile result.
+func (project *cachedSchedulerProject) hasRecordedCompile(name string) bool {
+	_, reason := project.records().loadBaseline(name)
+
+	return reason != "no baseline: no full compile of this assembly is on record"
 }
 
 // compile runs the whole plan through the scheduler with a fake compiler.
@@ -306,20 +328,20 @@ func TestCompileUnitsBlocksTheDependentsOfAReplayedFailure(t *testing.T) {
 func TestCompileUnitsHasNoManifestWhileAUnitIsCompiling(t *testing.T) {
 	project := newCachedSchedulerProject(t, nil, "Alpha")
 	project.compileOrFail(t, newCachedSchedulerRecorder("Alpha"))
-	if !project.hasManifest("Alpha") {
+	if !project.hasRecordedCompile("Alpha") {
 		t.Fatal("the first run should have recorded a result")
 	}
 
 	project.editSource(t, "Alpha", "class Alpha { void Body() { } }")
 	recorder := newCachedSchedulerRecorder("Alpha")
 	present := map[string]bool{}
-	recorder.during = func(name string) { present[name] = project.hasManifest(name) }
+	recorder.during = func(name string) { present[name] = project.hasRecordedCompile(name) }
 	project.compileOrFail(t, recorder)
 
 	if present["Alpha"] {
 		t.Error("the manifest of the previous compile should be gone while the unit compiles")
 	}
-	if !project.hasManifest("Alpha") {
+	if !project.hasRecordedCompile("Alpha") {
 		t.Error("the finished compile should have been recorded")
 	}
 }
@@ -333,7 +355,7 @@ func TestCompileUnitsRecordsNothingForAUnitThatCouldNotBeStarted(t *testing.T) {
 	if _, err := project.compile(context.Background(), failing); err == nil {
 		t.Fatal("expected the failure to start the compiler to be reported")
 	}
-	if project.hasManifest("Alpha") {
+	if project.hasRecordedCompile("Alpha") {
 		t.Error("a unit whose compiler never ran should have no recorded result")
 	}
 
@@ -356,7 +378,7 @@ func TestCompileUnitsRecordsNothingForACancelledUnit(t *testing.T) {
 		t.Fatal("expected the cancelled run to be reported as a failure")
 	}
 	cancel()
-	if project.hasManifest("Alpha") {
+	if project.hasRecordedCompile("Alpha") {
 		t.Error("a cancelled compile should have no recorded result")
 	}
 
@@ -398,7 +420,7 @@ func TestCompileUnitsRecordsNothingWhenTheCompilerFailedWithoutADiagnostic(t *te
 	broken.output["Alpha"] = fakeCompilerOutput{stdout: "csc : fatal error", exitCode: 1}
 	project.compileOrFail(t, broken)
 
-	if project.hasManifest("Alpha") {
+	if project.hasRecordedCompile("Alpha") {
 		t.Error("a compile that failed without a diagnostic should have no recorded result")
 	}
 
@@ -433,7 +455,7 @@ func TestCompileUnitsCompilesAgainWhenAnOutputWasChanged(t *testing.T) {
 func TestCompileUnitsLeavesNoManifestForASkippedDependent(t *testing.T) {
 	project := newCachedSchedulerProject(t, map[string][]string{"Beta": {"Alpha"}}, "Alpha", "Beta")
 	project.compileOrFail(t, newCachedSchedulerRecorder("Alpha", "Beta"))
-	if !project.hasManifest("Beta") {
+	if !project.hasRecordedCompile("Beta") {
 		t.Fatal("the first run should have recorded a result for the dependent")
 	}
 
@@ -454,7 +476,7 @@ func TestCompileUnitsLeavesNoManifestForASkippedDependent(t *testing.T) {
 	if recorder.runs["Beta"] != 0 {
 		t.Errorf("the skipped dependent should not have compiled, got %d runs", recorder.runs["Beta"])
 	}
-	if project.hasManifest("Beta") {
+	if project.hasRecordedCompile("Beta") {
 		t.Error("the skipped dependent's recorded result should have been removed with its outputs")
 	}
 }
@@ -478,7 +500,7 @@ func TestCompileUnitsRecordsNothingForAUnitKilledWhileItWasReportingDiagnostics(
 	}
 	cancel()
 
-	if project.hasManifest("Alpha") {
+	if project.hasRecordedCompile("Alpha") {
 		t.Fatal("a killed compile must leave no recorded result to replay")
 	}
 
@@ -500,7 +522,7 @@ func TestCompileUnitsRecordsNothingWhenASuccessfulCompileWroteNoOutput(t *testin
 
 	project.compileOrFail(t, silent)
 
-	if project.hasManifest("Alpha") {
+	if project.hasRecordedCompile("Alpha") {
 		t.Fatal("a compile that produced no output must leave no recorded result")
 	}
 
