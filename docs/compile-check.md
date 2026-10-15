@@ -153,7 +153,7 @@ build - does not call the worker again: it reports what the previous check repor
 Otherwise the assembly is compiled in full as before, and `FastPathFallbacks` says why:
 
 - `no baseline: no full compile of this assembly is on record` (none ran yet, a later run
-  skipped or blocked the assembly, which removes its result and baseline, or an input changed while
+  skipped the assembly, which removes its result and baseline, or an input changed while
   the last full compile ran, so it left no record; `FastPathBaselineNotes` of that run says which)
 - `no baseline: the last full compile had errors` (a full compile that fails drops the baseline an
   earlier one left)
@@ -191,9 +191,11 @@ So the first body edit is compiled in full more often than it looks:
   that references another assembly of the project, the first body edit after `--all` falls back
   with `inputs other than source contents changed: references`; an assembly that references none
   is checked as usual.
-- A run that skips an assembly because nothing it compiles from changed, or blocks it because an
-  assembly it references has errors, removes its result and baseline, so its next body edit is
-  compiled in full.
+- A run that skips an assembly because nothing it compiles from changed removes its result and
+  baseline, so its next body edit is compiled in full. A run that blocks it because an assembly it
+  references has errors keeps them: the next run checks them against the inputs and output hashes
+  they were recorded with before using them, so a reference that comes back the same leaves the
+  assembly reused or checked on its changed files, and one that comes back changed compiles it.
 - `--full` while the assembly still has errors drops its baseline, so the run after the fix is
   compiled in full. Running `--full` once the errors are fixed keeps it.
 

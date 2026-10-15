@@ -116,7 +116,7 @@ func (s Store[D]) LoadBaseline(assembly string) (Baseline[D], string) {
 // compile.
 // Why the reasons are told apart: a full compile with errors drops the baseline an earlier compile
 // left, and a reason that read as "never compiled" sent users looking for a compile that had run.
-// Why a missing manifest says nothing about what happened: a run that skips or blocks the unit
+// Why a missing manifest says nothing about what happened: a run that skips the unit
 // removes the manifest and the baseline alike, so nothing on disk tells that apart from no compile.
 func (s Store[D]) missingBaselineReason(assembly string) string {
 	const notOnRecord = "no baseline: no full compile of this assembly is on record"
