@@ -225,7 +225,7 @@ func TestBuildCompileCheckResponseCountsWarningsOnASuccessfulRun(t *testing.T) {
 	if !response.Success || response.WarningCount != 1 {
 		t.Fatalf("expected a clean run with one warning, got %+v", response)
 	}
-	if response.Message != "Compiled 1 assemblies with 0 errors and 1 warnings." {
+	if response.Message != "Compiled 1 assembly with 0 errors and 1 warning." {
 		t.Fatalf("the summary should report the warning count, got %q", response.Message)
 	}
 }
@@ -285,7 +285,7 @@ func TestBuildCompileCheckResponseSummarizesCompiledAndReusedTogether(t *testing
 		},
 	}, "/projects/sample")
 
-	if response.Message != "Compiled 1 assemblies and reused 2 with 0 errors and 0 warnings." {
+	if response.Message != "Compiled 1 assembly and reused 2 with 0 errors and 0 warnings." {
 		t.Fatalf("unexpected summary, got %q", response.Message)
 	}
 }
@@ -312,7 +312,7 @@ func TestBuildCompileCheckResponseKeepsTheCompiledOnlySummary(t *testing.T) {
 		Units:  []compilecheck.UnitResult{{Assembly: "A", Succeeded: true}},
 	}, "/projects/sample")
 
-	if response.Message != "Compiled 1 assemblies with 0 errors and 0 warnings." {
+	if response.Message != "Compiled 1 assembly with 0 errors and 0 warnings." {
 		t.Fatalf("unexpected summary, got %q", response.Message)
 	}
 }
@@ -378,7 +378,7 @@ func TestBuildCompileCheckResponseSaysWhyBlockedAssembliesWereNotCompiled(t *tes
 		Blocked: []string{"B", "C"},
 	}, "/projects/sample")
 
-	want := "Compiled 1 assemblies with 1 errors and 0 warnings." +
+	want := "Compiled 1 assembly with 1 error and 0 warnings." +
 		" 2 assemblies were not compiled because an assembly they reference has errors."
 	if response.Message != want {
 		t.Fatalf("unexpected summary, got %q", response.Message)

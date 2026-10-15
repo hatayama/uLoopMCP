@@ -13,14 +13,17 @@ import (
 func compileCheckMessage(response compileCheckResponse) string {
 	message := compileCheckRunSummary(response)
 	if len(response.BlockedAssemblies) > 0 {
-		message += fmt.Sprintf(
-			" %d assemblies were not compiled because an assembly they reference has errors.",
-			len(response.BlockedAssemblies))
+		count := len(response.BlockedAssemblies)
+		message += fmt.Sprintf(compileCheckPlural(count,
+			" %d assembly was not compiled because an assembly it references has errors.",
+			" %d assemblies were not compiled because an assembly they reference has errors."), count)
 	}
 	if len(response.FastCheckedAssemblies) > 0 {
-		message += fmt.Sprintf(
-			" %d assemblies were checked on their changed files only; run with --full before finishing to cover assembly-wide rules.",
-			len(response.FastCheckedAssemblies))
+		count := len(response.FastCheckedAssemblies)
+		message += fmt.Sprintf(compileCheckPlural(count,
+			" %d assembly was checked on its changed files only;",
+			" %d assemblies were checked on their changed files only;"), count) +
+			" run with --full before finishing to cover assembly-wide rules."
 	}
 
 	return message
@@ -44,8 +47,9 @@ func compileCheckRunSummary(response compileCheckResponse) string {
 			continue
 		}
 		if len(parts) == 0 {
-			parts = append(parts, fmt.Sprintf("%s%s %d assemblies",
-				strings.ToUpper(entry.verb[:1]), entry.verb[1:], entry.count))
+			parts = append(parts, fmt.Sprintf("%s%s %d %s",
+				strings.ToUpper(entry.verb[:1]), entry.verb[1:], entry.count,
+				compileCheckPlural(entry.count, "assembly", "assemblies")))
 			continue
 		}
 		parts = append(parts, fmt.Sprintf("%s %d", entry.verb, entry.count))
@@ -54,8 +58,20 @@ func compileCheckRunSummary(response compileCheckResponse) string {
 		return compileCheckNoChangeMessage
 	}
 
-	return fmt.Sprintf("%s with %d errors and %d warnings.",
-		joinCompileCheckSummaryParts(parts), response.ErrorCount, response.WarningCount)
+	return fmt.Sprintf("%s with %d %s and %d %s.",
+		joinCompileCheckSummaryParts(parts),
+		response.ErrorCount, compileCheckPlural(response.ErrorCount, "error", "errors"),
+		response.WarningCount, compileCheckPlural(response.WarningCount, "warning", "warnings"))
+}
+
+// compileCheckPlural picks the wording for count, which is singular only for exactly one; zero
+// takes the plural ("0 errors").
+func compileCheckPlural(count int, singular string, plural string) string {
+	if count == 1 {
+		return singular
+	}
+
+	return plural
 }
 
 // joinCompileCheckSummaryParts joins the summary parts as "A and b" or "A, b and c".

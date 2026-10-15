@@ -84,8 +84,8 @@ func TestResponseListsFallbackReasons(t *testing.T) {
 func TestMessageMentionsFastCheckedAssemblies(t *testing.T) {
 	response := buildCompileCheckResponse(fastCheckedResult(), "/projects/sample")
 
-	want := "Compiled 1 assemblies, reused 1 and fast-checked 1 with 0 errors and 0 warnings." +
-		" 1 assemblies were checked on their changed files only; run with --full before finishing to cover assembly-wide rules."
+	want := "Compiled 1 assembly, reused 1 and fast-checked 1 with 0 errors and 0 warnings." +
+		" 1 assembly was checked on its changed files only; run with --full before finishing to cover assembly-wide rules."
 	if response.Message != want {
 		t.Errorf("message = %q, want %q", response.Message, want)
 	}
@@ -102,7 +102,7 @@ func TestFastCheckOnlyRunWithErrorDoesNotSayNoAssembliesChanged(t *testing.T) {
 		}},
 	}, "/projects/sample")
 
-	if strings.Contains(response.Message, compileCheckNoChangeMessage) || !strings.HasPrefix(response.Message, "Fast-checked 1 assemblies with 1 errors and 0 warnings.") {
+	if strings.Contains(response.Message, compileCheckNoChangeMessage) || !strings.HasPrefix(response.Message, "Fast-checked 1 assembly with 1 error and 0 warnings.") {
 		t.Errorf("unexpected message %q", response.Message)
 	}
 	if response.ErrorCount != 1 || response.Success {
