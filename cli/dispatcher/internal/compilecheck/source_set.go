@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 )
@@ -165,21 +166,28 @@ func readAssemblyDefinitionGUID(assemblyDefinitionPath string) string {
 }
 
 // RebuildSources lists the sources to compile now, reflecting .cs files added or deleted since Bee ran.
+// The recorded sources keep the order of the response file, and the ones added since follow them in
+// ordinal order.
+// Why the order is kept: csc emits types in the order of its sources, so another order gives an
+// assembly nobody edited a reference assembly in other bytes than Unity's, and its dependents compile
+// again. Why the added ones are not slotted in where Unity would put them: Unity versions order the
+// response file differently, and appending leaves the relative order of every recorded source as is.
 func RebuildSources(
 	projectRoot string, rsp ResponseFile, asmdef *AssemblyDefinition, owners assemblyOwnerIndex,
 ) ([]string, error) {
 	existing := make([]string, 0, len(rsp.Sources))
+	seen := map[string]bool{}
 	for _, source := range rsp.Sources {
-		if owners.tree.fileExists(sourcePath(projectRoot, source)) {
-			existing = append(existing, source)
+		if seen[source] || !owners.tree.fileExists(sourcePath(projectRoot, source)) {
+			continue
 		}
+		seen[source] = true
+		existing = append(existing, source)
 	}
 
 	// Why package-cache assemblies are not re-globbed: their contents are restored from the package
 	// manager and never edited in place, so the walk would only cost time.
 	if asmdef == nil || isUnderPackageCache(projectRoot, asmdef.Directory) {
-		sort.Strings(existing)
-
 		return existing, nil
 	}
 
@@ -225,10 +233,11 @@ func detectMovedAssemblyDefinition(
 			"so it moved after the last Unity build", asmdef.Name)
 }
 
-// rescueRecordedSources adds back the recorded sources the glob did not produce, which are the files
-// an .asmref attaches to this assembly from a folder the glob never reaches - the folder is not
-// always outside the assembly directory, since an .asmref nested inside a child assembly's directory
-// sits under it yet stops the glob at the child's boundary.
+// rescueRecordedSources keeps the recorded sources the glob did not produce, which are the files an
+// .asmref attaches to this assembly from a folder the glob never reaches - the folder is not always
+// outside the assembly directory, since an .asmref nested inside a child assembly's directory sits
+// under it yet stops the glob at the child's boundary. It returns every recorded source in response
+// file order, then the sources the glob found that the response file did not record, sorted.
 // Why each one is checked against the .asmref that owns its folder rather than simply kept: removing
 // or retargeting an .asmref leaves the .cs file where it is, so the response file still records it
 // while the project has handed it to another assembly, and keeping it would compile the file into
@@ -237,12 +246,13 @@ func rescueRecordedSources(
 	projectRoot string, asmdef AssemblyDefinition, globbed []string, existing []string,
 	owners assemblyOwnerIndex,
 ) ([]string, error) {
-	result := globbed
 	globbedSet := map[string]bool{}
 	for _, source := range globbed {
 		globbedSet[filepath.ToSlash(source)] = true
 	}
+	recordedSet := map[string]bool{}
 	for _, source := range existing {
+		recordedSet[filepath.ToSlash(source)] = true
 		if globbedSet[filepath.ToSlash(source)] {
 			continue
 		}
@@ -251,11 +261,17 @@ func rescueRecordedSources(
 				"the last build recorded %s in %s, which no assembly reference attaches to it any more",
 				filepath.Base(source), asmdef.Name)
 		}
-		result = append(result, source)
 	}
-	sort.Strings(result)
 
-	return result, nil
+	added := []string{}
+	for _, source := range globbed {
+		if !recordedSet[filepath.ToSlash(source)] {
+			added = append(added, source)
+		}
+	}
+	sort.Strings(added)
+
+	return append(slices.Clone(existing), added...), nil
 }
 
 // globAssemblySources lists the .cs files an assembly owns, stopping at nested assembly boundaries.

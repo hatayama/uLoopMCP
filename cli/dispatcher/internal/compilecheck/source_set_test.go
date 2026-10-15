@@ -91,8 +91,8 @@ func TestRebuildSourcesKeepsSourcesOutsideTheAssemblyDirectory(t *testing.T) {
 
 	assertStrings(t, "sources", sources, []string{
 		"Assets/Foo/A.cs",
-		"Assets/Foo/Sub/B.cs",
 		"Assets/Shared/E.cs",
+		"Assets/Foo/Sub/B.cs",
 	})
 }
 
@@ -481,8 +481,8 @@ func TestRebuildSourcesGlobsANewSourceInsideAnOutsideAsmrefFolder(t *testing.T) 
 	}
 
 	assertStrings(t, "sources", sources, []string{
-		"Assets/Ext/Ext.cs",
 		"Assets/P/A.cs",
 		"Assets/P/Core/Dialog/Dialog.cs",
+		"Assets/Ext/Ext.cs",
 	})
 }
