@@ -222,8 +222,9 @@ command ran against:
 - A missing line is evidence only when the define was set and the code path logs at all.
   Coverage is per call site, not per command: for example, `execute-dynamic-code`,
   `simulate-keyboard`, `screenshot`, compile, domain reload, server binding, and hot reload log
-  start and completion, while the CLI side logs compile requests, window focus, and the tool
-  requests described under "CLI entries for tool commands" below.
+  start and completion, while the CLI side logs compile requests, window focus, the tool
+  requests described under "CLI entries for tool commands" below, and `compile-check` runs
+  ("CLI entries for compile-check").
   Check that the operation you expect is logged somewhere (`git grep` the operation name) before
   reading its absence as "it never ran".
 
@@ -269,6 +270,21 @@ or `control-play-mode` that waits for a domain reload or a Play Mode change, and
   request itself got through.
 - The `cli_tool_*` entries of one command share one `correlation_id`, and the two
   `cli_hot_reload_*` entries share another. Pair the two groups by time.
+
+## CLI entries for compile-check
+
+`compile-check` never talks to the Editor, so these two entries are the only record of what a run
+did. Both carry the same `correlation_id`. A run that cannot find its project writes neither,
+because there is no project to write into.
+
+| `operation` | Written | `context` |
+|---|---|---|
+| `cli_compile_check_start` | once the project is found | `command`, `all`, `full`, `jobs`, `project_identity` |
+| `cli_compile_check_complete` (`INFO`; `WARNING` when the run found compile errors; `ERROR` when it could not finish) | on every way out of a run that wrote the start entry | `command`, `outcome` (`succeeded`, `errors`, or `failed`), `duration_ms`; for `failed`, `error` and `error_code`; otherwise `error_count`, `warning_count`, `compiled`, `reused`, `fast_checked`, `blocked` (assembly names, as in the response), `skipped_count`, `fast_checks` (`assembly`, `reused`, `changed_file_count`), `fallbacks` and `baseline_notes` (`assembly`, `reason`), and `units` (`assembly`, `duration_ms`, `succeeded` of each assembly the run compiled or checked; replayed ones are left out) |
+
+- Unlike the tool-command entries, the complete entry holds the run's error message and fallback
+  reasons: they can name assemblies and files of the project, which the command's own output prints
+  as well.
 
 ## How to use them in an investigation
 
