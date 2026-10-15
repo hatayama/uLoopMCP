@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -342,4 +343,25 @@ func TestCompileUnitsDoesNotCompareTheSurfaceOfAFailedUnit(t *testing.T) {
 	compileWithFastPath(t, project, worker, recorder, "Alpha", "Beta")
 
 	assertComparisons(t, worker, 0)
+}
+
+// Verifies a comparison whose copies cannot be written counts as changed, without asking the worker.
+func TestReferenceSurfaceVerdictTreatsUnwritableCopiesAsChanged(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("directory permissions do not make a directory read-only on Windows")
+	}
+	project := newSurfaceVerdictProject(t)
+	project.worker.surfaceOutcome = "same"
+	outputDirectory := filepath.Join(project.root, project.plan.OutputDir)
+	if err := os.Chmod(outputDirectory, 0o500); err != nil {
+		t.Fatalf("failed to make the output directory read-only: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(outputDirectory, outputDirPermissions) })
+
+	got := project.verdict()
+
+	if got.Kept || !strings.HasPrefix(got.Reason, SurfaceCouldNotComparePrefix) {
+		t.Fatalf("expected a changed surface that could not be compared, got %+v", got)
+	}
+	assertComparisons(t, project.worker, 0)
 }
