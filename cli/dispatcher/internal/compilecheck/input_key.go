@@ -132,7 +132,7 @@ func keyParts(
 		{keyPartNames[1], func(digest hash.Hash) error { return writeResponseFileIdentity(digest, unit.Assembly) }},
 		{keyPartNames[2], sourceWriter},
 		{keyPartNames[3], func(digest hash.Hash) error {
-			return writeReferenceIdentity(digest, projectRoot, plan, unit.Assembly.References)
+			return writeReferenceIdentity(digest, projectRoot, plan, unit)
 		}},
 		{keyPartNames[4], func(digest hash.Hash) error {
 			return writeAnalyzerIdentity(digest, projectRoot, unit.Assembly.Analyzers)
@@ -234,15 +234,16 @@ func writeSourceNames(digest hash.Hash, sources []string) {
 
 // writeReferenceIdentity records the assemblies this one compiles against, resolved the way the
 // compile itself resolves them.
-// Why the two rules: a reference this run rebuilds is read by content, because recompiling an
-// assembly writes the same public surface with a new timestamp whenever the edit stayed inside a
-// method body - the very case this cache exists for. Everything else is read by timestamp, which
-// moves whenever Unity rebuilt it, and a compile that did not need it costs less than a missed error.
+// Why the two rules: a reference this run rebuilt into a different surface is read by content,
+// because a later rebuild can write the same bytes again with a new timestamp. Everything else -
+// including a rebuilt reference that kept Unity's surface, which the compile reads from Unity's file -
+// is read by timestamp, which moves whenever Unity rebuilt it, and a compile that did not need it
+// costs less than a missed error.
 func writeReferenceIdentity(
-	digest hash.Hash, projectRoot string, plan BuildPlan, references []string,
+	digest hash.Hash, projectRoot string, plan BuildPlan, unit CompileUnit,
 ) error {
-	for _, reference := range references {
-		resolved := rewriteReference(projectRoot, plan, reference)
+	for _, reference := range unit.Assembly.References {
+		resolved := rewriteReference(projectRoot, plan, unit, reference)
 		path := projectPath(projectRoot, resolved)
 		if isUnderDirectory(resolved, plan.OutputDir) {
 			if err := writeFileContentEntry(digest, "produced-reference", resolved, path); err != nil {

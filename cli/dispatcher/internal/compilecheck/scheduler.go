@@ -14,10 +14,11 @@ import (
 type unitCompletion struct {
 	index  int
 	result UnitResult
-	// changed says whether this unit's reference assembly came out different from the one the last
-	// Unity build produced, which is what decides whether its dependents still have to compile.
-	changed bool
-	err     error
+	// keptSurface says whether this unit's reference assembly came out describing the same public
+	// surface as the one the last Unity build produced, which decides whether its dependents still
+	// have to compile and which of the two reference assemblies they read when they do.
+	keptSurface bool
+	err         error
 }
 
 // schedule is the readiness bookkeeping of one run: how many of a unit's references are still
@@ -25,6 +26,8 @@ type unitCompletion struct {
 type schedule struct {
 	pending    []int
 	dependents [][]int
+	// references lists, per unit, the units of the plan it references.
+	references [][]int
 	ready      []int
 	// changedInputs counts, per unit, how many of the references it waited for came out with a
 	// different public surface than the last Unity build recorded.
@@ -32,6 +35,8 @@ type schedule struct {
 	// blocked marks, per unit, that an assembly it references has errors, so this run must not
 	// compile it.
 	blocked []bool
+	// keptSurface marks, per unit, that it finished with the public surface of the last Unity build.
+	keptSurface []bool
 }
 
 // compileOutcome is everything one run of the scheduler produced: the results it has, and what it
@@ -151,7 +156,7 @@ func (run *schedulerRun) startReadyUnits(jobs int) error {
 			continue
 		}
 		run.running++
-		go run.compileOneUnit(index)
+		go run.compileOneUnit(index, run.startingUnit(index), len(run.state.dependents[index]) > 0)
 	}
 
 	return nil
@@ -163,9 +168,10 @@ func (run *schedulerRun) startReadyUnits(jobs int) error {
 // find rather than anything about itself.
 // Why its earlier outputs and records are kept: nothing in this run reads them, since every unit
 // that references this one is blocked too, and a later run uses them only when the records still
-// match: a replayed compile needs its input key, which reads every reference this run rebuilds by
-// content and the others by timestamp, and outputs that still hash as recorded; a changed-files
-// check needs the baseline's compile result on disk and the same non-source key.
+// match: a replayed compile needs its input key, which reads every reference this run rebuilt into
+// a different surface by content and the others by timestamp, and outputs that still hash as
+// recorded; a changed-files check needs the baseline's compile result on disk and the same
+// non-source key.
 // Removing them made the first successful run after an error compile every dependent again even
 // when the assembly with errors came back with the same reference assembly.
 func (run *schedulerRun) skipBlockedUnit(index int) bool {
@@ -198,20 +204,42 @@ func (run *schedulerRun) skipUnchangedDependent(index int) (bool, error) {
 	return true, nil
 }
 
+// startingUnit is the unit at index as it is about to start, carrying which of the references it
+// waited for kept the surface of the last Unity build.
+// Why a copy made here rather than a lookup from the unit's goroutine: the loop writes those answers
+// as units finish, while the units it already started are still running, and every reference of this
+// unit is done by now, so the copy is final. Why on the unit rather than passed alongside: the
+// response file, the changed-files check and every key read it from the unit, so none of them can
+// end up pointing at a different reference assembly than the compile does.
+func (run *schedulerRun) startingUnit(index int) CompileUnit {
+	unit := run.plan.Units[index]
+	kept := map[string]bool{}
+	for _, reference := range run.state.references[index] {
+		if run.state.keptSurface[reference] {
+			kept[run.plan.Units[reference].Assembly.AssemblyName] = true
+		}
+	}
+	unit.KeptSurfaceReferences = kept
+
+	return unit
+}
+
 // compileOneUnit produces one unit's result - by compiling it, or by replaying the previous run's
-// answer when nothing it reads has moved - and reports whether its public surface changed.
+// answer when nothing it reads has moved - and reports whether its public surface stayed the same.
 // Why the comparison happens here rather than in the loop: it reads two files, and the loop has to
 // stay free to start the next unit. Why a replayed unit is compared just the same: it kept the
 // outputs of the previous run, so the reference assembly on disk is still the one to hold against
 // Unity's.
-func (run *schedulerRun) compileOneUnit(index int) {
-	unit := run.plan.Units[index]
+// Why only a successful unit that something in the plan references is compared: nothing reads the
+// answer of any other unit - the dependents of a failed one are blocked whatever it wrote - and
+// comparing costs a read of two reference assemblies for every edit of a leaf assembly.
+func (run *schedulerRun) compileOneUnit(index int, unit CompileUnit, readByDependents bool) {
 	result, err := run.compiler.reuseOrCompile(run.runContext, run.plan, unit)
-	changed := true
-	if err == nil {
-		changed = !run.compiler.keptSurface(run.plan, unit)
+	keptSurface := false
+	if err == nil && readByDependents && result.Succeeded {
+		keptSurface = run.compiler.keptSurface(run.plan, unit)
 	}
-	run.completions <- unitCompletion{index: index, result: result, changed: changed, err: err}
+	run.completions <- unitCompletion{index: index, result: result, keptSurface: keptSurface, err: err}
 }
 
 // collectOneCompletion waits for one unit to finish and hands what it produced to the schedule.
@@ -232,7 +260,8 @@ func (run *schedulerRun) collectOneCompletion() error {
 	if !completion.result.Succeeded {
 		run.state.blockDependents(completion.index)
 	}
-	run.state.release(completion.index, completion.changed)
+	run.state.keptSurface[completion.index] = completion.keptSurface
+	run.state.release(completion.index, !completion.keptSurface)
 
 	return nil
 }
@@ -272,9 +301,11 @@ func newSchedule(plan BuildPlan) *schedule {
 	state := &schedule{
 		pending:       make([]int, len(plan.Units)),
 		dependents:    make([][]int, len(plan.Units)),
+		references:    make([][]int, len(plan.Units)),
 		ready:         []int{},
 		changedInputs: make([]int, len(plan.Units)),
 		blocked:       make([]bool, len(plan.Units)),
+		keptSurface:   make([]bool, len(plan.Units)),
 	}
 	for index, unit := range plan.Units {
 		for _, reference := range unit.PlanReferences {
@@ -284,6 +315,7 @@ func newSchedule(plan BuildPlan) *schedule {
 			}
 			state.pending[index]++
 			state.dependents[referenceIndex] = append(state.dependents[referenceIndex], index)
+			state.references[index] = append(state.references[index], referenceIndex)
 		}
 	}
 	for index := range plan.Units {

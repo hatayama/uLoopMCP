@@ -298,7 +298,7 @@ func writeRewrittenResponseFile(
 	}
 	for _, reference := range rsp.References {
 		lines = append(lines,
-			quoteFlag(referenceFlagPrefix, rewriteReference(projectRoot, plan, reference)))
+			quoteFlag(referenceFlagPrefix, rewriteReference(projectRoot, plan, unit, reference)))
 	}
 	for _, analyzer := range rsp.Analyzers {
 		lines = append(lines, quoteFlag(analyzerFlagPrefix, analyzer))
@@ -332,13 +332,18 @@ func writeRewrittenResponseFile(
 	return path, nil
 }
 
-// rewriteReference points a reference at this run's own output when this run rebuilds that assembly.
+// rewriteReference points a reference of the unit at this run's own output when this run rebuilt
+// that assembly into a different public surface.
 // Why the others stay: an assembly this run skipped is unchanged, so Unity's own reference assembly
 // still describes it exactly. An assembly this run failed to compile wrote no reference assembly at
 // all, so it falls back to Unity's too rather than failing the dependent on a missing file.
-func rewriteReference(projectRoot string, plan BuildPlan, reference string) string {
+// Why a rebuilt one that kept its surface stays as well: the dependent then reads the same API from
+// either file, and Unity's is the one an earlier run read whenever that assembly was not rebuilt, so
+// staying on it keeps the dependent's key and its changed-files baseline where those runs left them.
+// Pointing it at the output instead would recompile the dependent in full for nothing.
+func rewriteReference(projectRoot string, plan BuildPlan, unit CompileUnit, reference string) string {
 	name, ok := projectAssemblyReferenceName(reference, plan.DagDir)
-	if !ok || !planCompiles(plan, name) {
+	if !ok || !planCompiles(plan, name) || unit.KeptSurfaceReferences[name] {
 		return reference
 	}
 
