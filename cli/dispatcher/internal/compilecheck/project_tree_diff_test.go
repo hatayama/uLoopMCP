@@ -59,14 +59,41 @@ func toComparableProjectTree(tree projectTree) comparableProjectTree {
 	return comparable
 }
 
-// assertWalkMatchesOracle walks a project with the production walk and with the WalkDir oracle and
-// fails when the two trees differ in anything a caller can observe.
+// readNothingAhead is a read-ahead that reads nothing, so the walk reads every directory itself.
+func readNothingAhead([]string) map[string]projectTreeListing {
+	return map[string]projectTreeListing{}
+}
+
+// readOnlyRootsAhead is a read-ahead that reads the roots and nothing below them.
+func readOnlyRootsAhead(rootPaths []string) map[string]projectTreeListing {
+	listings := map[string]projectTreeListing{}
+	for _, rootPath := range rootPaths {
+		listings[rootPath] = readProjectTreeListing(rootPath)
+	}
+
+	return listings
+}
+
+// assertWalkMatchesOracle walks a project with the WalkDir oracle and with the production walk under
+// the production read-ahead, one that reads nothing and one that reads only the roots, and fails
+// when any of them differs from the oracle in anything a caller can observe.
 func assertWalkMatchesOracle(t *testing.T, projectRoot string) {
 	t.Helper()
 	want := toComparableProjectTree(oracleWalkProjectTree(projectRoot))
-	got := toComparableProjectTree(walkProjectTree(projectRoot))
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("walk differs from the WalkDir oracle\n got: %+v\nwant: %+v", got, want)
+	readAheads := []struct {
+		name      string
+		readAhead func([]string) map[string]projectTreeListing
+	}{
+		{"the production read-ahead", readProjectTreeListings},
+		{"a read-ahead that reads nothing", readNothingAhead},
+		{"a read-ahead that reads only the roots", readOnlyRootsAhead},
+	}
+	for _, readAhead := range readAheads {
+		got := toComparableProjectTree(walkProjectTreeReadingAhead(projectRoot, readAhead.readAhead))
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("walk with %s differs from the WalkDir oracle\n got: %+v\nwant: %+v",
+				readAhead.name, got, want)
+		}
 	}
 }
 

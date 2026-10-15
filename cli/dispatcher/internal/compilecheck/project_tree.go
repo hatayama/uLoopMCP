@@ -46,6 +46,14 @@ type projectTreeEntry struct {
 // Why the walk stops at the first root that fails: indexing stopped there before, so a later root
 // was never read, and an error found there must not take the place of the one found first.
 func walkProjectTree(projectRoot string) projectTree {
+	return walkProjectTreeReadingAhead(projectRoot, readProjectTreeListings)
+}
+
+// walkProjectTreeReadingAhead is walkProjectTree with the read-ahead given. The tree it returns does
+// not depend on what readAhead read: a directory it left out is read when the walk reaches it.
+func walkProjectTreeReadingAhead(
+	projectRoot string, readAhead func(rootPaths []string) map[string]projectTreeListing,
+) projectTree {
 	starts := []projectTreeRootStart{}
 	readFirst := []string{}
 	for _, rootPath := range projectIndexRoots(projectRoot) {
@@ -61,7 +69,7 @@ func walkProjectTree(projectRoot string) projectTree {
 		}
 		starts = append(starts, start)
 	}
-	listings := readProjectTreeListings(readFirst)
+	listings := readAhead(readFirst)
 
 	tree := projectTree{directories: map[string]projectTreeDirectory{}}
 	for _, start := range starts {
