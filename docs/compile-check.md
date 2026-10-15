@@ -97,11 +97,21 @@ references, scripting defines and analyzers. `compile-check` replays those respo
    reference that was added to one, invalidate the recorded build. The run then stops with
    `COMPILE_CHECK_UNITY_BUILD_REQUIRED` rather than reporting diagnostics for a configuration the
    project no longer has.
-5. **Compile in dependency order** and parse the compiler's diagnostics into JSON. An assembly starts
-   as soon as every assembly it references that this run also compiles has finished, so independent
-   assemblies compile at the same time. `--jobs <n>` caps how many run at once; the default is half
-   the machine's CPUs and never less than one, because one `csc` process already keeps two to three
-   cores busy on its own. `--jobs 1` compiles the assemblies one after another.
+5. **Compile in dependency order** and parse the compiler's diagnostics into JSON. An assembly
+   starts once every assembly it references that this run also compiles has finished, so
+   independent assemblies compile at the same time. An assembly selected for its own sources, or a
+   dependent that is already known to need compiling, starts sooner: as soon as every assembly it
+   references that was selected for its own sources has finished. The dependents it references
+   that are still compiling are assumed to keep Unity's public surface, so it reads Unity's
+   reference assembly for them. When one of them turns out to have changed its surface, the
+   assembly is compiled again after all of them finished; when one of them fails, the assembly is
+   blocked. An assembly is compiled at most twice per run. An assembly whose recorded result may
+   still apply once those dependents finish waits for them instead, so a run over the same inputs
+   still replays it. `assumed_kept` and `compiled_again_after` in the VibeLog's `units` say which
+   happened. A unit whose record applied after the wait is counted under `reused` and does not
+   appear in `units`; `waited_for_record` marks a unit that waited for a record that then did not
+   apply. `--jobs <n>` caps how many run at once; the default is half the machine's CPUs and never
+   less than one, because one `csc` process already keeps two to three cores busy on its own. `--jobs 1` compiles the assemblies one after another.
    The reported order does not depend on the job count: results are collected in dependency order
    whatever finishes first. An assembly that fails to compile stops the run at that point of the
    tree: it wrote no reference assembly, so everything below it has nothing to compile against and
