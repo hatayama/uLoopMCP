@@ -130,7 +130,7 @@ func (s Store[D]) missingBaselineReason(assembly string) string {
 		return notOnRecord
 	}
 	if !manifest.Succeeded {
-		return "no baseline: the last full compile had errors"
+		return "no baseline: the last full compile had errors; the first full compile without errors records one"
 	}
 
 	return "no baseline: the last full compile did not record one"
