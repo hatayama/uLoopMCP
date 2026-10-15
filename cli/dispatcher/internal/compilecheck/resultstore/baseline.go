@@ -1,4 +1,4 @@
-package compilecheck
+package resultstore
 
 import (
 	"encoding/json"
@@ -14,67 +14,76 @@ const (
 	generatedDirectoryExtension = ".generated"
 )
 
+// KeyDigest is a key over several kinds of input together with a digest of each kind, so a change
+// of the key can be told by kind.
+type KeyDigest struct {
+	Key string
+	// Parts maps each kind of input to its digest.
+	Parts map[string]string
+}
+
+// BaselineFile describes one source as the full compile saw it.
+type BaselineFile struct {
+	ContentHash string
+	Fingerprint string
+}
+
+// BaselineInputs is what the caller knows about the full compile a baseline describes: its input
+// key, its key over every input but the source contents, the worker build that fingerprinted its
+// sources, and each source.
+type BaselineInputs struct {
+	InputKey     string
+	NonSourceKey KeyDigest
+	WorkerKey    string
+	Files        map[string]BaselineFile
+}
+
+// Baseline is a recorded baseline together with what its full compile reported.
+type Baseline[D any] struct {
+	InputKey     string
+	NonSourceKey KeyDigest
+	WorkerKey    string
+	Files        map[string]BaselineFile
+	// GeneratedDirectory is relative to the project root and slash-separated, as recorded.
+	GeneratedDirectory string
+	// Diagnostics is what the full compile this baseline describes reported.
+	Diagnostics    []D
+	generatedFiles map[string]string
+}
+
 // baselineRecord is what a successful full compile leaves for the next changed-files check.
 type baselineRecord struct {
 	FormatVersion int
 	// InputKey is the key of the full compile this baseline describes; its manifest carries the same.
 	InputKey string
 	// NonSourceKey covers every input but the source contents, so any other change compiles in full.
-	NonSourceKey nonSourceIdentity
+	NonSourceKey KeyDigest
 	// WorkerKey names the worker build that computed the fingerprints.
 	WorkerKey          string
 	GeneratedDirectory string // relative to the project root
 	// GeneratedFiles maps each generated file, relative to GeneratedDirectory, to its content hash,
 	// so a check never runs without the generator output its baseline compile had.
 	GeneratedFiles map[string]string
-	Files          map[string]baselineFile
+	Files          map[string]BaselineFile
 }
 
-// baselineFile describes one source as the full compile saw it.
-type baselineFile struct {
-	ContentHash string
-	Fingerprint string
-}
-
-// baselineInputs is what the caller knows about the full compile a baseline describes: its input
-// key, its non-source key, the worker build that fingerprinted its sources, and each source.
-type baselineInputs struct {
-	InputKey     string
-	NonSourceKey nonSourceIdentity
-	WorkerKey    string
-	Files        map[string]baselineFile
-}
-
-// storedBaseline is a recorded baseline together with what its full compile reported.
-type storedBaseline struct {
-	InputKey     string
-	NonSourceKey nonSourceIdentity
-	WorkerKey    string
-	Files        map[string]baselineFile
-	// GeneratedDirectory is relative to the project root and slash-separated, as recorded.
-	GeneratedDirectory string
-	// Diagnostics is what the full compile this baseline describes reported.
-	Diagnostics    []Diagnostic
-	generatedFiles map[string]string
-}
-
-// generatedDirectory names, relative to the project root, where a full compile saves the generator
+// GeneratedDirectory names, relative to the project root, where a full compile saves the generator
 // output of an assembly.
-func (s recordStore) generatedDirectory(assembly string) string {
+func (s Store[D]) GeneratedDirectory(assembly string) string {
 	return filepath.Join(s.outputDir, assembly+generatedDirectoryExtension)
 }
 
-// loadBaseline reads the baseline of an assembly together with what the full compile it describes
+// LoadBaseline reads the baseline of an assembly together with what the full compile it describes
 // reported, or says why there is none to use.
-func (s recordStore) loadBaseline(assembly string) (storedBaseline, string) {
+func (s Store[D]) LoadBaseline(assembly string) (Baseline[D], string) {
 	content, err := os.ReadFile(baselineRecordPath(s.directoryPath(), assembly))
 	if err != nil {
-		return storedBaseline{}, s.missingBaselineReason(assembly)
+		return Baseline[D]{}, s.missingBaselineReason(assembly)
 	}
 
 	var record baselineRecord
 	if err := json.Unmarshal(content, &record); err != nil || record.FormatVersion != baselineRecordFormatVersion {
-		return storedBaseline{}, "no baseline: it was recorded by another version of compile-check"
+		return Baseline[D]{}, "no baseline: it was recorded by another version of compile-check"
 	}
 
 	// In the normal flow the record and the manifest are written together under one key, and a full
@@ -82,17 +91,17 @@ func (s recordStore) loadBaseline(assembly string) (storedBaseline, string) {
 	const goneFromDisk = "baseline compile is no longer on disk"
 	manifestContent, err := os.ReadFile(manifestPath(s.directoryPath(), assembly))
 	if err != nil {
-		return storedBaseline{}, goneFromDisk
+		return Baseline[D]{}, goneFromDisk
 	}
 
-	var manifest unitResultManifest
+	var manifest unitResultManifest[D]
 	if err := json.Unmarshal(manifestContent, &manifest); err != nil ||
 		manifest.InputKey != record.InputKey || !manifest.Succeeded ||
 		!outputsStillMatch(s.directoryPath(), manifest.Outputs) {
-		return storedBaseline{}, goneFromDisk
+		return Baseline[D]{}, goneFromDisk
 	}
 
-	return storedBaseline{
+	return Baseline[D]{
 		InputKey:           record.InputKey,
 		NonSourceKey:       record.NonSourceKey,
 		WorkerKey:          record.WorkerKey,
@@ -109,14 +118,14 @@ func (s recordStore) loadBaseline(assembly string) (storedBaseline, string) {
 // left, and a reason that read as "never compiled" sent users looking for a compile that had run.
 // Why a missing manifest says nothing about what happened: a run that skips or blocks the unit
 // removes the manifest and the baseline alike, so nothing on disk tells that apart from no compile.
-func (s recordStore) missingBaselineReason(assembly string) string {
+func (s Store[D]) missingBaselineReason(assembly string) string {
 	const notOnRecord = "no baseline: no full compile of this assembly is on record"
 	content, err := os.ReadFile(manifestPath(s.directoryPath(), assembly))
 	if err != nil {
 		return notOnRecord
 	}
 
-	var manifest unitResultManifest
+	var manifest unitResultManifest[D]
 	if err := json.Unmarshal(content, &manifest); err != nil {
 		return notOnRecord
 	}
@@ -127,16 +136,16 @@ func (s recordStore) missingBaselineReason(assembly string) string {
 	return "no baseline: the last full compile did not record one"
 }
 
-// generatorOutputUnchanged reports whether the generator output on disk is exactly what the
-// baseline recorded.
-func (s recordStore) generatorOutputUnchanged(baseline storedBaseline) bool {
+// GeneratorOutputUnchanged reports whether the generator output on disk is exactly what the
+// baseline recorded: no file missing, added, or changed.
+func (s Store[D]) GeneratorOutputUnchanged(baseline Baseline[D]) bool {
 	return generatedFilesMatch(projectPath(s.projectRoot, baseline.GeneratedDirectory), baseline.generatedFiles)
 }
 
-// recordBaseline records what the next changed-files check of an assembly compares against, with
+// RecordBaseline records what the next changed-files check of an assembly compares against, with
 // the generator output its full compile saved.
-func (s recordStore) recordBaseline(assembly string, inputs baselineInputs) error {
-	generatedDirectory := s.generatedDirectory(assembly)
+func (s Store[D]) RecordBaseline(assembly string, inputs BaselineInputs) error {
+	generatedDirectory := s.GeneratedDirectory(assembly)
 	generatedFiles, err := hashGeneratedFiles(filepath.Join(s.projectRoot, generatedDirectory))
 	if err != nil {
 		return err

@@ -8,6 +8,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/hatayama/unity-cli-loop/dispatcher/internal/compilecheck/resultstore"
 )
 
 // reuseOrCompile reports what csc would say about one unit, replaying the previous run's answer when
@@ -26,7 +28,7 @@ func (c Compiler) reuseOrCompile(
 	// Why --all only skips the lookup and still records: it is the way out of a reuse that got
 	// something wrong, and the ordinary run after it should still be able to reuse what it compiled.
 	if key != "" && !plan.All {
-		if recorded, found := records.reusableResult(unit.Assembly.AssemblyName, key); found {
+		if recorded, found := records.Reusable(unit.Assembly.AssemblyName, key); found {
 			return UnitResult{
 				Assembly:    unit.Assembly.AssemblyName,
 				Diagnostics: recorded.Diagnostics,
@@ -56,8 +58,8 @@ func (c Compiler) reuseOrCompile(
 	if err != nil || key == "" || result.RawOutput != "" {
 		return result, err
 	}
-	if writeErr := records.recordCompile(unit.Assembly.AssemblyName, key,
-		recordedCompile{Succeeded: result.Succeeded, Diagnostics: result.Diagnostics}, unitOutputNames(unit)); writeErr != nil {
+	if writeErr := records.RecordCompile(unit.Assembly.AssemblyName, key,
+		resultstore.CompileResult[Diagnostic]{Succeeded: result.Succeeded, Diagnostics: result.Diagnostics}, unitOutputNames(unit)); writeErr != nil {
 		return UnitResult{}, writeErr
 	}
 
@@ -75,8 +77,8 @@ func (c Compiler) reuseOrCompile(
 }
 
 // records opens the store of what earlier runs of the check recorded in the plan's output directory.
-func (c Compiler) records(plan BuildPlan) recordStore {
-	return openRecordStore(c.ProjectRoot, plan.OutputDir)
+func (c Compiler) records(plan BuildPlan) resultstore.Store[Diagnostic] {
+	return resultstore.Open[Diagnostic](c.ProjectRoot, plan.OutputDir)
 }
 
 // unitOutputNames lists the files a compile of the unit writes in the output directory, by name,

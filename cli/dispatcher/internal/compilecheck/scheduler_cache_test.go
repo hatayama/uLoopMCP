@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/hatayama/unity-cli-loop/dispatcher/internal/compilecheck/resultstore"
 )
 
 // cachedSchedulerProject is a project laid out on disk in enough detail for the input key to read
@@ -118,8 +120,8 @@ func writeOutputFile(t *testing.T, outputDirectoryPath string, name string, cont
 }
 
 // records opens the store the runs of this test project write to.
-func (project *cachedSchedulerProject) records() recordStore {
-	return openRecordStore(project.root, project.plan.OutputDir)
+func (project *cachedSchedulerProject) records() resultstore.Store[Diagnostic] {
+	return resultstore.Open[Diagnostic](project.root, project.plan.OutputDir)
 }
 
 // hasBaselineOf reports whether a baseline of the current format is on disk for the assembly.
@@ -127,7 +129,7 @@ func (project *cachedSchedulerProject) records() recordStore {
 // was written by another version; a baseline file that disagrees with its compile result is
 // reported as "baseline compile is no longer on disk" instead.
 func (project *cachedSchedulerProject) hasBaselineOf(name string) bool {
-	_, reason := project.records().loadBaseline(name)
+	_, reason := project.records().LoadBaseline(name)
 
 	return !strings.HasPrefix(reason, "no baseline:")
 }
@@ -137,7 +139,7 @@ func (project *cachedSchedulerProject) hasBaselineOf(name string) bool {
 // needs, so they never get a baseline, and the store explains the missing baseline from the
 // compile result alone - this reason is the one it gives when there is no compile result.
 func (project *cachedSchedulerProject) hasRecordedCompile(name string) bool {
-	_, reason := project.records().loadBaseline(name)
+	_, reason := project.records().LoadBaseline(name)
 
 	return reason != "no baseline: no full compile of this assembly is on record"
 }

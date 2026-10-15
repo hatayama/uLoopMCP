@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/hatayama/unity-cli-loop/dispatcher/internal/compilecheck/fastcheck"
+	"github.com/hatayama/unity-cli-loop/dispatcher/internal/compilecheck/resultstore"
 )
 
 // fakeDeclarationSeparator splits a fixture source into its declaration part and its body part, so
@@ -227,9 +228,9 @@ func (project *fastPathProject) hasBaseline() bool {
 }
 
 // baseline reads Alpha's baseline through the store and fails the test when there is none to use.
-func (project *fastPathProject) baseline(t *testing.T) storedBaseline {
+func (project *fastPathProject) baseline(t *testing.T) resultstore.Baseline[Diagnostic] {
 	t.Helper()
-	baseline, reason := project.records().loadBaseline("Alpha")
+	baseline, reason := project.records().LoadBaseline("Alpha")
 	if reason != "" {
 		t.Fatalf("expected a usable baseline for Alpha, got %q", reason)
 	}
@@ -238,7 +239,7 @@ func (project *fastPathProject) baseline(t *testing.T) storedBaseline {
 }
 
 // generatedFileCount counts the files under the generator output a baseline points at.
-func (project *fastPathProject) generatedFileCount(t *testing.T, baseline storedBaseline) int {
+func (project *fastPathProject) generatedFileCount(t *testing.T, baseline resultstore.Baseline[Diagnostic]) int {
 	t.Helper()
 	count := 0
 	err := filepath.WalkDir(projectPath(project.root, baseline.GeneratedDirectory),

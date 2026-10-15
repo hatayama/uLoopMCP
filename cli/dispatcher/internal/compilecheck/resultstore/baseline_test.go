@@ -1,4 +1,4 @@
-package compilecheck
+package resultstore
 
 import (
 	"os"
@@ -9,7 +9,7 @@ import (
 // Verifies that only generated C# files are recorded, keyed relative to the generator output directory.
 func TestHashGeneratedFilesRecordsOnlyCSharpFiles(t *testing.T) {
 	directory := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(directory, "Gen"), outputDirPermissions); err != nil {
+	if err := os.MkdirAll(filepath.Join(directory, "Gen"), testDirectoryPermissions); err != nil {
 		t.Fatalf("failed to create the generator folder: %v", err)
 	}
 	writeOutputFile(t, filepath.Join(directory, "Gen"), "A.g.cs", "class A { }")
@@ -30,7 +30,7 @@ func TestHashGeneratedFilesRecordsOnlyCSharpFiles(t *testing.T) {
 func TestLoadBaselineReportsABaselineOfAnotherFormat(t *testing.T) {
 	directoryPath := newRecordedOutputs(t)
 	store := directoryStore(directoryPath)
-	if err := store.recordCompile("Alpha", "input", recordedCompile{Succeeded: true}, alphaOutputs()); err != nil {
+	if err := store.RecordCompile("Alpha", "input", CompileResult[testDiagnostic]{Succeeded: true}, alphaOutputs()); err != nil {
 		t.Fatalf("failed to write the manifest: %v", err)
 	}
 	if err := writeBaselineRecord(directoryPath, "Alpha", baselineRecord{
@@ -40,7 +40,7 @@ func TestLoadBaselineReportsABaselineOfAnotherFormat(t *testing.T) {
 		t.Fatalf("failed to write the baseline: %v", err)
 	}
 
-	_, reason := store.loadBaseline("Alpha")
+	_, reason := store.LoadBaseline("Alpha")
 
 	if reason != "no baseline: it was recorded by another version of compile-check" {
 		t.Errorf("reason = %q", reason)

@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/hatayama/unity-cli-loop/dispatcher/internal/compilecheck/fastcheck"
+	"github.com/hatayama/unity-cli-loop/dispatcher/internal/compilecheck/resultstore"
 )
 
 // Verifies that unchanged inputs are reused before the changed-files check is tried.
@@ -123,8 +124,8 @@ func TestHandCorruptedFailedManifestFallsBack(t *testing.T) {
 	project.recordBaseline(t)
 	project.editBody(t, 0, "edited")
 	baseline := project.baseline(t)
-	if err := project.records().recordCompile("Alpha", baseline.InputKey,
-		recordedCompile{Succeeded: false, Diagnostics: baseline.Diagnostics}, unitOutputNames(project.plan.Units[0])); err != nil {
+	if err := project.records().RecordCompile("Alpha", baseline.InputKey,
+		resultstore.CompileResult[Diagnostic]{Succeeded: false, Diagnostics: baseline.Diagnostics}, unitOutputNames(project.plan.Units[0])); err != nil {
 		t.Fatalf("failed to record the failed compile: %v", err)
 	}
 	recorder := newCachedSchedulerRecorder("Alpha", "Beta")
@@ -222,11 +223,11 @@ func TestMissingOrChangedGeneratorOutputFallsBack(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			project := newFastPathProject(t, fastPathMinimumSources)
-			generatedPath := filepath.Join(project.root, project.records().generatedDirectory("Alpha"))
+			generatedPath := filepath.Join(project.root, project.records().GeneratedDirectory("Alpha"))
 			recorder := newCachedSchedulerRecorder("Alpha", "Beta")
 			recorder.during = func(unit string) {
 				if unit == "Alpha" {
-					project.writeFile(t, filepath.Join(project.records().generatedDirectory("Alpha"), "Gen", "G.g.cs"), "class G { }")
+					project.writeFile(t, filepath.Join(project.records().GeneratedDirectory("Alpha"), "Gen", "G.g.cs"), "class G { }")
 				}
 			}
 			project.run(t, recorder, false)
@@ -361,7 +362,7 @@ func TestFastPathCleanResultKeepsBaselineFiles(t *testing.T) {
 	if recorder.runs["Beta"] != 0 || outcome.Skipped != 1 {
 		t.Errorf("expected Beta to be skipped, got %d runs and %d skipped", recorder.runs["Beta"], outcome.Skipped)
 	}
-	if project.worker.lastCheck.GeneratedDirectory != filepath.Join(project.root, project.records().generatedDirectory("Alpha")) {
+	if project.worker.lastCheck.GeneratedDirectory != filepath.Join(project.root, project.records().GeneratedDirectory("Alpha")) {
 		t.Errorf("expected the saved generator output to be passed, got %q", project.worker.lastCheck.GeneratedDirectory)
 	}
 }
@@ -434,11 +435,11 @@ func TestZeroChangedFilesDropsBaselineAndFallsBack(t *testing.T) {
 	project.recordBaseline(t)
 	baseline := project.baseline(t)
 	records := project.records()
-	if err := records.recordCompile("Alpha", "tampered",
-		recordedCompile{Succeeded: true, Diagnostics: baseline.Diagnostics}, unitOutputNames(project.plan.Units[0])); err != nil {
+	if err := records.RecordCompile("Alpha", "tampered",
+		resultstore.CompileResult[Diagnostic]{Succeeded: true, Diagnostics: baseline.Diagnostics}, unitOutputNames(project.plan.Units[0])); err != nil {
 		t.Fatalf("failed to record the tampered compile: %v", err)
 	}
-	if err := records.recordBaseline("Alpha", baselineInputs{
+	if err := records.RecordBaseline("Alpha", resultstore.BaselineInputs{
 		InputKey: "tampered", NonSourceKey: baseline.NonSourceKey, WorkerKey: baseline.WorkerKey, Files: baseline.Files,
 	}); err != nil {
 		t.Fatalf("failed to record the tampered baseline: %v", err)

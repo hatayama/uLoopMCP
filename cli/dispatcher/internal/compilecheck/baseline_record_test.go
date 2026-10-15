@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/hatayama/unity-cli-loop/dispatcher/internal/compilecheck/fastcheck"
+	"github.com/hatayama/unity-cli-loop/dispatcher/internal/compilecheck/resultstore"
 )
 
 // Verifies that a successful full compile records a baseline whose content hashes are the ones the
@@ -125,7 +126,7 @@ func TestCompileUnitPassesGeneratedFilesOut(t *testing.T) {
 	written, _ := compileSecondUnit(t, "", 0)
 
 	plan := newCompilerPlan()
-	want := quoteFlag(generatedFilesOutFlagPrefix, filepath.ToSlash(openRecordStore("", plan.OutputDir).generatedDirectory(plan.Units[1].Assembly.AssemblyName)))
+	want := quoteFlag(generatedFilesOutFlagPrefix, filepath.ToSlash(resultstore.Open[Diagnostic]("", plan.OutputDir).GeneratedDirectory(plan.Units[1].Assembly.AssemblyName)))
 	if !strings.Contains(written, want) {
 		t.Errorf("expected %s in the response file, got:\n%s", want, written)
 	}
@@ -217,7 +218,7 @@ func TestCompileUnitCreatesGeneratedFilesOutDirectory(t *testing.T) {
 		ProjectRoot: projectRoot,
 		Timeout:     time.Minute,
 		Run: func(_ context.Context, _ *exec.Cmd) (string, string, int, error) {
-			info, err := os.Stat(filepath.Join(projectRoot, openRecordStore(projectRoot, plan.OutputDir).generatedDirectory(plan.Units[1].Assembly.AssemblyName)))
+			info, err := os.Stat(filepath.Join(projectRoot, resultstore.Open[Diagnostic](projectRoot, plan.OutputDir).GeneratedDirectory(plan.Units[1].Assembly.AssemblyName)))
 			existed = err == nil && info.IsDir()
 			return "", "", 0, nil
 		},

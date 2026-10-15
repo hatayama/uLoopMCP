@@ -1,4 +1,4 @@
-package compilecheck
+package resultstore
 
 import (
 	"os"
@@ -16,7 +16,7 @@ func TestLoadBaselineReportsAnotherFormatBeforeAMissingManifest(t *testing.T) {
 		t.Fatalf("failed to write the baseline: %v", err)
 	}
 
-	_, reason := directoryStore(directoryPath).loadBaseline("Alpha")
+	_, reason := directoryStore(directoryPath).LoadBaseline("Alpha")
 
 	if reason != "no baseline: it was recorded by another version of compile-check" {
 		t.Errorf("reason = %q", reason)
@@ -26,10 +26,10 @@ func TestLoadBaselineReportsAnotherFormatBeforeAMissingManifest(t *testing.T) {
 // Verifies the bytes a compile result is recorded as, so moving the record keeps its format.
 func TestWriteUnitResultManifestWritesTheRecordedFormat(t *testing.T) {
 	directoryPath := newRecordedOutputs(t)
-	result := recordedCompile{
+	result := CompileResult[testDiagnostic]{
 		Succeeded: false,
-		Diagnostics: []Diagnostic{{
-			Severity: severityError,
+		Diagnostics: []testDiagnostic{{
+			Severity: "error",
 			Code:     "CS0103",
 			Message:  "The name 'Missing' does not exist in the current context",
 			File:     "Assets/Alpha/Alpha.cs",
@@ -38,7 +38,7 @@ func TestWriteUnitResultManifestWritesTheRecordedFormat(t *testing.T) {
 		}},
 	}
 
-	if err := directoryStore(directoryPath).recordCompile("Alpha", "key", result, alphaOutputs()); err != nil {
+	if err := directoryStore(directoryPath).RecordCompile("Alpha", "key", result, alphaOutputs()); err != nil {
 		t.Fatalf("failed to write the manifest: %v", err)
 	}
 
@@ -55,14 +55,14 @@ func TestWriteBaselineRecordWritesTheRecordedFormat(t *testing.T) {
 	record := baselineRecord{
 		FormatVersion: baselineRecordFormatVersion,
 		InputKey:      "input",
-		NonSourceKey: nonSourceIdentity{
+		NonSourceKey: KeyDigest{
 			Key:   "non-source",
 			Parts: map[string]string{"compiler": "c", "source list": "s"},
 		},
 		WorkerKey:          "worker",
 		GeneratedDirectory: "Library/out/Alpha.generated",
 		GeneratedFiles:     map[string]string{"Gen/G.g.cs": "g"},
-		Files:              map[string]baselineFile{"Assets/A.cs": {ContentHash: "a", Fingerprint: "f"}},
+		Files:              map[string]BaselineFile{"Assets/A.cs": {ContentHash: "a", Fingerprint: "f"}},
 	}
 
 	if err := writeBaselineRecord(directoryPath, "Alpha", record); err != nil {
