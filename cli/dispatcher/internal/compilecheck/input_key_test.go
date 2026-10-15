@@ -9,6 +9,8 @@ import (
 	"sort"
 	"testing"
 	"time"
+
+	"github.com/hatayama/unity-cli-loop/dispatcher/internal/compilecheck/resultstore"
 )
 
 // inputKeyProject is a project tree holding every kind of input one unit's key is built from, so a
@@ -584,7 +586,7 @@ func TestComputeInputKeyShapeFollowsTheSources(t *testing.T) {
 }
 
 // Verifies the project reference identities name every project assembly the unit references, in the
-// plan or not, and nothing else.
+// plan or not, and nothing else, each with the kind of file its line reads.
 func TestComputeInputKeyNamesEveryProjectReference(t *testing.T) {
 	project := newInputKeyProject(t)
 	library := filepath.Join("Packages", "Library.dll")
@@ -600,5 +602,11 @@ func TestComputeInputKeyNamesEveryProjectReference(t *testing.T) {
 	sort.Strings(names)
 	if !reflect.DeepEqual(names, []string{"Beta", "Gamma"}) {
 		t.Errorf("project references = %v, want [Beta Gamma]", names)
+	}
+	if kind := identity.ProjectReferences["Beta"].Kind; kind != resultstore.ProducedReference {
+		t.Errorf("Beta, read from this run's output, is of kind %q", kind)
+	}
+	if kind := identity.ProjectReferences["Gamma"].Kind; kind != resultstore.UnityReference {
+		t.Errorf("Gamma, read from Unity's build, is of kind %q", kind)
 	}
 }

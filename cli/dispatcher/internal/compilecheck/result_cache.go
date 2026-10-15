@@ -99,11 +99,13 @@ func (c Compiler) recordMayStillApply(plan BuildPlan, unit CompileUnit, unknown 
 		return false
 	}
 
+	// Why the sources are hashed inside the function only: the store asks for the shape last, and
+	// most answers of no come from the references before it.
 	return c.records(plan).MayStillApply(unit.Assembly.AssemblyName, projectReferences, unknown,
-		func() (string, bool) {
+		func() (string, error) {
 			keyResult, keyErr := computeInputKey(c.ProjectRoot, c.Paths, plan, unit)
 
-			return keyResult.Shape, keyErr == nil
+			return keyResult.Shape, keyErr
 		})
 }
 

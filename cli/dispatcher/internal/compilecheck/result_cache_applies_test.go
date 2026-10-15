@@ -63,21 +63,26 @@ func TestCompileUnitsRecordsAKeyAUnitCanStillApplyLater(t *testing.T) {
 	}
 }
 
-// Verifies a record does not apply when a reference that is not unknown has another identity, and
-// that the answer does not wait on the sources: it stays the same with the unit's source unreadable.
-func TestRecordMayStillApplyRefusesAChangedProjectReferenceWithoutReadingSources(t *testing.T) {
-	project := newChangedReferenceProject(t)
-	writeOutputFile(t, project.outputDirectory(), "X"+referenceAssemblyExtension, "another surface X")
-
-	if project.recordMayStillApply(t, project.plan, "D") {
-		t.Fatal("the record should not apply once X's produced reference changed")
+// Verifies a record that read an unknown reference from Unity's build stops applying once Unity
+// rebuilt that file: whatever the reference finishes as, the key can never read the recorded line
+// again.
+func TestRecordMayStillApplyRefusesAnUnknownReferenceUnityRebuilt(t *testing.T) {
+	project := newCachedSchedulerProject(t, map[string][]string{"D": {"X"}}, "X", "D")
+	recorder := newCachedSchedulerRecorder("X", "D")
+	recorder.surfaces["X"] = keptSurfaceOf("X")
+	project.compileOrFail(t, recorder)
+	if !project.recordMayStillApply(t, project.plan, "D", "X") {
+		t.Fatal("the record should still apply while Unity's file for X is as it read it")
 	}
 
-	if err := os.Remove(filepath.Join(project.root, "Assets", "D", "D.cs")); err != nil {
-		t.Fatalf("failed to remove D's source: %v", err)
+	rebuilt := time.Now().Add(time.Hour)
+	unityReference := filepath.Join(project.root, planDagDirectory, "X"+referenceAssemblyExtension)
+	if err := os.Chtimes(unityReference, rebuilt, rebuilt); err != nil {
+		t.Fatalf("failed to move Unity's reference assembly of X: %v", err)
 	}
-	if project.recordMayStillApply(t, project.plan, "D") {
-		t.Error("the record should not apply once X's produced reference changed, with D's source gone")
+
+	if project.recordMayStillApply(t, project.plan, "D", "X") {
+		t.Error("the record should not apply once Unity rebuilt the reference assembly it read for X")
 	}
 }
 

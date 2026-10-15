@@ -42,10 +42,10 @@ type inputKeyResult struct {
 	// apart from it tells whether a recorded compile can still be replayed once it finishes.
 	Shape string
 	// ProjectReferences maps each project assembly the unit references, in the plan or not, to the
-	// sha256 of the line Key holds for it.
+	// sha256 of the line Key holds for it and whether that line reads this run's output.
 	// Why the plan does not decide which references go here: a reference entering or leaving the
 	// plan leaves the bytes of Key as they were, so it must leave these as they were too.
-	ProjectReferences map[string]string
+	ProjectReferences map[string]resultstore.ReferenceIdentity
 }
 
 // identity is what a record of a compile under this key is kept with.
@@ -88,8 +88,8 @@ func computeInputKey(
 func computeShape(
 	projectRoot string, paths EditorCompilerPaths, plan BuildPlan, unit CompileUnit,
 	sourceHashes map[string]string,
-) (string, map[string]string, error) {
-	projectReferences := map[string]string{}
+) (string, map[string]resultstore.ReferenceIdentity, error) {
+	projectReferences := map[string]resultstore.ReferenceIdentity{}
 	parts := keyParts(projectRoot, paths, plan, unit, func(digest hash.Hash) error {
 		writeHashedSources(digest, sourceHashes)
 
@@ -114,8 +114,8 @@ func computeShape(
 // and differs in most cases where the answer is no.
 func computeProjectReferences(
 	projectRoot string, plan BuildPlan, unit CompileUnit,
-) (map[string]string, error) {
-	projectReferences := map[string]string{}
+) (map[string]resultstore.ReferenceIdentity, error) {
+	projectReferences := map[string]resultstore.ReferenceIdentity{}
 	err := writeShapeReferenceIdentity(io.Discard, projectRoot, plan, unit, projectReferences)
 
 	return projectReferences, err
@@ -323,7 +323,7 @@ func writeReferenceIdentity(
 	digest io.Writer, projectRoot string, plan BuildPlan, unit CompileUnit,
 ) error {
 	for _, reference := range unit.Assembly.References {
-		if err := writeReferenceLine(digest, projectRoot, plan, unit, reference); err != nil {
+		if _, err := writeReferenceLine(digest, projectRoot, plan, unit, reference); err != nil {
 			return err
 		}
 	}
@@ -332,44 +332,50 @@ func writeReferenceIdentity(
 }
 
 // writeShapeReferenceIdentity writes the lines writeReferenceIdentity writes for every reference
-// that is not a project assembly, and puts the sha256 of the line of each one that is into
-// projectReferences under its name.
+// that is not a project assembly, and puts the sha256 of the line of each one that is, with which
+// file that line reads, into projectReferences under its name.
 // Why a name seen twice is simply overwritten: the same reference resolves to the same line.
 func writeShapeReferenceIdentity(
 	digest io.Writer, projectRoot string, plan BuildPlan, unit CompileUnit,
-	projectReferences map[string]string,
+	projectReferences map[string]resultstore.ReferenceIdentity,
 ) error {
 	for _, reference := range unit.Assembly.References {
 		name, isProjectAssembly := projectAssemblyReferenceName(reference, plan.DagDir)
 		if !isProjectAssembly {
-			if err := writeReferenceLine(digest, projectRoot, plan, unit, reference); err != nil {
+			if _, err := writeReferenceLine(digest, projectRoot, plan, unit, reference); err != nil {
 				return err
 			}
 
 			continue
 		}
 		var line bytes.Buffer
-		if err := writeReferenceLine(&line, projectRoot, plan, unit, reference); err != nil {
+		produced, err := writeReferenceLine(&line, projectRoot, plan, unit, reference)
+		if err != nil {
 			return err
 		}
 		sum := sha256.Sum256(line.Bytes())
-		projectReferences[name] = hex.EncodeToString(sum[:])
+		kind := resultstore.UnityReference
+		if produced {
+			kind = resultstore.ProducedReference
+		}
+		projectReferences[name] = resultstore.ReferenceIdentity{Kind: kind, Hash: hex.EncodeToString(sum[:])}
 	}
 
 	return nil
 }
 
-// writeReferenceLine writes the line one reference contributes to the key.
+// writeReferenceLine writes the line one reference contributes to the key, and reports whether that
+// line reads this run's output rather than Unity's build.
 func writeReferenceLine(
 	digest io.Writer, projectRoot string, plan BuildPlan, unit CompileUnit, reference string,
-) error {
+) (bool, error) {
 	resolved := rewriteReference(projectRoot, plan, unit, reference)
 	path := projectPath(projectRoot, resolved)
 	if isUnderDirectory(resolved, plan.OutputDir) {
-		return writeFileContentEntry(digest, "produced-reference", resolved, path)
+		return true, writeFileContentEntry(digest, "produced-reference", resolved, path)
 	}
 
-	return writeStatEntry(digest, "reference", resolved, path)
+	return false, writeStatEntry(digest, "reference", resolved, path)
 }
 
 // writeAnalyzerIdentity records the analyzer assemblies csc loads, which are shipped rather than

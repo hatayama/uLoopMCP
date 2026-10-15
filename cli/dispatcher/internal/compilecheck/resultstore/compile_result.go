@@ -33,7 +33,23 @@ type KeyIdentity struct {
 	Shape string
 	// ProjectReferences maps each project assembly the unit references to the identity the key holds
 	// for it.
-	ProjectReferences map[string]string
+	ProjectReferences map[string]ReferenceIdentity
+}
+
+const (
+	// ProducedReference is the kind of a reference the compile read from this run's own output.
+	ProducedReference = "produced"
+	// UnityReference is the kind of a reference the compile read from Unity's build.
+	UnityReference = "unity"
+)
+
+// ReferenceIdentity is what an input key holds for one project assembly reference: which file the
+// compile read it from, and a hash of the line the key holds for it.
+// Why the kind is kept with the hash: a reference still compiling is read from Unity's build, and
+// whether a record can still apply once it finishes depends on which file the record read.
+type ReferenceIdentity struct {
+	Kind string
+	Hash string
 }
 
 // unitResultManifest is what one finished compile left behind for the next run: the inputs it ran
@@ -42,7 +58,7 @@ type unitResultManifest[D any] struct {
 	FormatVersion     int
 	InputKey          string
 	Shape             string
-	ProjectReferences map[string]string
+	ProjectReferences map[string]ReferenceIdentity
 	Succeeded         bool
 	Diagnostics       []D
 	// Outputs maps the name of each file the compile wrote in the check's output directory to its
@@ -75,31 +91,42 @@ func (s Store[D]) Reusable(assembly string, key string) (CompileResult[D], bool)
 }
 
 // MayStillApply reports whether the assembly's recorded compile may become reusable once the
-// references named in unknown finish compiling: every project reference outside unknown has the
-// identity it was recorded with, the same project assemblies are referenced, the outputs still hold
-// what that compile wrote, and shape gives the recorded shape.
-// Why shape is a function: it reads every source of the assembly, and is asked for only when every
-// other check has passed, which in most cases where the answer is no it has not.
+// references named in unknown finish compiling. projectReferences is what the key holds for each
+// project assembly reference now, with the unknown ones read from Unity's build.
+// It checks, in this order, and stops at the first that fails: a record of the current format, the
+// same project assemblies referenced, every reference outside unknown as recorded, every unknown one
+// the record read from Unity's build still as recorded, the outputs still holding what that compile
+// wrote, and shape giving the recorded shape.
+// Why an unknown reference the record read from Unity's build must still match: it finishes either
+// keeping Unity's surface, read from that same file, or changed, read from this run's output; when
+// Unity's file moved, neither gives the recorded line back. One the record read from this run's
+// output is not compared, because what it finishes as decides that.
+// Why shape is a function asked last: it reads every source of the assembly, and the cheaper checks
+// before it answer most of the cases where the answer is no.
 // Why anything unexpected means no: the caller then compiles without waiting, which is what it did
 // before this check existed.
 func (s Store[D]) MayStillApply(
-	assembly string, projectReferences map[string]string, unknown map[string]bool, shape func() (string, bool),
+	assembly string, projectReferences map[string]ReferenceIdentity, unknown map[string]bool,
+	shape func() (string, error),
 ) bool {
 	manifest, found := s.loadManifest(assembly)
-	if !found || !sameKnownReferences(manifest.ProjectReferences, projectReferences, unknown) {
+	if !found || !referencesMayStillMatch(manifest.ProjectReferences, projectReferences, unknown) {
 		return false
 	}
 	if !outputsStillMatch(s.directoryPath(), manifest.Outputs) {
 		return false
 	}
-	current, computed := shape()
+	current, err := shape()
 
-	return computed && current == manifest.Shape
+	return err == nil && current == manifest.Shape
 }
 
-// sameKnownReferences reports whether two sets of project reference identities name the same
-// assemblies and agree on every one outside unknown.
-func sameKnownReferences(recorded map[string]string, current map[string]string, unknown map[string]bool) bool {
+// referencesMayStillMatch reports whether two sets of project reference identities name the same
+// assemblies, agree on every one outside unknown, and agree on every unknown one the record read from
+// Unity's build.
+func referencesMayStillMatch(
+	recorded map[string]ReferenceIdentity, current map[string]ReferenceIdentity, unknown map[string]bool,
+) bool {
 	if len(recorded) != len(current) {
 		return false
 	}
@@ -108,7 +135,10 @@ func sameKnownReferences(recorded map[string]string, current map[string]string, 
 		if !found {
 			return false
 		}
-		if !unknown[name] && recordedIdentity != identity {
+		if unknown[name] && recordedIdentity.Kind == ProducedReference {
+			continue
+		}
+		if recordedIdentity != identity {
 			return false
 		}
 	}
