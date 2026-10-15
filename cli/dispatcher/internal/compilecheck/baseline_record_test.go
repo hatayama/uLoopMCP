@@ -139,7 +139,7 @@ func TestRemoveUnitOutputsRemovesBaselineAndGeneratedDirectory(t *testing.T) {
 	}
 	writeOutputFile(t, generatedPath, "G.cs", "class G {}")
 
-	if err := removeUnitOutputs(outputDirectoryPath, unit); err != nil {
+	if err := (Compiler{ProjectRoot: outputDirectoryPath}).removeUnitOutputs(BuildPlan{}, unit); err != nil {
 		t.Fatalf("expected the outputs to be removed, got error: %v", err)
 	}
 

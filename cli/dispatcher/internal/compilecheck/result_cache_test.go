@@ -160,7 +160,7 @@ func TestRemoveUnitOutputsRemovesTheManifest(t *testing.T) {
 	outputDirectoryPath, unit := newManifestUnit(t)
 	recordResult(t, outputDirectoryPath, unit, "key")
 
-	if err := removeUnitOutputs(outputDirectoryPath, unit); err != nil {
+	if err := (Compiler{ProjectRoot: outputDirectoryPath}).removeUnitOutputs(BuildPlan{}, unit); err != nil {
 		t.Fatalf("failed to remove the outputs: %v", err)
 	}
 

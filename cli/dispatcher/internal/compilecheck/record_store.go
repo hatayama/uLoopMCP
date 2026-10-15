@@ -180,3 +180,27 @@ func hashOutputs(directoryPath string, names []string, succeeded bool) (map[stri
 
 	return outputs, true, nil
 }
+
+// forget removes every record of the assembly: its manifest, its baseline, and its generator output.
+func (s recordStore) forget(assembly string) error {
+	names := []string{
+		// Why the manifest goes with the outputs: it describes those very files, so leaving it behind
+		// would let a later run replay diagnostics for outputs this one removed.
+		assembly + resultManifestExtension,
+		// The baseline and the generator output describe the same compile as the manifest.
+		assembly + baselineRecordExtension,
+	}
+	for _, name := range names {
+		path := filepath.Join(s.directoryPath(), name)
+		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("failed to remove %s: %w", path, err)
+		}
+	}
+
+	generatedPath := filepath.Join(s.directoryPath(), assembly+generatedDirectoryExtension)
+	if err := os.RemoveAll(generatedPath); err != nil {
+		return fmt.Errorf("failed to remove %s: %w", generatedPath, err)
+	}
+
+	return nil
+}

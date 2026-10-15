@@ -98,11 +98,10 @@ type Compiler struct {
 func (c Compiler) CompileUnit(
 	ctx context.Context, plan BuildPlan, unit CompileUnit,
 ) (UnitResult, error) {
-	outputDirectoryPath := filepath.Join(c.ProjectRoot, plan.OutputDir)
 	// Why the previous run's outputs go first: csc writes nothing when it fails, so a leftover
 	// reference assembly from an earlier run would keep describing an assembly that no longer
 	// compiles, and every dependent would be checked against an API that is gone.
-	if err := removeUnitOutputs(outputDirectoryPath, unit); err != nil {
+	if err := c.removeUnitOutputs(plan, unit); err != nil {
 		return UnitResult{}, err
 	}
 
@@ -155,30 +154,21 @@ func (c Compiler) CompileUnit(
 	return buildUnitResult(unit.Assembly.AssemblyName, stdout, stderr, exitCode, duration), nil
 }
 
-// removeUnitOutputs deletes what a previous run left for this assembly in the check's output directory.
-func removeUnitOutputs(outputDirectoryPath string, unit CompileUnit) error {
-	names := []string{
+// removeUnitOutputs deletes what a previous run left for this assembly in the check's output
+// directory: its outputs, and then every record of the compile that wrote them.
+func (c Compiler) removeUnitOutputs(plan BuildPlan, unit CompileUnit) error {
+	outputDirectoryPath := filepath.Join(c.ProjectRoot, plan.OutputDir)
+	for _, name := range []string{
 		unit.Assembly.AssemblyName + assemblyExtension,
 		unit.Assembly.AssemblyName + referenceAssemblyExtension,
-		// Why the manifest goes with them: it describes those very files, so leaving it behind would
-		// let a later run replay diagnostics for outputs this one removed.
-		unit.Assembly.AssemblyName + resultManifestExtension,
-		// The baseline and the generator output describe the same compile as the manifest.
-		unit.Assembly.AssemblyName + baselineRecordExtension,
-	}
-	for _, name := range names {
+	} {
 		path := filepath.Join(outputDirectoryPath, name)
 		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
 			return fmt.Errorf("failed to remove %s: %w", path, err)
 		}
 	}
 
-	generatedPath := filepath.Join(outputDirectoryPath, unit.Assembly.AssemblyName+generatedDirectoryExtension)
-	if err := os.RemoveAll(generatedPath); err != nil {
-		return fmt.Errorf("failed to remove %s: %w", generatedPath, err)
-	}
-
-	return nil
+	return c.records(plan).forget(unit.Assembly.AssemblyName)
 }
 
 // buildUnitResult turns one compiler invocation's output into the result for its assembly.

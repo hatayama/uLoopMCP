@@ -61,16 +61,15 @@ func DefaultJobs() int {
 // schedulerRun is the state of one run of the scheduler: what is running, what has finished, and
 // what was left out because nothing it compiles against changed.
 type schedulerRun struct {
-	runContext          context.Context
-	compiler            Compiler
-	plan                BuildPlan
-	outputDirectoryPath string
-	state               *schedule
-	results             []UnitResult
-	compiled            []bool
-	completions         chan unitCompletion
-	running             int
-	referenceSkips      int
+	runContext     context.Context
+	compiler       Compiler
+	plan           BuildPlan
+	state          *schedule
+	results        []UnitResult
+	compiled       []bool
+	completions    chan unitCompletion
+	running        int
+	referenceSkips int
 }
 
 // compileUnits compiles a plan's assemblies, starting each one as soon as the assemblies it
@@ -96,14 +95,13 @@ func compileUnits(
 	defer cancel()
 
 	run := &schedulerRun{
-		runContext:          runContext,
-		compiler:            compiler,
-		plan:                plan,
-		outputDirectoryPath: outputDirectoryPath,
-		state:               newSchedule(plan),
-		results:             make([]UnitResult, len(plan.Units)),
-		compiled:            make([]bool, len(plan.Units)),
-		completions:         make(chan unitCompletion, len(plan.Units)),
+		runContext:  runContext,
+		compiler:    compiler,
+		plan:        plan,
+		state:       newSchedule(plan),
+		results:     make([]UnitResult, len(plan.Units)),
+		compiled:    make([]bool, len(plan.Units)),
+		completions: make(chan unitCompletion, len(plan.Units)),
 	}
 
 	var failure error
@@ -173,7 +171,7 @@ func (run *schedulerRun) skipBlockedUnit(index int) (bool, error) {
 	if !run.state.blocked[index] {
 		return false, nil
 	}
-	if err := removeUnitOutputs(run.outputDirectoryPath, run.plan.Units[index]); err != nil {
+	if err := run.compiler.removeUnitOutputs(run.plan, run.plan.Units[index]); err != nil {
 		return false, err
 	}
 	run.state.blockDependents(index)
@@ -193,7 +191,7 @@ func (run *schedulerRun) skipUnchangedDependent(index int) (bool, error) {
 	if !unit.SelectedAsDependent || run.state.changedInputs[index] != 0 {
 		return false, nil
 	}
-	if err := removeUnitOutputs(run.outputDirectoryPath, unit); err != nil {
+	if err := run.compiler.removeUnitOutputs(run.plan, unit); err != nil {
 		return false, err
 	}
 	run.referenceSkips++
