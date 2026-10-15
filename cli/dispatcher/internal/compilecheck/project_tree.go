@@ -1,7 +1,7 @@
 package compilecheck
 
 import (
-	"io/fs"
+	"os"
 	"path/filepath"
 )
 
@@ -38,18 +38,42 @@ type projectTreeEntry struct {
 	isRegular   bool // a regular file, as opposed to a directory, a symbolic link or a device
 }
 
-// walkProjectTree walks each index root once, in root order.
+// walkProjectTree lists each index root once, as filepath.WalkDir would walk the roots in root order.
+// Why the directories are read in parallel but put together in walk order: on a project of tens of
+// thousands of files the reads are what take the time, while the order decides results - the
+// .asmdef index keeps the first of two assemblies declaring the same name, and the first error a
+// root meets is the one reported - so only the reads may run in any order.
 // Why the walk stops at the first root that fails: indexing stopped there before, so a later root
 // was never read, and an error found there must not take the place of the one found first.
-// Why the roots are walked one after another rather than in parallel: the .asmdef index keeps the
-// first of two assemblies declaring the same name, so the order across roots decides the winner.
 func walkProjectTree(projectRoot string) projectTree {
-	tree := projectTree{directories: map[string]projectTreeDirectory{}}
+	return walkProjectTreeReadingAhead(projectRoot, readProjectTreeListings)
+}
+
+// walkProjectTreeReadingAhead is walkProjectTree with the read-ahead given. The tree it returns does
+// not depend on what readAhead read: a directory it left out is read when the walk reaches it.
+func walkProjectTreeReadingAhead(
+	projectRoot string, readAhead func(rootPaths []string) map[string]projectTreeListing,
+) projectTree {
+	starts := []projectTreeRootStart{}
+	readFirst := []string{}
 	for _, rootPath := range projectIndexRoots(projectRoot) {
 		if !directoryExists(rootPath) {
 			continue
 		}
-		root, directories := walkProjectTreeRoot(rootPath)
+		// Why Lstat: a root that is a symbolic link is listed without being followed, as WalkDir does.
+		info, err := os.Lstat(rootPath)
+		start := projectTreeRootStart{path: rootPath, lstatErr: err}
+		if err == nil && info.IsDir() {
+			start.isDirectory = true
+			readFirst = append(readFirst, rootPath)
+		}
+		starts = append(starts, start)
+	}
+	listings := readAhead(readFirst)
+
+	tree := projectTree{directories: map[string]projectTreeDirectory{}}
+	for _, start := range starts {
+		root, directories := restoreProjectTreeRoot(start, listings)
 		tree.roots = append(tree.roots, root)
 		if root.walkErr != nil {
 			break
@@ -62,72 +86,71 @@ func walkProjectTree(projectRoot string) projectTree {
 	return tree
 }
 
-// walkProjectTreeRoot lists one root with the same rules the indexes walked it with: names Unity
-// ignores are left out, and symbolic links are listed but not followed.
-func walkProjectTreeRoot(rootPath string) (projectTreeRoot, map[string]projectTreeDirectory) {
-	root := projectTreeRoot{path: rootPath}
+// projectTreeRootStart is what the walk learned about one root before reading it.
+type projectTreeRootStart struct {
+	path        string
+	isDirectory bool
+	lstatErr    error
+}
+
+// restoreProjectTreeRoot puts one root together from the listings read ahead, in the order
+// filepath.WalkDir would have met its entries, and stops at the first error the same walk would
+// have stopped at.
+func restoreProjectTreeRoot(
+	start projectTreeRootStart, listings map[string]projectTreeListing,
+) (projectTreeRoot, map[string]projectTreeDirectory) {
+	root := projectTreeRoot{path: start.path}
 	directories := map[string]projectTreeDirectory{}
-	root.walkErr = filepath.WalkDir(rootPath, func(path string, entry fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if path == rootPath {
-			if entry.IsDir() {
-				directories[filepath.Clean(path)] = newProjectTreeDirectory()
-			}
+	if start.lstatErr != nil {
+		root.walkErr = start.lstatErr
 
-			return nil
-		}
-		if isUnityIgnoredName(entry.Name()) {
-			if entry.IsDir() {
-				return filepath.SkipDir
-			}
-
-			return nil
-		}
-		addProjectTreeEntry(directories, path, entry)
-		if entry.IsDir() {
-			directories[filepath.Clean(path)] = newProjectTreeDirectory()
-
-			return nil
-		}
-		switch filepath.Ext(path) {
-		case assemblyDefinitionExtension:
-			root.definitionFiles = append(root.definitionFiles, path)
-		case assemblyReferenceExtension:
-			root.referenceFiles = append(root.referenceFiles, path)
-		}
-
-		return nil
-	})
+		return root, directories
+	}
+	if start.isDirectory {
+		root.walkErr = restoreProjectTreeDirectory(&root, directories, start.path, listings)
+	}
 
 	return root, directories
 }
 
-// newProjectTreeDirectory starts the listing of one directory.
-func newProjectTreeDirectory() projectTreeDirectory {
-	return projectTreeDirectory{byName: map[string]projectTreeEntry{}}
-}
+// restoreProjectTreeDirectory lists one directory and everything below it in walk order: each name in
+// name order, with a directory walked to the end before the next name.
+// Why a listing that failed is not walked: WalkDir stops at the error, so what a failed read did
+// return was never seen, and nothing after it in the same root was either.
+func restoreProjectTreeDirectory(
+	root *projectTreeRoot,
+	directories map[string]projectTreeDirectory,
+	path string,
+	listings map[string]projectTreeListing,
+) error {
+	listing, readAhead := listings[path]
+	if !readAhead {
+		// Why a directory missing from the read-ahead is read here: whatever rule decided what to
+		// read ahead, the tree must come out as the walk would have listed it.
+		listing = readProjectTreeListing(path)
+	}
+	if listing.err != nil {
+		return listing.err
+	}
+	directories[filepath.Clean(path)] = listing.directory
+	for _, entry := range listing.directory.entries {
+		entryPath := filepath.Join(path, entry.name)
+		if entry.isDirectory {
+			if err := restoreProjectTreeDirectory(root, directories, entryPath, listings); err != nil {
+				return err
+			}
 
-// addProjectTreeEntry records one name in the listing of its parent.
-// Why a missing parent listing is started here: the walk lists a parent before its children, but
-// the parent's key is derived by cleaning the child's path, which need not match the key the root
-// was stored under - a Windows share root is one such spelling - and writing to a listing that was
-// never started would panic.
-func addProjectTreeEntry(directories map[string]projectTreeDirectory, path string, entry fs.DirEntry) {
-	parentPath := filepath.Dir(filepath.Clean(path))
-	parent, started := directories[parentPath]
-	if !started {
-		parent = newProjectTreeDirectory()
+			continue
+		}
+		switch filepath.Ext(entryPath) {
+		case assemblyDefinitionExtension:
+			root.definitionFiles = append(root.definitionFiles, entryPath)
+		case assemblyReferenceExtension:
+			root.referenceFiles = append(root.referenceFiles, entryPath)
+		}
 	}
-	listed := projectTreeEntry{
-		name:        entry.Name(),
-		isDirectory: entry.IsDir(),
-		isRegular:   entry.Type().IsRegular(),
-	}
-	parent.entries = append(parent.entries, listed)
-	parent.byName[listed.name] = listed
-	directories[parentPath] = parent
+
+	return nil
 }
 
 // directory returns the listing of a directory the walk went through.

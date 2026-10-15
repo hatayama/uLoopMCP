@@ -50,12 +50,13 @@ type assemblyGraph struct {
 
 // BuildCompilePlan decides which assemblies to compile, in which order, for one project.
 func BuildCompilePlan(projectRoot string, dagDir string, all bool) (BuildPlan, error) {
-	graph, err := loadAssemblyGraph(projectRoot, dagDir)
-	if err != nil {
-		return BuildPlan{}, err
+	inputs := loadPlanInputs(projectRoot, dagDir, all)
+	if inputs.graphErr != nil {
+		return BuildPlan{}, inputs.graphErr
 	}
+	graph := inputs.graph
 
-	reasons, err := selectChangedAssemblies(projectRoot, dagDir, graph, all)
+	reasons, err := selectChangedAssemblies(projectRoot, dagDir, inputs, all)
 	if err != nil {
 		return BuildPlan{}, err
 	}
@@ -160,12 +161,14 @@ func listResponseFiles(dagDirectoryPath string) ([]string, error) {
 }
 
 // selectChangedAssemblies rebuilds each assembly's source list and records why it needs compiling.
+// Why it takes the walk and the Bee log rather than reading them: they are read once per run, at the
+// same time as the response files, and the .asmdef index, the .asmref index and every source rebuild
+// below read the same walk.
 func selectChangedAssemblies(
-	projectRoot string, dagDir string, graph assemblyGraph, all bool,
+	projectRoot string, dagDir string, inputs planInputs, all bool,
 ) (map[string]string, error) {
-	// Why the project is walked once here: the .asmdef index, the .asmref index and every source
-	// rebuild below all read the same directories, and walking them for each would repeat the walk.
-	tree := walkProjectTree(projectRoot)
+	graph := inputs.graph
+	tree := inputs.tree
 	assemblyDefinitions, err := IndexAssemblyDefinitions(tree)
 	if err != nil {
 		return nil, err
@@ -189,13 +192,7 @@ func selectChangedAssemblies(
 		return nil, referenceErr
 	}
 
-	// Why the Bee log is read once here: it describes the whole of the last build, and reading it per
-	// assembly would reread tens of megabytes for every response file in the dag. An --all run reads
-	// nothing, because it selects every assembly whatever the last build made of it.
-	failedLastBuild := map[string]bool{}
-	if !all {
-		failedLastBuild = ReadFailedUnityCompiles(projectRoot, dagDir)
-	}
+	failedLastBuild := inputs.failedLastBuild
 
 	reasons := map[string]string{}
 	for _, name := range graph.names {

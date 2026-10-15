@@ -1,7 +1,6 @@
 package compilecheck
 
 import (
-	"io/fs"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -147,23 +146,5 @@ func TestWalkProjectTreeStopsAtTheFirstRootThatFails(t *testing.T) {
 	}
 	if _, listed := tree.directory(filepath.Join(projectRoot, "Assets", "A")); !listed {
 		t.Fatal("a directory of a root that walked cleanly was not listed")
-	}
-}
-
-// Verifies recording an entry whose parent the walk has not listed starts the parent's listing
-// instead of writing to a missing one, which a root whose cleaned parent key differs could cause.
-func TestAddProjectTreeEntryStartsAMissingParentListing(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "A.cs")
-	writeFileAt(t, path, "")
-	info, err := os.Stat(path)
-	if err != nil {
-		t.Fatalf("failed to stat %s: %v", path, err)
-	}
-	directories := map[string]projectTreeDirectory{}
-
-	addProjectTreeEntry(directories, path, fs.FileInfoToDirEntry(info))
-
-	if entry, found := directories[filepath.Dir(path)].byName["A.cs"]; !found || !entry.isRegular {
-		t.Fatalf("listing = %+v, want A.cs as a regular file", directories[filepath.Dir(path)])
 	}
 }
