@@ -544,3 +544,35 @@ func TestCompileUnitsRecordsNothingWhenASuccessfulCompileWroteNoOutput(t *testin
 		t.Errorf("the next run should have compiled the unit, got %d runs", recorder.runs["Alpha"])
 	}
 }
+
+// Verifies a compile of sources edited while csc ran is not recorded under the key of the bytes
+// before the edit, so putting those bytes back compiles them again rather than reusing what the
+// edited file reported.
+func TestCompileUnitsDoesNotRecordACompileOfSourcesEditedDuringIt(t *testing.T) {
+	project := newCachedSchedulerProject(t, nil, "Alpha")
+	project.compileOrFail(t, newCachedSchedulerRecorder("Alpha"))
+	project.editSource(t, "Alpha", "class Alpha { void X() { } }")
+	edited := newCachedSchedulerRecorder("Alpha")
+	var editErr error
+	edited.during = func(name string) {
+		if name == "Alpha" {
+			editErr = os.WriteFile(filepath.Join(project.root, "Assets", "Alpha", "Alpha.cs"),
+				[]byte("class Alpha { void Y() { } }"), 0o600)
+		}
+	}
+	project.compileOrFail(t, edited)
+	if editErr != nil {
+		t.Fatalf("failed to edit the source during the compile: %v", editErr)
+	}
+	if edited.runs["Alpha"] != 1 {
+		t.Fatalf("expected the edited unit to compile, got %d runs", edited.runs["Alpha"])
+	}
+	project.editSource(t, "Alpha", "class Alpha { void X() { } }")
+
+	recorder := newCachedSchedulerRecorder("Alpha")
+	project.compileOrFail(t, recorder)
+
+	if recorder.runs["Alpha"] != 1 {
+		t.Errorf("expected the reverted source to compile again, got %d runs", recorder.runs["Alpha"])
+	}
+}

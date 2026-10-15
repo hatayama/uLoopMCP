@@ -183,8 +183,9 @@ func TestSmallAssemblyIsNotTried(t *testing.T) {
 	}
 }
 
-// Verifies that an input other than source contents that changed while csc compiled leaves no
-// baseline, and says why, so the next body edit compiles in full.
+// Verifies that an input other than source contents that changed while csc compiled leaves neither a
+// baseline nor a record of the compile to reuse, and the note says why, so the next body edit
+// compiles in full.
 func TestNonSourceInputChangedDuringCompileLeavesNoBaseline(t *testing.T) {
 	project := newFastPathProject(t, fastPathMinimumSources)
 	recorder := newCachedSchedulerRecorder("Alpha", "Beta")
@@ -205,7 +206,7 @@ func TestNonSourceInputChangedDuringCompileLeavesNoBaseline(t *testing.T) {
 
 	project.editBody(t, 0, "edited")
 	second := newCachedSchedulerRecorder("Alpha", "Beta")
-	assertFallback(t, project.run(t, second, false), second, "no baseline: the last full compile did not record one")
+	assertFallback(t, project.run(t, second, false), second, "no baseline: no full compile of this assembly is on record")
 }
 
 // Verifies that a baseline whose saved generator output was deleted or changed is not used, since

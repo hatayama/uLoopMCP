@@ -152,8 +152,9 @@ build - does not call the worker again: it reports what the previous check repor
 
 Otherwise the assembly is compiled in full as before, and `FastPathFallbacks` says why:
 
-- `no baseline: no full compile of this assembly is on record` (none ran yet, or a later run
-  skipped or blocked the assembly, which removes its result and baseline)
+- `no baseline: no full compile of this assembly is on record` (none ran yet, a later run
+  skipped or blocked the assembly, which removes its result and baseline, or an input changed while
+  the last full compile ran, so it left no record; `FastPathBaselineNotes` of that run says which)
 - `no baseline: the last full compile had errors` (a full compile that fails drops the baseline an
   earlier one left)
 - `no baseline: the last full compile did not record one` (`FastPathBaselineNotes` of that run
@@ -176,8 +177,9 @@ Otherwise the assembly is compiled in full as before, and `FastPathFallbacks` sa
   not support)
 
 A full compile that succeeds records a new baseline, `--full` runs included, so the run after it can
-use the check again. A source or another input edited while csc was compiling leaves no baseline,
-and `FastPathBaselineNotes` says why a successful full compile left none. An input edited while the
+use the check again. A source or another input edited while csc was compiling leaves no baseline
+and no record of that compile to reuse, so the next run compiles the assembly again;
+`FastPathBaselineNotes` says why a successful full compile left no baseline. An input edited while the
 changed files were being checked leaves no record of that check, so the next run checks them again.
 
 So the first body edit is compiled in full more often than it looks:
