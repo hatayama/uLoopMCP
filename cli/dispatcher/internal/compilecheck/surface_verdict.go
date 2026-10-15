@@ -5,6 +5,8 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
@@ -90,9 +92,7 @@ func (c Compiler) referenceSurfaceVerdict(ctx context.Context, plan BuildPlan, u
 	}
 
 	startedAt := time.Now()
-	verdict := c.askSurface(ctx, plan, unit, comparer, fastcheck.CompareSurfaceRequest{
-		ProducedPath: producedPath, UnityBuildPath: unityBuildPath,
-	}, resultstore.SurfaceInputs{ProducedSha256: sha256Hex(produced), UnityBuildSha256: sha256Hex(unityBuild)})
+	verdict := c.askSurface(ctx, plan, unit, comparer, comparedPair{produced: produced, unityBuild: unityBuild})
 	verdict.Asked = true
 	verdict.Duration = time.Since(startedAt)
 
@@ -110,22 +110,32 @@ func (c Compiler) surfaceComparer() surfaceComparer {
 	return c.FastPath.Worker
 }
 
+// comparedPair is the two reference assemblies of one comparison, as read once.
+type comparedPair struct {
+	produced   []byte
+	unityBuild []byte
+}
+
 // askSurface answers from the record of the same comparison when there is one, and otherwise asks
 // the worker and records what it said.
+// Why the worker reads copies rather than the two paths: Unity can rewrite its reference assembly
+// while the worker is built or runs, and an answer about bytes other than the ones the record is
+// keyed by would later answer for a pair nobody compared.
 // Why only an answer is recorded: a failure says nothing about the two assemblies, and the next
 // run, which meets the same pair until Unity builds again, should ask again rather than repeat it.
 // Why a record that cannot be written leaves the verdict standing: it only saves the next run a
 // comparison.
 func (c Compiler) askSurface(
-	ctx context.Context, plan BuildPlan, unit CompileUnit, comparer surfaceComparer,
-	request fastcheck.CompareSurfaceRequest, inputs resultstore.SurfaceInputs,
+	ctx context.Context, plan BuildPlan, unit CompileUnit, comparer surfaceComparer, pair comparedPair,
 ) SurfaceVerdict {
 	worker, err := comparer.Ensure(ctx)
 	if err != nil {
 		return SurfaceVerdict{Reason: SurfaceCouldNotComparePrefix + err.Error()}
 	}
 
-	inputs.WorkerKey = worker.Key
+	inputs := resultstore.SurfaceInputs{
+		ProducedSha256: sha256Hex(pair.produced), UnityBuildSha256: sha256Hex(pair.unityBuild), WorkerKey: worker.Key,
+	}
 	records := c.records(plan)
 	assembly := unit.Assembly.AssemblyName
 	if recorded, found := records.ReusableSurfaceVerdict(assembly, inputs); found {
@@ -134,6 +144,12 @@ func (c Compiler) askSurface(
 
 		return verdict
 	}
+
+	request, cleanup, err := writeComparedPair(filepath.Join(c.ProjectRoot, plan.OutputDir), assembly, pair)
+	if err != nil {
+		return SurfaceVerdict{Reason: SurfaceCouldNotComparePrefix + err.Error()}
+	}
+	defer cleanup()
 
 	response, err := comparer.CompareSurface(ctx, worker, request)
 	if err != nil {
@@ -144,6 +160,46 @@ func (c Compiler) askSurface(
 	_ = records.RecordSurfaceVerdict(assembly, inputs, answer)
 
 	return verdictFromWorker(answer)
+}
+
+// writeComparedPair writes the two reference assemblies of a comparison to files of their own in
+// directory, and returns the request naming them with what removes them.
+func writeComparedPair(
+	directory string, assembly string, pair comparedPair,
+) (fastcheck.CompareSurfaceRequest, func(), error) {
+	paths := []string{}
+	cleanup := func() {
+		for _, path := range paths {
+			_ = os.Remove(path)
+		}
+	}
+	for _, content := range [][]byte{pair.produced, pair.unityBuild} {
+		path, err := writeComparedCopy(directory, assembly, content)
+		if err != nil {
+			cleanup()
+
+			return fastcheck.CompareSurfaceRequest{}, nil, err
+		}
+		paths = append(paths, path)
+	}
+
+	return fastcheck.CompareSurfaceRequest{ProducedPath: paths[0], UnityBuildPath: paths[1]}, cleanup, nil
+}
+
+func writeComparedCopy(directory string, assembly string, content []byte) (string, error) {
+	file, err := os.CreateTemp(directory, assembly+".surface-compare-*.tmp")
+	if err != nil {
+		return "", fmt.Errorf("failed to write a reference assembly to compare: %w", err)
+	}
+	_, writeErr := file.Write(content)
+	closeErr := file.Close()
+	if err := errors.Join(writeErr, closeErr); err != nil {
+		_ = os.Remove(file.Name())
+
+		return "", fmt.Errorf("failed to write a reference assembly to compare: %w", err)
+	}
+
+	return file.Name(), nil
 }
 
 func verdictFromWorker(answer resultstore.SurfaceVerdict) SurfaceVerdict {

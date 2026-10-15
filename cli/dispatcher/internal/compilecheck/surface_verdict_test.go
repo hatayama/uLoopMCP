@@ -105,8 +105,9 @@ func TestReferenceSurfaceVerdictKeepsIdenticalBytesWithoutTheWorker(t *testing.T
 }
 
 // Verifies the worker is asked about any two reference assemblies whose bytes differ, whatever they
-// contain: a private member renumbering the compiler's private nested types changes the bytes of an
-// assembly that embeds no attribute type at all.
+// contain - a private member renumbering the compiler's private nested types changes the bytes of an
+// assembly that embeds no attribute type at all - is handed the rebuilt one and Unity's in that
+// order, and leaves no copy behind.
 func TestReferenceSurfaceVerdictAsksTheWorkerWhateverTheAssembliesContain(t *testing.T) {
 	project := newSurfaceVerdictProject(t)
 	project.worker.surfaceOutcome = "same"
@@ -115,11 +116,16 @@ func TestReferenceSurfaceVerdictAsksTheWorkerWhateverTheAssembliesContain(t *tes
 
 	assertVerdict(t, got, true, SurfaceSameAPI)
 	assertComparisons(t, project.worker, 1)
-	if want := filepath.Join(project.root, project.plan.OutputDir, "A.ref.dll"); project.worker.surfaceComparisons[0] != want {
-		t.Errorf("expected the produced reference assembly %s to be compared, got %s", want, project.worker.surfaceComparisons[0])
+	want := fakeSurfaceComparison{Produced: "rebuilt surface", UnityBuild: "unity surface"}
+	if project.worker.surfaceComparisons[0] != want {
+		t.Errorf("expected the worker to compare %+v, got %+v", want, project.worker.surfaceComparisons[0])
 	}
 	if !got.Asked || got.FromRecord {
 		t.Errorf("expected a verdict the worker gave, got %+v", got)
+	}
+	leftovers, err := filepath.Glob(filepath.Join(project.root, project.plan.OutputDir, "*.surface-compare-*"))
+	if err != nil || len(leftovers) != 0 {
+		t.Errorf("expected the copies handed to the worker to be removed, got %v (%v)", leftovers, err)
 	}
 }
 
@@ -148,6 +154,23 @@ func TestReferenceSurfaceVerdictRecordsADifferenceTheWorkerFound(t *testing.T) {
 	if _, err := os.Stat(project.recordPath()); err != nil {
 		t.Errorf("expected the verdict to be recorded, got %v", err)
 	}
+}
+
+// Verifies the worker compares the very bytes the record is keyed by: when Unity rewrites its
+// reference assembly while the comparison runs, the answer and its record still describe the pair
+// read before it, so a later run meeting that pair again is not answered for another one.
+func TestReferenceSurfaceVerdictComparesTheBytesItKeysTheRecordBy(t *testing.T) {
+	project := newSurfaceVerdictProject(t)
+	project.worker.surfaceByContent = true
+	project.worker.onCompare = func() { project.writeUnityBuild(t, "rebuilt surface") }
+
+	assertVerdict(t, project.verdict(), false, SurfaceChanged)
+
+	project.worker.onCompare = nil
+	project.writeUnityBuild(t, "unity surface")
+	project.worker.surfaceByContent = false
+
+	assertVerdict(t, project.verdict(), false, SurfaceChanged)
 }
 
 // Verifies a matching record answers "same" without asking the worker again.

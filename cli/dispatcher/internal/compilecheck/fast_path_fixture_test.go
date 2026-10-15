@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -42,8 +43,19 @@ type fakeFastCheckWorker struct {
 	// not care about the comparison sees every differing reference assembly as a changed surface.
 	surfaceOutcome string
 	surfaceErr     error
-	// surfaceComparisons lists the produced reference assembly of every comparison, in call order.
-	surfaceComparisons []string
+	// surfaceByContent answers same exactly when the two files handed over hold the same bytes,
+	// instead of answering surfaceOutcome.
+	surfaceByContent bool
+	// onCompare runs as a comparison starts, before the worker reads what it was handed.
+	onCompare func()
+	// surfaceComparisons lists what every comparison was handed, in call order.
+	surfaceComparisons []fakeSurfaceComparison
+}
+
+// fakeSurfaceComparison is what one comparison read from the two paths it was handed.
+type fakeSurfaceComparison struct {
+	Produced   string
+	UnityBuild string
 }
 
 func newFakeFastCheckWorker() *fakeFastCheckWorker {
@@ -118,9 +130,26 @@ func (worker *fakeFastCheckWorker) CompareSurface(
 ) (fastcheck.CompareSurfaceResponse, error) {
 	worker.mutex.Lock()
 	defer worker.mutex.Unlock()
-	worker.surfaceComparisons = append(worker.surfaceComparisons, request.ProducedPath)
+	if worker.onCompare != nil {
+		worker.onCompare()
+	}
+	produced, producedErr := os.ReadFile(request.ProducedPath)
+	unityBuild, unityBuildErr := os.ReadFile(request.UnityBuildPath)
+	if producedErr != nil || unityBuildErr != nil {
+		return fastcheck.CompareSurfaceResponse{}, errors.Join(producedErr, unityBuildErr)
+	}
+	worker.surfaceComparisons = append(worker.surfaceComparisons,
+		fakeSurfaceComparison{Produced: string(produced), UnityBuild: string(unityBuild)})
 	if worker.surfaceErr != nil {
 		return fastcheck.CompareSurfaceResponse{}, worker.surfaceErr
+	}
+	if worker.surfaceByContent {
+		outcome := fastcheck.DifferentSurfaceOutcome
+		if string(produced) == string(unityBuild) {
+			outcome = fastcheck.SameSurfaceOutcome
+		}
+
+		return fastcheck.CompareSurfaceResponse{Outcome: outcome}, nil
 	}
 	if worker.surfaceOutcome == "" {
 		return fastcheck.CompareSurfaceResponse{Outcome: fastcheck.DifferentSurfaceOutcome, Detail: "fake difference"}, nil
