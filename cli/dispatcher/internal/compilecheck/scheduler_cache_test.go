@@ -432,21 +432,31 @@ func TestCompileUnitsRecordsNothingWhenTheCompilerFailedWithoutADiagnostic(t *te
 	}
 }
 
-// Verifies an output that no longer holds what the compile wrote sends the unit back through the
-// compiler: the assemblies below it read those bytes.
+// Verifies that either output - the assembly or the reference assembly - no longer holding what the
+// compile wrote sends the unit back through the compiler: the assemblies below it read those bytes.
 func TestCompileUnitsCompilesAgainWhenAnOutputWasChanged(t *testing.T) {
-	project := newCachedSchedulerProject(t, nil, "Alpha")
-	project.compileOrFail(t, newCachedSchedulerRecorder("Alpha"))
+	for name, output := range map[string]string{
+		"assembly":           "Alpha" + assemblyExtension,
+		"reference assembly": "Alpha" + referenceAssemblyExtension,
+	} {
+		t.Run(name, func(t *testing.T) {
+			project := newCachedSchedulerProject(t, nil, "Alpha")
+			project.compileOrFail(t, newCachedSchedulerRecorder("Alpha"))
 
-	assemblyPath := filepath.Join(project.outputDirectory(), "Alpha"+assemblyExtension)
-	if err := os.WriteFile(assemblyPath, []byte("something else"), 0o600); err != nil {
-		t.Fatalf("failed to change the output: %v", err)
-	}
-	recorder := newCachedSchedulerRecorder("Alpha")
-	project.compileOrFail(t, recorder)
+			outputPath := filepath.Join(project.outputDirectory(), output)
+			if _, err := os.Stat(outputPath); err != nil {
+				t.Fatalf("expected the compile to write %s: %v", output, err)
+			}
+			if err := os.WriteFile(outputPath, []byte("something else"), 0o600); err != nil {
+				t.Fatalf("failed to change the output: %v", err)
+			}
+			recorder := newCachedSchedulerRecorder("Alpha")
+			project.compileOrFail(t, recorder)
 
-	if recorder.runs["Alpha"] != 1 {
-		t.Errorf("a unit whose output changed should have compiled, got %d runs", recorder.runs["Alpha"])
+			if recorder.runs["Alpha"] != 1 {
+				t.Errorf("a unit whose %s changed should have compiled, got %d runs", name, recorder.runs["Alpha"])
+			}
+		})
 	}
 }
 
