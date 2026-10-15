@@ -54,8 +54,12 @@ func (state *schedule) enqueue(index int) {
 	state.ready = append(state.ready, index)
 }
 
-// takeNext removes the next unit to start from the ready queue: the one with the most sources, and
-// among those the one first in the plan.
+// takeNext removes the next unit to start from the ready queue: a unit whose references are all final
+// before one queued early, then the one with the most sources, and among those the one first in the
+// plan.
+// Why a unit with final references goes first: a unit queued early may reference one still waiting
+// in the queue, and starting it ahead of that reference would compile it against Unity's file, only
+// to compile it again once the reference changed its surface.
 // Why the most sources first: how long a compile takes follows its source count closely, and
 // starting the longest compiles first keeps them from finishing last while the other jobs sit idle.
 // Why plan order breaks a tie rather than the order units became ready: it keeps the start order the
@@ -76,6 +80,9 @@ func (state *schedule) takeNext() int {
 
 // startsBefore reports whether unit a should start before unit b when both are ready.
 func (state *schedule) startsBefore(a int, b int) bool {
+	if (state.pending[a] == 0) != (state.pending[b] == 0) {
+		return state.pending[a] == 0
+	}
 	if state.sourceCounts[a] != state.sourceCounts[b] {
 		return state.sourceCounts[a] > state.sourceCounts[b]
 	}

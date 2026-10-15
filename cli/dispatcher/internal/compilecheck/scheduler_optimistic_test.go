@@ -604,3 +604,23 @@ func TestCompileUnitsBreaksATieInSourceCountByPlanOrder(t *testing.T) {
 
 	assertStrings(t, "start order", recorder.startOrder, []string{"Z", "A", "B"})
 }
+
+// Verifies a unit whose references are all final starts before a larger unit queued early that
+// references it: starting the larger one first would compile it against a reference not yet
+// compiled, and again once that reference changed its surface.
+func TestCompileUnitsStartsAUnitWhoseReferencesAreFinalBeforeALargerUnitQueuedEarly(t *testing.T) {
+	run := newOptimisticPlanRun(t, map[string][]string{"A": {"X"}, "B": {"X"}, "D": {"X", "A"}},
+		[]string{"A", "B", "D"}, "X", "A", "B", "D")
+	run.plan = withSourceCounts(run.plan, map[string]int{"X": 1, "A": 1, "B": 1, "D": 3})
+	run.jobs = 1
+
+	outcome := run.compile(t)
+
+	if run.recorder.runs["D"] != 1 {
+		t.Errorf("D compiled %d times, want 1", run.recorder.runs["D"])
+	}
+	assertStrings(t, "start order", run.recorder.startOrder, []string{"X", "A", "D", "B"})
+	if again := resultOf(t, outcome.Units, "D").CompiledAgainAfter; again != "" {
+		t.Errorf("D compiled again after %q, want once", again)
+	}
+}
