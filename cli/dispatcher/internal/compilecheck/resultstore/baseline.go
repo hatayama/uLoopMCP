@@ -73,6 +73,9 @@ func (s Store[D]) GeneratedDirectory(assembly string) string {
 	return filepath.Join(s.outputDir, assembly+generatedDirectoryExtension)
 }
 
+// anotherVersionReason says a baseline, or the compile it describes, was recorded by another version.
+const anotherVersionReason = "no baseline: it was recorded by another version of compile-check"
+
 // LoadBaseline reads the baseline of an assembly together with what the full compile it describes
 // reported, or says why there is none to use.
 func (s Store[D]) LoadBaseline(assembly string) (Baseline[D], string) {
@@ -83,11 +86,12 @@ func (s Store[D]) LoadBaseline(assembly string) (Baseline[D], string) {
 
 	var record baselineRecord
 	if err := json.Unmarshal(content, &record); err != nil || record.FormatVersion != baselineRecordFormatVersion {
-		return Baseline[D]{}, "no baseline: it was recorded by another version of compile-check"
+		return Baseline[D]{}, anotherVersionReason
 	}
 
 	// In the normal flow the record and the manifest are written together under one key, and a full
-	// compile removes both, so the checks below only catch a state someone changed by hand.
+	// compile removes both, so the checks below other than the format version only catch a state
+	// someone changed by hand.
 	const goneFromDisk = "baseline compile is no longer on disk"
 	manifestContent, err := os.ReadFile(manifestPath(s.directoryPath(), assembly))
 	if err != nil {
@@ -95,8 +99,16 @@ func (s Store[D]) LoadBaseline(assembly string) (Baseline[D], string) {
 	}
 
 	var manifest unitResultManifest[D]
-	if err := json.Unmarshal(manifestContent, &manifest); err != nil ||
-		manifest.InputKey != record.InputKey || !manifest.Succeeded ||
+	if err := json.Unmarshal(manifestContent, &manifest); err != nil {
+		return Baseline[D]{}, goneFromDisk
+	}
+	// Why a manifest of another format version ends the baseline too: a changed-files check leaves the
+	// outputs of the full compile in place, so a baseline would hand dependents what an older version
+	// compiled long after the manifest itself stopped being reused.
+	if manifest.FormatVersion != resultManifestFormatVersion {
+		return Baseline[D]{}, anotherVersionReason
+	}
+	if manifest.InputKey != record.InputKey || !manifest.Succeeded ||
 		!outputsStillMatch(s.directoryPath(), manifest.Outputs) {
 		return Baseline[D]{}, goneFromDisk
 	}

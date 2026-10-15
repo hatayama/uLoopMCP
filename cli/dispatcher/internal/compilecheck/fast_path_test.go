@@ -2,6 +2,7 @@ package compilecheck
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -132,6 +133,35 @@ func TestHandCorruptedFailedManifestFallsBack(t *testing.T) {
 	outcome := project.run(t, recorder, false)
 
 	assertFallback(t, outcome, recorder, "baseline compile is no longer on disk")
+}
+
+// Verifies that a baseline whose full compile was recorded in format version 1, when sources were
+// compiled in ordinal order, is not used: the body edit compiles in full instead of handing the
+// dependents the reference assembly that compile wrote.
+func TestBaselineOfAFormatVersion1CompileFallsBack(t *testing.T) {
+	project := newFastPathProject(t, fastPathMinimumSources)
+	project.recordBaseline(t)
+	manifestPath := filepath.Join(project.outputDirectory(), "Alpha.result.json")
+	content, err := os.ReadFile(manifestPath)
+	if err != nil {
+		t.Fatalf("failed to read the compile result: %v", err)
+	}
+	manifest := map[string]any{}
+	if err := json.Unmarshal(content, &manifest); err != nil {
+		t.Fatalf("failed to parse the compile result: %v", err)
+	}
+	manifest["FormatVersion"] = 1
+	rewritten, err := json.Marshal(manifest)
+	if err != nil {
+		t.Fatalf("failed to write the compile result back: %v", err)
+	}
+	writeOutputFile(t, project.outputDirectory(), "Alpha.result.json", string(rewritten))
+	project.editBody(t, 0, "edited")
+	recorder := newCachedSchedulerRecorder("Alpha", "Beta")
+
+	outcome := project.run(t, recorder, false)
+
+	assertFallback(t, outcome, recorder, "no baseline: it was recorded by another version of compile-check")
 }
 
 // Verifies that a failed full compile leaves no baseline, so the next body edit compiles in full.

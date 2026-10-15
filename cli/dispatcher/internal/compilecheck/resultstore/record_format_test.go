@@ -42,7 +42,7 @@ func TestWriteUnitResultManifestWritesTheRecordedFormat(t *testing.T) {
 		t.Fatalf("failed to write the manifest: %v", err)
 	}
 
-	assertFileContent(t, manifestPath(directoryPath, "Alpha"), `{"FormatVersion":1,"InputKey":"key","Succeeded":false,`+
+	assertFileContent(t, manifestPath(directoryPath, "Alpha"), `{"FormatVersion":2,"InputKey":"key","Succeeded":false,`+
 		`"Diagnostics":[{"Severity":"error","Code":"CS0103","Message":"The name 'Missing' does not exist in the current context",`+
 		`"File":"Assets/Alpha/Alpha.cs","Line":3,"Column":9}],`+
 		`"Outputs":{"Alpha.dll":"e020bdf568793dee747a220086c5e53c8b3af5abd959383a31297f303577efe6",`+
