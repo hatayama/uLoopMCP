@@ -63,7 +63,7 @@ func (c Compiler) reuseOrCompile(
 	// putting the file back would replay what the edited file reported. CompileUnit has already
 	// removed the previous record, so leaving this one out makes the next run compile again.
 	if c.keyStillHolds(plan, unit, key) {
-		if writeErr := records.RecordCompile(unit.Assembly.AssemblyName, key,
+		if writeErr := records.RecordCompile(unit.Assembly.AssemblyName, keyResult.identity(),
 			resultstore.CompileResult[Diagnostic]{Succeeded: result.Succeeded, Diagnostics: result.Diagnostics}, unitOutputNames(unit)); writeErr != nil {
 			return UnitResult{}, writeErr
 		}
@@ -80,6 +80,31 @@ func (c Compiler) reuseOrCompile(
 	}
 
 	return result, nil
+}
+
+// recordMayStillApply reports whether the unit's recorded compile may be replayed once the
+// references named in unknown finish compiling. unit is shaped the way it would start now, reading
+// Unity's reference assembly for each of them; what it reads for them is not compared.
+// Why the project references are compared before the shape: the shape reads every source of the
+// unit, and in the common case where a reference that already finished changed again, the
+// references alone answer no.
+// Why --all and an unreadable input answer no: --all never replays a record, and a unit whose key
+// cannot be computed cannot replay one either, so waiting for either would gain nothing.
+func (c Compiler) recordMayStillApply(plan BuildPlan, unit CompileUnit, unknown map[string]bool) bool {
+	if plan.All {
+		return false
+	}
+	projectReferences, err := computeProjectReferences(c.ProjectRoot, plan, unit)
+	if err != nil {
+		return false
+	}
+
+	return c.records(plan).MayStillApply(unit.Assembly.AssemblyName, projectReferences, unknown,
+		func() (string, bool) {
+			keyResult, keyErr := computeInputKey(c.ProjectRoot, c.Paths, plan, unit)
+
+			return keyResult.Shape, keyErr == nil
+		})
 }
 
 // records opens the store of what earlier runs of the check recorded in the plan's output directory.

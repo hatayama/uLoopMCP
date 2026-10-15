@@ -46,7 +46,7 @@ func storedResult() CompileResult[testDiagnostic] {
 // recordResult stores one compile of Alpha's outcome under a key.
 func recordResult(t *testing.T, directoryPath string, key string) {
 	t.Helper()
-	if err := directoryStore(directoryPath).RecordCompile("Alpha", key, storedResult(), alphaOutputs()); err != nil {
+	if err := directoryStore(directoryPath).RecordCompile("Alpha", KeyIdentity{Key: key}, storedResult(), alphaOutputs()); err != nil {
 		t.Fatalf("failed to write the manifest: %v", err)
 	}
 }
@@ -197,7 +197,7 @@ func TestRecordCompileReportsAFailedRename(t *testing.T) {
 	directoryPath := newRecordedOutputs(t)
 	blockManifestPath(t, manifestPath(directoryPath, "Alpha"))
 
-	err := directoryStore(directoryPath).RecordCompile("Alpha", "key", storedResult(), alphaOutputs())
+	err := directoryStore(directoryPath).RecordCompile("Alpha", KeyIdentity{Key: "key"}, storedResult(), alphaOutputs())
 
 	if err == nil || !strings.HasPrefix(err.Error(), "failed to write "+manifestPath(directoryPath, "Alpha")+":") {
 		t.Fatalf("err = %v", err)
@@ -213,7 +213,7 @@ func TestRecordCompileReportsAFailedRename(t *testing.T) {
 func TestRecordCompileReportsAMissingOutputDirectory(t *testing.T) {
 	directoryPath := filepath.Join(t.TempDir(), "missing")
 
-	err := directoryStore(directoryPath).RecordCompile("Alpha", "key", storedResult(), alphaOutputs())
+	err := directoryStore(directoryPath).RecordCompile("Alpha", KeyIdentity{Key: "key"}, storedResult(), alphaOutputs())
 
 	if err == nil || !strings.HasPrefix(err.Error(), "failed to write "+manifestPath(directoryPath, "Alpha")+":") {
 		t.Fatalf("err = %v", err)
@@ -269,5 +269,121 @@ func TestForgetRemovesTheManifestTheBaselineAndTheGeneratorOutput(t *testing.T) 
 		if _, err := os.Stat(filepath.Join(directoryPath, name)); !os.IsNotExist(err) {
 			t.Errorf("expected %s to be removed, got %v", name, err)
 		}
+	}
+}
+
+// recordIdentity stores one compile of Alpha's outcome under the shape and project reference
+// identities of the key it ran on.
+func recordIdentity(t *testing.T, directoryPath string, shape string, projectReferences map[string]string) {
+	t.Helper()
+	identity := KeyIdentity{Key: "key", Shape: shape, ProjectReferences: projectReferences}
+	if err := directoryStore(directoryPath).RecordCompile("Alpha", identity, storedResult(), alphaOutputs()); err != nil {
+		t.Fatalf("failed to write the manifest: %v", err)
+	}
+}
+
+// shapeOf hands MayStillApply a shape, counting how many times it was asked for one.
+func shapeOf(shape string, asked *int) func() (string, bool) {
+	return func() (string, bool) {
+		*asked++
+
+		return shape, true
+	}
+}
+
+// Verifies a record still may apply when only the identities of the unknown references differ:
+// those references are still compiling, so the key they will end up giving is not known yet.
+func TestMayStillApplyWhenOnlyUnknownReferencesDiffer(t *testing.T) {
+	directoryPath := newRecordedOutputs(t)
+	recordIdentity(t, directoryPath, "shape", map[string]string{"Beta": "produced beta", "Gamma": "gamma"})
+	asked := 0
+
+	mayApply := directoryStore(directoryPath).MayStillApply("Alpha",
+		map[string]string{"Beta": "unity beta", "Gamma": "gamma"}, map[string]bool{"Beta": true}, shapeOf("shape", &asked))
+
+	if !mayApply {
+		t.Error("a record differing only in an unknown reference should still apply")
+	}
+}
+
+// Verifies a record no longer applies when a reference that is not unknown has another identity,
+// and that the shape, which reads every source, is not asked for then.
+func TestMayStillApplyRefusesAChangedKnownReference(t *testing.T) {
+	directoryPath := newRecordedOutputs(t)
+	recordIdentity(t, directoryPath, "shape", map[string]string{"Beta": "beta", "Gamma": "gamma"})
+	asked := 0
+
+	mayApply := directoryStore(directoryPath).MayStillApply("Alpha",
+		map[string]string{"Beta": "beta", "Gamma": "another gamma"}, map[string]bool{"Beta": true}, shapeOf("shape", &asked))
+
+	if mayApply {
+		t.Error("a record whose known reference changed should not apply")
+	}
+	if asked != 0 {
+		t.Errorf("the shape was asked for %d times, want none once a known reference differs", asked)
+	}
+}
+
+// Verifies a record no longer applies when the inputs other than the project references differ.
+func TestMayStillApplyRefusesAnotherShape(t *testing.T) {
+	directoryPath := newRecordedOutputs(t)
+	recordIdentity(t, directoryPath, "shape", map[string]string{"Beta": "beta"})
+	asked := 0
+
+	mayApply := directoryStore(directoryPath).MayStillApply("Alpha",
+		map[string]string{"Beta": "beta"}, map[string]bool{"Beta": true}, shapeOf("another shape", &asked))
+
+	if mayApply {
+		t.Error("a record of another shape should not apply")
+	}
+}
+
+// Verifies a record no longer applies when the unit references another set of project assemblies,
+// whether one was added or one was dropped, even when the difference is an unknown reference.
+func TestMayStillApplyRefusesAnotherSetOfReferences(t *testing.T) {
+	cases := map[string]map[string]string{
+		"a reference the record lacks": {"Beta": "beta", "Gamma": "gamma", "Delta": "delta"},
+		"a reference no longer there":  {"Beta": "beta"},
+	}
+	for name, current := range cases {
+		t.Run(name, func(t *testing.T) {
+			directoryPath := newRecordedOutputs(t)
+			recordIdentity(t, directoryPath, "shape", map[string]string{"Beta": "beta", "Gamma": "gamma"})
+			asked := 0
+			unknown := map[string]bool{"Gamma": true, "Delta": true}
+
+			if directoryStore(directoryPath).MayStillApply("Alpha", current, unknown, shapeOf("shape", &asked)) {
+				t.Error("a record over another set of project references should not apply")
+			}
+		})
+	}
+}
+
+// Verifies a record no longer applies once an output it hashed holds other bytes.
+func TestMayStillApplyRefusesChangedOutputs(t *testing.T) {
+	directoryPath := newRecordedOutputs(t)
+	recordIdentity(t, directoryPath, "shape", map[string]string{"Beta": "beta"})
+	writeOutputFile(t, directoryPath, "Alpha"+referenceAssemblyExtension, "another surface")
+	asked := 0
+
+	if directoryStore(directoryPath).MayStillApply("Alpha",
+		map[string]string{"Beta": "beta"}, map[string]bool{}, shapeOf("shape", &asked)) {
+		t.Error("a record whose outputs changed should not apply")
+	}
+}
+
+// Verifies a record of format version 2, which kept no shape, neither may apply nor is reused.
+func TestMayStillApplyRefusesAnotherFormatVersion(t *testing.T) {
+	directoryPath := newRecordedOutputs(t)
+	recordIdentity(t, directoryPath, "shape", map[string]string{"Beta": "beta"})
+	setManifestFormatVersion(t, directoryPath, "Alpha", 2)
+	asked := 0
+
+	if directoryStore(directoryPath).MayStillApply("Alpha",
+		map[string]string{"Beta": "beta"}, map[string]bool{}, shapeOf("shape", &asked)) {
+		t.Error("a record of format version 2 should not apply")
+	}
+	if _, reusable := directoryStore(directoryPath).Reusable("Alpha", "key"); reusable {
+		t.Error("a record of format version 2 should not be reused")
 	}
 }

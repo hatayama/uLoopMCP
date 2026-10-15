@@ -45,7 +45,7 @@ func (project projectStore) recordCompile(t *testing.T, key string, succeeded bo
 		Succeeded:   succeeded,
 		Diagnostics: []testDiagnostic{{Severity: "warning", Code: "CS0168", File: "Assets/A.cs", Line: 1, Column: 1}},
 	}
-	if err := project.store.RecordCompile("Alpha", key, result, alphaOutputs()); err != nil {
+	if err := project.store.RecordCompile("Alpha", KeyIdentity{Key: key}, result, alphaOutputs()); err != nil {
 		t.Fatalf("failed to record the compile: %v", err)
 	}
 }

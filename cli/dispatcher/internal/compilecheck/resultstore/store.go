@@ -14,7 +14,8 @@
 //   - Records are written through a temporary file and renamed into place, so a run stopped while
 //     writing never leaves half a record behind.
 //   - A compile result is reusable only under the key it was recorded with, and only while every
-//     output it hashed still holds those bytes.
+//     output it hashed still holds those bytes. It may still apply while some project references are
+//     unknown only when every other part of that key, and those outputs, are as recorded.
 //   - A baseline is handed out only when the compile result recorded with it is still on disk: the
 //     same key, a successful compile, and outputs that still match. Otherwise LoadBaseline says why
 //     there is none, in one of these reasons:
