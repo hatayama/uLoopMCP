@@ -193,11 +193,12 @@ So the first body edit is compiled in full more often than it looks:
 
 - Right after a Unity build, compile-check finds nothing to compile and records nothing. The first
   body edit after that is compiled in full and records the baseline; the edits after it are checked.
-- A run with `--all` records baselines too, but it rebuilds the assemblies the next ordinary run
-  takes from Unity's build instead, so references to them are read differently. In an assembly
-  that references another assembly of the project, the first body edit after `--all` falls back
-  with `inputs other than source contents changed: references`; an assembly that references none
-  is checked as usual.
+- A run with `--all` records baselines too. It rebuilds the assemblies the next ordinary run takes
+  from Unity's build, but a reference whose rebuilt reference assembly matches Unity's is read from
+  Unity's build in both runs. Only in an assembly that references one whose rebuilt reference
+  assembly differs from Unity's does the first body edit after `--all` fall back with
+  `inputs other than source contents changed: references`; every other assembly is checked as
+  usual.
 - A run that skips an assembly because nothing it compiles from changed removes its result and
   baseline, so its next body edit is compiled in full. A run that blocks it because an assembly it
   references has errors keeps them: the next run checks them against the inputs and output hashes
