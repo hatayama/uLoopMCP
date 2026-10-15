@@ -17,7 +17,7 @@ func TestLoadBaselineReportsAnotherFormatBeforeAMissingManifest(t *testing.T) {
 		t.Fatalf("failed to remove the manifest: %v", err)
 	}
 
-	_, _, reason := loadBaseline(project.outputDirectory(), project.plan.Units[0])
+	_, reason := openRecordStore(project.root, project.plan.OutputDir).loadBaseline("Alpha")
 
 	if reason != "no baseline: it was recorded by another version of compile-check" {
 		t.Errorf("reason = %q", reason)
@@ -67,11 +67,11 @@ func TestWriteBaselineRecordWritesTheRecordedFormat(t *testing.T) {
 		Files:              map[string]baselineFile{"Assets/A.cs": {ContentHash: "a", Fingerprint: "f"}},
 	}
 
-	if err := writeBaselineRecord(outputDirectoryPath, unit, record); err != nil {
+	if err := writeBaselineRecord(outputDirectoryPath, unit.Assembly.AssemblyName, record); err != nil {
 		t.Fatalf("failed to write the baseline: %v", err)
 	}
 
-	assertFileContent(t, baselineRecordPath(outputDirectoryPath, unit), `{"FormatVersion":3,"InputKey":"input",`+
+	assertFileContent(t, baselineRecordPath(outputDirectoryPath, unit.Assembly.AssemblyName), `{"FormatVersion":3,"InputKey":"input",`+
 		`"NonSourceKey":{"Key":"non-source","Parts":{"compiler":"c","source list":"s"}},"WorkerKey":"worker",`+
 		`"GeneratedDirectory":"Library/out/Alpha.generated","GeneratedFiles":{"Gen/G.g.cs":"g"},`+
 		`"Files":{"Assets/A.cs":{"ContentHash":"a","Fingerprint":"f"}}}`)

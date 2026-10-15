@@ -123,7 +123,7 @@ func TestCompileUnitPassesGeneratedFilesOut(t *testing.T) {
 	written, _ := compileSecondUnit(t, "", 0)
 
 	plan := newCompilerPlan()
-	want := quoteFlag(generatedFilesOutFlagPrefix, filepath.ToSlash(generatedDirectory(plan, plan.Units[1])))
+	want := quoteFlag(generatedFilesOutFlagPrefix, filepath.ToSlash(openRecordStore("", plan.OutputDir).generatedDirectory(plan.Units[1].Assembly.AssemblyName)))
 	if !strings.Contains(written, want) {
 		t.Errorf("expected %s in the response file, got:\n%s", want, written)
 	}
@@ -236,7 +236,7 @@ func TestCompileUnitCreatesGeneratedFilesOutDirectory(t *testing.T) {
 		ProjectRoot: projectRoot,
 		Timeout:     time.Minute,
 		Run: func(_ context.Context, _ *exec.Cmd) (string, string, int, error) {
-			info, err := os.Stat(filepath.Join(projectRoot, generatedDirectory(plan, plan.Units[1])))
+			info, err := os.Stat(filepath.Join(projectRoot, openRecordStore(projectRoot, plan.OutputDir).generatedDirectory(plan.Units[1].Assembly.AssemblyName)))
 			existed = err == nil && info.IsDir()
 			return "", "", 0, nil
 		},

@@ -2,10 +2,8 @@ package compilecheck
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -15,9 +13,6 @@ import (
 )
 
 const (
-	baselineRecordFormatVersion = 3
-	baselineRecordExtension     = ".fastcheck.json"
-	generatedDirectoryExtension = ".generated"
 	fastCheckResponseFileSuffix = ".fastcheck.rsp"
 	generatedFilesOutFlagPrefix = "-generatedfilesout:"
 
@@ -82,8 +77,8 @@ func (runner *fastPathRunner) Try(
 	ctx context.Context, c Compiler, plan BuildPlan, unit CompileUnit, keyResult inputKeyResult,
 	nonSourceKey nonSourceIdentity,
 ) fastPathAttempt {
-	outputDirectoryPath := filepath.Join(c.ProjectRoot, plan.OutputDir)
-	record, manifest, reason := loadBaseline(outputDirectoryPath, unit)
+	records := c.records(plan)
+	baseline, reason := records.loadBaseline(unit.Assembly.AssemblyName)
 	if reason != "" {
 		return fallBack(reason)
 	}
@@ -91,16 +86,16 @@ func (runner *fastPathRunner) Try(
 	if nonSourceKey.Key == "" {
 		return fallBack("inputs other than source contents could not be read")
 	}
-	if nonSourceKey.Key != record.NonSourceKey.Key {
+	if nonSourceKey.Key != baseline.NonSourceKey.Key {
 		return fallBack("inputs other than source contents changed: " +
-			strings.Join(changedInputKinds(nonSourceKey, record.NonSourceKey), ", "))
+			strings.Join(changedInputKinds(nonSourceKey, baseline.NonSourceKey), ", "))
 	}
 
-	if !generatedFilesMatch(projectPath(c.ProjectRoot, record.GeneratedDirectory), record.GeneratedFiles) {
+	if !records.generatorOutputUnchanged(baseline) {
 		return fallBack("generator output of the baseline is gone")
 	}
 
-	changed := changedSources(unit, keyResult, record)
+	changed := changedSources(unit, keyResult, baseline.Files)
 	if len(changed) == 0 {
 		// The source contents and every other input match the record, so the input key matches it
 		// too, and reuse would have answered first. Getting here means the record and the manifest
@@ -112,14 +107,14 @@ func (runner *fastPathRunner) Try(
 		return fallBack(fmt.Sprintf("too many changed files (%d, limit %d)", len(changed), fastPathMaximumChangedFiles))
 	}
 
-	return runner.check(ctx, c, plan, unit, record, manifest, changed)
+	return runner.check(ctx, c, plan, unit, baseline, changed)
 }
 
 // check runs the worker over the changed files and merges what it found with the diagnostics the
 // last full compile reported for the files that did not change.
 func (runner *fastPathRunner) check(
 	ctx context.Context, c Compiler, plan BuildPlan, unit CompileUnit,
-	record baselineRecord, manifest unitResultManifest, changed []string,
+	baseline storedBaseline, changed []string,
 ) fastPathAttempt {
 	startedAt := time.Now()
 	worker, err := runner.Worker.Ensure(ctx)
@@ -130,7 +125,7 @@ func (runner *fastPathRunner) check(
 		return fallBack("worker unavailable: " + err.Error())
 	}
 
-	if worker.Key != record.WorkerKey {
+	if worker.Key != baseline.WorkerKey {
 		return fallBack("baseline was fingerprinted by another worker build")
 	}
 
@@ -140,7 +135,7 @@ func (runner *fastPathRunner) check(
 		return fallBack("worker failed: " + err.Error())
 	}
 
-	response, err := runner.Worker.Check(ctx, worker, buildCheckRequest(c.ProjectRoot, record, responseFilePath, changed))
+	response, err := runner.Worker.Check(ctx, worker, buildCheckRequest(c.ProjectRoot, baseline, responseFilePath, changed))
 	if ctxErr := ctx.Err(); ctxErr != nil {
 		return fastPathAttempt{Err: ctxErr}
 	}
@@ -152,7 +147,7 @@ func (runner *fastPathRunner) check(
 		return fallBack(response.Outcome + ": " + projectRelativeReason(c.ProjectRoot, response.Reason, changed))
 	}
 
-	diagnostics := mergeDiagnostics(c.ProjectRoot, unit, manifest.Diagnostics, response.Diagnostics, changed)
+	diagnostics := mergeDiagnostics(c.ProjectRoot, unit, baseline.Diagnostics, response.Diagnostics, changed)
 
 	return fastPathAttempt{Used: true, Result: UnitResult{
 		Assembly:              unit.Assembly.AssemblyName,
@@ -179,7 +174,7 @@ func projectRelativeReason(projectRoot string, reason string, changed []string) 
 
 // buildCheckRequest names, in absolute paths, what the worker checks and against which baseline.
 func buildCheckRequest(
-	projectRoot string, record baselineRecord, responseFilePath string, changed []string,
+	projectRoot string, baseline storedBaseline, responseFilePath string, changed []string,
 ) fastcheck.CheckRequest {
 	request := fastcheck.CheckRequest{
 		ProjectRoot:          projectRoot,
@@ -187,78 +182,24 @@ func buildCheckRequest(
 		ChangedFiles:         make([]string, 0, len(changed)),
 		BaselineFingerprints: map[string]string{},
 	}
-	if record.GeneratedDirectory != "" {
-		request.GeneratedDirectory = projectPath(projectRoot, record.GeneratedDirectory)
+	if baseline.GeneratedDirectory != "" {
+		request.GeneratedDirectory = projectPath(projectRoot, baseline.GeneratedDirectory)
 	}
 	for _, source := range changed {
 		absolute := projectPath(projectRoot, source)
 		request.ChangedFiles = append(request.ChangedFiles, absolute)
-		request.BaselineFingerprints[absolute] = record.Files[source].Fingerprint
+		request.BaselineFingerprints[absolute] = baseline.Files[source].Fingerprint
 	}
 
 	return request
 }
 
-// loadBaseline reads the baseline of a unit and the manifest of the full compile it describes, or
-// says why there is none to use.
-func loadBaseline(outputDirectoryPath string, unit CompileUnit) (baselineRecord, unitResultManifest, string) {
-	content, err := os.ReadFile(baselineRecordPath(outputDirectoryPath, unit))
-	if err != nil {
-		return baselineRecord{}, unitResultManifest{}, missingBaselineReason(outputDirectoryPath, unit)
-	}
-
-	var record baselineRecord
-	if err := json.Unmarshal(content, &record); err != nil || record.FormatVersion != baselineRecordFormatVersion {
-		return baselineRecord{}, unitResultManifest{}, "no baseline: it was recorded by another version of compile-check"
-	}
-
-	// In the normal flow the record and the manifest are written together under one key, and a full
-	// compile removes both, so the checks below only catch a state someone changed by hand.
-	const goneFromDisk = "baseline compile is no longer on disk"
-	manifestContent, err := os.ReadFile(manifestPath(outputDirectoryPath, unit.Assembly.AssemblyName))
-	if err != nil {
-		return baselineRecord{}, unitResultManifest{}, goneFromDisk
-	}
-
-	var manifest unitResultManifest
-	if err := json.Unmarshal(manifestContent, &manifest); err != nil ||
-		manifest.InputKey != record.InputKey || !manifest.Succeeded ||
-		!outputsStillMatch(outputDirectoryPath, manifest.Outputs) {
-		return baselineRecord{}, unitResultManifest{}, goneFromDisk
-	}
-
-	return record, manifest, ""
-}
-
-// missingBaselineReason says why a unit has no baseline, from the manifest of its last full compile.
-// Why the reasons are told apart: a full compile with errors drops the baseline an earlier compile
-// left, and a reason that read as "never compiled" sent users looking for a compile that had run.
-// Why a missing manifest says nothing about what happened: a run that skips or blocks the unit
-// removes the manifest and the baseline alike, so nothing on disk tells that apart from no compile.
-func missingBaselineReason(outputDirectoryPath string, unit CompileUnit) string {
-	const notOnRecord = "no baseline: no full compile of this assembly is on record"
-	content, err := os.ReadFile(manifestPath(outputDirectoryPath, unit.Assembly.AssemblyName))
-	if err != nil {
-		return notOnRecord
-	}
-
-	var manifest unitResultManifest
-	if err := json.Unmarshal(content, &manifest); err != nil {
-		return notOnRecord
-	}
-	if !manifest.Succeeded {
-		return "no baseline: the last full compile had errors"
-	}
-
-	return "no baseline: the last full compile did not record one"
-}
-
 // changedSources lists the sources whose content differs from the baseline, using the hashes the
 // input key read rather than reading the files again.
-func changedSources(unit CompileUnit, keyResult inputKeyResult, record baselineRecord) []string {
+func changedSources(unit CompileUnit, keyResult inputKeyResult, files map[string]baselineFile) []string {
 	changed := []string{}
 	for _, source := range unit.Sources {
-		if keyResult.SourceHashes[source] != record.Files[source].ContentHash {
+		if keyResult.SourceHashes[source] != files[source].ContentHash {
 			changed = append(changed, source)
 		}
 	}
