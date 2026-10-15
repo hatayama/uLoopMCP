@@ -56,6 +56,13 @@ func computeInputKey(
 	return inputKeyResult{Key: key, SourceHashes: sourceHashes}, nil
 }
 
+// keyStillHolds reports whether the unit's inputs still give the key the run started from.
+func (c Compiler) keyStillHolds(plan BuildPlan, unit CompileUnit, key string) bool {
+	rechecked, err := computeInputKey(c.ProjectRoot, c.Paths, plan, unit)
+
+	return err == nil && rechecked.Key == key
+}
+
 // nonSourceIdentity is the non-source key of a unit together with a digest of each kind of input it
 // covers, so a fallback can say which kind changed.
 type nonSourceIdentity struct {

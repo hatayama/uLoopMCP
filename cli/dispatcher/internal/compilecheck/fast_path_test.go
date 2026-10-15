@@ -331,8 +331,8 @@ func TestWorkerKeyMismatchFallsBack(t *testing.T) {
 }
 
 // Verifies the clean changed-files check: Alpha is not compiled, its outputs, manifest, and baseline
-// stay as they were, the diagnostics of unchanged files are carried over, and a dependent whose
-// reference kept its surface is still skipped.
+// stay as they were with only the record of the check itself added, the diagnostics of unchanged
+// files are carried over, and a dependent whose reference kept its surface is still skipped.
 func TestFastPathCleanResultKeepsBaselineFiles(t *testing.T) {
 	project := newFastPathProject(t, fastPathMinimumSources)
 	markSelectedAsDependent(t, project.plan, "Beta")
@@ -356,8 +356,14 @@ func TestFastPathCleanResultKeepsBaselineFiles(t *testing.T) {
 	if len(result.Diagnostics) != 1 || result.Diagnostics[0].File != "Assets/Alpha/File001.cs" {
 		t.Errorf("expected the warning of the unchanged file to be carried over, got %+v", result.Diagnostics)
 	}
-	if after := project.outputSnapshot(t); !reflect.DeepEqual(after, before) {
-		t.Errorf("expected the outputs, manifest, and baseline to stay, got %v then %v", before, after)
+	after := project.outputSnapshot(t)
+	for path, hash := range before {
+		if after[path] != hash {
+			t.Errorf("expected %s to stay as it was, got %q then %q", path, hash, after[path])
+		}
+	}
+	if len(after) != len(before)+1 {
+		t.Errorf("expected only the record of the check to be added, got %v then %v", before, after)
 	}
 	if recorder.runs["Beta"] != 0 || outcome.Skipped != 1 {
 		t.Errorf("expected Beta to be skipped, got %d runs and %d skipped", recorder.runs["Beta"], outcome.Skipped)

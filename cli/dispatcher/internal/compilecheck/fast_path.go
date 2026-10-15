@@ -108,14 +108,16 @@ func (runner *fastPathRunner) Try(
 		return fallBack(fmt.Sprintf("too many changed files (%d, limit %d)", len(changed), fastPathMaximumChangedFiles))
 	}
 
-	return runner.check(ctx, c, plan, unit, baseline, changed)
+	return runner.check(ctx, c, plan, unit, baseline, changed, keyResult.Key)
 }
 
 // check runs the worker over the changed files and merges what it found with the diagnostics the
-// last full compile reported for the files that did not change.
+// last full compile reported for the files that did not change. When the previous run checked the
+// same inputs against the same baseline with the same worker build, it reports that check instead.
+// key is the unit's input key, read before the check.
 func (runner *fastPathRunner) check(
 	ctx context.Context, c Compiler, plan BuildPlan, unit CompileUnit,
-	baseline resultstore.Baseline[Diagnostic], changed []string,
+	baseline resultstore.Baseline[Diagnostic], changed []string, key string,
 ) fastPathAttempt {
 	startedAt := time.Now()
 	worker, err := runner.Worker.Ensure(ctx)
@@ -128,6 +130,13 @@ func (runner *fastPathRunner) check(
 
 	if worker.Key != baseline.WorkerKey {
 		return fallBack("baseline was fingerprinted by another worker build")
+	}
+
+	// Why the record is looked up only here: everything above is what a check needs, so a check is
+	// replayed only where it would have run, for the same inputs it ran on.
+	records := c.records(plan)
+	if recorded, found := records.ReusableFastCheck(unit.Assembly.AssemblyName, key, baseline, worker.Key); found {
+		return fastPathAttempt{Used: true, Result: fastCheckedUnitResult(unit, recorded, time.Since(startedAt), true)}
 	}
 
 	responseFilePath, err := writeRewrittenResponseFile(
@@ -149,17 +158,39 @@ func (runner *fastPathRunner) check(
 	}
 
 	diagnostics := mergeDiagnostics(c.ProjectRoot, unit, baseline.Diagnostics, response.Diagnostics, changed)
+	checked := resultstore.FastCheckResult[Diagnostic]{
+		Succeeded:          !containsError(diagnostics),
+		Diagnostics:        diagnostics,
+		ChangedFiles:       changed,
+		UncheckedCodes:     response.UncheckedCodes,
+		GeneratorsNotRerun: response.GeneratorsNotRerun,
+	}
+	// Why the key is read again before recording: the worker reads the sources while it checks, so an
+	// edit made during the check would otherwise be recorded under the key of the bytes before it.
+	if c.keyStillHolds(plan, unit, key) {
+		if err := records.RecordFastCheck(unit.Assembly.AssemblyName, key, baseline, worker.Key, checked); err != nil {
+			return fastPathAttempt{Err: err}
+		}
+	}
 
-	return fastPathAttempt{Used: true, Result: UnitResult{
+	return fastPathAttempt{Used: true, Result: fastCheckedUnitResult(unit, checked, time.Since(startedAt), false)}
+}
+
+// fastCheckedUnitResult turns a check of the changed files into the unit's result.
+func fastCheckedUnitResult(
+	unit CompileUnit, checked resultstore.FastCheckResult[Diagnostic], duration time.Duration, reused bool,
+) UnitResult {
+	return UnitResult{
 		Assembly:              unit.Assembly.AssemblyName,
-		Diagnostics:           diagnostics,
-		Succeeded:             !containsError(diagnostics),
-		Duration:              time.Since(startedAt),
+		Diagnostics:           checked.Diagnostics,
+		Succeeded:             checked.Succeeded,
+		Duration:              duration,
 		FastChecked:           true,
-		FastCheckChangedFiles: changed,
-		UncheckedCodes:        response.UncheckedCodes,
-		GeneratorsNotRerun:    response.GeneratorsNotRerun,
-	}}
+		FastCheckReused:       reused,
+		FastCheckChangedFiles: checked.ChangedFiles,
+		UncheckedCodes:        checked.UncheckedCodes,
+		GeneratorsNotRerun:    checked.GeneratorsNotRerun,
+	}
 }
 
 // projectRelativeReason rewrites the absolute paths the worker put in a reason the way the output
