@@ -58,9 +58,15 @@ func (c Compiler) reuseOrCompile(
 	if err != nil || key == "" || result.RawOutput != "" {
 		return result, err
 	}
-	if writeErr := records.RecordCompile(unit.Assembly.AssemblyName, key,
-		resultstore.CompileResult[Diagnostic]{Succeeded: result.Succeeded, Diagnostics: result.Diagnostics}, unitOutputNames(unit)); writeErr != nil {
-		return UnitResult{}, writeErr
+	// Why the key is read again before recording: csc reads the sources while it compiles, so an edit
+	// made during the compile would otherwise be recorded under the key of the bytes before it, and
+	// putting the file back would replay what the edited file reported. CompileUnit has already
+	// removed the previous record, so leaving this one out makes the next run compile again.
+	if c.keyStillHolds(plan, unit, key) {
+		if writeErr := records.RecordCompile(unit.Assembly.AssemblyName, key,
+			resultstore.CompileResult[Diagnostic]{Succeeded: result.Succeeded, Diagnostics: result.Diagnostics}, unitOutputNames(unit)); writeErr != nil {
+			return UnitResult{}, writeErr
+		}
 	}
 
 	// Why --full records too: running --full before finishing would otherwise drop the baseline, and
