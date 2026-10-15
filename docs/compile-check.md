@@ -260,6 +260,11 @@ gives the `Assembly` and `Reason` of each successful full compile that left no b
 process exits 1 when
 `ErrorCount` is greater than zero.
 
+With the `ULOOP_DEBUG` environment variable set, each run also writes two entries to the CLI
+VibeLog of the project, `cli_compile_check_start` and `cli_compile_check_complete`, with which
+assemblies it compiled, reused, checked on their changed files, or blocked, why each fallback
+happened, and how long each assembly took. `docs/vibe-logs.md` lists their fields.
+
 ## Limitations
 
 - **It replays the last Unity build, and only some staleness is detectable.** Four `.asmdef`

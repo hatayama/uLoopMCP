@@ -138,9 +138,11 @@ func runCompileCheck(
 			stderr, err, clierrors.ErrorContext{Command: clicore.CompileCheckCommandName})
 		return 1
 	}
+	logRun := startCompileCheckVibeLog(projectRoot, options)
 
 	editorPath, err := resolveCompileCheckEditorPath(projectRoot, options)
 	if err != nil {
+		logRun.failed(err)
 		clierrors.WriteClassifiedError(stderr, err, clierrors.ErrorContext{
 			Command: clicore.CompileCheckCommandName, ProjectRoot: projectRoot,
 		})
@@ -149,6 +151,7 @@ func runCompileCheck(
 
 	result, err := compilecheck.Run(ctx, newCompileCheckRunOptions(options, projectRoot, editorPath))
 	if err != nil {
+		logRun.failed(err)
 		clierrors.WriteClassifiedError(stderr, err, clierrors.ErrorContext{
 			Command: clicore.CompileCheckCommandName, ProjectRoot: projectRoot,
 		})
@@ -158,11 +161,13 @@ func runCompileCheck(
 	response := buildCompileCheckResponse(result, projectRoot)
 	encoded, err := json.Marshal(response)
 	if err != nil {
+		logRun.failed(err)
 		clierrors.WriteClassifiedError(stderr, err, clierrors.ErrorContext{
 			Command: clicore.CompileCheckCommandName, ProjectRoot: projectRoot,
 		})
 		return 1
 	}
+	logRun.completed(response, result)
 	clicore.WriteJSON(stdout, encoded)
 
 	if response.ErrorCount > 0 {
