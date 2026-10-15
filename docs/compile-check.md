@@ -111,7 +111,8 @@ references, scripting defines and analyzers. `compile-check` replays those respo
    happened. A unit whose record applied after the wait is counted under `reused` and does not
    appear in `units`; `waited_for_record` marks a unit that waited for a record that then did not
    apply. `--jobs <n>` caps how many run at once; the default is half the machine's CPUs and never
-   less than one, because one `csc` process already keeps two to three cores busy on its own. `--jobs 1` compiles the assemblies one after another.
+   less than one, because one `csc` process already keeps two to three cores busy on its own.
+   `--jobs 1` compiles the assemblies one after another.
    The reported order does not depend on the job count: results are collected in dependency order
    whatever finishes first. An assembly that fails to compile stops the run at that point of the
    tree: it wrote no reference assembly, so everything below it has nothing to compile against and
