@@ -58,9 +58,10 @@ declaration is checked on the changed files only, in a few seconds. Adding or re
 directive counts as a declaration change. Such a check skips a few assembly-wide rules, so run once
 with `--full` before finishing. When the project treats warnings as errors, a rule listed in
 `UncheckedCodes`, such as CS0414, can fail that `--full` run only. The first body edit after a Unity
-build, after a `--full` that had errors, after a run that skipped the assembly, or after
-`--all` in an assembly that references another of the project is compiled in full and records what
-the next check compares against; `FastPathFallbacks` says why.
+build, after a full compile that had errors (a `--full` run or a run that fell back to one), after
+a run that compiled it only because an assembly it references changed, after a run that skipped the
+assembly, or after `--all` in an assembly that references another of the project is compiled in
+full and records what the next check compares against; `FastPathFallbacks` says why.
 
 ## Parameters
 
@@ -92,7 +93,9 @@ A JSON payload:
 - `ProjectRoot`: resolved project root
 - `Message`: one-line summary
 
-The process exits 1 when `ErrorCount` is greater than zero.
+The process exits 1 when `ErrorCount` is greater than zero. A failure of the command itself, such
+as `COMPILE_CHECK_UNITY_BUILD_REQUIRED`, also exits 1 but prints no payload: the error, with its
+`ErrorCode`, goes to stderr.
 
 Only one compile-check runs per project at a time. A second one waits for the first, up to five
 minutes, then fails with `COMPILE_CHECK_PROJECT_BUSY`: wait for the other run to finish and run

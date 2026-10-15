@@ -199,8 +199,9 @@ So the first body edit is compiled in full more often than it looks:
   references has errors keeps them: the next run checks them against the inputs and output hashes
   they were recorded with before using them, so a reference that comes back the same leaves the
   assembly reused or checked on its changed files, and one that comes back changed compiles it.
-- `--full` while the assembly still has errors drops its baseline, so the run after the fix is
-  compiled in full. Running `--full` once the errors are fixed keeps it.
+- A full compile while the assembly still has errors, whether a `--full` run or a run that fell
+  back to one, drops its baseline, so the run after the fix is compiled in full. Running `--full`
+  once the errors are fixed keeps it.
 
 What the check does not guarantee, so run `--full` before finishing:
 
@@ -258,7 +259,8 @@ check of the same changed files instead of checking them again), and `FastPathFa
 `Reason` of each assembly the check was tried on and compiled in full. `FastPathBaselineNotes`
 gives the `Assembly` and `Reason` of each successful full compile that left no baseline. The
 process exits 1 when
-`ErrorCount` is greater than zero.
+`ErrorCount` is greater than zero. A failure of the command itself also exits 1 but writes nothing to
+stdout: stderr gets `{"Success": false, "Error": {...}}`, whose `ErrorCode` names the failure.
 
 With the `ULOOP_DEBUG` environment variable set, each run also writes two entries to the CLI
 VibeLog of the project, `cli_compile_check_start` and `cli_compile_check_complete`, with which
