@@ -216,3 +216,23 @@ func TestCompileWritesSourcesInTheResponseFileOrder(t *testing.T) {
 	}
 	assertStrings(t, "source lines", sourceLines, []string{`"Assets/A/Sub/Z.cs"`, `"Assets/A/A.cs"`})
 }
+
+// Verifies a source the response file lists twice is compiled once, at its first position, in the
+// re-globbed branch and in the one without an .asmdef alike.
+func TestRebuildSourcesKeepsADuplicateResponseFileSourceOnce(t *testing.T) {
+	projectRoot := newAssemblyProject(t)
+	rsp := ResponseFile{Sources: []string{
+		"Assets/Foo/Sub/B.cs",
+		"Assets/Foo/A.cs",
+		"Assets/Foo/Sub/B.cs",
+	}}
+	want := []string{"Assets/Foo/Sub/B.cs", "Assets/Foo/A.cs"}
+
+	assertStrings(t, "re-globbed sources", rebuildFooSources(t, projectRoot, rsp), want)
+
+	sources, err := RebuildSources(projectRoot, rsp, nil, newOwnerIndexForProject(t, projectRoot))
+	if err != nil {
+		t.Fatalf("expected the rebuild to succeed, got error: %v", err)
+	}
+	assertStrings(t, "sources without an .asmdef", sources, want)
+}
