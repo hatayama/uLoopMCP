@@ -433,6 +433,20 @@ namespace UnityCliLoop.CompileCheckWorker.UnitTests
         }
 
         /// <summary>
+        /// Verifies that a nested type keeps the surface when private members move the context of the
+        /// type around it: the nested type's members then carry a context of their own instead of
+        /// inheriting the outer one, with the same effective annotations.
+        /// </summary>
+        [Test]
+        public void NestedTypeKeepsTheSurfaceWhenTheOuterTypeContextMoves()
+        {
+            SurfaceFixture.AssertSame(
+                "public class Outer { public string P() => \"\"; public class Inner { public string M() => \"\"; public string N() => \"\"; } }",
+                "public class Outer { public string P() => \"\";" + ThreePrivateNullableObjects + "public class Inner { public string M() => \"\"; public string N() => \"\"; } }",
+                "class D { int F() => new Outer.Inner().M().Length; }");
+        }
+
+        /// <summary>
         /// Verifies that sending the internals to another assembly changes the surface: what the
         /// assembly says about itself decides what a dependent may use.
         /// </summary>

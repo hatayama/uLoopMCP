@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Reflection;
 using System.Reflection.Metadata;
 
 namespace UnityCliLoop.CompileCheckWorker
@@ -15,8 +14,6 @@ namespace UnityCliLoop.CompileCheckWorker
     /// </summary>
     internal static class SurfaceStructureWriter
     {
-        private const int ReturnParameterSequence = 0;
-
         internal static void Write(SurfaceMetadata metadata, List<string> lines)
         {
             SurfaceManifestWriter.Write(metadata, lines);
@@ -132,32 +129,19 @@ namespace UnityCliLoop.CompileCheckWorker
             WriteGenericParameters(metadata, method.GetGenericParameters(), name, lines);
             foreach (ParameterHandle parameterHandle in method.GetParameters())
             {
-                string parameterLine = ParameterLine(metadata, reader.GetParameter(parameterHandle));
-                if (parameterLine != null)
-                {
-                    lines.Add(name + " " + parameterLine);
-                }
+                lines.Add(name + " " + ParameterLine(metadata, reader.GetParameter(parameterHandle)));
             }
             SurfaceManifestWriter.AddPrefixed(lines, name + " ", SurfaceManifestWriter.SecurityLines(reader, method.GetDeclarativeSecurityAttributes()));
             SurfaceManifestWriter.AddPrefixed(lines, name + " ", metadata.AttributeLines(method.GetCustomAttributes()));
         }
 
-        // One parameter row, or null for a return-value row the compiler wrote only to carry a nullable
-        // attribute: whether such a row exists follows the context of the method, which moves with
-        // members a dependent never sees, while the annotation itself is compared by the nullability
-        // description.
+        // One parameter row, the return value's included. Why a return-value row that only carries a
+        // nullable attribute is kept: a method's nullable context follows its own signature alone, so
+        // whether that row exists never moves with members a dependent cannot see.
         private static string ParameterLine(SurfaceMetadata metadata, Parameter parameter)
         {
             MetadataReader reader = metadata.Reader;
             List<string> attributes = metadata.AttributeLines(parameter.GetCustomAttributes());
-            bool carriesOnlyNullability = parameter.SequenceNumber == ReturnParameterSequence
-                && parameter.Name.IsNil
-                && parameter.Attributes == ParameterAttributes.None
-                && attributes.Count == 0;
-            if (carriesOnlyNullability)
-            {
-                return null;
-            }
 
             return "param #" + parameter.SequenceNumber.ToString(CultureInfo.InvariantCulture)
                 + " " + (parameter.Name.IsNil ? "" : reader.GetString(parameter.Name))
