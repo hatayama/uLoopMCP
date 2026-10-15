@@ -90,6 +90,20 @@ type Compiler struct {
 	Run         CommandRunner
 	// FastPath checks only the changed files when it can; nil compiles every unit in full.
 	FastPath *fastPathRunner
+	// compareSurface stands in for the comparison of a unit's reference assembly with Unity's; nil
+	// compares the two files. Why it can be replaced: the tests have to see which units the run
+	// compares at all, and reading two files leaves nothing behind to count.
+	compareSurface func(projectRoot string, plan BuildPlan, unit CompileUnit) bool
+}
+
+// keptSurface reports whether compiling this unit left its reference assembly describing the same
+// public surface as the one the last Unity build produced.
+func (c Compiler) keptSurface(plan BuildPlan, unit CompileUnit) bool {
+	if c.compareSurface != nil {
+		return c.compareSurface(c.ProjectRoot, plan, unit)
+	}
+
+	return referenceSurfaceUnchanged(c.ProjectRoot, plan, unit)
 }
 
 // CompileUnit compiles one assembly and reports the diagnostics csc produced for it.
@@ -284,7 +298,7 @@ func writeRewrittenResponseFile(
 	}
 	for _, reference := range rsp.References {
 		lines = append(lines,
-			quoteFlag(referenceFlagPrefix, rewriteReference(projectRoot, plan, reference)))
+			quoteFlag(referenceFlagPrefix, rewriteReference(projectRoot, plan, unit, reference)))
 	}
 	for _, analyzer := range rsp.Analyzers {
 		lines = append(lines, quoteFlag(analyzerFlagPrefix, analyzer))
@@ -318,13 +332,18 @@ func writeRewrittenResponseFile(
 	return path, nil
 }
 
-// rewriteReference points a reference at this run's own output when this run rebuilds that assembly.
+// rewriteReference points a reference of the unit at this run's own output when this run rebuilt
+// that assembly into a different public surface.
 // Why the others stay: an assembly this run skipped is unchanged, so Unity's own reference assembly
 // still describes it exactly. An assembly this run failed to compile wrote no reference assembly at
 // all, so it falls back to Unity's too rather than failing the dependent on a missing file.
-func rewriteReference(projectRoot string, plan BuildPlan, reference string) string {
+// Why a rebuilt one that kept its surface stays as well: the dependent then reads the same API from
+// either file, and Unity's is the one an earlier run read whenever that assembly was not rebuilt, so
+// staying on it keeps the dependent's key and its changed-files baseline where those runs left them.
+// Pointing it at the output instead would recompile the dependent in full for nothing.
+func rewriteReference(projectRoot string, plan BuildPlan, unit CompileUnit, reference string) string {
 	name, ok := projectAssemblyReferenceName(reference, plan.DagDir)
-	if !ok || !planCompiles(plan, name) {
+	if !ok || !planCompiles(plan, name) || unit.KeptSurfaceReferences[name] {
 		return reference
 	}
 

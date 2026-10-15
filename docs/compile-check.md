@@ -98,15 +98,19 @@ references, scripting defines and analyzers. `compile-check` replays those respo
    reported errors reports them again until one of its inputs moves. Because the outputs stay in
    place, the assemblies below it resolve the same reference assembly and are reused in turn, which
    is what makes editing a single method body cost one compile rather than one per dependent.
-   References this check produces are compared by content and everything else by timestamp, so a
+   A reference to an assembly this run rebuilt is read from Unity's artifact when the rebuilt
+   reference assembly came out byte-identical to it, and from this check's own output otherwise. The
+   first is digested by timestamp, like every reference the run did not rebuild, so rebuilding an
+   assembly without moving its public surface leaves the digests of the assemblies that reference it
+   where the runs that did not rebuild it left them. The second is digested by content, so a
    reference assembly rewritten with identical bytes still counts as unmoved. A response file naming
    a file the digest does not follow — `keyfile`, `resource`, `link`, `addmodule` — gets no digest,
    and such an assembly always compiles. `--all` looks nothing up, though it still records what it
-   compiled. What `--all` records is keyed slightly differently, and the difference is visible:
-   every assembly is in its plan, so every reference to an assembly Bee builds resolves to this
-   check's own output, while an ordinary run resolves the references of an assembly it does not
-   compile to Unity's artifacts instead. The first ordinary run after an `--all` may therefore
-   compile such an assembly once more before it starts reusing it. This is a separate mechanism from the dependent skip in step 3: that one compares this
+   compiled, under the same rule: a reference whose rebuilt reference assembly matches Unity's stays
+   on Unity's artifact, so an ordinary run after it reuses what it compiled. Only a reference whose
+   rebuilt surface differs from Unity's resolves to this check's output under `--all`; an ordinary
+   run that leaves that assembly out reads Unity's artifact instead, and may compile the assemblies
+   that reference it once more before it starts reusing them. This is a separate mechanism from the dependent skip in step 3: that one compares this
    run's reference assembly against Unity's artifact to decide whether a *dependent* needs compiling
    at all, while this one compares an assembly's own inputs against what the previous `compile-check`
    read.
@@ -189,11 +193,12 @@ So the first body edit is compiled in full more often than it looks:
 
 - Right after a Unity build, compile-check finds nothing to compile and records nothing. The first
   body edit after that is compiled in full and records the baseline; the edits after it are checked.
-- A run with `--all` records baselines too, but it rebuilds the assemblies the next ordinary run
-  takes from Unity's build instead, so references to them are read differently. In an assembly
-  that references another assembly of the project, the first body edit after `--all` falls back
-  with `inputs other than source contents changed: references`; an assembly that references none
-  is checked as usual.
+- A run with `--all` records baselines too. It rebuilds the assemblies the next ordinary run takes
+  from Unity's build, but a reference whose rebuilt reference assembly matches Unity's is read from
+  Unity's build in both runs. Only in an assembly that references one whose rebuilt reference
+  assembly differs from Unity's does the first body edit after `--all` fall back with
+  `inputs other than source contents changed: references`; every other assembly is checked as
+  usual.
 - A run that skips an assembly because nothing it compiles from changed removes its result and
   baseline, so its next body edit is compiled in full. A run that blocks it because an assembly it
   references has errors keeps them: the next run checks them against the inputs and output hashes

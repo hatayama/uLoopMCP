@@ -439,7 +439,7 @@ func TestInputKeyDigestsEveryPartInOneStream(t *testing.T) {
 	if err := writeSourceIdentity(digest, project.root, unit.Sources, map[string]string{}); err != nil {
 		t.Fatalf("sources: %v", err)
 	}
-	if err := writeReferenceIdentity(digest, project.root, project.plan, unit.Assembly.References); err != nil {
+	if err := writeReferenceIdentity(digest, project.root, project.plan, unit); err != nil {
 		t.Fatalf("references: %v", err)
 	}
 	if err := writeAnalyzerIdentity(digest, project.root, unit.Assembly.Analyzers); err != nil {
