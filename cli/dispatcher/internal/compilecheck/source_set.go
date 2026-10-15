@@ -55,12 +55,20 @@ func projectIndexRoots(projectRoot string) []string {
 // decisions below - which of two same-named files wins, which error is reported - only need the
 // results in walk order, not the reads.
 func IndexAssemblyDefinitions(tree projectTree) (map[string]AssemblyDefinition, error) {
+	return indexAssemblyDefinitionsReading(tree, readAssemblyDefinition)
+}
+
+// indexAssemblyDefinitionsReading is IndexAssemblyDefinitions with the read of one .asmdef given.
+// The index it returns does not depend on the order the reads finish in.
+func indexAssemblyDefinitionsReading(
+	tree projectTree, read func(path string) assemblyDefinitionRead,
+) (map[string]AssemblyDefinition, error) {
 	paths := []string{}
 	for _, root := range tree.roots {
 		paths = append(paths, root.definitionFiles...)
 	}
 	reads := computeInParallel(len(paths), func(index int) assemblyDefinitionRead {
-		return readAssemblyDefinition(paths[index])
+		return read(paths[index])
 	})
 
 	index := map[string]AssemblyDefinition{}

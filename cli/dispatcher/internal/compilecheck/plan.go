@@ -192,26 +192,32 @@ func selectChangedAssemblies(
 		return nil, referenceErr
 	}
 
-	failedLastBuild := inputs.failedLastBuild
-
-	// Why every assembly is checked side by side first: each check only reads the disk and the
-	// indexes built above, while the order below decides which error is reported, so only the
-	// checks may run in any order.
-	checks := computeInParallel(len(graph.names), func(index int) assemblyCheck {
-		name := graph.names[index]
-
+	return decideAssembliesInNameOrder(graph, inputs.failedLastBuild, all, func(name string) assemblyCheck {
 		return checkAssembly(projectRoot, dagDir, graph.byName[name],
 			lookupAssemblyDefinition(assemblyDefinitions, name), context, owners)
+	})
+}
+
+// decideAssembliesInNameOrder checks every assembly, then records each one's sources and why it needs
+// compiling, in name order, returning the first error in that order.
+// Why every assembly is checked side by side first: each check only reads the disk and the indexes
+// built before it, while the order below decides which error is reported, so only the checks may
+// run in any order and the result does not depend on the order they finish in.
+func decideAssembliesInNameOrder(
+	graph assemblyGraph, failedLastBuild map[string]bool, all bool, check func(name string) assemblyCheck,
+) (map[string]string, error) {
+	checks := computeInParallel(len(graph.names), func(index int) assemblyCheck {
+		return check(graph.names[index])
 	})
 
 	reasons := map[string]string{}
 	for index, name := range graph.names {
-		check := checks[index]
-		if check.err != nil {
-			return nil, check.err
+		result := checks[index]
+		if result.err != nil {
+			return nil, result.err
 		}
-		graph.sources[name] = check.sources
-		report := check.report
+		graph.sources[name] = result.sources
+		report := result.report
 		// Why a failed build only speaks for an assembly nothing else selected: when a source did
 		// move, that is what this run found itself, and it says more about why the assembly needs
 		// compiling than what the previous build made of it.

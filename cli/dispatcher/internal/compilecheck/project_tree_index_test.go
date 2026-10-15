@@ -1,6 +1,7 @@
 package compilecheck
 
 import (
+	"errors"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -145,5 +146,32 @@ func TestIndexAssemblyDefinitionsReportsTheFirstBrokenAsmdefInWalkOrder(t *testi
 	wantPrefix := "failed to index assembly definitions under " + filepath.Join(projectRoot, "Assets") + ": failed to read " + first
 	if err == nil || !strings.HasPrefix(err.Error(), wantPrefix) {
 		t.Fatalf("err = %v, want it to start with %q", err, wantPrefix)
+	}
+}
+
+// Verifies the first broken .asmdef in walk order is reported even when a later file's read finishes
+// first: the earlier read is held until the later one has returned its error.
+func TestIndexAssemblyDefinitionsReportsTheFirstErrorWhateverFinishesFirst(t *testing.T) {
+	projectRoot := t.TempDir()
+	first := filepath.Join(projectRoot, "Assets", "a", "X.asmdef")
+	later := filepath.Join(projectRoot, "Assets", "a.b", "Y.asmdef")
+	writeFileAt(t, first, "")
+	writeFileAt(t, later, "")
+	laterReturned := make(chan struct{})
+	errFirst := errors.New("first failed")
+
+	_, err := indexAssemblyDefinitionsReading(walkProjectTree(projectRoot), func(path string) assemblyDefinitionRead {
+		if path == first {
+			<-laterReturned
+
+			return assemblyDefinitionRead{err: errFirst}
+		}
+		defer close(laterReturned)
+
+		return assemblyDefinitionRead{err: errors.New("later failed")}
+	})
+
+	if !errors.Is(err, errFirst) {
+		t.Fatalf("err = %v, want the error of the file met first", err)
 	}
 }
