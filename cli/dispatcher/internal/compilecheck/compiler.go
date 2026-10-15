@@ -80,6 +80,19 @@ type UnitResult struct {
 	// Surface says whether the unit's reference assembly kept the API of the last Unity build, for a
 	// successful unit something in the plan references; zero for any other unit.
 	Surface SurfaceVerdict
+	// AssumedReferences names the referenced assemblies that were still compiling when the compile
+	// this result came from started, and that it read from Unity's build on the assumption that they
+	// keep Unity's public surface.
+	AssumedReferences []string
+	// CompiledAgainAfter names the referenced assembly whose changed surface proved an earlier
+	// compile of this unit wrong, so this result comes from compiling it again; empty when one
+	// compile was enough.
+	CompiledAgainAfter string
+	// DiscardedDuration is how long the compile this run threw away took.
+	DiscardedDuration time.Duration
+	// WaitedForRecord marks a unit that waited for the references still compiling rather than
+	// starting before them, because its recorded result might be replayed once they finished.
+	WaitedForRecord bool
 }
 
 // CommandRunner runs one compiler invocation, so tests can stand in for the real process.

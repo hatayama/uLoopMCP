@@ -23,8 +23,16 @@ type unitCompletion struct {
 
 // schedule is the readiness bookkeeping of one run: how many of a unit's references are still
 // missing, and which units are waiting on each one.
+// A unit's final state - compiled and kept, compiled and changed, failed, skipped or blocked - is
+// decided once, after every unit of the plan it references has a final state of its own. A unit may
+// start before that, but what it found counts only from then on.
 type schedule struct {
-	pending    []int
+	pending []int
+	// pendingOwn counts, per unit, the references in pending that were selected for their own
+	// sources rather than through a reference of their own.
+	pendingOwn []int
+	// ownSources marks, per unit, that it was selected for its own sources.
+	ownSources []bool
 	dependents [][]int
 	// references lists, per unit, the units of the plan it references.
 	references [][]int
@@ -37,6 +45,7 @@ type schedule struct {
 	blocked []bool
 	// keptSurface marks, per unit, that it finished with the public surface of the last Unity build.
 	keptSurface []bool
+	unitProgress
 }
 
 // compileOutcome is everything one run of the scheduler produced: the results it has, and what it
@@ -77,12 +86,14 @@ type schedulerRun struct {
 	referenceSkips int
 }
 
-// compileUnits compiles a plan's assemblies, starting each one as soon as the assemblies it
-// references have been compiled and keeping at most jobs of them running at a time. It reports the
-// results of the units it compiled, in the plan's order, and how many it left out.
+// compileUnits compiles a plan's assemblies, keeping at most jobs of them running at a time. It
+// reports the results of the units it compiled, in the plan's order, and how many it left out.
+// A unit starts once every assembly it references has a final state, or - when it has to compile
+// anyway - once every one of them selected for its own sources has, assuming the dependents still
+// compiling keep Unity's public surface. A unit whose assumption turns out wrong compiles again.
 // Why the units cannot simply run in the plan's order all at once: a dependent reads the reference
-// assembly its reference writes, so starting it early would compile it against the previous run's
-// output or against nothing at all.
+// assembly its reference writes when that one changed its surface, so starting it before anything is
+// known would mostly compile it against the wrong file.
 func compileUnits(
 	ctx context.Context, compiler Compiler, plan BuildPlan, jobs int,
 ) (compileOutcome, error) {
@@ -108,16 +119,23 @@ func compileUnits(
 		compiled:    make([]bool, len(plan.Units)),
 		completions: make(chan unitCompletion, len(plan.Units)),
 	}
+	for index := range plan.Units {
+		run.offer(index)
+	}
 
 	var failure error
 	for {
 		if failure == nil {
-			if err := run.startReadyUnits(jobs); err != nil {
+			if err := run.startAndSettle(jobs); err != nil {
 				failure = err
 				cancel()
 			}
 		}
 		if run.running == 0 {
+			if failure == nil {
+				failure = run.unfinishedError()
+			}
+
 			break
 		}
 		if err := run.collectOneCompletion(); err != nil && failure == nil {
@@ -141,22 +159,32 @@ func compileUnits(
 // the ones that have nothing left to learn from compiling.
 func (run *schedulerRun) startReadyUnits(jobs int) error {
 	for run.running < jobs && len(run.state.ready) > 0 {
-		index := run.state.ready[0]
-		run.state.ready = run.state.ready[1:]
+		index := run.state.takeNext()
 		// Why the block is read before the skip: a blocked unit has no result to compare against
 		// anything, so asking whether its references kept their surface answers nothing.
-		if run.skipBlockedUnit(index) {
-			continue
-		}
-		skipped, err := run.skipUnchangedDependent(index)
+		blocked, err := run.skipBlockedUnit(index)
 		if err != nil {
 			return err
 		}
-		if skipped {
+		if blocked {
 			continue
 		}
+		// Why the skip is asked only once every reference is final: until then a reference may
+		// still change its surface, and a unit queued early was queued because it compiles anyway.
+		if run.state.pending[index] == 0 {
+			skipped, err := run.skipUnchangedDependent(index)
+			if err != nil {
+				return err
+			}
+			if skipped {
+				continue
+			}
+		}
+		unit, assumed := run.startingUnit(index)
+		run.state.assumed[index] = assumed
+		run.state.started[index] = true
 		run.running++
-		go run.compileOneUnit(index, run.startingUnit(index), len(run.state.dependents[index]) > 0)
+		go run.compileOneUnit(index, unit, len(run.state.dependents[index]) > 0)
 	}
 
 	return nil
@@ -174,19 +202,29 @@ func (run *schedulerRun) startReadyUnits(jobs int) error {
 // non-source key.
 // Removing them made the first successful run after an error compile every dependent again even
 // when the assembly with errors came back with the same reference assembly.
-func (run *schedulerRun) skipBlockedUnit(index int) bool {
+func (run *schedulerRun) skipBlockedUnit(index int) (bool, error) {
 	if !run.state.blocked[index] {
-		return false
+		return false, nil
+	}
+	// Why a unit queued early is only taken out of the queue here: it is decided once every
+	// reference it has is, like any other unit, and the last of them to finish offers it again.
+	if run.state.pending[index] != 0 {
+		return true, nil
+	}
+	if err := run.markFinal(index); err != nil {
+		return false, err
 	}
 	run.state.blockDependents(index)
-	run.state.release(index, false)
+	run.releaseAndOffer(index, false)
 
-	return true
+	return true, nil
 }
 
 // skipUnchangedDependent leaves out a unit this run picked up only because something it references
 // was recompiled, when every one of those came out with the public surface the last Unity build
-// recorded: compiling it would read exactly the API it was last compiled against.
+// recorded: compiling it would read exactly the API it was last compiled against. It counts as
+// having kept Unity's surface, so the units that started before it finished read Unity's reference
+// assembly for it, as they assumed.
 // Why its earlier outputs are removed rather than left alone: a reference assembly an earlier run
 // wrote would otherwise be picked up as this run's own output, and the units below it would be
 // compiled against a result this run never produced.
@@ -198,30 +236,45 @@ func (run *schedulerRun) skipUnchangedDependent(index int) (bool, error) {
 	if err := run.compiler.removeUnitOutputs(run.plan, unit); err != nil {
 		return false, err
 	}
+	if err := run.markFinal(index); err != nil {
+		return false, err
+	}
 	run.referenceSkips++
-	run.state.release(index, false)
+	run.state.keptSurface[index] = true
+	run.releaseAndOffer(index, false)
 
 	return true, nil
 }
 
-// startingUnit is the unit at index as it is about to start, carrying which of the references it
-// waited for kept the surface of the last Unity build.
+// startingUnit is the unit at index as it would start now, carrying which of its references it
+// reads from Unity's build: the final ones that kept the surface of the last Unity build, and the
+// ones without a final state yet, which it assumes will. It also reports the latter.
 // Why a copy made here rather than a lookup from the unit's goroutine: the loop writes those answers
-// as units finish, while the units it already started are still running, and every reference of this
-// unit is done by now, so the copy is final. Why on the unit rather than passed alongside: the
-// response file, the changed-files check and every key read it from the unit, so none of them can
-// end up pointing at a different reference assembly than the compile does.
-func (run *schedulerRun) startingUnit(index int) CompileUnit {
+// as units finish, while the units it already started are still running. Why on the unit rather than
+// passed alongside: the response file, the changed-files check and every key read it from the unit,
+// so none of them can end up pointing at a different reference assembly than the compile does.
+// Why an assumed reference is named rather than left to the missing-output fallback: an earlier run
+// may have left its output on disk, and reading that would compile against a result this run never
+// produced.
+func (run *schedulerRun) startingUnit(index int) (CompileUnit, []int) {
 	unit := run.plan.Units[index]
 	kept := map[string]bool{}
+	assumed := []int{}
 	for _, reference := range run.state.references[index] {
+		name := run.plan.Units[reference].Assembly.AssemblyName
+		if !run.state.final[reference] {
+			assumed = append(assumed, reference)
+			kept[name] = true
+
+			continue
+		}
 		if run.state.keptSurface[reference] {
-			kept[run.plan.Units[reference].Assembly.AssemblyName] = true
+			kept[name] = true
 		}
 	}
 	unit.KeptSurfaceReferences = kept
 
-	return unit
+	return unit, assumed
 }
 
 // compileOneUnit produces one unit's result - by compiling it, or by replaying the previous run's
@@ -242,10 +295,14 @@ func (run *schedulerRun) compileOneUnit(index int, unit CompileUnit, readByDepen
 	run.completions <- unitCompletion{index: index, result: result, keptSurface: result.Surface.Kept, err: err}
 }
 
-// collectOneCompletion waits for one unit to finish and hands what it produced to the schedule.
+// collectOneCompletion waits for one unit to finish and holds what it produced until the unit's
+// final state can be decided.
 // Why a failure stops the run: it means the compiler itself could not be started, which every
 // remaining unit would hit as well. Compile errors are not failures here - they arrive as
 // diagnostics and the run continues so that one pass reports all of them.
+// Why nothing is released or blocked here: a unit that started before its references finished may
+// still have its result thrown away, and the errors or the surface of a result nobody keeps must not
+// decide anything for the units below it.
 func (run *schedulerRun) collectOneCompletion() error {
 	completion := <-run.completions
 	run.running--
@@ -253,15 +310,8 @@ func (run *schedulerRun) collectOneCompletion() error {
 		return completion.err
 	}
 	run.results[completion.index] = completion.result
-	run.compiled[completion.index] = true
-	// Why a replayed result blocks the same way a compiled one does: it says the assembly has
-	// errors, and whether this run learned that from csc or from what the last run recorded changes
-	// nothing about the reference assembly the units below it would have to read.
-	if !completion.result.Succeeded {
-		run.state.blockDependents(completion.index)
-	}
-	run.state.keptSurface[completion.index] = completion.keptSurface
-	run.state.release(completion.index, !completion.keptSurface)
+	run.state.pendingKept[completion.index] = completion.keptSurface
+	run.state.finished[completion.index] = true
 
 	return nil
 }
@@ -291,7 +341,8 @@ func (run *schedulerRun) blockedNames() []string {
 	return names
 }
 
-// newSchedule counts what every unit is waiting for and queues the units waiting for nothing.
+// newSchedule counts what every unit is waiting for. The caller offers every unit once, which queues
+// the ones waiting for nothing.
 func newSchedule(plan BuildPlan) *schedule {
 	indexByName := make(map[string]int, len(plan.Units))
 	for index, unit := range plan.Units {
@@ -300,12 +351,18 @@ func newSchedule(plan BuildPlan) *schedule {
 
 	state := &schedule{
 		pending:       make([]int, len(plan.Units)),
+		pendingOwn:    make([]int, len(plan.Units)),
+		ownSources:    make([]bool, len(plan.Units)),
 		dependents:    make([][]int, len(plan.Units)),
 		references:    make([][]int, len(plan.Units)),
 		ready:         []int{},
 		changedInputs: make([]int, len(plan.Units)),
 		blocked:       make([]bool, len(plan.Units)),
 		keptSurface:   make([]bool, len(plan.Units)),
+		unitProgress:  newUnitProgress(len(plan.Units)),
+	}
+	for index, unit := range plan.Units {
+		state.ownSources[index] = !unit.SelectedAsDependent
 	}
 	for index, unit := range plan.Units {
 		for _, reference := range unit.PlanReferences {
@@ -314,13 +371,11 @@ func newSchedule(plan BuildPlan) *schedule {
 				continue
 			}
 			state.pending[index]++
+			if state.ownSources[referenceIndex] {
+				state.pendingOwn[index]++
+			}
 			state.dependents[referenceIndex] = append(state.dependents[referenceIndex], index)
 			state.references[index] = append(state.references[index], referenceIndex)
-		}
-	}
-	for index := range plan.Units {
-		if state.pending[index] == 0 {
-			state.ready = append(state.ready, index)
 		}
 	}
 
@@ -328,24 +383,35 @@ func newSchedule(plan BuildPlan) *schedule {
 }
 
 // blockDependents marks every unit waiting on this one as one this run must not compile.
-// Why marking rather than removing from the queue: a unit is only queued once everything it waits
-// for is done, so the ones marked here have not been queued yet and are read as they come up.
+// Why marking rather than removing from the queue: a queued unit is read as it comes up, and one that
+// already started is read when its final state is decided.
 func (state *schedule) blockDependents(index int) {
 	for _, dependent := range state.dependents[index] {
 		state.blocked[dependent] = true
 	}
 }
 
-// release hands the units that were waiting on a finished one to the ready queue, recording whether
-// what it produced still describes the same public surface as the last Unity build.
-func (state *schedule) release(index int, changed bool) {
+// release tells the units waiting on one that just got its final state that it has, recording
+// whether what it produced still describes the same public surface as the last Unity build, and
+// reports those units so the caller can decide which of them to queue.
+// Why a unit that assumed this one is marked stale only when it changed: it read Unity's reference
+// assembly for it, which is exactly right when the surface was kept. A failed or blocked one blocks
+// it through blockDependents instead.
+func (state *schedule) release(index int, changed bool) []int {
 	for _, dependent := range state.dependents[index] {
 		state.pending[dependent]--
-		if changed {
-			state.changedInputs[dependent]++
+		if state.ownSources[index] {
+			state.pendingOwn[dependent]--
 		}
-		if state.pending[dependent] == 0 {
-			state.ready = append(state.ready, dependent)
+		if !changed {
+			continue
+		}
+		state.changedInputs[dependent]++
+		if !state.stale[dependent] && containsIndex(state.assumed[dependent], index) {
+			state.stale[dependent] = true
+			state.staleCause[dependent] = index
 		}
 	}
+
+	return state.dependents[index]
 }

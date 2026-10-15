@@ -23,13 +23,14 @@ type CompileUnit struct {
 	// every unit of an --all run.
 	SelectedAsDependent bool
 	// PlanReferences names the assemblies this one references that this run compiles too. It is
-	// what the scheduler waits for: a reference left out of the plan was not rebuilt, so its
-	// reference assembly from the last Unity build is already on disk and nothing has to wait.
+	// what the scheduler waits for, or starts ahead of: a reference left out of the plan was not
+	// rebuilt, so its reference assembly from the last Unity build is already on disk.
 	PlanReferences []string
-	// KeptSurfaceReferences names the assemblies among PlanReferences whose rebuilt reference
-	// assembly the run found to describe the same public surface as Unity's, so this unit reads
-	// Unity's instead. The scheduler fills it when it starts the unit, once every reference is done,
-	// and nothing writes to it afterwards. Empty everywhere else.
+	// KeptSurfaceReferences names the assemblies among PlanReferences this unit reads Unity's
+	// reference assembly for: the ones whose rebuilt reference assembly the run found to describe
+	// the same public surface as Unity's, or assumed would while they were still compiling. The
+	// scheduler fills it when it starts the unit, and nothing writes to it afterwards. Empty
+	// everywhere else.
 	KeptSurfaceReferences map[string]bool
 }
 

@@ -136,23 +136,46 @@ func compileCheckVibeReasons(reasons []compileCheckFastPathFallback) []map[strin
 	return entries
 }
 
-// compileCheckVibeUnits lists how long each unit this run compiled or checked took.
+// compileCheckVibeUnits lists how long each unit this run compiled or checked took, and how it was
+// scheduled when that was out of the ordinary: the references it assumed kept Unity's surface, the
+// one that made it compile again and the time the compile it threw away took, and that it waited
+// for a record that then did not apply - a unit whose record applied is replayed and left out.
 // Why replayed units are left out: they took no work, and their durations would only hide which
 // units the run spent its time on.
+// Why the scheduling keys appear only when they say something: most units carry none of them, and a
+// line of empty values would hide the few that do.
 func compileCheckVibeUnits(units []compilecheck.UnitResult) []map[string]any {
 	entries := make([]map[string]any, 0, len(units))
 	for _, unit := range units {
 		if unit.Reused || unit.FastCheckReused {
 			continue
 		}
-		entries = append(entries, map[string]any{
+		entry := map[string]any{
 			"assembly":    unit.Assembly,
 			"duration_ms": unit.Duration.Milliseconds(),
 			"succeeded":   unit.Succeeded,
-		})
+		}
+		addCompileCheckVibeScheduling(entry, unit)
+		entries = append(entries, entry)
 	}
 
 	return entries
+}
+
+// addCompileCheckVibeScheduling adds to a units entry the scheduling keys that apply to the unit.
+func addCompileCheckVibeScheduling(entry map[string]any, unit compilecheck.UnitResult) {
+	if len(unit.AssumedReferences) > 0 {
+		entry["assumed_kept"] = unit.AssumedReferences
+	}
+	if unit.CompiledAgainAfter != "" {
+		entry["compiled_again_after"] = unit.CompiledAgainAfter
+	}
+	if unit.DiscardedDuration > 0 {
+		entry["discarded_ms"] = unit.DiscardedDuration.Milliseconds()
+	}
+	if unit.WaitedForRecord {
+		entry["waited_for_record"] = true
+	}
 }
 
 // compileCheckVibeSurfaceChecks lists every unit whose surface the worker, or its record of the same
