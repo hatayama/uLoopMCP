@@ -7,9 +7,10 @@ namespace UnityCliLoop.CompileCheckWorker
 {
     /// <summary>
     /// Finds the private nested types of a reference assembly that nothing a dependent can see refers
-    /// to: the compiler's closure, async and iterator types, and private helpers. A dependent can name
-    /// a private nested type only from inside the type around it, so such a type reaches it through
-    /// nothing. One a kept row names - an interface a public type implements over it, the type of a
+    /// to: the compiler's closure, async and iterator types, and private helpers. A dependent cannot
+    /// use such a type, so whether it exists never decides whether a dependent compiles; it only
+    /// decides which error a dependent that already names it reports (CS0122 rather than CS0246 or
+    /// CS0426). One a kept row names - an interface a public type implements over it, the type of a
     /// private field a struct keeps - does reach it, and stays.
     /// </summary>
     internal sealed class SurfaceReachability : ISignatureTypeProvider<object, object>

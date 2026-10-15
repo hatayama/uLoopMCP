@@ -46,7 +46,9 @@ namespace UnityCliLoop.CompileCheckWorker
 
     /// <summary>
     /// Result of a surface comparison. "same" only when every dependent would compile against either
-    /// reference assembly the same way; anything the comparison cannot vouch for is "different".
+    /// reference assembly with the same outcome and the same warnings; anything the comparison cannot
+    /// vouch for is "different". A dependent that already fails because it names a private nested type
+    /// may report that error under another ID (CS0246, CS0426 or CS0122).
     /// </summary>
     internal sealed class CompareSurfaceResponse
     {

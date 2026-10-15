@@ -432,6 +432,31 @@ namespace UnityCliLoop.CompileCheckWorker.UnitTests
                 "class D : Outer { int F() => new PP().V; }");
         }
 
+        /// <summary>
+        /// Verifies that sending the internals to another assembly changes the surface: what the
+        /// assembly says about itself decides what a dependent may use.
+        /// </summary>
+        [Test]
+        public void InternalsVisibleToTargetChangeChangesTheSurface()
+        {
+            SurfaceFixture.AssertDifferent(
+                InternalsVisibleToDependent + "public class C { internal static int M() => 0; }",
+                "[assembly: System.Runtime.CompilerServices.InternalsVisibleTo(\"Other\")]\npublic class C { internal static int M() => 0; }",
+                "class D { int F() => C.M(); }");
+        }
+
+        /// <summary>
+        /// Verifies that renaming a parameter changes the surface, since a dependent can pass it by name.
+        /// </summary>
+        [Test]
+        public void ParameterRenameChangesTheSurface()
+        {
+            SurfaceFixture.AssertDifferent(
+                "public class C { public static void M(int a) { } }",
+                "public class C { public static void M(int b) { } }",
+                "class D { void F() => C.M(a: 1); }");
+        }
+
         private static void AssertOnlyPrivateNestedTypesDiffer(string oldSource, string newSource)
         {
             Assert.That(
