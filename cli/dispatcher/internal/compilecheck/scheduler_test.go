@@ -62,6 +62,14 @@ type schedulerRecorder struct {
 	// run kills it mid-compile: whatever it had already printed, plus an exit error. Without this a
 	// test can only produce the tidy failure of a process that never ran.
 	killedUnits map[string]bool
+	// outputByRun holds, per unit, what the n-th invocation of it prints and exits with. An
+	// invocation past its end falls back to output.
+	outputByRun map[string][]fakeCompilerOutput
+	// surfacesByRun holds, per unit, the reference assembly the n-th invocation of it writes; an
+	// empty one writes none. An invocation past its end falls back to surfaces.
+	surfacesByRun map[string][]string
+	// startOrder lists the units in the order their invocations started.
+	startOrder []string
 }
 
 // fakeCompilerOutput is what one fake invocation prints and exits with.
@@ -73,16 +81,18 @@ type fakeCompilerOutput struct {
 // newSchedulerRecorder prepares a recorder whose units each take the same time to compile.
 func newSchedulerRecorder(hold time.Duration) *schedulerRecorder {
 	return &schedulerRecorder{
-		hold:         hold,
-		holdByUnit:   map[string]time.Duration{},
-		started:      map[string]bool{},
-		surfaces:     map[string]string{},
-		assemblies:   map[string]string{},
-		output:       map[string]fakeCompilerOutput{},
-		killedUnits:  map[string]bool{},
-		runs:         map[string]int{},
-		finished:     map[string]bool{},
-		finishedWhen: map[string][]string{},
+		hold:          hold,
+		holdByUnit:    map[string]time.Duration{},
+		started:       map[string]bool{},
+		surfaces:      map[string]string{},
+		assemblies:    map[string]string{},
+		output:        map[string]fakeCompilerOutput{},
+		killedUnits:   map[string]bool{},
+		runs:          map[string]int{},
+		finished:      map[string]bool{},
+		finishedWhen:  map[string][]string{},
+		outputByRun:   map[string][]fakeCompilerOutput{},
+		surfacesByRun: map[string][]string{},
 	}
 }
 
@@ -93,6 +103,8 @@ func (recorder *schedulerRecorder) runner() CommandRunner {
 		recorder.mutex.Lock()
 		recorder.started[name] = true
 		recorder.runs[name]++
+		run := recorder.runs[name]
+		recorder.startOrder = append(recorder.startOrder, name)
 		recorder.running++
 		if recorder.running > recorder.maxRunning {
 			recorder.maxRunning = recorder.running
@@ -109,6 +121,9 @@ func (recorder *schedulerRecorder) runner() CommandRunner {
 		failing := recorder.failingUnit == name
 		during := recorder.during
 		output := recorder.output[name]
+		if byRun := recorder.outputByRun[name]; run <= len(byRun) {
+			output = byRun[run-1]
+		}
 		killed := recorder.killedUnits[name]
 		recorder.mutex.Unlock()
 
@@ -117,7 +132,7 @@ func (recorder *schedulerRecorder) runner() CommandRunner {
 		}
 		time.Sleep(hold)
 
-		recorder.writeReferenceAssembly(cmd, name)
+		recorder.writeReferenceAssembly(cmd, name, run)
 		recorder.writeAssembly(cmd, name)
 
 		recorder.mutex.Lock()
@@ -159,11 +174,14 @@ func (recorder *schedulerRecorder) writeAssembly(cmd *exec.Cmd, name string) {
 	writeBesideResponseFile(cmd, name+assemblyExtension, content)
 }
 
-// writeReferenceAssembly writes the reference assembly this fake invocation is set up to produce,
-// beside the response file it was given, which is where csc writes it too.
-func (recorder *schedulerRecorder) writeReferenceAssembly(cmd *exec.Cmd, name string) {
+// writeReferenceAssembly writes the reference assembly the run-th invocation of the unit is set up to
+// produce, beside the response file it was given, which is where csc writes it too.
+func (recorder *schedulerRecorder) writeReferenceAssembly(cmd *exec.Cmd, name string, run int) {
 	recorder.mutex.Lock()
 	surface, produces := recorder.surfaces[name]
+	if byRun := recorder.surfacesByRun[name]; run <= len(byRun) {
+		surface, produces = byRun[run-1], byRun[run-1] != ""
+	}
 	recorder.mutex.Unlock()
 	if !produces {
 		return
