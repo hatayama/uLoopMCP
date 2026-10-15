@@ -47,13 +47,13 @@ references, scripting defines and analyzers. `compile-check` replays those respo
    the compiler embeds, private nested types nothing visible refers to (closures and async or
    iterator state machines) along with the attributes naming them, and where the compiler happens to
    put nullable annotations — each annotation is written as the value that applies to its member.
-   So a private reference-type field in a nullable-enabled assembly, a private generic method, or a
-   private member added before a lambda no longer compiles every dependent again, which Unity, going
-   by bytes, does. This is safe because a dependent cannot name an embedded type or an unreferenced
-   private nested type, and reads every annotation by the value that applies to it. One difference
-   remains: a dependent that already fails because it names a private nested type may report the
-   error under another ID (CS0122, CS0426 or CS0117) until it compiles again; whether it compiles
-   does not change. When the worker cannot be built or cannot answer, the dependents are compiled.
+   So a private reference-type field in a nullable-enabled assembly, a private generic method with
+   an `unmanaged` constraint, or a private member added before a lambda no longer compiles every
+   dependent again, which Unity, going by bytes, does. This is safe because a dependent cannot name
+   an embedded type or an unreferenced private nested type, and reads every annotation by the value
+   that applies to it. One difference remains: a dependent that already fails because it names a
+   private nested type may report the error under another ID (CS0246, CS0426 or CS0117 in place of
+   CS0122, or the other way round) until it compiles again; whether it compiles does not change. When the worker cannot be built or cannot answer, the dependents are compiled.
    Its answer is kept in `<Assembly>.surface.json`, keyed by the content of both reference
    assemblies and the worker build, so the runs until Unity builds again do not compare the same
    pair twice. The comparison is always against Unity's own artifact, never against the

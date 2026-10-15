@@ -227,9 +227,9 @@ func (run *schedulerRun) startingUnit(index int) CompileUnit {
 // compileOneUnit produces one unit's result - by compiling it, or by replaying the previous run's
 // answer when nothing it reads has moved - and reports whether its public surface stayed the same.
 // Why the comparison happens here rather than in the loop: it reads two files and may ask the
-// worker, and the loop has to stay free to start the next unit. Why a replayed unit is compared just the same: it kept the
-// outputs of the previous run, so the reference assembly on disk is still the one to hold against
-// Unity's.
+// worker, and the loop has to stay free to start the next unit. Why a replayed unit is compared just
+// the same: it kept the outputs of the previous run, so the reference assembly on disk is still the
+// one to hold against Unity's.
 // Why only a successful unit that something in the plan references is compared: nothing reads the
 // answer of any other unit - the dependents of a failed one are blocked whatever it wrote - and
 // comparing costs a read of two reference assemblies, and possibly a worker call, for every edit of
