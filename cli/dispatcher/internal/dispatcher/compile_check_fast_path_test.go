@@ -110,6 +110,33 @@ func TestFastCheckOnlyRunWithErrorDoesNotSayNoAssembliesChanged(t *testing.T) {
 	}
 }
 
+// Verifies a fast check this run replayed is still listed and reported as fast-checked - with the
+// --full reminder - and says it was replayed, while one checked afresh says it was not.
+func TestResponseMarksAReplayedFastCheck(t *testing.T) {
+	for name, reused := range map[string]bool{"replayed": true, "checked": false} {
+		t.Run(name, func(t *testing.T) {
+			response := buildCompileCheckResponse(compilecheck.Result{
+				DagDir: "Library/Bee/artifacts/1234.dag",
+				Units: []compilecheck.UnitResult{{
+					Assembly: "Fast", Succeeded: true, FastChecked: true, FastCheckReused: reused,
+					FastCheckChangedFiles: []string{"Assets/Fast/A.cs"},
+				}},
+			}, "/projects/sample")
+
+			assertCompileCheckNames(t, "fast-checked", response.FastCheckedAssemblies, []string{"Fast"})
+			if len(response.ReusedAssemblies) != 0 {
+				t.Errorf("reused = %v, want none", response.ReusedAssemblies)
+			}
+			if len(response.FastChecks) != 1 || response.FastChecks[0].Reused != reused {
+				t.Errorf("fast checks = %+v, want Reused %t", response.FastChecks, reused)
+			}
+			if !strings.Contains(response.Message, "run with --full before finishing") {
+				t.Errorf("message = %q, want the --full reminder", response.Message)
+			}
+		})
+	}
+}
+
 func assertCompileCheckNames(t *testing.T, label string, got []string, want []string) {
 	t.Helper()
 	if !reflect.DeepEqual(got, want) {

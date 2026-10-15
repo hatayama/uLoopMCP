@@ -62,6 +62,10 @@ type UnitResult struct {
 	// FastChecked marks a result that came from checking only the changed files against the last
 	// successful full compile, instead of compiling the assembly.
 	FastChecked bool
+	// FastCheckReused marks a fast check this run replayed from the previous run's check of the same
+	// changed files, because the inputs, the baseline and the worker build were all as that check saw
+	// them.
+	FastCheckReused bool
 	// FastCheckChangedFiles lists the files a fast check checked, spelled as the response file does.
 	FastCheckChangedFiles []string
 	// UncheckedCodes lists the diagnostic IDs a fast check could not run; only a full compile does.

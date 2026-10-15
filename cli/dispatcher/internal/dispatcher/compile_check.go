@@ -85,6 +85,9 @@ type compileCheckFastCheck struct {
 	UncheckedCodes []string `json:"UncheckedCodes"`
 	// GeneratorsNotRerun is set when the source generators were not run again.
 	GeneratorsNotRerun bool `json:"GeneratorsNotRerun"`
+	// Reused is set when this run reported the previous run's check of the same changed files instead
+	// of checking them again.
+	Reused bool `json:"Reused"`
 }
 
 // compileCheckFastPathFallback says why one assembly compiled in full instead of being fast-checked.
@@ -268,6 +271,7 @@ func addCompileCheckUnitKind(response *compileCheckResponse, unit compilecheck.U
 			ChangedFiles:       append(make([]string, 0, len(unit.FastCheckChangedFiles)), unit.FastCheckChangedFiles...),
 			UncheckedCodes:     append(make([]string, 0, len(unit.UncheckedCodes)), unit.UncheckedCodes...),
 			GeneratorsNotRerun: unit.GeneratorsNotRerun,
+			Reused:             unit.FastCheckReused,
 		})
 	default:
 		response.CompiledAssemblies = append(response.CompiledAssemblies, unit.Assembly)

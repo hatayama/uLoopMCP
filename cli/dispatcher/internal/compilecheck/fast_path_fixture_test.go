@@ -31,11 +31,13 @@ type fakeFastCheckWorker struct {
 	reason         string
 	diagnostics    []fastcheck.WorkerDiagnostic
 	uncheckedCodes []string
-	onCheck        func()
-	ensures        int
-	fingerprints   int
-	checks         int
-	lastCheck      fastcheck.CheckRequest
+	// generatorsNotRerun is what Check reports about the source generators.
+	generatorsNotRerun bool
+	onCheck            func()
+	ensures            int
+	fingerprints       int
+	checks             int
+	lastCheck          fastcheck.CheckRequest
 }
 
 func newFakeFastCheckWorker() *fakeFastCheckWorker {
@@ -97,10 +99,11 @@ func (worker *fakeFastCheckWorker) Check(
 	}
 
 	return fastcheck.CheckResponse{
-		Outcome:        worker.outcome,
-		Reason:         worker.reason,
-		Diagnostics:    worker.diagnostics,
-		UncheckedCodes: worker.uncheckedCodes,
+		Outcome:            worker.outcome,
+		Reason:             worker.reason,
+		Diagnostics:        worker.diagnostics,
+		UncheckedCodes:     worker.uncheckedCodes,
+		GeneratorsNotRerun: worker.generatorsNotRerun,
 	}, nil
 }
 
@@ -145,7 +148,12 @@ func (project *fastPathProject) sourceName(index int) string {
 // editBody changes the body part of Alpha's source at index, keeping its declaration.
 func (project *fastPathProject) editBody(t *testing.T, index int, body string) {
 	t.Helper()
-	project.writeFile(t, project.sourceName(index), fmt.Sprintf("class File%03d %s %s", index, fakeDeclarationSeparator, body))
+	project.writeFile(t, project.sourceName(index), bodyContent(index, body))
+}
+
+// bodyContent is what Alpha's source at index holds once its body is body.
+func bodyContent(index int, body string) string {
+	return fmt.Sprintf("class File%03d %s %s", index, fakeDeclarationSeparator, body)
 }
 
 // editDeclaration changes the declaration part of Alpha's source at index.
