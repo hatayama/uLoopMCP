@@ -131,3 +131,25 @@ func TestIndexAssemblyReferencesReportsAnUnreadableDirectory(t *testing.T) {
 		t.Fatalf("err = %v, want the unreadable Assets directory reported", err)
 	}
 }
+
+// Verifies that of two broken .asmdef files in one root, the one the walk meets first is reported,
+// which is not the one whose full path sorts first.
+func TestIndexAssemblyDefinitionsReportsTheFirstBrokenAsmdefInWalkOrder(t *testing.T) {
+	projectRoot := t.TempDir()
+	first := filepath.Join(projectRoot, "Assets", "a", "X.asmdef")
+	writeFileAt(t, first, "not json")
+	writeFileAt(t, filepath.Join(projectRoot, "Assets", "a.b", "Y.asmdef"), "not json")
+	// Why many valid files sit in between: with the reads running side by side, the second broken
+	// file is likely to be read before the first finishes.
+	for index := range 20 {
+		name := "V" + string(rune('A'+index))
+		writeFileAt(t, filepath.Join(projectRoot, "Assets", "a", "m", name, name+".asmdef"), `{"name":"`+name+`"}`)
+	}
+
+	_, err := IndexAssemblyDefinitions(walkProjectTree(projectRoot))
+
+	wantPrefix := "failed to index assembly definitions under " + filepath.Join(projectRoot, "Assets") + ": failed to read " + first
+	if err == nil || !strings.HasPrefix(err.Error(), wantPrefix) {
+		t.Fatalf("err = %v, want it to start with %q", err, wantPrefix)
+	}
+}
