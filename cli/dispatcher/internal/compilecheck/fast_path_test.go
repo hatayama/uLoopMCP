@@ -150,7 +150,7 @@ func TestFailedFullCompileLeavesNoBaseline(t *testing.T) {
 	recorder := newCachedSchedulerRecorder("Alpha", "Beta")
 	outcome := project.run(t, recorder, false)
 
-	assertFallback(t, outcome, recorder, "no baseline: the last full compile had errors")
+	assertFallback(t, outcome, recorder, "no baseline: the last full compile had errors; the first full compile without errors records one")
 }
 
 // Verifies that a change to an input other than source contents, such as a new source, compiles in full.

@@ -19,7 +19,7 @@
 //     same key, a successful compile, and outputs that still match. Otherwise LoadBaseline says why
 //     there is none, in one of these reasons:
 //     "no baseline: no full compile of this assembly is on record",
-//     "no baseline: the last full compile had errors",
+//     "no baseline: the last full compile had errors; the first full compile without errors records one",
 //     "no baseline: the last full compile did not record one",
 //     "no baseline: it was recorded by another version of compile-check",
 //     "baseline compile is no longer on disk".

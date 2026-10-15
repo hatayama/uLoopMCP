@@ -138,7 +138,9 @@ The check is used when all of these hold:
   list of source paths.
 - 1 to 30 of its sources changed.
 - Every changed file keeps its declarations: only method bodies, accessor bodies, expression
-  bodies, non-constant initializers outside partial types, comments, or whitespace changed.
+  bodies, non-constant initializers outside partial types, comments, or whitespace changed. Adding
+  or removing a `using` directive counts as a declaration change, because it can change what every
+  name in the file resolves to.
 
 The changed files are checked by a worker built once per Editor toolchain with the Editor's own
 dotnet and Roslyn. It reports their compiler and analyzer diagnostics, with `DiagnosticSuppressor`s
@@ -155,8 +157,9 @@ Otherwise the assembly is compiled in full as before, and `FastPathFallbacks` sa
 - `no baseline: no full compile of this assembly is on record` (none ran yet, a later run
   skipped the assembly, which removes its result and baseline, or an input changed while
   the last full compile ran, so it left no record; `FastPathBaselineNotes` of that run says which)
-- `no baseline: the last full compile had errors` (a full compile that fails drops the baseline an
-  earlier one left)
+- `no baseline: the last full compile had errors; the first full compile without errors records one`
+  (a full compile that fails drops the baseline an earlier one left, and the assembly is
+  compiled in full until a compile succeeds)
 - `no baseline: the last full compile did not record one` (`FastPathBaselineNotes` of that run
   says why, or the assembly was compiled only because a reference changed)
 - `no baseline: it was recorded by another version of compile-check`
@@ -205,7 +208,8 @@ What the check does not guarantee, so run `--full` before finishing:
   assembly, and the rules of analyzers that use Compilation, CompilationEnd, SemanticModel, or
   SymbolStart actions. `FastChecks[].UncheckedCodes` lists the IDs it could not run, leaving out
   the ones the response file already turns off (with `-nowarn` or a ruleset) and analyzer rules
-  that are disabled, so an assembly may list fewer than these four.
+  that are disabled, so an assembly may list fewer than these four. In a project that treats
+  warnings as errors (`-warnaserror`), these are errors that only `--full` reports.
 - Errors the compiler reports only while emitting, such as CS8178 and CS0656.
 - Source generators. The check reads the generator output saved by the last full compile and does
   not run them again; `FastChecks[].GeneratorsNotRerun` says so.

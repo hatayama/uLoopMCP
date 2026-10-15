@@ -181,7 +181,7 @@ func TestLoadBaselineExplainsAMissingBaseline(t *testing.T) {
 		},
 		"failed compile": {
 			record: func(t *testing.T, project projectStore) { project.recordCompile(t, "input", false) },
-			want:   "no baseline: the last full compile had errors",
+			want:   "no baseline: the last full compile had errors; the first full compile without errors records one",
 		},
 		"successful compile": {
 			record: func(t *testing.T, project projectStore) { project.recordCompile(t, "input", true) },
