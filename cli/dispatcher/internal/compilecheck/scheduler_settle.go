@@ -120,7 +120,11 @@ func (run *schedulerRun) startAndSettle(jobs int) error {
 		if err := run.startReadyUnits(jobs); err != nil {
 			return err
 		}
-		if !run.settleFinished() {
+		settled, err := run.settleFinished()
+		if err != nil {
+			return err
+		}
+		if !settled {
 			return nil
 		}
 	}
@@ -128,7 +132,7 @@ func (run *schedulerRun) startAndSettle(jobs int) error {
 
 // settleFinished decides the final state of every finished unit whose references all have one, until
 // none is left, and reports whether it decided anything.
-func (run *schedulerRun) settleFinished() bool {
+func (run *schedulerRun) settleFinished() (bool, error) {
 	state := run.state
 	progressed := false
 	for settled := true; settled; {
@@ -139,11 +143,13 @@ func (run *schedulerRun) settleFinished() bool {
 			}
 			settled = true
 			progressed = true
-			run.settle(index)
+			if err := run.settle(index); err != nil {
+				return progressed, err
+			}
 		}
 	}
 
-	return progressed
+	return progressed, nil
 }
 
 // settle decides what a finished unit's latest compile counts for, now that every reference it has
@@ -151,12 +157,14 @@ func (run *schedulerRun) settleFinished() bool {
 // when one it assumed changed its surface, and its result otherwise.
 // Why a compile again rather than a correction: the reference assembly it read is the wrong one, and
 // what csc reports against the right one cannot be derived from what it reported against Unity's.
-func (run *schedulerRun) settle(index int) {
+func (run *schedulerRun) settle(index int) error {
 	state := run.state
 	switch {
 	case state.blocked[index]:
 		state.finished[index] = false
-		state.final[index] = true
+		if err := run.markFinal(index); err != nil {
+			return err
+		}
 		state.blockDependents(index)
 		run.releaseAndOffer(index, false)
 	case state.stale[index]:
@@ -167,15 +175,17 @@ func (run *schedulerRun) settle(index int) {
 		state.assumed[index] = nil
 		state.enqueue(index)
 	default:
-		run.adopt(index)
+		return run.adopt(index)
 	}
+
+	return nil
 }
 
 // adopt makes a finished unit's latest compile its final state and tells the units below it.
 // Why a replayed result blocks the same way a compiled one does: it says the assembly has errors,
 // and whether this run learned that from csc or from what the last run recorded changes nothing about
 // the reference assembly the units below it would have to read.
-func (run *schedulerRun) adopt(index int) {
+func (run *schedulerRun) adopt(index int) error {
 	state := run.state
 	result := run.results[index]
 	result.AssumedReferences = run.namesOf(state.assumed[index])
@@ -185,13 +195,32 @@ func (run *schedulerRun) adopt(index int) {
 		result.DiscardedDuration = state.discarded[index]
 	}
 	run.results[index] = result
+	if err := run.markFinal(index); err != nil {
+		return err
+	}
 	run.compiled[index] = true
-	state.final[index] = true
 	state.keptSurface[index] = state.pendingKept[index]
 	if !result.Succeeded {
 		state.blockDependents(index)
 	}
 	run.releaseAndOffer(index, !state.keptSurface[index])
+
+	return nil
+}
+
+// markFinal gives a unit its final state, which every unit may get only once every reference it has
+// in the plan has one.
+// Why a breach is an error rather than ignored: a unit decided early tells the units below it what
+// it turned out as before that is settled, and the run then reports results nobody can trust. As an
+// error it stops the run the way a plan it cannot finish does, after the running compiles return.
+func (run *schedulerRun) markFinal(index int) error {
+	if run.state.pending[index] != 0 {
+		return fmt.Errorf("compile-check finished scheduling %s before every assembly it references finished",
+			run.plan.Units[index].Assembly.AssemblyName)
+	}
+	run.state.final[index] = true
+
+	return nil
 }
 
 // unfinishedError reports the units a run that ran out of work never decided on, or nil when there

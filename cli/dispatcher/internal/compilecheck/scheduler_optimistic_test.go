@@ -21,6 +21,8 @@ type optimisticPlanRun struct {
 	plan     BuildPlan
 	recorder *schedulerRecorder
 	compiler Compiler
+	// jobs caps how many units compile at once.
+	jobs int
 }
 
 // newOptimisticPlanRun lays out the plan, marking the named dependents as units this run picks up
@@ -38,7 +40,7 @@ func newOptimisticPlanRun(
 		recorder.surfaces[name] = "changed " + name
 	}
 
-	return &optimisticPlanRun{plan: plan, recorder: recorder, compiler: compiler}
+	return &optimisticPlanRun{plan: plan, recorder: recorder, compiler: compiler, jobs: 8}
 }
 
 // keep makes the named units come out with Unity's public surface.
@@ -57,7 +59,7 @@ func (run *optimisticPlanRun) fail(name string) {
 // compile runs the plan and fails the test when the run could not finish.
 func (run *optimisticPlanRun) compile(t *testing.T) compileOutcome {
 	t.Helper()
-	outcome, err := compileUnits(context.Background(), run.compiler, run.plan, 8)
+	outcome, err := compileUnits(context.Background(), run.compiler, run.plan, run.jobs)
 	if err != nil {
 		t.Fatalf("expected the run to succeed, got error: %v", err)
 	}
@@ -523,5 +525,38 @@ func TestCompileUnitsReportsAPlanItCannotFinish(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "A") || !strings.Contains(err.Error(), "B") {
 		t.Errorf("error = %v, want it to name A and B", err)
+	}
+}
+
+// Verifies a unit queued early that a reference with errors then blocks keeps waiting for the other
+// references it has until they finish, rather than being decided while one of them still compiles:
+// U is queued behind B with S still compiling when R's failure blocks it.
+func TestCompileUnitsDecidesABlockedUnitQueuedEarlyOnlyOnceItsReferencesFinish(t *testing.T) {
+	run := newOptimisticPlanRun(t, map[string][]string{"R": {"X"}, "B": {"X"}, "S": {"X"}, "U": {"X", "R", "S"}},
+		[]string{"R", "B", "S", "U"}, "X", "R", "B", "S", "U")
+	run.jobs = 2
+	run.fail("R")
+	run.recorder.holdByUnit["B"] = 20 * time.Millisecond
+	run.recorder.holdByUnit["S"] = 80 * time.Millisecond
+
+	outcome := run.compile(t)
+
+	assertStrings(t, "blocked", outcome.Blocked, []string{"U"})
+	if run.recorder.started["U"] {
+		t.Error("a blocked unit should not have started")
+	}
+}
+
+// Verifies a unit queued early that becomes ready while it still waits for a free job is queued
+// once and compiled once: D is queued early behind B, and A finishes before a job frees up.
+func TestCompileUnitsQueuesAUnitOnceWhenItsLastReferenceFinishesWhileItWaitsForAJob(t *testing.T) {
+	run := newOptimisticPlanRun(t, map[string][]string{"A": {"X"}, "B": {"X"}, "D": {"X", "A"}},
+		[]string{"A", "B", "D"}, "X", "A", "B", "D")
+	run.jobs = 1
+
+	run.compile(t)
+
+	if run.recorder.runs["D"] != 1 {
+		t.Errorf("D compiled %d times, want 1", run.recorder.runs["D"])
 	}
 }

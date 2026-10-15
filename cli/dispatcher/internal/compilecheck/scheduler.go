@@ -162,7 +162,11 @@ func (run *schedulerRun) startReadyUnits(jobs int) error {
 		index := run.state.takeNext()
 		// Why the block is read before the skip: a blocked unit has no result to compare against
 		// anything, so asking whether its references kept their surface answers nothing.
-		if run.skipBlockedUnit(index) {
+		blocked, err := run.skipBlockedUnit(index)
+		if err != nil {
+			return err
+		}
+		if blocked {
 			continue
 		}
 		// Why the skip is asked only once every reference is final: until then a reference may
@@ -198,15 +202,22 @@ func (run *schedulerRun) startReadyUnits(jobs int) error {
 // non-source key.
 // Removing them made the first successful run after an error compile every dependent again even
 // when the assembly with errors came back with the same reference assembly.
-func (run *schedulerRun) skipBlockedUnit(index int) bool {
+func (run *schedulerRun) skipBlockedUnit(index int) (bool, error) {
 	if !run.state.blocked[index] {
-		return false
+		return false, nil
 	}
-	run.state.final[index] = true
+	// Why a unit queued early is only taken out of the queue here: it is decided once every
+	// reference it has is, like any other unit, and the last of them to finish offers it again.
+	if run.state.pending[index] != 0 {
+		return true, nil
+	}
+	if err := run.markFinal(index); err != nil {
+		return false, err
+	}
 	run.state.blockDependents(index)
 	run.releaseAndOffer(index, false)
 
-	return true
+	return true, nil
 }
 
 // skipUnchangedDependent leaves out a unit this run picked up only because something it references
@@ -225,9 +236,11 @@ func (run *schedulerRun) skipUnchangedDependent(index int) (bool, error) {
 	if err := run.compiler.removeUnitOutputs(run.plan, unit); err != nil {
 		return false, err
 	}
+	if err := run.markFinal(index); err != nil {
+		return false, err
+	}
 	run.referenceSkips++
 	run.state.keptSurface[index] = true
-	run.state.final[index] = true
 	run.releaseAndOffer(index, false)
 
 	return true, nil
