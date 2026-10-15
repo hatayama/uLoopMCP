@@ -128,6 +128,22 @@ func TestGeneratorOutputUnchangedNoticesEveryChange(t *testing.T) {
 	}
 }
 
+// Verifies a baseline tied to a compile result of another format version is not handed out, even
+// when its key, success and outputs all still match: the outputs of a format version 1 compile came
+// from sources in ordinal order, and the changed-files check would hand them to dependents as is.
+func TestLoadBaselineRefusesABaselineWhoseCompileHasAnotherFormatVersion(t *testing.T) {
+	project := newProjectStore(t)
+	project.recordCompile(t, "input", true)
+	project.recordBaseline(t, "input")
+	setManifestFormatVersion(t, project.outputPath(), "Alpha", 1)
+
+	_, reason := project.store.LoadBaseline("Alpha")
+
+	if reason != "no baseline: it was recorded by another version of compile-check" {
+		t.Errorf("reason = %q", reason)
+	}
+}
+
 // Verifies a baseline is not handed out once the compile it describes is no longer what is on disk.
 func TestLoadBaselineRefusesABaselineWhoseCompileIsGone(t *testing.T) {
 	for name, damage := range map[string]func(t *testing.T, project projectStore){

@@ -10,8 +10,10 @@ import (
 const (
 	// resultManifestFormatVersion guards against reading a manifest an older or newer build wrote:
 	// what belongs in the key is part of this check's code, so a manifest from another version says
-	// nothing about whether this one would compile the same thing.
-	resultManifestFormatVersion = 1
+	// nothing about whether this one would compile the same thing. So is the order the sources are
+	// handed to csc in, which decides the bytes of what it writes without being in the key: version 1
+	// compiled them in ordinal order rather than Unity's.
+	resultManifestFormatVersion = 2
 
 	resultManifestExtension = ".result.json"
 )

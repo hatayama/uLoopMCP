@@ -129,7 +129,29 @@ func TestReusableResultRejectsAnUnreadableManifest(t *testing.T) {
 func TestReusableResultRejectsAnotherFormatVersion(t *testing.T) {
 	directoryPath := newRecordedOutputs(t)
 	recordResult(t, directoryPath, "key")
-	path := manifestPath(directoryPath, "Alpha")
+	setManifestFormatVersion(t, directoryPath, "Alpha", resultManifestFormatVersion+1)
+
+	if _, reusable := directoryStore(directoryPath).Reusable("Alpha", "key"); reusable {
+		t.Error("a manifest of another format version should not be reused")
+	}
+}
+
+// Verifies a manifest of format version 1, whose outputs were compiled from sources in ordinal
+// rather than response file order, is not reused under the same key.
+func TestReusableResultRejectsAManifestCompiledInOrdinalSourceOrder(t *testing.T) {
+	directoryPath := newRecordedOutputs(t)
+	recordResult(t, directoryPath, "key")
+	setManifestFormatVersion(t, directoryPath, "Alpha", 1)
+
+	if _, reusable := directoryStore(directoryPath).Reusable("Alpha", "key"); reusable {
+		t.Error("a manifest of format version 1 should not be reused")
+	}
+}
+
+// setManifestFormatVersion rewrites the format version of an assembly's manifest, leaving the rest.
+func setManifestFormatVersion(t *testing.T, directoryPath string, assembly string, version int) {
+	t.Helper()
+	path := manifestPath(directoryPath, assembly)
 	content, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("failed to read the manifest: %v", err)
@@ -138,17 +160,13 @@ func TestReusableResultRejectsAnotherFormatVersion(t *testing.T) {
 	if err := json.Unmarshal(content, &manifest); err != nil {
 		t.Fatalf("failed to parse the manifest: %v", err)
 	}
-	manifest.FormatVersion = resultManifestFormatVersion + 1
+	manifest.FormatVersion = version
 	rewritten, err := json.Marshal(manifest)
 	if err != nil {
 		t.Fatalf("failed to write the manifest back: %v", err)
 	}
 	if err := os.WriteFile(path, rewritten, 0o600); err != nil {
 		t.Fatalf("failed to write the manifest back: %v", err)
-	}
-
-	if _, reusable := directoryStore(directoryPath).Reusable("Alpha", "key"); reusable {
-		t.Error("a manifest of another format version should not be reused")
 	}
 }
 

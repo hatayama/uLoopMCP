@@ -53,7 +53,8 @@ references, scripting defines and analyzers. `compile-check` replays those respo
    an embedded type or an unreferenced private nested type, and reads every annotation by the value
    that applies to it. One difference remains: a dependent that already fails because it names a
    private nested type may report the error under another ID (CS0246, CS0426 or CS0117 in place of
-   CS0122, or the other way round) until it compiles again; whether it compiles does not change. When the worker cannot be built or cannot answer, the dependents are compiled.
+   CS0122, or the other way round) until it compiles again; whether it compiles does not change.
+   When the worker cannot be built or cannot answer, the dependents are compiled.
    Its answer is kept in `<Assembly>.surface.json`, keyed by the content of both reference
    assemblies and the worker build, so the runs until Unity builds again do not compare the same
    pair twice. The comparison is always against Unity's own artifact, never against the
@@ -86,7 +87,11 @@ references, scripting defines and analyzers. `compile-check` replays those respo
    it as. A package shipping a sample for a render pipeline the project does not install is the
    ordinary case. Membership is compared without looking at any timestamp, because
    moving a file carries its modification time along, and either an `.asmdef` or an `.asmref` can
-   hand a folder's sources to a different assembly without editing a single `.cs` file.
+   hand a folder's sources to a different assembly without editing a single `.cs` file. The
+   recorded sources keep the order of the response file, and the ones added since the last Unity
+   build follow them in ordinal order: csc emits types in the order of its sources, so any other
+   order gives an assembly nobody edited a reference assembly in other bytes than Unity's, and
+   every assembly that references it compiles again.
 4. **Check that the response files still describe the project.** An assembly definition that was
    added, removed, or that stopped building for the Editor, and a reference or a precompiled
    reference that was added to one, invalidate the recorded build. The run then stops with
