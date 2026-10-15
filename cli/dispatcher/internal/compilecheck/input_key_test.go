@@ -6,8 +6,11 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"testing"
 	"time"
+
+	"github.com/hatayama/unity-cli-loop/dispatcher/internal/compilecheck/resultstore"
 )
 
 // inputKeyProject is a project tree holding every kind of input one unit's key is built from, so a
@@ -469,5 +472,141 @@ func TestInputKeyReturnsHashesOfContentItRead(t *testing.T) {
 	expected := map[string]string{source: hex.EncodeToString(sum[:])}
 	if !reflect.DeepEqual(result.SourceHashes, expected) {
 		t.Errorf("expected source hashes %v, got %v", expected, result.SourceHashes)
+	}
+}
+
+// identity computes the whole input key result of the unit under test.
+func (project *inputKeyProject) identity(t *testing.T) inputKeyResult {
+	t.Helper()
+	keyResult, err := computeInputKey(project.root, project.paths, project.plan, project.plan.Units[0])
+	if err != nil {
+		t.Fatalf("expected a key, got error: %v", err)
+	}
+
+	return keyResult
+}
+
+// assertShapeKept fails when a change that should only move one project reference moved the shape,
+// or did not move the key and that reference's identity.
+func assertShapeKept(t *testing.T, before inputKeyResult, after inputKeyResult, reference string) {
+	t.Helper()
+	if after.Key == before.Key {
+		t.Error("the change should move the key")
+	}
+	if after.ProjectReferences[reference] == before.ProjectReferences[reference] {
+		t.Errorf("the change should move the identity of %s", reference)
+	}
+	if after.Shape != before.Shape {
+		t.Error("the change should leave the shape alone")
+	}
+}
+
+// Verifies the shape leaves out the content of a reference this run produced, which the identity of
+// that reference carries instead: a record must stay comparable while that reference is unknown.
+func TestComputeInputKeyShapeIgnoresTheIdentityOfAProducedReference(t *testing.T) {
+	project := newInputKeyProject(t)
+	before := project.identity(t)
+
+	writeProjectFile(t, project.root,
+		filepath.Join(project.plan.OutputDir, "Beta"+referenceAssemblyExtension), "beta surface with more")
+
+	assertShapeKept(t, before, project.identity(t), "Beta")
+}
+
+// Verifies the shape leaves out the timestamp of Unity's file for a reference this run compiles but
+// reads from Unity's build, which the identity of that reference carries instead.
+func TestComputeInputKeyShapeIgnoresTheIdentityOfAKeptReference(t *testing.T) {
+	project := newInputKeyProject(t)
+	unityReference := filepath.Join(planDagDirectory, "Beta"+referenceAssemblyExtension)
+	writeProjectFile(t, project.root, unityReference, "unity beta")
+	project.plan.Units[0].KeptSurfaceReferences = map[string]bool{"Beta": true}
+	before := project.identity(t)
+
+	touchProjectFile(t, project.root, unityReference)
+
+	assertShapeKept(t, before, project.identity(t), "Beta")
+}
+
+// Verifies the key, the shape and the project reference identities do not depend on whether a
+// referenced assembly is in the plan: when it is and kept Unity's surface, the compile reads the
+// same file as when it is not, so a record must stay comparable as the reference enters or leaves.
+func TestComputeInputKeyShapeDoesNotDependOnThePlan(t *testing.T) {
+	project := newInputKeyProject(t)
+	outsidePlan := project.identity(t)
+
+	project.plan.Units = append(project.plan.Units, CompileUnit{Assembly: ResponseFile{AssemblyName: "Gamma"}})
+	project.plan.Units[0].KeptSurfaceReferences = map[string]bool{"Gamma": true}
+	insidePlan := project.identity(t)
+
+	if insidePlan.Key != outsidePlan.Key {
+		t.Error("the key should not depend on whether a kept reference is in the plan")
+	}
+	if insidePlan.Shape != outsidePlan.Shape {
+		t.Error("the shape should not depend on whether a kept reference is in the plan")
+	}
+	if !reflect.DeepEqual(insidePlan.ProjectReferences, outsidePlan.ProjectReferences) {
+		t.Errorf("project references = %v, want %v", insidePlan.ProjectReferences, outsidePlan.ProjectReferences)
+	}
+}
+
+// Verifies a reference that is not a project assembly - a package or system dll - stays in the
+// shape: it is never unknown while the run compiles, so the shape is what follows it.
+func TestComputeInputKeyShapeFollowsAReferenceOutsideTheProject(t *testing.T) {
+	project := newInputKeyProject(t)
+	library := filepath.Join("Packages", "Library.dll")
+	writeProjectFile(t, project.root, library, "library")
+	project.plan.Units[0].Assembly.References = append(project.plan.Units[0].Assembly.References, library)
+	before := project.identity(t)
+
+	touchProjectFile(t, project.root, library)
+	after := project.identity(t)
+
+	if after.Shape == before.Shape {
+		t.Error("a reference outside the project should move the shape")
+	}
+	if !reflect.DeepEqual(after.ProjectReferences, before.ProjectReferences) {
+		t.Error("a reference outside the project should leave the project reference identities alone")
+	}
+}
+
+// Verifies the shape follows the content of the sources and the project reference identities do not.
+func TestComputeInputKeyShapeFollowsTheSources(t *testing.T) {
+	project := newInputKeyProject(t)
+	before := project.identity(t)
+
+	writeProjectFile(t, project.root, filepath.Join("Assets", "Alpha", "Alpha.cs"), "class Alpha { int Added; }")
+	after := project.identity(t)
+
+	if after.Shape == before.Shape {
+		t.Error("an edited source should move the shape")
+	}
+	if !reflect.DeepEqual(after.ProjectReferences, before.ProjectReferences) {
+		t.Error("an edited source should leave the project reference identities alone")
+	}
+}
+
+// Verifies the project reference identities name every project assembly the unit references, in the
+// plan or not, and nothing else, each with the kind of file its line reads.
+func TestComputeInputKeyNamesEveryProjectReference(t *testing.T) {
+	project := newInputKeyProject(t)
+	library := filepath.Join("Packages", "Library.dll")
+	writeProjectFile(t, project.root, library, "library")
+	project.plan.Units[0].Assembly.References = append(project.plan.Units[0].Assembly.References, library)
+
+	identity := project.identity(t)
+
+	names := []string{}
+	for name := range identity.ProjectReferences {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	if !reflect.DeepEqual(names, []string{"Beta", "Gamma"}) {
+		t.Errorf("project references = %v, want [Beta Gamma]", names)
+	}
+	if kind := identity.ProjectReferences["Beta"].Kind; kind != resultstore.ProducedReference {
+		t.Errorf("Beta, read from this run's output, is of kind %q", kind)
+	}
+	if kind := identity.ProjectReferences["Gamma"].Kind; kind != resultstore.UnityReference {
+		t.Errorf("Gamma, read from Unity's build, is of kind %q", kind)
 	}
 }

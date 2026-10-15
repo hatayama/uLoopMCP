@@ -124,7 +124,7 @@ func TestHandCorruptedFailedManifestFallsBack(t *testing.T) {
 	project.recordBaseline(t)
 	project.editBody(t, 0, "edited")
 	baseline := project.baseline(t)
-	if err := project.records().RecordCompile("Alpha", baseline.InputKey,
+	if err := project.records().RecordCompile("Alpha", resultstore.KeyIdentity{Key: baseline.InputKey},
 		resultstore.CompileResult[Diagnostic]{Succeeded: false, Diagnostics: baseline.Diagnostics}, unitOutputNames(project.plan.Units[0])); err != nil {
 		t.Fatalf("failed to record the failed compile: %v", err)
 	}
@@ -477,7 +477,7 @@ func TestZeroChangedFilesDropsBaselineAndFallsBack(t *testing.T) {
 	project.recordBaseline(t)
 	baseline := project.baseline(t)
 	records := project.records()
-	if err := records.RecordCompile("Alpha", "tampered",
+	if err := records.RecordCompile("Alpha", resultstore.KeyIdentity{Key: "tampered"},
 		resultstore.CompileResult[Diagnostic]{Succeeded: true, Diagnostics: baseline.Diagnostics}, unitOutputNames(project.plan.Units[0])); err != nil {
 		t.Fatalf("failed to record the tampered compile: %v", err)
 	}

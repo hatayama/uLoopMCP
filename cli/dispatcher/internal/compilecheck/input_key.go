@@ -1,6 +1,7 @@
 package compilecheck
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -10,6 +11,8 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/hatayama/unity-cli-loop/dispatcher/internal/compilecheck/resultstore"
 )
 
 // pathValuedFlagNames are the flags whose value names a file the project edits and csc reads: they
@@ -32,6 +35,22 @@ type inputKeyResult struct {
 	// SourceHashes maps each source, spelled as unit.Sources spells it, to the sha256 of the bytes
 	// the key read from it.
 	SourceHashes map[string]string
+	// Shape digests the same inputs as Key, in the same order, except the references to project
+	// assemblies, which ProjectReferences carries one by one instead.
+	// Why they are split out: a reference still compiling is read from Unity's build when a unit
+	// starts before it finishes, and from this run's output when it changed. Comparing the rest
+	// apart from it tells whether a recorded compile can still be replayed once it finishes.
+	Shape string
+	// ProjectReferences maps each project assembly the unit references, in the plan or not, to the
+	// sha256 of the line Key holds for it and whether that line reads this run's output.
+	// Why the plan does not decide which references go here: a reference entering or leaving the
+	// plan leaves the bytes of Key as they were, so it must leave these as they were too.
+	ProjectReferences map[string]resultstore.ReferenceIdentity
+}
+
+// identity is what a record of a compile under this key is kept with.
+func (result inputKeyResult) identity() resultstore.KeyIdentity {
+	return resultstore.KeyIdentity{Key: result.Key, Shape: result.Shape, ProjectReferences: result.ProjectReferences}
 }
 
 // computeInputKey digests everything that decides what csc reports for one assembly, so that two
@@ -52,8 +71,54 @@ func computeInputKey(
 	if err != nil {
 		return inputKeyResult{}, err
 	}
+	shape, projectReferences, err := computeShape(projectRoot, paths, plan, unit, sourceHashes)
+	if err != nil {
+		return inputKeyResult{}, err
+	}
 
-	return inputKeyResult{Key: key, SourceHashes: sourceHashes}, nil
+	return inputKeyResult{
+		Key: key, SourceHashes: sourceHashes, Shape: shape, ProjectReferences: projectReferences,
+	}, nil
+}
+
+// computeShape digests the parts of the input key in the same order, writing the sources from the
+// hashes the key read and leaving each project assembly reference out of the digest, and reports
+// the identity of each of those references apart.
+// Why the sources are not read again: the shape must describe the very bytes the key does.
+func computeShape(
+	projectRoot string, paths EditorCompilerPaths, plan BuildPlan, unit CompileUnit,
+	sourceHashes map[string]string,
+) (string, map[string]resultstore.ReferenceIdentity, error) {
+	projectReferences := map[string]resultstore.ReferenceIdentity{}
+	parts := keyParts(projectRoot, paths, plan, unit, func(digest hash.Hash) error {
+		writeHashedSources(digest, sourceHashes)
+
+		return nil
+	})
+	parts[referencesPartIndex].write = func(digest hash.Hash) error {
+		return writeShapeReferenceIdentity(digest, projectRoot, plan, unit, projectReferences)
+	}
+	digest := sha256.New()
+	for _, part := range parts {
+		if err := part.write(digest); err != nil {
+			return "", nil, err
+		}
+	}
+
+	return hex.EncodeToString(digest.Sum(nil)), projectReferences, nil
+}
+
+// computeProjectReferences reports the identity of each project assembly the unit references,
+// reading those references alone.
+// Why apart from the key: it answers whether a record can still apply without reading the sources,
+// and differs in most cases where the answer is no.
+func computeProjectReferences(
+	projectRoot string, plan BuildPlan, unit CompileUnit,
+) (map[string]resultstore.ReferenceIdentity, error) {
+	projectReferences := map[string]resultstore.ReferenceIdentity{}
+	err := writeShapeReferenceIdentity(io.Discard, projectRoot, plan, unit, projectReferences)
+
+	return projectReferences, err
 }
 
 // keyStillHolds reports whether the unit's inputs still give the key the run started from.
@@ -122,6 +187,9 @@ var keyPartNames = []string{
 	"compiler", "response file", "source list", "references", "analyzers", "analyzer inputs", "output name",
 }
 
+// referencesPartIndex is where keyParts digests the references.
+const referencesPartIndex = 3
+
 // keyParts lists every kind of input of one unit, letting the caller decide how the sources go in.
 func keyParts(
 	projectRoot string, paths EditorCompilerPaths, plan BuildPlan, unit CompileUnit,
@@ -131,7 +199,7 @@ func keyParts(
 		{keyPartNames[0], func(digest hash.Hash) error { return writeCompilerIdentity(digest, paths) }},
 		{keyPartNames[1], func(digest hash.Hash) error { return writeResponseFileIdentity(digest, unit.Assembly) }},
 		{keyPartNames[2], sourceWriter},
-		{keyPartNames[3], func(digest hash.Hash) error {
+		{keyPartNames[referencesPartIndex], func(digest hash.Hash) error {
 			return writeReferenceIdentity(digest, projectRoot, plan, unit)
 		}},
 		{keyPartNames[4], func(digest hash.Hash) error {
@@ -223,6 +291,18 @@ func writeSourceIdentity(
 	return nil
 }
 
+// writeHashedSources writes the same lines writeSourceIdentity writes, from hashes it already read.
+func writeHashedSources(digest io.Writer, hashes map[string]string) {
+	ordered := make([]string, 0, len(hashes))
+	for source := range hashes {
+		ordered = append(ordered, source)
+	}
+	sort.Strings(ordered)
+	for _, source := range ordered {
+		_, _ = fmt.Fprintf(digest, "source\x00%s\x00%s\n", filepath.ToSlash(source), hashes[source])
+	}
+}
+
 // writeSourceNames records which sources the assembly compiles, without what they hold.
 func writeSourceNames(digest hash.Hash, sources []string) {
 	ordered := append([]string{}, sources...)
@@ -240,24 +320,62 @@ func writeSourceNames(digest hash.Hash, sources []string) {
 // is read by timestamp, which moves whenever Unity rebuilt it, and a compile that did not need it
 // costs less than a missed error.
 func writeReferenceIdentity(
-	digest hash.Hash, projectRoot string, plan BuildPlan, unit CompileUnit,
+	digest io.Writer, projectRoot string, plan BuildPlan, unit CompileUnit,
 ) error {
 	for _, reference := range unit.Assembly.References {
-		resolved := rewriteReference(projectRoot, plan, unit, reference)
-		path := projectPath(projectRoot, resolved)
-		if isUnderDirectory(resolved, plan.OutputDir) {
-			if err := writeFileContentEntry(digest, "produced-reference", resolved, path); err != nil {
-				return err
-			}
-
-			continue
-		}
-		if err := writeStatEntry(digest, "reference", resolved, path); err != nil {
+		if _, err := writeReferenceLine(digest, projectRoot, plan, unit, reference); err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+// writeShapeReferenceIdentity writes the lines writeReferenceIdentity writes for every reference
+// that is not a project assembly, and puts the sha256 of the line of each one that is, with which
+// file that line reads, into projectReferences under its name.
+// Why a name seen twice is simply overwritten: the same reference resolves to the same line.
+func writeShapeReferenceIdentity(
+	digest io.Writer, projectRoot string, plan BuildPlan, unit CompileUnit,
+	projectReferences map[string]resultstore.ReferenceIdentity,
+) error {
+	for _, reference := range unit.Assembly.References {
+		name, isProjectAssembly := projectAssemblyReferenceName(reference, plan.DagDir)
+		if !isProjectAssembly {
+			if _, err := writeReferenceLine(digest, projectRoot, plan, unit, reference); err != nil {
+				return err
+			}
+
+			continue
+		}
+		var line bytes.Buffer
+		produced, err := writeReferenceLine(&line, projectRoot, plan, unit, reference)
+		if err != nil {
+			return err
+		}
+		sum := sha256.Sum256(line.Bytes())
+		kind := resultstore.UnityReference
+		if produced {
+			kind = resultstore.ProducedReference
+		}
+		projectReferences[name] = resultstore.ReferenceIdentity{Kind: kind, Hash: hex.EncodeToString(sum[:])}
+	}
+
+	return nil
+}
+
+// writeReferenceLine writes the line one reference contributes to the key, and reports whether that
+// line reads this run's output rather than Unity's build.
+func writeReferenceLine(
+	digest io.Writer, projectRoot string, plan BuildPlan, unit CompileUnit, reference string,
+) (bool, error) {
+	resolved := rewriteReference(projectRoot, plan, unit, reference)
+	path := projectPath(projectRoot, resolved)
+	if isUnderDirectory(resolved, plan.OutputDir) {
+		return true, writeFileContentEntry(digest, "produced-reference", resolved, path)
+	}
+
+	return false, writeStatEntry(digest, "reference", resolved, path)
 }
 
 // writeAnalyzerIdentity records the analyzer assemblies csc loads, which are shipped rather than
@@ -360,7 +478,7 @@ func splitFlag(line string) (string, string, bool) {
 }
 
 // writeStatEntry records a file by where it is, how big it is and when it last changed.
-func writeStatEntry(digest hash.Hash, kind string, name string, path string) error {
+func writeStatEntry(digest io.Writer, kind string, name string, path string) error {
 	info, err := os.Stat(path)
 	if err != nil {
 		return fmt.Errorf("failed to read %s: %w", path, err)
@@ -372,7 +490,7 @@ func writeStatEntry(digest hash.Hash, kind string, name string, path string) err
 }
 
 // writeFileContentEntry records a file by where it is and what it holds.
-func writeFileContentEntry(digest hash.Hash, kind string, name string, path string) error {
+func writeFileContentEntry(digest io.Writer, kind string, name string, path string) error {
 	file, err := os.Open(path)
 	if err != nil {
 		return fmt.Errorf("failed to read %s: %w", path, err)

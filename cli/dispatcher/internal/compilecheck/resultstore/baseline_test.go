@@ -30,7 +30,7 @@ func TestHashGeneratedFilesRecordsOnlyCSharpFiles(t *testing.T) {
 func TestLoadBaselineReportsABaselineOfAnotherFormat(t *testing.T) {
 	directoryPath := newRecordedOutputs(t)
 	store := directoryStore(directoryPath)
-	if err := store.RecordCompile("Alpha", "input", CompileResult[testDiagnostic]{Succeeded: true}, alphaOutputs()); err != nil {
+	if err := store.RecordCompile("Alpha", KeyIdentity{Key: "input"}, CompileResult[testDiagnostic]{Succeeded: true}, alphaOutputs()); err != nil {
 		t.Fatalf("failed to write the manifest: %v", err)
 	}
 	if err := writeBaselineRecord(directoryPath, "Alpha", baselineRecord{
