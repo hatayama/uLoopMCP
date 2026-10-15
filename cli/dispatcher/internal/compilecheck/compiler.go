@@ -90,6 +90,20 @@ type Compiler struct {
 	Run         CommandRunner
 	// FastPath checks only the changed files when it can; nil compiles every unit in full.
 	FastPath *fastPathRunner
+	// compareSurface stands in for the comparison of a unit's reference assembly with Unity's; nil
+	// compares the two files. Why it can be replaced: the tests have to see which units the run
+	// compares at all, and reading two files leaves nothing behind to count.
+	compareSurface func(projectRoot string, plan BuildPlan, unit CompileUnit) bool
+}
+
+// keptSurface reports whether compiling this unit left its reference assembly describing the same
+// public surface as the one the last Unity build produced.
+func (c Compiler) keptSurface(plan BuildPlan, unit CompileUnit) bool {
+	if c.compareSurface != nil {
+		return c.compareSurface(c.ProjectRoot, plan, unit)
+	}
+
+	return referenceSurfaceUnchanged(c.ProjectRoot, plan, unit)
 }
 
 // CompileUnit compiles one assembly and reports the diagnostics csc produced for it.

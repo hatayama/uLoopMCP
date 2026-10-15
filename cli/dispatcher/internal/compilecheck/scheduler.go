@@ -209,7 +209,7 @@ func (run *schedulerRun) compileOneUnit(index int) {
 	result, err := run.compiler.reuseOrCompile(run.runContext, run.plan, unit)
 	changed := true
 	if err == nil {
-		changed = !referenceSurfaceUnchanged(run.compiler.ProjectRoot, run.plan, unit)
+		changed = !run.compiler.keptSurface(run.plan, unit)
 	}
 	run.completions <- unitCompletion{index: index, result: result, changed: changed, err: err}
 }
