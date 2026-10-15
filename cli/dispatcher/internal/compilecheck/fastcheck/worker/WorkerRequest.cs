@@ -32,4 +32,15 @@ namespace UnityCliLoop.CompileCheckWorker
 
         public string GeneratedDirectory { get; set; }
     }
+
+    /// <summary>
+    /// Asks whether the reference assembly compile-check produced for an assembly describes the same
+    /// surface, as a dependent compiles against it, as the one the last Unity build produced.
+    /// </summary>
+    internal sealed class CompareSurfaceRequest
+    {
+        public string ProducedPath { get; set; }
+
+        public string UnityBuildPath { get; set; }
+    }
 }

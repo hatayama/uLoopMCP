@@ -16,15 +16,16 @@ namespace UnityCliLoop.CompileCheckWorker
         private const int CompletedExitCode = 0;
         private const int UsageExitCode = 2;
         private const int UnexpectedFailureExitCode = 3;
-        private const string FingerprintCommandName = "fingerprint";
-        private const string CheckCommandName = "check";
+        internal const string FingerprintCommandName = "fingerprint";
+        internal const string CheckCommandName = "check";
+        internal const string CompareSurfaceCommandName = "compare-surface";
         private const string RoslynDirectorySidecarFileName = "roslyn-directory.txt";
 
         private static int Main(string[] args)
         {
-            if (args.Length != 3 || (args[0] != FingerprintCommandName && args[0] != CheckCommandName))
+            if (args.Length != 3 || !IsCommand(args[0]))
             {
-                Console.Error.WriteLine("usage: worker (fingerprint|check) <in.json> <out.json>");
+                Console.Error.WriteLine("usage: worker (fingerprint|check|compare-surface) <in.json> <out.json>");
                 return UsageExitCode;
             }
 
@@ -41,19 +42,30 @@ namespace UnityCliLoop.CompileCheckWorker
             }
         }
 
+        private static bool IsCommand(string command)
+        {
+            return command == FingerprintCommandName || command == CheckCommandName || command == CompareSurfaceCommandName;
+        }
+
+        // Runs one command on the request in inputPath and writes its response to outputPath.
         // Kept out of Main so no Roslyn type is loaded before the resolver is registered.
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private static void RunCommand(string command, string inputPath, string outputPath)
+        internal static void RunCommand(string command, string inputPath, string outputPath)
         {
-            if (command == FingerprintCommandName)
+            switch (command)
             {
-                FingerprintRequest fingerprintRequest = ReadJson<FingerprintRequest>(inputPath);
-                WriteJson(outputPath, FingerprintCommand.Run(fingerprintRequest));
-                return;
+                case FingerprintCommandName:
+                    WriteJson(outputPath, FingerprintCommand.Run(ReadJson<FingerprintRequest>(inputPath)));
+                    return;
+                case CheckCommandName:
+                    WriteJson(outputPath, ChangedFileChecker.Check(ReadJson<CheckRequest>(inputPath)));
+                    return;
+                case CompareSurfaceCommandName:
+                    WriteJson(outputPath, CompareSurfaceCommand.Run(ReadJson<CompareSurfaceRequest>(inputPath)));
+                    return;
+                default:
+                    throw new ArgumentException("unknown worker command: " + command, nameof(command));
             }
-
-            CheckRequest checkRequest = ReadJson<CheckRequest>(inputPath);
-            WriteJson(outputPath, ChangedFileChecker.Check(checkRequest));
         }
 
         private static T ReadJson<T>(string path)
