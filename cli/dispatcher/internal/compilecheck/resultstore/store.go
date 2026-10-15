@@ -1,12 +1,14 @@
 // Package resultstore keeps what earlier runs of compile-check recorded for each assembly in one
 // output directory, and is the only code that reads or writes those records.
 //
-// A store keeps three records per assembly:
+// A store keeps four records per assembly:
 //   - the result of its last compile: the inputs it ran on (as a key), what it reported, and a hash
 //     of every output it wrote;
 //   - the baseline of the changed-files check: what the last successful full compile saw of each
 //     source, its non-source inputs and the worker build that fingerprinted it;
-//   - the generator output that full compile saved.
+//   - the generator output that full compile saved;
+//   - the result of its last changed-files check: the inputs, the baseline and the worker build it
+//     checked with, and what it reported.
 //
 // Contract:
 //   - Records are written through a temporary file and renamed into place, so a run stopped while
@@ -21,6 +23,8 @@
 //     "no baseline: the last full compile did not record one",
 //     "no baseline: it was recorded by another version of compile-check",
 //     "baseline compile is no longer on disk".
+//   - A changed-files check is reusable only under the input key, the baseline and the worker build
+//     it was recorded with, and is never recorded without all three.
 //   - Forget removes every kind of record of an assembly. It does not touch the assembly's outputs,
 //     and the store never creates the generator output directory; it only names where it is.
 package resultstore
@@ -54,8 +58,8 @@ func (s Store[D]) directoryPath() string {
 	return filepath.Join(s.projectRoot, s.outputDir)
 }
 
-// Forget removes every record of the assembly: its compile result, its baseline, and its saved
-// generator output.
+// Forget removes every record of the assembly: its compile result, its baseline, its saved generator
+// output, and its last changed-files check.
 func (s Store[D]) Forget(assembly string) error {
 	names := []string{
 		// Why the compile result goes with the outputs: it describes those very files, so leaving it
@@ -74,6 +78,12 @@ func (s Store[D]) Forget(assembly string) error {
 	generatedPath := filepath.Join(s.directoryPath(), assembly+generatedDirectoryExtension)
 	if err := os.RemoveAll(generatedPath); err != nil {
 		return fmt.Errorf("failed to remove %s: %w", generatedPath, err)
+	}
+
+	// The last changed-files check was checked against the compile whose records are going.
+	fastResult := fastResultPath(s.directoryPath(), assembly)
+	if err := os.Remove(fastResult); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("failed to remove %s: %w", fastResult, err)
 	}
 
 	return nil
