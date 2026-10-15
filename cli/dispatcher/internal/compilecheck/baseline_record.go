@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/hatayama/unity-cli-loop/dispatcher/internal/compilecheck/fastcheck"
+	"github.com/hatayama/unity-cli-loop/dispatcher/internal/compilecheck/resultstore"
 )
 
 // RecordBaseline records what the next changed-files check of a unit compares against, after a
@@ -56,9 +57,9 @@ func (runner *fastPathRunner) RecordBaseline(
 		return err
 	}
 
-	return c.records(plan).recordBaseline(unit.Assembly.AssemblyName, baselineInputs{
+	return c.records(plan).RecordBaseline(unit.Assembly.AssemblyName, resultstore.BaselineInputs{
 		InputKey:     keyResult.Key,
-		NonSourceKey: nonSourceKey,
+		NonSourceKey: resultstore.KeyDigest(nonSourceKey),
 		WorkerKey:    worker.Key,
 		Files:        files,
 	})
@@ -67,8 +68,8 @@ func (runner *fastPathRunner) RecordBaseline(
 // baselineFiles pairs each source's content hash, as the input key read it, with its fingerprint.
 func baselineFiles(
 	projectRoot string, unit CompileUnit, keyResult inputKeyResult, fingerprints fastcheck.FingerprintResponse,
-) (map[string]baselineFile, error) {
-	files := make(map[string]baselineFile, len(unit.Sources))
+) (map[string]resultstore.BaselineFile, error) {
+	files := make(map[string]resultstore.BaselineFile, len(unit.Sources))
 	for _, source := range unit.Sources {
 		absolute := projectPath(projectRoot, source)
 		fingerprint, hasFingerprint := fingerprints.Fingerprints[absolute]
@@ -79,7 +80,7 @@ func baselineFiles(
 		if contentHash != keyResult.SourceHashes[source] {
 			return nil, fmt.Errorf("source changed during the compile: %s", source)
 		}
-		files[source] = baselineFile{ContentHash: contentHash, Fingerprint: fingerprint}
+		files[source] = resultstore.BaselineFile{ContentHash: contentHash, Fingerprint: fingerprint}
 	}
 
 	return files, nil

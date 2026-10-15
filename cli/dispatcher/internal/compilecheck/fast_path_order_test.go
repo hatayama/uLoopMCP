@@ -13,7 +13,7 @@ import (
 // matches the baseline, and the check that it is gone could run anywhere in the order unnoticed.
 func (project *fastPathProject) recordBaselineWithGeneratorOutput(t *testing.T) string {
 	t.Helper()
-	generatedDirectoryPath := project.records().generatedDirectory("Alpha")
+	generatedDirectoryPath := project.records().GeneratedDirectory("Alpha")
 	recorder := newCachedSchedulerRecorder("Alpha", "Beta")
 	recorder.during = func(unit string) {
 		if unit == "Alpha" {

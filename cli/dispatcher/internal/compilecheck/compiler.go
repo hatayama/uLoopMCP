@@ -108,7 +108,7 @@ func (c Compiler) CompileUnit(
 	// Why the generator output directory is created here: the csc of Roslyn 4.3 (Unity 2022.3) creates
 	// the folder of each generator under it but not the directory itself, and fails every generated
 	// file with CS0016 when it is missing. Newer Roslyn creates it either way.
-	generatedPath := filepath.Join(c.ProjectRoot, c.records(plan).generatedDirectory(unit.Assembly.AssemblyName))
+	generatedPath := filepath.Join(c.ProjectRoot, c.records(plan).GeneratedDirectory(unit.Assembly.AssemblyName))
 	if err := os.MkdirAll(generatedPath, outputDirPermissions); err != nil {
 		return UnitResult{}, fmt.Errorf("failed to create %s: %w", generatedPath, err)
 	}
@@ -116,7 +116,7 @@ func (c Compiler) CompileUnit(
 	// Why the generator output is saved: a later fast check reads it instead of running the generators.
 	responseFilePath, err := writeRewrittenResponseFile(c.ProjectRoot, plan, unit,
 		unit.Assembly.AssemblyName+responseFileExtension,
-		[]string{quoteFlag(generatedFilesOutFlagPrefix, filepath.ToSlash(c.records(plan).generatedDirectory(unit.Assembly.AssemblyName)))})
+		[]string{quoteFlag(generatedFilesOutFlagPrefix, filepath.ToSlash(c.records(plan).GeneratedDirectory(unit.Assembly.AssemblyName)))})
 	if err != nil {
 		return UnitResult{}, err
 	}
@@ -168,7 +168,7 @@ func (c Compiler) removeUnitOutputs(plan BuildPlan, unit CompileUnit) error {
 		}
 	}
 
-	return c.records(plan).forget(unit.Assembly.AssemblyName)
+	return c.records(plan).Forget(unit.Assembly.AssemblyName)
 }
 
 // buildUnitResult turns one compiler invocation's output into the result for its assembly.

@@ -1,4 +1,4 @@
-package compilecheck
+package resultstore
 
 import (
 	"encoding/json"
@@ -24,16 +24,16 @@ func newRecordedOutputs(t *testing.T) string {
 }
 
 // directoryStore opens the records kept directly in directoryPath.
-func directoryStore(directoryPath string) recordStore {
-	return openRecordStore(directoryPath, "")
+func directoryStore(directoryPath string) Store[testDiagnostic] {
+	return Open[testDiagnostic](directoryPath, "")
 }
 
 // storedResult is the result the tests record and expect to read back unchanged.
-func storedResult() recordedCompile {
-	return recordedCompile{
+func storedResult() CompileResult[testDiagnostic] {
+	return CompileResult[testDiagnostic]{
 		Succeeded: false,
-		Diagnostics: []Diagnostic{{
-			Severity: severityError,
+		Diagnostics: []testDiagnostic{{
+			Severity: "error",
 			Code:     "CS0103",
 			Message:  "The name 'Missing' does not exist in the current context",
 			File:     filepath.Join("Assets", "Alpha", "Alpha.cs"),
@@ -46,7 +46,7 @@ func storedResult() recordedCompile {
 // recordResult stores one compile of Alpha's outcome under a key.
 func recordResult(t *testing.T, directoryPath string, key string) {
 	t.Helper()
-	if err := directoryStore(directoryPath).recordCompile("Alpha", key, storedResult(), alphaOutputs()); err != nil {
+	if err := directoryStore(directoryPath).RecordCompile("Alpha", key, storedResult(), alphaOutputs()); err != nil {
 		t.Fatalf("failed to write the manifest: %v", err)
 	}
 }
@@ -64,7 +64,7 @@ func TestReusableResultReplaysTheRecordedDiagnostics(t *testing.T) {
 	directoryPath := newRecordedOutputs(t)
 	recordResult(t, directoryPath, "key")
 
-	result, reusable := directoryStore(directoryPath).reusableResult("Alpha", "key")
+	result, reusable := directoryStore(directoryPath).Reusable("Alpha", "key")
 
 	if !reusable {
 		t.Fatal("expected the recorded result to be reusable")
@@ -82,7 +82,7 @@ func TestReusableResultRejectsAnotherKey(t *testing.T) {
 	directoryPath := newRecordedOutputs(t)
 	recordResult(t, directoryPath, "key")
 
-	if _, reusable := directoryStore(directoryPath).reusableResult("Alpha", "other key"); reusable {
+	if _, reusable := directoryStore(directoryPath).Reusable("Alpha", "other key"); reusable {
 		t.Error("a result recorded for other inputs should not be reused")
 	}
 }
@@ -95,7 +95,7 @@ func TestReusableResultRejectsAChangedOutput(t *testing.T) {
 
 	writeOutputFile(t, directoryPath, "Alpha"+referenceAssemblyExtension, "another surface")
 
-	if _, reusable := directoryStore(directoryPath).reusableResult("Alpha", "key"); reusable {
+	if _, reusable := directoryStore(directoryPath).Reusable("Alpha", "key"); reusable {
 		t.Error("a changed output should stop the reuse")
 	}
 }
@@ -109,7 +109,7 @@ func TestReusableResultRejectsAMissingOutput(t *testing.T) {
 		t.Fatalf("failed to remove the output: %v", err)
 	}
 
-	if _, reusable := directoryStore(directoryPath).reusableResult("Alpha", "key"); reusable {
+	if _, reusable := directoryStore(directoryPath).Reusable("Alpha", "key"); reusable {
 		t.Error("a missing output should stop the reuse")
 	}
 }
@@ -120,7 +120,7 @@ func TestReusableResultRejectsAnUnreadableManifest(t *testing.T) {
 	directoryPath := newRecordedOutputs(t)
 	writeOutputFile(t, directoryPath, "Alpha.result.json", "{not json")
 
-	if _, reusable := directoryStore(directoryPath).reusableResult("Alpha", "key"); reusable {
+	if _, reusable := directoryStore(directoryPath).Reusable("Alpha", "key"); reusable {
 		t.Error("an unreadable manifest should not be reused")
 	}
 }
@@ -134,7 +134,7 @@ func TestReusableResultRejectsAnotherFormatVersion(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to read the manifest: %v", err)
 	}
-	var manifest unitResultManifest
+	var manifest unitResultManifest[testDiagnostic]
 	if err := json.Unmarshal(content, &manifest); err != nil {
 		t.Fatalf("failed to parse the manifest: %v", err)
 	}
@@ -147,7 +147,7 @@ func TestReusableResultRejectsAnotherFormatVersion(t *testing.T) {
 		t.Fatalf("failed to write the manifest back: %v", err)
 	}
 
-	if _, reusable := directoryStore(directoryPath).reusableResult("Alpha", "key"); reusable {
+	if _, reusable := directoryStore(directoryPath).Reusable("Alpha", "key"); reusable {
 		t.Error("a manifest of another format version should not be reused")
 	}
 }
@@ -163,7 +163,7 @@ func TestRecordCompileRecordsACompileThatWroteNothing(t *testing.T) {
 	}
 	recordResult(t, directoryPath, "key")
 
-	result, reusable := directoryStore(directoryPath).reusableResult("Alpha", "key")
+	result, reusable := directoryStore(directoryPath).Reusable("Alpha", "key")
 
 	if !reusable {
 		t.Fatal("expected a compile that wrote nothing to be reusable")
@@ -179,7 +179,7 @@ func TestRecordCompileReportsAFailedRename(t *testing.T) {
 	directoryPath := newRecordedOutputs(t)
 	blockManifestPath(t, manifestPath(directoryPath, "Alpha"))
 
-	err := directoryStore(directoryPath).recordCompile("Alpha", "key", storedResult(), alphaOutputs())
+	err := directoryStore(directoryPath).RecordCompile("Alpha", "key", storedResult(), alphaOutputs())
 
 	if err == nil || !strings.HasPrefix(err.Error(), "failed to write "+manifestPath(directoryPath, "Alpha")+":") {
 		t.Fatalf("err = %v", err)
@@ -195,7 +195,7 @@ func TestRecordCompileReportsAFailedRename(t *testing.T) {
 func TestRecordCompileReportsAMissingOutputDirectory(t *testing.T) {
 	directoryPath := filepath.Join(t.TempDir(), "missing")
 
-	err := directoryStore(directoryPath).recordCompile("Alpha", "key", storedResult(), alphaOutputs())
+	err := directoryStore(directoryPath).RecordCompile("Alpha", "key", storedResult(), alphaOutputs())
 
 	if err == nil || !strings.HasPrefix(err.Error(), "failed to write "+manifestPath(directoryPath, "Alpha")+":") {
 		t.Fatalf("err = %v", err)
@@ -236,12 +236,12 @@ func TestForgetRemovesTheManifestTheBaselineAndTheGeneratorOutput(t *testing.T) 
 	recordResult(t, directoryPath, "key")
 	writeOutputFile(t, directoryPath, "Alpha"+baselineRecordExtension, "{}")
 	generatedPath := filepath.Join(directoryPath, "Alpha"+generatedDirectoryExtension, "Nested")
-	if err := os.MkdirAll(generatedPath, outputDirPermissions); err != nil {
+	if err := os.MkdirAll(generatedPath, testDirectoryPermissions); err != nil {
 		t.Fatalf("failed to create the generated directory: %v", err)
 	}
 	writeOutputFile(t, generatedPath, "G.cs", "class G {}")
 
-	if err := directoryStore(directoryPath).forget("Alpha"); err != nil {
+	if err := directoryStore(directoryPath).Forget("Alpha"); err != nil {
 		t.Fatalf("expected the records to be removed, got error: %v", err)
 	}
 

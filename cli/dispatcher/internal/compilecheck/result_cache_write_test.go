@@ -29,7 +29,7 @@ func TestUnitOutputNamesSkipsAnAbsentReferenceAssemblyPath(t *testing.T) {
 func TestRemoveUnitOutputsLeavesNoRecords(t *testing.T) {
 	project := newFastPathProject(t, fastPathMinimumSources)
 	project.recordBaseline(t)
-	generatedPath := filepath.Join(project.root, project.records().generatedDirectory("Alpha"))
+	generatedPath := filepath.Join(project.root, project.records().GeneratedDirectory("Alpha"))
 	if _, err := os.Stat(generatedPath); err != nil {
 		t.Fatalf("expected the compile to leave its generator output directory: %v", err)
 	}

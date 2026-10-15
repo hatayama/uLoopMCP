@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/hatayama/unity-cli-loop/dispatcher/internal/compilecheck/fastcheck"
+	"github.com/hatayama/unity-cli-loop/dispatcher/internal/compilecheck/resultstore"
 )
 
 const (
@@ -78,7 +79,7 @@ func (runner *fastPathRunner) Try(
 	nonSourceKey nonSourceIdentity,
 ) fastPathAttempt {
 	records := c.records(plan)
-	baseline, reason := records.loadBaseline(unit.Assembly.AssemblyName)
+	baseline, reason := records.LoadBaseline(unit.Assembly.AssemblyName)
 	if reason != "" {
 		return fallBack(reason)
 	}
@@ -88,10 +89,10 @@ func (runner *fastPathRunner) Try(
 	}
 	if nonSourceKey.Key != baseline.NonSourceKey.Key {
 		return fallBack("inputs other than source contents changed: " +
-			strings.Join(changedInputKinds(nonSourceKey, baseline.NonSourceKey), ", "))
+			strings.Join(changedInputKinds(nonSourceKey, nonSourceIdentity(baseline.NonSourceKey)), ", "))
 	}
 
-	if !records.generatorOutputUnchanged(baseline) {
+	if !records.GeneratorOutputUnchanged(baseline) {
 		return fallBack("generator output of the baseline is gone")
 	}
 
@@ -114,7 +115,7 @@ func (runner *fastPathRunner) Try(
 // last full compile reported for the files that did not change.
 func (runner *fastPathRunner) check(
 	ctx context.Context, c Compiler, plan BuildPlan, unit CompileUnit,
-	baseline storedBaseline, changed []string,
+	baseline resultstore.Baseline[Diagnostic], changed []string,
 ) fastPathAttempt {
 	startedAt := time.Now()
 	worker, err := runner.Worker.Ensure(ctx)
@@ -174,7 +175,7 @@ func projectRelativeReason(projectRoot string, reason string, changed []string) 
 
 // buildCheckRequest names, in absolute paths, what the worker checks and against which baseline.
 func buildCheckRequest(
-	projectRoot string, baseline storedBaseline, responseFilePath string, changed []string,
+	projectRoot string, baseline resultstore.Baseline[Diagnostic], responseFilePath string, changed []string,
 ) fastcheck.CheckRequest {
 	request := fastcheck.CheckRequest{
 		ProjectRoot:          projectRoot,
@@ -196,7 +197,7 @@ func buildCheckRequest(
 
 // changedSources lists the sources whose content differs from the baseline, using the hashes the
 // input key read rather than reading the files again.
-func changedSources(unit CompileUnit, keyResult inputKeyResult, files map[string]baselineFile) []string {
+func changedSources(unit CompileUnit, keyResult inputKeyResult, files map[string]resultstore.BaselineFile) []string {
 	changed := []string{}
 	for _, source := range unit.Sources {
 		if keyResult.SourceHashes[source] != files[source].ContentHash {
