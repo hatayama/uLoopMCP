@@ -14,6 +14,7 @@ import (
 const (
 	fingerprintCommandName = "fingerprint"
 	checkCommandName       = "check"
+	compareSurfaceCommand  = "compare-surface"
 	defaultWorkerTimeout   = 60 * time.Second
 	requestFileSuffix      = ".in.json"
 	responseFileSuffix     = ".out.json"
@@ -25,6 +26,13 @@ const (
 	DeclarationChangedOutcome = "DeclarationChanged"
 	// UnsupportedOutcome means the assembly uses something the changed-files check cannot handle.
 	UnsupportedOutcome = "Unsupported"
+
+	// SameSurfaceOutcome means every assembly compiling against either reference assembly sees the
+	// same API.
+	SameSurfaceOutcome = "same"
+	// DifferentSurfaceOutcome means the two reference assemblies may show a dependent a different API,
+	// including when the worker could not read one of them.
+	DifferentSurfaceOutcome = "different"
 )
 
 // The request and response types mirror the worker's JSON contract field for field. Field names
@@ -60,6 +68,19 @@ type CheckResponse struct {
 	Diagnostics        []WorkerDiagnostic
 	UncheckedCodes     []string // sorted, unique
 	GeneratorsNotRerun bool
+}
+
+// CompareSurfaceRequest asks whether two reference assemblies of one assembly show its dependents
+// the same API.
+type CompareSurfaceRequest struct {
+	ProducedPath   string // absolute
+	UnityBuildPath string // absolute
+}
+
+// CompareSurfaceResponse is the answer of one surface comparison.
+type CompareSurfaceResponse struct {
+	Outcome string
+	Detail  string // the first line of the two descriptions that differs, or why one could not be read
 }
 
 // WorkerDiagnostic is one error or warning in a changed file, with a 1-based line and column.
@@ -105,6 +126,22 @@ func (c Client) Check(ctx context.Context, request CheckRequest) (CheckResponse,
 		return response, nil
 	default:
 		return CheckResponse{}, fmt.Errorf("changed-files check worker returned an unknown outcome %q", response.Outcome)
+	}
+}
+
+// CompareSurface asks whether two reference assemblies show their dependents the same API.
+func (c Client) CompareSurface(ctx context.Context, request CompareSurfaceRequest) (CompareSurfaceResponse, error) {
+	response := CompareSurfaceResponse{}
+	if err := c.invoke(ctx, compareSurfaceCommand, request, &response); err != nil {
+		return CompareSurfaceResponse{}, err
+	}
+
+	// Rejected here so an answer the worker does not define is never read as either.
+	switch response.Outcome {
+	case SameSurfaceOutcome, DifferentSurfaceOutcome:
+		return response, nil
+	default:
+		return CompareSurfaceResponse{}, fmt.Errorf("changed-files check worker returned an unknown outcome %q", response.Outcome)
 	}
 }
 

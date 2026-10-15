@@ -25,12 +25,13 @@ const (
 	fastPathMaximumChangedFiles = 30
 )
 
-// fastCheckWorker is what the changed-files check needs from its worker, so tests can stand in
-// for the real build and process.
+// fastCheckWorker is what the changed-files check and the surface comparison need from their
+// worker, so tests can stand in for the real build and process.
 type fastCheckWorker interface {
 	Ensure(ctx context.Context) (fastcheck.WorkerPaths, error)
 	Fingerprint(ctx context.Context, worker fastcheck.WorkerPaths, request fastcheck.FingerprintRequest) (fastcheck.FingerprintResponse, error)
 	Check(ctx context.Context, worker fastcheck.WorkerPaths, request fastcheck.CheckRequest) (fastcheck.CheckResponse, error)
+	CompareSurface(ctx context.Context, worker fastcheck.WorkerPaths, request fastcheck.CompareSurfaceRequest) (fastcheck.CompareSurfaceResponse, error)
 }
 
 // fastPathRunner checks only the changed files of a unit against the last successful full compile,
@@ -359,6 +360,12 @@ func (w *bootstrappedWorker) Check(
 	ctx context.Context, worker fastcheck.WorkerPaths, request fastcheck.CheckRequest,
 ) (fastcheck.CheckResponse, error) {
 	return w.client(worker).Check(ctx, request)
+}
+
+func (w *bootstrappedWorker) CompareSurface(
+	ctx context.Context, worker fastcheck.WorkerPaths, request fastcheck.CompareSurfaceRequest,
+) (fastcheck.CompareSurfaceResponse, error) {
+	return w.client(worker).CompareSurface(ctx, request)
 }
 
 func (w *bootstrappedWorker) client(worker fastcheck.WorkerPaths) fastcheck.Client {

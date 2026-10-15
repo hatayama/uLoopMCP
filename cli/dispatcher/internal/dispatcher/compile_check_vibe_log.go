@@ -86,6 +86,7 @@ func (logRun compileCheckVibeLog) completed(response compileCheckResponse, resul
 	context["fallbacks"] = compileCheckVibeReasons(response.FastPathFallbacks)
 	context["baseline_notes"] = compileCheckVibeReasons(response.FastPathBaselineNotes)
 	context["units"] = compileCheckVibeUnits(result.Units)
+	context["surface_checks"] = compileCheckVibeSurfaceChecks(result.Units)
 	logRun.write(level, compileCheckVibeCompleteOperation, "compile-check finished.", context)
 }
 
@@ -148,6 +149,28 @@ func compileCheckVibeUnits(units []compilecheck.UnitResult) []map[string]any {
 			"assembly":    unit.Assembly,
 			"duration_ms": unit.Duration.Milliseconds(),
 			"succeeded":   unit.Succeeded,
+		})
+	}
+
+	return entries
+}
+
+// compileCheckVibeSurfaceChecks lists every unit whose surface the worker, or its record of the same
+// comparison, settled: what it answered and how long asking took.
+// Why replayed units are kept here, unlike in units: a replayed unit is compared just the same, and
+// its verdict decides whether its dependents compile.
+func compileCheckVibeSurfaceChecks(units []compilecheck.UnitResult) []map[string]any {
+	entries := make([]map[string]any, 0, len(units))
+	for _, unit := range units {
+		if !unit.Surface.Asked {
+			continue
+		}
+		entries = append(entries, map[string]any{
+			"assembly":    unit.Assembly,
+			"verdict":     unit.Surface.Reason,
+			"detail":      unit.Surface.Detail,
+			"duration_ms": unit.Surface.Duration.Milliseconds(),
+			"from_record": unit.Surface.FromRecord,
 		})
 	}
 

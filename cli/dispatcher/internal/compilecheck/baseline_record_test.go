@@ -65,8 +65,12 @@ func TestBaselineNotRecordedForDependentUnit(t *testing.T) {
 // Verifies that an assembly with fewer sources than the minimum records no baseline.
 func TestBaselineNotRecordedForSmallAssembly(t *testing.T) {
 	project := newFastPathProject(t, fastPathMinimumSources-1)
+	// Why Alpha keeps Unity's reference assembly: a differing one is compared by the worker, which
+	// would build it for a reason other than the changed-files check.
+	recorder := newCachedSchedulerRecorder("Alpha", "Beta")
+	recorder.surfaces["Alpha"] = keptSurfaceOf("Alpha")
 
-	project.run(t, newCachedSchedulerRecorder("Alpha", "Beta"), false)
+	project.run(t, recorder, false)
 
 	if project.hasBaseline() || project.worker.ensures != 0 {
 		t.Errorf("expected no baseline and no worker for a small assembly, got %d builds", project.worker.ensures)
@@ -186,6 +190,9 @@ func TestBootstrappedWorkerBuildsAtMostOncePerRun(t *testing.T) {
 	}
 	if _, err := worker.Check(context.Background(), paths, fastcheck.CheckRequest{}); err == nil {
 		t.Error("expected a failing check call to be an error")
+	}
+	if _, err := worker.CompareSurface(context.Background(), paths, fastcheck.CompareSurfaceRequest{}); err == nil {
+		t.Error("expected a failing surface comparison to be an error")
 	}
 }
 
