@@ -82,7 +82,7 @@ A JSON payload:
 - `ReusedAssemblies`: the assemblies reported from the previous run's recorded result, without compiling
 - `BlockedAssemblies`: the assemblies not compiled because an assembly they reference has errors, as Unity's own build would stop there; fix those errors and run again
 - `FastCheckedAssemblies`: the assemblies checked on their changed files only
-- `FastChecks`: per fast-checked assembly, `ChangedFiles`, `UncheckedCodes` (rules only `--full` runs), and `GeneratorsNotRerun`
+- `FastChecks`: per fast-checked assembly, `ChangedFiles`, `UncheckedCodes` (rules only `--full` runs), `GeneratorsNotRerun`, and `Reused` (the previous run's check of the same edit, reported again)
 - `FastPathFallbacks`: `Assembly` and `Reason` for each assembly that was compiled in full instead
 - `FastPathBaselineNotes`: `Assembly` and `Reason` for each successful full compile that left no baseline for the next changed-files check
 - `SkippedAssemblies`: how many assemblies were left out: nothing they compile from changed, or every assembly they reference kept the same public surface

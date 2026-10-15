@@ -146,6 +146,10 @@ and the response file's options applied, and the diagnostics of the files that d
 carried over from the last full compile. The outputs, the result, and the baseline of that compile
 are left as they were.
 
+A second run over the same changed files - the same inputs, the same baseline, and the same worker
+build - does not call the worker again: it reports what the previous check reported, and
+`FastChecks[].Reused` says so.
+
 Otherwise the assembly is compiled in full as before, and `FastPathFallbacks` says why:
 
 - `no baseline: no full compile of this assembly is on record` (none ran yet, or a later run
@@ -173,7 +177,8 @@ Otherwise the assembly is compiled in full as before, and `FastPathFallbacks` sa
 
 A full compile that succeeds records a new baseline, `--full` runs included, so the run after it can
 use the check again. A source or another input edited while csc was compiling leaves no baseline,
-and `FastPathBaselineNotes` says why a successful full compile left none.
+and `FastPathBaselineNotes` says why a successful full compile left none. An input edited while the
+changed files were being checked leaves no record of that check, so the next run checks them again.
 
 So the first body edit is compiled in full more often than it looks:
 
@@ -203,7 +208,8 @@ What the check does not guarantee, so run `--full` before finishing:
 
 The check keeps its state next to the compile outputs: `<Assembly>.fastcheck.json` (the baseline),
 `<Assembly>.generated/` (the saved generator output, whose files the baseline records by content
-hash), and the worker build in `Library/uloop/compile-check/fastcheck-worker/<key>/`. Deleting or
+hash), `<Assembly>.fastresult.json` (the result of the last changed-files check, reported again
+while nothing it read has changed), and the worker build in `Library/uloop/compile-check/fastcheck-worker/<key>/`. Deleting or
 changing any of them only costs a full compile.
 
 ## One run per project at a time
@@ -239,7 +245,8 @@ the assemblies the check read and found nothing left to say about: the ones noth
 and the ones left out because every assembly they reference kept the same public surface.
 `FastCheckedAssemblies` names the assemblies checked on their changed files only, which are in
 neither `CompiledAssemblies` nor `ReusedAssemblies`; `FastChecks` gives each one's `ChangedFiles`,
-`UncheckedCodes`, and `GeneratorsNotRerun`, and `FastPathFallbacks` gives the `Assembly` and
+`UncheckedCodes`, `GeneratorsNotRerun`, and `Reused` (set when the run reported the previous run's
+check of the same changed files instead of checking them again), and `FastPathFallbacks` gives the `Assembly` and
 `Reason` of each assembly the check was tried on and compiled in full. `FastPathBaselineNotes`
 gives the `Assembly` and `Reason` of each successful full compile that left no baseline. The
 process exits 1 when

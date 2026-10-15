@@ -25,6 +25,10 @@ reports that failure as AD0001. `--full` turns the changed-files check off for o
 The check runs in a C# worker built on the user's machine with the Roslyn that ships with the
 Editor, so the worker uses only the public Roslyn API that Roslyn 4.3.1 already has.
 
+When an assembly's input key, its baseline, and the worker build are the same as at the previous
+check of its changed files, and everything above still holds, compile-check reports the record of
+that check without calling the worker. `FastChecks[].Reused` says it did.
+
 ## What It Guarantees
 
 - The compiler diagnostics and the analyzer diagnostics of the changed files, with the
@@ -34,6 +38,9 @@ Editor, so the worker uses only the public Roslyn API that Roslyn 4.3.1 already 
   fingerprint accepts does not change what the compiler binds or analyzes in another file, so
   their binding and flow-analysis diagnostics stay as they were. The exceptions are the
   assembly-wide diagnostics listed below.
+- A replayed check reports what checking the same files again would report: the record is looked
+  up only after every condition the check needs has been confirmed, and only for the same inputs,
+  baseline, and worker build it was recorded with.
 
 ## What It Does Not Guarantee
 
