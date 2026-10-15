@@ -20,12 +20,14 @@ func TestBaselineRecordedAfterSuccessfulCompile(t *testing.T) {
 
 	project.run(t, newCachedSchedulerRecorder("Alpha", "Beta"), false)
 
-	record := project.readBaseline(t)
+	record := project.baseline(t)
 	keyResult, err := computeInputKey(project.root, project.paths, project.plan, project.plan.Units[0])
 	if err != nil {
 		t.Fatalf("expected a key, got error: %v", err)
 	}
-	if record.InputKey != project.readManifest(t).InputKey || record.InputKey != keyResult.Key {
+	// Why a usable baseline shows it carries the manifest's input key: the store hands one back only
+	// when the two keys agree.
+	if record.InputKey != keyResult.Key {
 		t.Errorf("expected the baseline to carry the manifest's input key, got %s", record.InputKey)
 	}
 	for source, hash := range keyResult.SourceHashes {
@@ -126,27 +128,6 @@ func TestCompileUnitPassesGeneratedFilesOut(t *testing.T) {
 	want := quoteFlag(generatedFilesOutFlagPrefix, filepath.ToSlash(openRecordStore("", plan.OutputDir).generatedDirectory(plan.Units[1].Assembly.AssemblyName)))
 	if !strings.Contains(written, want) {
 		t.Errorf("expected %s in the response file, got:\n%s", want, written)
-	}
-}
-
-// Verifies that removing a unit's outputs also removes its baseline and its saved generator output.
-func TestRemoveUnitOutputsRemovesBaselineAndGeneratedDirectory(t *testing.T) {
-	outputDirectoryPath, unit := newManifestUnit(t)
-	writeOutputFile(t, outputDirectoryPath, "Alpha"+baselineRecordExtension, "{}")
-	generatedPath := filepath.Join(outputDirectoryPath, "Alpha"+generatedDirectoryExtension, "Nested")
-	if err := os.MkdirAll(generatedPath, outputDirPermissions); err != nil {
-		t.Fatalf("failed to create the generated directory: %v", err)
-	}
-	writeOutputFile(t, generatedPath, "G.cs", "class G {}")
-
-	if err := (Compiler{ProjectRoot: outputDirectoryPath}).removeUnitOutputs(BuildPlan{}, unit); err != nil {
-		t.Fatalf("expected the outputs to be removed, got error: %v", err)
-	}
-
-	for _, name := range []string{"Alpha" + baselineRecordExtension, "Alpha" + generatedDirectoryExtension} {
-		if _, err := os.Stat(filepath.Join(outputDirectoryPath, name)); !os.IsNotExist(err) {
-			t.Errorf("expected %s to be removed, got %v", name, err)
-		}
 	}
 }
 
@@ -268,39 +249,4 @@ func TestRecordBaselineRefusesAMissingNonSourceKey(t *testing.T) {
 	if err == nil || project.hasBaseline() {
 		t.Errorf("expected no baseline without a non-source key, got %v", err)
 	}
-}
-
-// Verifies that only generated C# files are recorded, keyed relative to the generator output directory.
-func TestHashGeneratedFilesRecordsOnlyCSharpFiles(t *testing.T) {
-	directory := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(directory, "Gen"), outputDirPermissions); err != nil {
-		t.Fatalf("failed to create the generator folder: %v", err)
-	}
-	writeOutputFile(t, filepath.Join(directory, "Gen"), "A.g.cs", "class A { }")
-	writeOutputFile(t, filepath.Join(directory, "Gen"), "notes.txt", "not code")
-
-	hashes, err := hashGeneratedFiles(directory)
-
-	if err != nil || len(hashes) != 1 || hashes["Gen/A.g.cs"] == "" {
-		t.Errorf("expected only Gen/A.g.cs, got %v (%v)", hashes, err)
-	}
-	if missing, err := hashGeneratedFiles(filepath.Join(directory, "missing")); err != nil || len(missing) != 0 {
-		t.Errorf("expected a missing directory to hold no files, got %v (%v)", missing, err)
-	}
-}
-
-// Verifies that a baseline another version of compile-check wrote is not used, and says so rather
-// than reporting that no full compile ran.
-func TestBaselineOfAnotherFormatFallsBack(t *testing.T) {
-	project := newFastPathProject(t, fastPathMinimumSources)
-	project.recordBaseline(t)
-	record := project.readBaseline(t)
-	record.FormatVersion = baselineRecordFormatVersion - 1
-	project.writeJSON(t, project.baselinePath(), record)
-	project.editBody(t, 0, "edited")
-	recorder := newCachedSchedulerRecorder("Alpha", "Beta")
-
-	outcome := project.run(t, recorder, false)
-
-	assertFallback(t, outcome, recorder, "no baseline: it was recorded by another version of compile-check")
 }

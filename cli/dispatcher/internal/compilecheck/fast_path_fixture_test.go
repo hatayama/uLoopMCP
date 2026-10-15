@@ -4,8 +4,8 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -221,74 +221,71 @@ func (project *fastPathProject) recordBaseline(t *testing.T) {
 	}
 }
 
-// baselinePath names Alpha's baseline record.
-func (project *fastPathProject) baselinePath() string {
-	return filepath.Join(project.outputDirectory(), "Alpha"+baselineRecordExtension)
-}
-
-// hasBaseline reports whether Alpha has a baseline record.
+// hasBaseline reports whether Alpha has a baseline of the current format.
 func (project *fastPathProject) hasBaseline() bool {
-	_, err := os.Stat(project.baselinePath())
-
-	return err == nil
+	return project.hasBaselineOf("Alpha")
 }
 
-// readBaseline reads Alpha's baseline record.
-func (project *fastPathProject) readBaseline(t *testing.T) baselineRecord {
+// baseline reads Alpha's baseline through the store and fails the test when there is none to use.
+func (project *fastPathProject) baseline(t *testing.T) storedBaseline {
 	t.Helper()
-	record := baselineRecord{}
-	project.readJSON(t, project.baselinePath(), &record)
+	baseline, reason := project.records().loadBaseline("Alpha")
+	if reason != "" {
+		t.Fatalf("expected a usable baseline for Alpha, got %q", reason)
+	}
 
-	return record
+	return baseline
 }
 
-// readManifest reads Alpha's result manifest.
-func (project *fastPathProject) readManifest(t *testing.T) unitResultManifest {
+// generatedFileCount counts the files under the generator output a baseline points at.
+func (project *fastPathProject) generatedFileCount(t *testing.T, baseline storedBaseline) int {
 	t.Helper()
-	manifest := unitResultManifest{}
-	project.readJSON(t, project.manifestPathOf("Alpha"), &manifest)
+	count := 0
+	err := filepath.WalkDir(projectPath(project.root, baseline.GeneratedDirectory),
+		func(_ string, entry fs.DirEntry, err error) error {
+			if err == nil && !entry.IsDir() {
+				count++
+			}
 
-	return manifest
-}
-
-func (project *fastPathProject) readJSON(t *testing.T, path string, value any) {
-	t.Helper()
-	content, err := os.ReadFile(path)
+			return err
+		})
 	if err != nil {
-		t.Fatalf("failed to read %s: %v", path, err)
+		t.Fatalf("failed to read the generator output: %v", err)
 	}
-	if err := json.Unmarshal(content, value); err != nil {
-		t.Fatalf("failed to parse %s: %v", path, err)
-	}
+
+	return count
 }
 
-func (project *fastPathProject) writeJSON(t *testing.T, path string, value any) {
+// outputSnapshot hashes every file the check keeps for Alpha, keyed by its path relative to the
+// output directory, leaving out the response file the changed-files check writes for itself.
+func (project *fastPathProject) outputSnapshot(t *testing.T) map[string]string {
 	t.Helper()
-	content, err := json.Marshal(value)
-	if err != nil {
-		t.Fatalf("failed to encode %s: %v", path, err)
-	}
-	if err := os.WriteFile(path, content, 0o600); err != nil {
-		t.Fatalf("failed to write %s: %v", path, err)
-	}
-}
-
-// fileHashes hashes Alpha's outputs, manifest, and baseline, to show a run left them alone.
-func (project *fastPathProject) fileHashes(t *testing.T) map[string]string {
-	t.Helper()
-	hashes := map[string]string{}
-	for _, name := range []string{
-		"Alpha" + assemblyExtension, "Alpha" + referenceAssemblyExtension,
-		"Alpha" + resultManifestExtension, "Alpha" + baselineRecordExtension,
-	} {
-		hash, err := hashFile(filepath.Join(project.outputDirectory(), name))
-		if err != nil {
-			t.Fatalf("failed to hash %s: %v", name, err)
+	snapshot := map[string]string{}
+	err := filepath.WalkDir(project.outputDirectory(), func(path string, entry fs.DirEntry, err error) error {
+		if err != nil || entry.IsDir() {
+			return err
 		}
-		hashes[name] = hash
+		relative, err := filepath.Rel(project.outputDirectory(), path)
+		if err != nil {
+			return err
+		}
+		first, _, _ := strings.Cut(filepath.ToSlash(relative), "/")
+		if !strings.HasPrefix(first, "Alpha.") || first == "Alpha"+fastCheckResponseFileSuffix {
+			return nil
+		}
+		hash, err := hashFile(path)
+		if err != nil {
+			return err
+		}
+		snapshot[filepath.ToSlash(relative)] = hash
+
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("failed to read the output directory: %v", err)
 	}
 
-	return hashes
+	return snapshot
 }
 
 // assertFallback checks that Alpha was compiled in full for a reason starting with prefix.
