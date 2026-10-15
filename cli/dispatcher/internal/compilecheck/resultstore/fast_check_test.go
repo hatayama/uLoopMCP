@@ -118,13 +118,35 @@ func TestReusableFastCheckRejectsAnotherFormatVersion(t *testing.T) {
 	}
 }
 
-// Verifies a record that cannot be read is treated as no record.
+// Verifies a record that cannot be read is treated as no record: one that is not JSON, and one whose
+// version and keys match but one field holds a value of the wrong type, which decoding would
+// otherwise fill in only partly.
 func TestReusableFastCheckRejectsAnUnreadableRecord(t *testing.T) {
-	directoryPath := t.TempDir()
-	writeOutputFile(t, directoryPath, "Alpha"+fastResultExtension, "{not json")
+	for name, write := range map[string]func(t *testing.T, directoryPath string){
+		"not json": func(t *testing.T, directoryPath string) {
+			writeOutputFile(t, directoryPath, "Alpha"+fastResultExtension, "{not json")
+		},
+		"wrong field type": func(t *testing.T, directoryPath string) {
+			recordCheck(t, directoryPath)
+			path := fastResultPath(directoryPath, "Alpha")
+			content, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("failed to read the recorded check: %v", err)
+			}
+			rewritten := strings.Replace(string(content), `"Line":3`, `"Line":"three"`, 1)
+			if err := os.WriteFile(path, []byte(rewritten), 0o600); err != nil {
+				t.Fatalf("failed to write the recorded check back: %v", err)
+			}
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			directoryPath := t.TempDir()
+			write(t, directoryPath)
 
-	if _, found := directoryStore(directoryPath).ReusableFastCheck("Alpha", "input", checkedBaseline(), "worker"); found {
-		t.Error("an unreadable record should not be found")
+			if _, found := directoryStore(directoryPath).ReusableFastCheck("Alpha", "input", checkedBaseline(), "worker"); found {
+				t.Error("an unreadable record should not be found")
+			}
+		})
 	}
 }
 
