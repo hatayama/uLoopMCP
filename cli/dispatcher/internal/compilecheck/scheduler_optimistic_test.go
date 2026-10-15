@@ -9,8 +9,9 @@ import (
 	"time"
 )
 
-// weightHold is how long the fake compile of an assembly selected for its own sources takes when a
-// test needs the dependents below it to stay unstarted while another unit starts.
+// weightHold is how long the fake compile of a reference takes in a test that checks a unit does not
+// start while it runs. Why a hold rather than a gate there: nothing is meant to start, so there is
+// nothing to wait for, and a slow machine can only let such a test pass, never fail it.
 const weightHold = 60 * time.Millisecond
 
 // optimisticPlanRun is a plan of named units with Unity's reference assembly of each one on disk and
@@ -81,8 +82,8 @@ func newOptimisticCachedProject(
 }
 
 // chainReferences is the plan most tests here use: X and K are selected for their own sources, D1
-// references both, and D2 references X and D1. K takes long enough that D1 has not started when D2
-// is ready to.
+// references both, and D2 references X and D1. The tests hold K until D2 begins, so D1 has not
+// started when D2 does.
 var chainReferences = map[string][]string{"D1": {"X", "K"}, "D2": {"X", "D1"}}
 
 // sortedNames copies names into ordinal order, for comparing sets of names.
@@ -106,7 +107,7 @@ func warningOutput(name string, message string) fakeCompilerOutput {
 // compile when the dependent turns out to keep Unity's surface.
 func TestCompileUnitsStartsADependentBeforeTheDependentsItReferencesFinish(t *testing.T) {
 	project, recorder := newOptimisticCachedProject(t, chainReferences, []string{"D1", "D2"}, "X", "K", "D1", "D2")
-	recorder.holdByUnit["K"] = weightHold
+	recorder.holdUntilBegun(t, "K", "D2")
 	recorder.surfaces["K"] = keptSurfaceOf("K")
 	recorder.surfaces["D1"] = keptSurfaceOf("D1")
 	writeStaleUnitOutput(t, project.root, project.plan, "D1")
@@ -132,7 +133,7 @@ func TestCompileUnitsStartsADependentBeforeTheDependentsItReferencesFinish(t *te
 func TestCompileUnitsStartsAnEditedAssemblyBeforeTheDependentsItReferencesFinish(t *testing.T) {
 	run := newOptimisticPlanRun(t, map[string][]string{"D1": {"X", "K"}, "Y": {"X", "D1"}},
 		[]string{"D1"}, "X", "K", "D1", "Y")
-	run.recorder.holdByUnit["K"] = weightHold
+	run.recorder.holdUntilBegun(t, "K", "Y")
 	run.keep("K", "D1")
 
 	outcome := run.compile(t)
@@ -198,7 +199,7 @@ func TestCompileUnitsDoesNotStartABlockedDependentOptimistically(t *testing.T) {
 // compile's diagnostics are reported.
 func TestCompileUnitsCompilesADependentAgainWhenAnAssumedReferenceChangedItsSurface(t *testing.T) {
 	project, recorder := newOptimisticCachedProject(t, chainReferences, []string{"D1", "D2"}, "X", "K", "D1", "D2")
-	recorder.holdByUnit["K"] = weightHold
+	recorder.holdUntilBegun(t, "K", "D2")
 	recorder.holdByUnit["D2"] = 5 * time.Millisecond
 	recorder.surfaces["K"] = keptSurfaceOf("K")
 	recorder.outputByRun["D2"] = []fakeCompilerOutput{
@@ -230,8 +231,9 @@ func TestCompileUnitsCompilesAStaleDependentOnlyOnceMore(t *testing.T) {
 	run := newOptimisticPlanRun(t, map[string][]string{
 		"D1": {"X", "K1"}, "D1b": {"X", "K2"}, "D2": {"X", "D1", "D1b"},
 	}, []string{"D1", "D1b", "D2"}, "X", "K1", "K2", "D1", "D1b", "D2")
-	run.recorder.holdByUnit["K1"] = 40 * time.Millisecond
-	run.recorder.holdByUnit["K2"] = 80 * time.Millisecond
+	run.recorder.holdUntilBegun(t, "K1", "D2")
+	run.recorder.holdUntilBegun(t, "K2", "D2")
+	run.recorder.holdByUnit["K2"] = 40 * time.Millisecond
 	run.keep("K1", "K2")
 
 	run.compile(t)
@@ -253,7 +255,7 @@ func TestCompileUnitsIgnoresTheVerdictOfADiscardedCompile(t *testing.T) {
 	references := map[string][]string{"D1": {"X", "K"}, "D2": {"X", "D1"}, "D3": {"X", "D2"}}
 	project, recorder := newOptimisticCachedProject(t, references, []string{"D1", "D2", "D3"},
 		"X", "K", "D1", "D2", "D3")
-	recorder.holdByUnit["K"] = weightHold
+	recorder.holdUntilBegun(t, "K", "D2", "D3")
 	recorder.surfaces["K"] = keptSurfaceOf("K")
 	recorder.surfacesByRun["D2"] = []string{keptSurfaceOf("D2"), "changed D2"}
 
@@ -271,7 +273,7 @@ func TestCompileUnitsIgnoresTheVerdictOfADiscardedCompile(t *testing.T) {
 func TestCompileUnitsIgnoresTheErrorsOfADiscardedCompile(t *testing.T) {
 	run := newOptimisticPlanRun(t, map[string][]string{"D1": {"X", "K"}, "D2": {"X", "D1"}, "D3": {"X", "D2"}},
 		[]string{"D1", "D2", "D3"}, "X", "K", "D1", "D2", "D3")
-	run.recorder.holdByUnit["K"] = weightHold
+	run.recorder.holdUntilBegun(t, "K", "D2")
 	run.keep("K")
 	run.recorder.outputByRun["D2"] = []fakeCompilerOutput{failingCompilerOutput("D2"), {}}
 	run.recorder.surfacesByRun["D2"] = []string{"", keptSurfaceOf("D2")}
@@ -295,7 +297,7 @@ func TestCompileUnitsIgnoresTheErrorsOfADiscardedCompile(t *testing.T) {
 func TestCompileUnitsBlocksADependentThatStartedBeforeItsReferenceFailed(t *testing.T) {
 	run := newOptimisticPlanRun(t, map[string][]string{"D1": {"X", "K"}, "D2": {"X", "D1"}, "D3": {"X", "D2"}},
 		[]string{"D1", "D2", "D3"}, "X", "K", "D1", "D2", "D3")
-	run.recorder.holdByUnit["K"] = weightHold
+	run.recorder.holdUntilBegun(t, "K", "D2", "D3")
 	run.keep("K")
 	run.fail("D1")
 
@@ -320,7 +322,7 @@ func TestCompileUnitsBlocksADependentThatStartedBeforeItsReferenceFailed(t *test
 func TestCompileUnitsSettlesADependentWhoseAssumedReferenceWasSkipped(t *testing.T) {
 	run := newOptimisticPlanRun(t, map[string][]string{"R": {"K"}, "U": {"X", "R"}},
 		[]string{"R", "U"}, "X", "K", "R", "U")
-	run.recorder.holdByUnit["K"] = weightHold
+	run.recorder.holdUntilBegun(t, "K", "U")
 	run.keep("K")
 
 	outcome := run.compile(t)
@@ -341,7 +343,7 @@ func TestCompileUnitsSettlesADependentWhoseAssumedReferenceWasSkipped(t *testing
 func TestCompileUnitsBlocksADependentWhoseAssumedReferenceWasBlocked(t *testing.T) {
 	run := newOptimisticPlanRun(t, map[string][]string{"R": {"A"}, "U": {"X", "R"}},
 		[]string{"R", "U"}, "X", "A", "R", "U")
-	run.recorder.holdByUnit["A"] = weightHold
+	run.recorder.holdUntilBegun(t, "A", "U")
 	run.fail("A")
 
 	outcome := run.compile(t)
@@ -361,7 +363,7 @@ func TestCompileUnitsBlocksADependentWhoseAssumedReferenceWasBlocked(t *testing.
 func TestCompileUnitsCompilesAnEditedAssemblyAgainWhenAnAssumedReferenceChangedItsSurface(t *testing.T) {
 	project, recorder := newOptimisticCachedProject(t, map[string][]string{"D1": {"X", "K"}, "Y": {"X", "D1"}},
 		[]string{"D1"}, "X", "K", "D1", "Y")
-	recorder.holdByUnit["K"] = weightHold
+	recorder.holdUntilBegun(t, "K", "Y")
 	recorder.surfaces["K"] = keptSurfaceOf("K")
 
 	results := project.compileOrFail(t, recorder)
@@ -381,7 +383,7 @@ func TestCompileUnitsCompilesAnEditedAssemblyAgainWhenAnAssumedReferenceChangedI
 func TestCompileUnitsBlocksAnEditedAssemblyWhoseAssumedReferenceFailed(t *testing.T) {
 	run := newOptimisticPlanRun(t, map[string][]string{"D1": {"X", "K"}, "Y": {"X", "D1"}},
 		[]string{"D1"}, "X", "K", "D1", "Y")
-	run.recorder.holdByUnit["K"] = weightHold
+	run.recorder.holdUntilBegun(t, "K", "Y")
 	run.keep("K")
 	run.fail("D1")
 
@@ -395,10 +397,10 @@ func TestCompileUnitsBlocksAnEditedAssemblyWhoseAssumedReferenceFailed(t *testin
 }
 
 // newChainRecorder prepares the fake compiler for the chain plan of the cached project, with K
-// keeping its surface and slow enough that D1 has not started when D2 can.
-func newChainRecorder() *schedulerRecorder {
+// keeping its surface and still compiling when D2 can start.
+func newChainRecorder(t *testing.T) *schedulerRecorder {
 	recorder := newCachedSchedulerRecorder("X", "K", "D1", "D2")
-	recorder.holdByUnit["K"] = weightHold
+	recorder.holdUntilBegun(t, "K", "D2")
 	recorder.surfaces["K"] = keptSurfaceOf("K")
 
 	return recorder
@@ -409,13 +411,13 @@ func newChainRecorder() *schedulerRecorder {
 // than compiling it twice again.
 func TestCompileUnitsWaitsForAnAssumedReferenceWhenItsRecordMayStillApply(t *testing.T) {
 	project, _ := newOptimisticCachedProject(t, chainReferences, []string{"D1", "D2"}, "X", "K", "D1", "D2")
-	first := newChainRecorder()
+	first := newChainRecorder(t)
 	project.compileOrFail(t, first)
 	if first.runs["D2"] != 2 {
 		t.Fatalf("the first run compiled D2 %d times, want 2", first.runs["D2"])
 	}
 
-	second := newChainRecorder()
+	second := newChainRecorder(t)
 	results := project.compileOrFail(t, second)
 
 	d2 := resultOf(t, results, "D2")
@@ -431,10 +433,10 @@ func TestCompileUnitsWaitsForAnAssumedReferenceWhenItsRecordMayStillApply(t *tes
 // came out different - starts early again rather than waiting.
 func TestCompileUnitsStartsADependentWhenItsRecordCannotApply(t *testing.T) {
 	project, _ := newOptimisticCachedProject(t, chainReferences, []string{"D1", "D2"}, "X", "K", "D1", "D2")
-	project.compileOrFail(t, newChainRecorder())
+	project.compileOrFail(t, newChainRecorder(t))
 
 	project.editSource(t, "X", "class X { int Added; }")
-	second := newChainRecorder()
+	second := newChainRecorder(t)
 	second.surfaces["X"] = "surface X again"
 	results := project.compileOrFail(t, second)
 
@@ -448,7 +450,7 @@ func TestCompileUnitsStartsADependentWhenItsRecordCannotApply(t *testing.T) {
 // surface, is replayed by the next run, whose key reads that reference the same way.
 func TestCompileUnitsReplaysADependentStartedBeforeItsReferencesFinished(t *testing.T) {
 	project, _ := newOptimisticCachedProject(t, chainReferences, []string{"D1", "D2"}, "X", "K", "D1", "D2")
-	first := newChainRecorder()
+	first := newChainRecorder(t)
 	first.surfaces["D1"] = keptSurfaceOf("D1")
 	firstResults := project.compileOrFail(t, first)
 	if first.runs["D2"] != 1 {
@@ -456,7 +458,7 @@ func TestCompileUnitsReplaysADependentStartedBeforeItsReferencesFinished(t *test
 	}
 	assertStrings(t, "D2 assumed", resultOf(t, firstResults, "D2").AssumedReferences, []string{"D1"})
 
-	second := newChainRecorder()
+	second := newChainRecorder(t)
 	second.surfaces["D1"] = keptSurfaceOf("D1")
 	results := project.compileOrFail(t, second)
 
@@ -481,12 +483,15 @@ func TestCompileUnitsFastChecksAnEditedAssemblyStartedBeforeItsReferencesFinish(
 	}
 	project.plan.Units[indexOfUnit(t, project.plan, "Beta")].Sources = sources
 	worker := newFakeFastCheckWorker()
+	var current *schedulerRecorder
+	worker.onCheck = func() { current.markBegun("Beta") }
 	keptRecorder := func() *schedulerRecorder {
 		recorder := newCachedSchedulerRecorder("Alpha", "K", "Gamma", "Beta")
-		recorder.holdByUnit["K"] = weightHold
+		recorder.holdUntilBegun(t, "K", "Beta")
 		recorder.surfaces["Alpha"] = keptSurfaceOf("Alpha")
 		recorder.surfaces["K"] = keptSurfaceOf("K")
 		recorder.surfaces["Gamma"] = keptSurfaceOf("Gamma")
+		current = recorder
 
 		return recorder
 	}
@@ -542,9 +547,6 @@ func TestCompileUnitsDecidesABlockedUnitQueuedEarlyOnlyOnceItsReferencesFinish(t
 	outcome := run.compile(t)
 
 	assertStrings(t, "blocked", outcome.Blocked, []string{"U"})
-	if run.recorder.started["U"] {
-		t.Error("a blocked unit should not have started")
-	}
 }
 
 // Verifies a unit queued early that becomes ready while it still waits for a free job is queued

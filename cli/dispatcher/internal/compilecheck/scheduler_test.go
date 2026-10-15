@@ -68,8 +68,68 @@ type schedulerRecorder struct {
 	// surfacesByRun holds, per unit, the reference assembly the n-th invocation of it writes; an
 	// empty one writes none. An invocation past its end falls back to surfaces.
 	surfacesByRun map[string][]string
-	// startOrder lists the units in the order their invocations started.
-	startOrder []string
+	// begun names the units whose compile or changed-files check has begun.
+	begun map[string]bool
+	// heldUntilBegun holds, per unit, the units its fake invocation waits to see begun before it
+	// finishes, so a test can rely on those starting while it still runs instead of on a hold long
+	// enough under every load. gatesReleased lets every waiting invocation finish.
+	heldUntilBegun map[string][]string
+	gatesReleased  bool
+}
+
+// gateLimit is how long a held invocation waits for the units it waits on before it finishes anyway.
+// Why it finishes rather than fails: the test's own assertions then say what started in which
+// order, which says more than a timeout would.
+const gateLimit = 10 * time.Second
+
+// holdUntilBegun makes the fake invocation of unit finish only once every named unit has begun, or
+// gateLimit has passed. Every invocation still waiting is let go when the test ends.
+func (recorder *schedulerRecorder) holdUntilBegun(t *testing.T, unit string, names ...string) {
+	t.Helper()
+	recorder.mutex.Lock()
+	recorder.heldUntilBegun[unit] = names
+	recorder.mutex.Unlock()
+	t.Cleanup(func() {
+		recorder.mutex.Lock()
+		recorder.gatesReleased = true
+		recorder.mutex.Unlock()
+	})
+}
+
+// markBegun records that the named unit has begun, for a unit checked on its changed files, which
+// never reaches the fake compiler.
+func (recorder *schedulerRecorder) markBegun(name string) {
+	recorder.mutex.Lock()
+	recorder.begun[name] = true
+	recorder.mutex.Unlock()
+}
+
+// waitForGate returns once every unit the named one waits on has begun, the gates were released, or
+// gateLimit has passed.
+func (recorder *schedulerRecorder) waitForGate(name string) {
+	deadline := time.Now().Add(gateLimit)
+	for time.Now().Before(deadline) {
+		if recorder.gateOpen(name) {
+			return
+		}
+		time.Sleep(time.Millisecond)
+	}
+}
+
+// gateOpen reports whether the named unit no longer has to wait.
+func (recorder *schedulerRecorder) gateOpen(name string) bool {
+	recorder.mutex.Lock()
+	defer recorder.mutex.Unlock()
+	if recorder.gatesReleased {
+		return true
+	}
+	for _, waited := range recorder.heldUntilBegun[name] {
+		if !recorder.begun[waited] {
+			return false
+		}
+	}
+
+	return true
 }
 
 // fakeCompilerOutput is what one fake invocation prints and exits with.
@@ -81,18 +141,20 @@ type fakeCompilerOutput struct {
 // newSchedulerRecorder prepares a recorder whose units each take the same time to compile.
 func newSchedulerRecorder(hold time.Duration) *schedulerRecorder {
 	return &schedulerRecorder{
-		hold:          hold,
-		holdByUnit:    map[string]time.Duration{},
-		started:       map[string]bool{},
-		surfaces:      map[string]string{},
-		assemblies:    map[string]string{},
-		output:        map[string]fakeCompilerOutput{},
-		killedUnits:   map[string]bool{},
-		runs:          map[string]int{},
-		finished:      map[string]bool{},
-		finishedWhen:  map[string][]string{},
-		outputByRun:   map[string][]fakeCompilerOutput{},
-		surfacesByRun: map[string][]string{},
+		hold:           hold,
+		holdByUnit:     map[string]time.Duration{},
+		started:        map[string]bool{},
+		surfaces:       map[string]string{},
+		assemblies:     map[string]string{},
+		output:         map[string]fakeCompilerOutput{},
+		killedUnits:    map[string]bool{},
+		runs:           map[string]int{},
+		finished:       map[string]bool{},
+		finishedWhen:   map[string][]string{},
+		outputByRun:    map[string][]fakeCompilerOutput{},
+		surfacesByRun:  map[string][]string{},
+		begun:          map[string]bool{},
+		heldUntilBegun: map[string][]string{},
 	}
 }
 
@@ -104,7 +166,7 @@ func (recorder *schedulerRecorder) runner() CommandRunner {
 		recorder.started[name] = true
 		recorder.runs[name]++
 		run := recorder.runs[name]
-		recorder.startOrder = append(recorder.startOrder, name)
+		recorder.begun[name] = true
 		recorder.running++
 		if recorder.running > recorder.maxRunning {
 			recorder.maxRunning = recorder.running
@@ -131,6 +193,7 @@ func (recorder *schedulerRecorder) runner() CommandRunner {
 			during(name)
 		}
 		time.Sleep(hold)
+		recorder.waitForGate(name)
 
 		recorder.writeReferenceAssembly(cmd, name, run)
 		recorder.writeAssembly(cmd, name)
