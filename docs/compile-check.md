@@ -38,10 +38,25 @@ references, scripting defines and analyzers. `compile-check` replays those respo
 3. **Decide what to compile.** By default the run compiles the assemblies whose sources changed
    since the last Unity build, plus every assembly that references one of them. An assembly pulled
    in only through a reference is dropped again once everything it references has been compiled and
-   every one of those reference assemblies (`.ref.dll`, which holds the public surface alone) came
-   out byte-identical to the last Unity build's. That is the decision Unity itself makes through
-   Bee: a change that does not reach the public surface — a method body, say — cannot change what a
-   dependent compiles to. The comparison is always against Unity's own artifact, never against the
+   every one of those reference assemblies (`.ref.dll`, which holds the public surface alone) shows
+   a dependent the same API as the last Unity build's: a change that does not reach the public
+   surface — a method body, say — cannot change what a dependent compiles to. A reference assembly
+   that came out byte-identical counts as the same, as it does for Unity. One whose bytes differ is
+   handed to the changed-files check worker, which writes both out as text and counts them the same
+   only when the texts match. The text leaves out what no dependent can read: the attribute types
+   the compiler embeds, private nested types nothing visible refers to (closures and async or
+   iterator state machines) along with the attributes naming them, and where the compiler happens to
+   put nullable annotations — each annotation is written as the value that applies to its member.
+   So a private reference-type field in a nullable-enabled assembly, a private generic method, or a
+   private member added before a lambda no longer compiles every dependent again, which Unity, going
+   by bytes, does. This is safe because a dependent cannot name an embedded type or an unreferenced
+   private nested type, and reads every annotation by the value that applies to it. One difference
+   remains: a dependent that already fails because it names a private nested type may report the
+   error under another ID (CS0122, CS0426 or CS0117) until it compiles again; whether it compiles
+   does not change. When the worker cannot be built or cannot answer, the dependents are compiled.
+   Its answer is kept in `<Assembly>.surface.json`, keyed by the content of both reference
+   assemblies and the worker build, so the runs until Unity builds again do not compare the same
+   pair twice. The comparison is always against Unity's own artifact, never against the
    previous `compile-check` output, which would only say that nothing moved since that run and would
    hide an error a dependent has been carrying all along. An assembly whose compiler step failed in
    the last Unity build is selected whatever its timestamps say: Unity runs Bee with deferred dag
@@ -99,14 +114,15 @@ references, scripting defines and analyzers. `compile-check` replays those respo
    place, the assemblies below it resolve the same reference assembly and are reused in turn, which
    is what makes editing a single method body cost one compile rather than one per dependent.
    A reference to an assembly this run rebuilt is read from Unity's artifact when the rebuilt
-   reference assembly came out byte-identical to it, and from this check's own output otherwise. The
+   reference assembly shows dependents the same API (step 3), and from this check's own output
+   otherwise. The
    first is digested by timestamp, like every reference the run did not rebuild, so rebuilding an
    assembly without moving its public surface leaves the digests of the assemblies that reference it
    where the runs that did not rebuild it left them. The second is digested by content, so a
    reference assembly rewritten with identical bytes still counts as unmoved. A response file naming
    a file the digest does not follow — `keyfile`, `resource`, `link`, `addmodule` — gets no digest,
    and such an assembly always compiles. `--all` looks nothing up, though it still records what it
-   compiled, under the same rule: a reference whose rebuilt reference assembly matches Unity's stays
+   compiled, under the same rule: a reference whose rebuilt reference assembly keeps Unity's API stays
    on Unity's artifact, so an ordinary run after it reuses what it compiled. Only a reference whose
    rebuilt surface differs from Unity's resolves to this check's output under `--all`; an ordinary
    run that leaves that assembly out reads Unity's artifact instead, and may compile the assemblies
@@ -194,11 +210,12 @@ So the first body edit is compiled in full more often than it looks:
 - Right after a Unity build, compile-check finds nothing to compile and records nothing. The first
   body edit after that is compiled in full and records the baseline; the edits after it are checked.
 - A run with `--all` records baselines too. It rebuilds the assemblies the next ordinary run takes
-  from Unity's build, but a reference whose rebuilt reference assembly matches Unity's is read from
-  Unity's build in both runs. Only in an assembly that references one whose rebuilt reference
-  assembly differs from Unity's does the first body edit after `--all` fall back with
-  `inputs other than source contents changed: references`; every other assembly is checked as
-  usual.
+  from Unity's build, but a reference whose rebuilt reference assembly keeps Unity's API is read
+  from Unity's build in both runs. A reference whose rebuilt API differs is read from this check's
+  output under `--all`; while the next ordinary run rebuilds it too, the reference reads the same
+  and the first body edit is checked as usual. Only when that run leaves the reference out, so it
+  reads Unity's build instead, does the first body edit of an assembly referencing it fall back
+  with `inputs other than source contents changed: references`.
 - A run that skips an assembly because nothing it compiles from changed removes its result and
   baseline, so its next body edit is compiled in full. A run that blocks it because an assembly it
   references has errors keeps them: the next run checks them against the inputs and output hashes
