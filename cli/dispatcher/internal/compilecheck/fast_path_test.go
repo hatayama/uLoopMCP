@@ -220,11 +220,11 @@ func TestMissingOrChangedGeneratorOutputFallsBack(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			project := newFastPathProject(t, fastPathMinimumSources)
-			generatedPath := filepath.Join(project.root, generatedDirectory(project.plan, project.plan.Units[0]))
+			generatedPath := filepath.Join(project.root, openRecordStore(project.root, project.plan.OutputDir).generatedDirectory("Alpha"))
 			recorder := newCachedSchedulerRecorder("Alpha", "Beta")
 			recorder.during = func(unit string) {
 				if unit == "Alpha" {
-					project.writeFile(t, filepath.Join(generatedDirectory(project.plan, project.plan.Units[0]), "Gen", "G.g.cs"), "class G { }")
+					project.writeFile(t, filepath.Join(openRecordStore(project.root, project.plan.OutputDir).generatedDirectory("Alpha"), "Gen", "G.g.cs"), "class G { }")
 				}
 			}
 			project.run(t, recorder, false)
@@ -359,7 +359,7 @@ func TestFastPathCleanResultKeepsBaselineFiles(t *testing.T) {
 	if recorder.runs["Beta"] != 0 || outcome.Skipped != 1 {
 		t.Errorf("expected Beta to be skipped, got %d runs and %d skipped", recorder.runs["Beta"], outcome.Skipped)
 	}
-	if project.worker.lastCheck.GeneratedDirectory != filepath.Join(project.root, generatedDirectory(project.plan, project.plan.Units[0])) {
+	if project.worker.lastCheck.GeneratedDirectory != filepath.Join(project.root, openRecordStore(project.root, project.plan.OutputDir).generatedDirectory("Alpha")) {
 		t.Errorf("expected the saved generator output to be passed, got %q", project.worker.lastCheck.GeneratedDirectory)
 	}
 }

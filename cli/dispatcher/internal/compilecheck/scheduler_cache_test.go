@@ -200,6 +200,27 @@ func TestCompileUnitsReusesEveryUnitWhoseInputsDidNotMove(t *testing.T) {
 	}
 }
 
+// Verifies a unit whose response file names no reference assembly is recorded by its assembly alone
+// and reused on the next run, rather than being taken for a successful compile that lost an output.
+func TestCompileUnitsReusesAUnitWithoutAReferenceAssembly(t *testing.T) {
+	project := newCachedSchedulerProject(t, nil, "Alpha")
+	project.plan.Units[0].Assembly.RefOutputPath = ""
+	first := newCachedSchedulerRecorder("Alpha")
+	delete(first.surfaces, "Alpha")
+	project.compileOrFail(t, first)
+	if _, err := os.Stat(filepath.Join(project.outputDirectory(), "Alpha"+referenceAssemblyExtension)); !os.IsNotExist(err) {
+		t.Fatalf("expected the compile to write no reference assembly, got %v", err)
+	}
+
+	recorder := newCachedSchedulerRecorder("Alpha")
+	delete(recorder.surfaces, "Alpha")
+	second := project.compileOrFail(t, recorder)
+
+	if !resultOf(t, second, "Alpha").Reused || len(recorder.runs) != 0 {
+		t.Errorf("expected Alpha to be reused without a compile, got %+v after %v", resultOf(t, second, "Alpha"), recorder.runs)
+	}
+}
+
 // Verifies the case the cache exists for: editing inside one assembly recompiles it, and the
 // assembly below it is reused because the reference assembly it reads came out byte-identical -
 // even though that file was rewritten and now carries a newer timestamp.

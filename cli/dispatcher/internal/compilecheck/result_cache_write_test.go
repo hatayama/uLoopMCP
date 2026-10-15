@@ -21,11 +21,11 @@ func blockManifestPath(t *testing.T, manifestFilePath string) {
 // no temporary file behind.
 func TestWriteUnitResultManifestReportsAFailedRename(t *testing.T) {
 	outputDirectoryPath, unit := newManifestUnit(t)
-	blockManifestPath(t, manifestPath(outputDirectoryPath, unit))
+	blockManifestPath(t, manifestPath(outputDirectoryPath, unit.Assembly.AssemblyName))
 
-	err := writeUnitResultManifest(outputDirectoryPath, unit, "key", storedResult())
+	err := manifestStore(outputDirectoryPath).recordCompile(unit.Assembly.AssemblyName, "key", storedResult(), unitOutputNames(unit))
 
-	if err == nil || !strings.HasPrefix(err.Error(), "failed to write "+manifestPath(outputDirectoryPath, unit)+":") {
+	if err == nil || !strings.HasPrefix(err.Error(), "failed to write "+manifestPath(outputDirectoryPath, unit.Assembly.AssemblyName)+":") {
 		t.Fatalf("err = %v", err)
 	}
 	matches, globErr := filepath.Glob(filepath.Join(outputDirectoryPath, "*"+resultManifestTempSuffix))
@@ -40,9 +40,9 @@ func TestWriteUnitResultManifestReportsAMissingOutputDirectory(t *testing.T) {
 	_, unit := newManifestUnit(t)
 	outputDirectoryPath := filepath.Join(t.TempDir(), "missing")
 
-	err := writeUnitResultManifest(outputDirectoryPath, unit, "key", storedResult())
+	err := manifestStore(outputDirectoryPath).recordCompile(unit.Assembly.AssemblyName, "key", storedResult(), unitOutputNames(unit))
 
-	if err == nil || !strings.HasPrefix(err.Error(), "failed to write "+manifestPath(outputDirectoryPath, unit)+":") {
+	if err == nil || !strings.HasPrefix(err.Error(), "failed to write "+manifestPath(outputDirectoryPath, unit.Assembly.AssemblyName)+":") {
 		t.Fatalf("err = %v", err)
 	}
 }
@@ -56,19 +56,30 @@ func TestHashUnitOutputsReportsAnUnreadableOutput(t *testing.T) {
 	}
 	makeDirAt(t, unreadablePath)
 
-	_, complete, err := hashUnitOutputs(outputDirectoryPath, unit, true)
+	_, complete, err := hashOutputs(outputDirectoryPath, unitOutputNames(unit), true)
 
 	if err == nil || complete || !strings.Contains(err.Error(), unreadablePath) {
 		t.Fatalf("complete=%v err=%v, want an error naming %s", complete, err, unreadablePath)
 	}
 }
 
-// Verifies a unit without a reference assembly is hashed by its assembly alone.
-func TestHashUnitOutputsSkipsAnAbsentReferenceAssemblyPath(t *testing.T) {
-	outputDirectoryPath, unit := newManifestUnit(t)
+// Verifies a unit without a reference assembly names its assembly alone as an output.
+func TestUnitOutputNamesSkipsAnAbsentReferenceAssemblyPath(t *testing.T) {
+	_, unit := newManifestUnit(t)
 	unit.Assembly.RefOutputPath = ""
 
-	outputs, complete, err := hashUnitOutputs(outputDirectoryPath, unit, true)
+	names := unitOutputNames(unit)
+
+	if len(names) != 1 || names[0] != "Alpha"+assemblyExtension {
+		t.Fatalf("names=%v", names)
+	}
+}
+
+// Verifies only the named outputs are hashed, even when another output is on disk.
+func TestHashOutputsHashesOnlyTheNamedOutputs(t *testing.T) {
+	outputDirectoryPath, _ := newManifestUnit(t)
+
+	outputs, complete, err := hashOutputs(outputDirectoryPath, []string{"Alpha" + assemblyExtension}, true)
 
 	if err != nil || !complete || len(outputs) != 1 || outputs["Alpha"+assemblyExtension] == "" {
 		t.Fatalf("outputs=%v complete=%v err=%v", outputs, complete, err)
