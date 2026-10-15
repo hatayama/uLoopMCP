@@ -113,6 +113,9 @@ references, scripting defines and analyzers. `compile-check` replays those respo
    apply. `--jobs <n>` caps how many run at once; the default is half the machine's CPUs and never
    less than one, because one `csc` process already keeps two to three cores busy on its own.
    `--jobs 1` compiles the assemblies one after another.
+   Among the assemblies ready at the same time, one whose references have all finished starts
+   before one started early, then the one with the most sources, and a tie goes to the one first in
+   dependency order.
    The reported order does not depend on the job count: results are collected in dependency order
    whatever finishes first. An assembly that fails to compile stops the run at that point of the
    tree: it wrote no reference assembly, so everything below it has nothing to compile against and

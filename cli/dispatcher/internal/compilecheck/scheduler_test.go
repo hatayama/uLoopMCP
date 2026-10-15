@@ -68,6 +68,8 @@ type schedulerRecorder struct {
 	// surfacesByRun holds, per unit, the reference assembly the n-th invocation of it writes; an
 	// empty one writes none. An invocation past its end falls back to surfaces.
 	surfacesByRun map[string][]string
+	// startOrder lists the units in the order their invocations started.
+	startOrder []string
 	// begun names the units whose compile or changed-files check has begun.
 	begun map[string]bool
 	// heldUntilBegun holds, per unit, the units its fake invocation waits to see begun before it
@@ -166,6 +168,7 @@ func (recorder *schedulerRecorder) runner() CommandRunner {
 		recorder.started[name] = true
 		recorder.runs[name]++
 		run := recorder.runs[name]
+		recorder.startOrder = append(recorder.startOrder, name)
 		recorder.begun[name] = true
 		recorder.running++
 		if recorder.running > recorder.maxRunning {

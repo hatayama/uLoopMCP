@@ -562,3 +562,65 @@ func TestCompileUnitsQueuesAUnitOnceWhenItsLastReferenceFinishesWhileItWaitsForA
 		t.Errorf("D compiled %d times, want 1", run.recorder.runs["D"])
 	}
 }
+
+// withSourceCounts gives each named unit of a plan that many sources.
+func withSourceCounts(plan BuildPlan, counts map[string]int) BuildPlan {
+	for index, unit := range plan.Units {
+		sources := []string{}
+		for source := 0; source < counts[unit.Assembly.AssemblyName]; source++ {
+			sources = append(sources, fmt.Sprintf("Assets/%s/File%d.cs", unit.Assembly.AssemblyName, source))
+		}
+		plan.Units[index].Sources = sources
+	}
+
+	return plan
+}
+
+// Verifies the unit with the most sources starts first among those ready at the same time, since it
+// is likely to take longest, while the results stay in the plan's order.
+func TestCompileUnitsStartsTheReadyUnitWithTheMostSourcesFirst(t *testing.T) {
+	plan := withSourceCounts(newSchedulerPlan(nil, "A", "B", "C"), map[string]int{"A": 1, "B": 3, "C": 2})
+	recorder := newSchedulerRecorder(0)
+
+	outcome, err := compileUnits(context.Background(), newSchedulerCompiler(t, recorder), plan, 1)
+	if err != nil {
+		t.Fatalf("expected the run to succeed, got error: %v", err)
+	}
+
+	assertStrings(t, "start order", recorder.startOrder, []string{"B", "C", "A"})
+	assertStrings(t, "results", compiledNames(outcome.Units), []string{"A", "B", "C"})
+}
+
+// Verifies units ready at the same time with as many sources start in the plan's order, not in the
+// order they became ready: B is ready from the start and A only once Z finished, yet A goes first.
+func TestCompileUnitsBreaksATieInSourceCountByPlanOrder(t *testing.T) {
+	plan := withSourceCounts(newSchedulerPlan(map[string][]string{"A": {"Z"}}, "A", "B", "Z"),
+		map[string]int{"A": 1, "B": 1, "Z": 2})
+	recorder := newSchedulerRecorder(0)
+
+	if _, err := compileUnits(context.Background(), newSchedulerCompiler(t, recorder), plan, 1); err != nil {
+		t.Fatalf("expected the run to succeed, got error: %v", err)
+	}
+
+	assertStrings(t, "start order", recorder.startOrder, []string{"Z", "A", "B"})
+}
+
+// Verifies a unit whose references are all final starts before a larger unit queued early that
+// references it: starting the larger one first would compile it against a reference not yet
+// compiled, and again once that reference changed its surface.
+func TestCompileUnitsStartsAUnitWhoseReferencesAreFinalBeforeALargerUnitQueuedEarly(t *testing.T) {
+	run := newOptimisticPlanRun(t, map[string][]string{"A": {"X"}, "B": {"X"}, "D": {"X", "A"}},
+		[]string{"A", "B", "D"}, "X", "A", "B", "D")
+	run.plan = withSourceCounts(run.plan, map[string]int{"X": 1, "A": 1, "B": 1, "D": 3})
+	run.jobs = 1
+
+	outcome := run.compile(t)
+
+	if run.recorder.runs["D"] != 1 {
+		t.Errorf("D compiled %d times, want 1", run.recorder.runs["D"])
+	}
+	assertStrings(t, "start order", run.recorder.startOrder, []string{"X", "A", "D", "B"})
+	if again := resultOf(t, outcome.Units, "D").CompiledAgainAfter; again != "" {
+		t.Errorf("D compiled again after %q, want once", again)
+	}
+}
