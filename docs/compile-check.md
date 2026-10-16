@@ -130,7 +130,8 @@ references, scripting defines and analyzers. `compile-check` replays those respo
    `Library/uloop/compile-check/<dag>/build-settings.json`, keyed to the build-trace file Bee
    rewrites on every build. A later run against the same build refuses any of them that moved; a
    run after another Unity build replaces the record instead. A scripting define of the active
-   build target group that the response files lack is refused on every run.
+   build target group that the response files lack is refused whenever `ProjectSettings.asset` was
+   saved after the last build, or there is no build-trace file.
 5. **Compile in dependency order** and parse the compiler's diagnostics into JSON. An assembly
    starts once every assembly it references that this run also compiles has finished, so
    independent assemblies compile at the same time. An assembly selected for its own sources, or a
@@ -372,7 +373,8 @@ happened, and how long each assembly took. `docs/vibe-logs.md` lists their field
   Unity build, keyed to the build-trace file Bee rewrites on every build
   (`Library/Bee/tundra.log.json`, `TundraBuildState.state` or `fullprofile.json`, whichever is
   newest). A later run against the same build refuses any of them that moved. A scripting define
-  that the response files lack is refused on every run, record or not. What stays invisible:
+  that the response files lack is refused, record or not, whenever `ProjectSettings.asset` was
+  saved after the last build or there is no build-trace file. What stays invisible:
   - on a Unity version whose `Library/Bee` has none of the build-trace files, only an added
     scripting define is seen - not a removed one, and not the other recorded settings;
   - a change made before the record exists (before the first run after that build), other than an
@@ -381,7 +383,10 @@ happened, and how long each assembly took. `docs/vibe-logs.md` lists their field
     response files carry `UNITY_SERVER`), because which settings group Unity reads for it cannot be
     determined, and those of a `ProjectSettings.asset` saved in binary;
   - an analyzer config added since the last build that Unity passes with `/analyzerconfig:`; one a
-    response file already names is read by content and invalidates a reused result.
+    response file already names is read by content and invalidates a reused result;
+  - a Unity 6 build profile that overrides Player Settings or carries its own scripting defines:
+    only the global ProjectSettings defines are compared, and a global define the build lacks is
+    refused only when `ProjectSettings.asset` was saved after the last build.
 - **The predefined assemblies** (`Assembly-CSharp` and friends) keep the source list of the last
   build, so a brand-new `.cs` file outside any `.asmdef` is not compiled until Unity imports it.
 - **A dependent left out by names can miss what a generator would write.** The names are read from

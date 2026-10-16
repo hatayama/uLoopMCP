@@ -81,7 +81,10 @@ These are documented and not detected; after any of them, run `uloop compile`:
 - (f) an analyzer config Unity passes with `/analyzerconfig:` that was added since the last build;
 - (g) scripting defines are not compared in a project whose active build target is Dedicated
   Server (the response files carry `UNITY_SERVER`), because which settings group Unity reads for it
-  cannot be determined.
+  cannot be determined;
+- (h) a Unity 6 build profile that overrides Player Settings or carries its own scripting defines:
+  only the global ProjectSettings defines are compared, and a global define the build lacks is
+  refused only when `ProjectSettings.asset` was saved after the last build.
 
 ## Consequences
 

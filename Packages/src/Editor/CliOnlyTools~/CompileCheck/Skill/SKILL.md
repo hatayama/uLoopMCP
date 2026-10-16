@@ -35,8 +35,8 @@ in `Library/uloop/compile-check/` and are never handed to the Editor.
   ```
 
   `uloop launch` does the same with the Editor window open. After that one build, compile-check works
-  without the Editor; it asks for another build when it detects an `.asmdef` change. A scripting define
-  change it cannot detect, so run `uloop compile` yourself after one.
+  without the Editor; it asks for another build when it detects an `.asmdef` change or a build setting
+  that moved; see the limitations for what stays unseen.
 
 ## Usage
 
@@ -110,8 +110,10 @@ compile-check once more rather than retrying in a loop.
 - Build settings are compared against a record the first run after a Unity build writes: a
   removed scripting define, a changed `csc.rsp`, `defineConstraints`, `versionDefines`,
   `packages-lock.json` or `manifest.json` stops the run, and a scripting define the last build lacks
-  stops it on every run. A change made before that first run (other than an added define) is not
-  seen, so run `uloop compile` after one.
+  stops it when `ProjectSettings.asset` was saved after that build. A change made before that first
+  run (other than an added define) is not seen, so run `uloop compile` after one. Under a Unity 6
+  build profile that overrides Player Settings or carries its own defines, only the global
+  ProjectSettings defines are compared.
 - A reference removed from an `.asmdef` stops the run with `COMPILE_CHECK_UNITY_BUILD_REQUIRED`; the
   four references Unity adds on its own are allowed, and an `.asmdef` with a reference that matches
   no `.asmdef` in the project is not judged.
