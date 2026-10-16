@@ -59,10 +59,10 @@ directive counts as a declaration change. Such a check skips a few assembly-wide
 with `--full` before finishing. When the project treats warnings as errors, a rule listed in
 `UncheckedCodes`, such as CS0414, can fail that `--full` run only. The first body edit after a Unity
 build, after a full compile that had errors (a `--full` run or a run that fell back to one), after
-a run that compiled it only because an assembly it references changed, after a run that skipped the
-assembly, or after `--all` in an assembly that references one whose rebuilt API differed from the
-last Unity build and that the next run no longer rebuilds is compiled in full and records what the
-next check compares against; `FastPathFallbacks` says why.
+a run that picked it up only because an assembly it references changed, whether it compiled or
+skipped the assembly, or after `--all` in an assembly that references one whose rebuilt API
+differed from the last Unity build and that the next run no longer rebuilds is compiled in full and
+records what the next check compares against; `FastPathFallbacks` says why.
 
 ## Parameters
 
