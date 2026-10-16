@@ -115,7 +115,9 @@ references, scripting defines and analyzers. `compile-check` replays those respo
    given to the four predefined assemblies by Unity's own path rules: a folder named `Editor`
    anywhere sends a script to an editor assembly, and `Assets/Plugins`, `Assets/Standard Assets`,
    `Assets/Pro Standard Assets` and `Assets/iPhone Standard Assets` send it to a first-pass one, so
-   a new script there is compiled with the assembly Unity would put it in. Membership is compared without looking at any timestamp, because
+   a new script there is compiled with the assembly Unity would put it in. Scripts in
+   `Assets/StreamingAssets`, `Assets/WebPlayerTemplates`, `Assets/WebGLTemplates` and
+   `Assets/Plugins/Android` are left out, as Unity imports them without compiling them. Membership is compared without looking at any timestamp, because
    moving a file carries its modification time along, and either an `.asmdef` or an `.asmref` can
    hand a folder's sources to a different assembly without editing a single `.cs` file. The
    recorded sources keep the order of the response file, and the ones added since the last Unity
@@ -395,6 +397,8 @@ happened, and how long each assembly took. `docs/vibe-logs.md` lists their field
 - **A new script outside every `.asmdef` is given to one of the four predefined assemblies by
   Unity's path rules.** When that assembly is one the last build did not produce - the first
   editor script of a project that had none - the run stops with `COMPILE_CHECK_UNITY_BUILD_REQUIRED`.
+  Scripts in the folders Unity never compiles (`Assets/StreamingAssets`, `Assets/WebPlayerTemplates`,
+  `Assets/WebGLTemplates`, `Assets/Plugins/Android`) are left out.
   A new script in a package folder that has no `.asmdef` is not seen, because where Unity puts
   such a script differs between Unity versions.
 - **A dependent compile-check has never compiled is compiled, not narrowed by names, the first time
