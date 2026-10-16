@@ -93,6 +93,9 @@ type UnitResult struct {
 	// WaitedForRecord marks a unit that waited for the references still compiling rather than
 	// starting before them, because its recorded result might be replayed once they finished.
 	WaitedForRecord bool
+	// ChangedReferences names the referenced assemblies whose changed surface counted for this unit,
+	// in the plan's order, each with the first changed name the unit writes.
+	ChangedReferences []ChangedReference
 }
 
 // CommandRunner runs one compiler invocation, so tests can stand in for the real process.
@@ -109,14 +112,14 @@ type Compiler struct {
 	// compareSurface stands in for the comparison of a unit's reference assembly with Unity's; nil
 	// compares the two. Why it can be replaced: the tests have to see which units the run compares at
 	// all, and a byte comparison leaves nothing behind to count.
-	compareSurface func(projectRoot string, plan BuildPlan, unit CompileUnit) bool
+	compareSurface func(projectRoot string, plan BuildPlan, unit CompileUnit) SurfaceVerdict
 }
 
 // surfaceVerdict says whether compiling this unit left its reference assembly showing its dependents
 // the public surface the last Unity build showed them.
 func (c Compiler) surfaceVerdict(ctx context.Context, plan BuildPlan, unit CompileUnit) SurfaceVerdict {
 	if c.compareSurface != nil {
-		return SurfaceVerdict{Kept: c.compareSurface(c.ProjectRoot, plan, unit)}
+		return c.compareSurface(c.ProjectRoot, plan, unit)
 	}
 
 	return c.referenceSurfaceVerdict(ctx, plan, unit)

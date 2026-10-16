@@ -47,6 +47,10 @@ type schedule struct {
 	blocked []bool
 	// keptSurface marks, per unit, that it finished with the public surface of the last Unity build.
 	keptSurface []bool
+	// unaffectedBy lists, per unit, the references that changed their surface only in names the unit
+	// never writes, and changedBy the ones whose change counted for it.
+	unaffectedBy [][]int
+	changedBy    [][]changedReference
 	unitProgress
 }
 
@@ -60,6 +64,10 @@ type compileOutcome struct {
 	// Blocked names the units left out because an assembly they reference has errors, in the plan's
 	// order. They are kept apart from Skipped: nothing they compile from was read at all.
 	Blocked []string
+	// NameSkips names the skipped units a reference did change under, in names they never write.
+	NameSkips []NameSkip
+	// NameIndex says what reading the units' names took.
+	NameIndex NameIndexReport
 }
 
 // DefaultJobs is how many assemblies compile at once when the caller names no number.
@@ -86,6 +94,8 @@ type schedulerRun struct {
 	completions    chan unitCompletion
 	running        int
 	referenceSkips int
+	names          nameIndex
+	nameSkips      []NameSkip
 }
 
 // compileUnits compiles a plan's assemblies, keeping at most jobs of them running at a time. It
@@ -121,6 +131,10 @@ func compileUnits(
 		compiled:    make([]bool, len(plan.Units)),
 		completions: make(chan unitCompletion, len(plan.Units)),
 	}
+	run.startNameIndex()
+	// Why waited for on every way out: the read runs on files a caller may remove once the run
+	// returns.
+	defer run.names.wait()
 	for index := range plan.Units {
 		run.offer(index)
 	}
@@ -151,9 +165,11 @@ func compileUnits(
 	}
 
 	return compileOutcome{
-		Units:   run.compiledResults(),
-		Skipped: run.referenceSkips,
-		Blocked: run.blockedNames(),
+		Units:     run.compiledResults(),
+		Skipped:   run.referenceSkips,
+		Blocked:   run.blockedNames(),
+		NameSkips: run.nameSkips,
+		NameIndex: run.names.report(),
 	}, nil
 }
 
@@ -217,14 +233,15 @@ func (run *schedulerRun) skipBlockedUnit(index int) (bool, error) {
 		return false, err
 	}
 	run.state.blockDependents(index)
-	run.releaseAndOffer(index, false)
+	run.releaseAndOffer(index, SurfaceVerdict{Kept: true})
 
 	return true, nil
 }
 
 // skipUnchangedDependent leaves out a unit this run picked up only because something it references
 // was recompiled, when every one of those came out with the public surface the last Unity build
-// recorded: compiling it would read exactly the API it was last compiled against. It counts as
+// recorded, or changed only names the unit never writes: compiling it would read exactly the API it
+// was last compiled against, as far as anything it writes can tell. It counts as
 // having kept Unity's surface, so the units that started before it finished read Unity's reference
 // assembly for it, as they assumed.
 // Why its earlier outputs are removed rather than left alone: a reference assembly an earlier run
@@ -242,8 +259,9 @@ func (run *schedulerRun) skipUnchangedDependent(index int) (bool, error) {
 		return false, err
 	}
 	run.referenceSkips++
+	run.recordNameSkip(index)
 	run.state.keptSurface[index] = true
-	run.releaseAndOffer(index, false)
+	run.releaseAndOffer(index, SurfaceVerdict{Kept: true})
 
 	return true, nil
 }
@@ -362,6 +380,8 @@ func newSchedule(plan BuildPlan) *schedule {
 		changedInputs: make([]int, len(plan.Units)),
 		blocked:       make([]bool, len(plan.Units)),
 		keptSurface:   make([]bool, len(plan.Units)),
+		unaffectedBy:  make([][]int, len(plan.Units)),
+		changedBy:     make([][]changedReference, len(plan.Units)),
 		unitProgress:  newUnitProgress(len(plan.Units)),
 	}
 	for index, unit := range plan.Units {
@@ -395,22 +415,28 @@ func (state *schedule) blockDependents(index int) {
 	}
 }
 
-// release tells the units waiting on one that just got its final state that it has, recording
-// whether what it produced still describes the same public surface as the last Unity build, and
-// reports those units so the caller can decide which of them to queue.
-// Why a unit that assumed this one is marked stale only when it changed: it read Unity's reference
-// assembly for it, which is exactly right when the surface was kept. A failed or blocked one blocks
-// it through blockDependents instead.
-func (state *schedule) release(index int, changed bool) []int {
-	for _, dependent := range state.dependents[index] {
+// release tells the units waiting on one that just got its final state that it has, recording for
+// each whether what it produced touches it, and reports those units so the caller can decide which
+// of them to queue. effects holds one entry per unit waiting on it, in the order of dependents.
+// Why a unit that assumed this one is marked stale only when touched: it read Unity's reference
+// assembly for it, which is exactly right when the surface was kept, and compiles the same when the
+// change touches no name it writes. A failed or blocked one blocks it through blockDependents instead.
+func (state *schedule) release(index int, effects []referenceEffect) []int {
+	for _, effect := range effects {
+		dependent := effect.dependent
 		state.pending[dependent]--
 		if state.ownSources[index] {
 			state.pendingOwn[dependent]--
 		}
-		if !changed {
+		if !effect.touches {
+			if effect.named {
+				state.unaffectedBy[dependent] = append(state.unaffectedBy[dependent], index)
+			}
+
 			continue
 		}
 		state.changedInputs[dependent]++
+		state.changedBy[dependent] = append(state.changedBy[dependent], changedReference{reference: index, name: effect.name})
 		if !state.stale[dependent] && containsIndex(state.assumed[dependent], index) {
 			state.stale[dependent] = true
 			state.staleCause[dependent] = index

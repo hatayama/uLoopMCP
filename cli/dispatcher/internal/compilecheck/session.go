@@ -46,6 +46,10 @@ type Result struct {
 	// They are kept apart from Skipped: a skipped assembly was read and found to have nothing left
 	// to say, and nothing about these was read at all.
 	Blocked []string
+	// NameSkips names the skipped assemblies a reference changed under, in names they never write.
+	NameSkips []NameSkip
+	// NameIndex says what reading the names of the assemblies with references in the plan took.
+	NameIndex NameIndexReport
 }
 
 // Run compiles the assemblies that need checking and collects their diagnostics.
@@ -102,8 +106,10 @@ func Run(ctx context.Context, options Options) (Result, error) {
 		// Why the two counts are added: both name an assembly the run did not compile - one because
 		// nothing it compiles from changed, the other because everything it references kept the
 		// public surface the last Unity build recorded.
-		Skipped: plan.Skipped + outcome.Skipped,
-		Blocked: outcome.Blocked,
+		Skipped:   plan.Skipped + outcome.Skipped,
+		Blocked:   outcome.Blocked,
+		NameSkips: outcome.NameSkips,
+		NameIndex: outcome.NameIndex,
 	}, nil
 }
 

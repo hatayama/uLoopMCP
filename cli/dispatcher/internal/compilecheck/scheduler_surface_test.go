@@ -264,12 +264,12 @@ type surfaceComparisonCounter struct {
 }
 
 // compare records one comparison of the unit's surface.
-func (counter *surfaceComparisonCounter) compare(_ string, _ BuildPlan, unit CompileUnit) bool {
+func (counter *surfaceComparisonCounter) compare(_ string, _ BuildPlan, unit CompileUnit) SurfaceVerdict {
 	counter.mutex.Lock()
 	defer counter.mutex.Unlock()
 	counter.compared[unit.Assembly.AssemblyName]++
 
-	return false
+	return SurfaceVerdict{Reason: SurfaceBytesDiffer, Unnamed: SurfaceBytesDiffer}
 }
 
 // Verifies a run compares the surface only of the units whose answer something in the plan reads:

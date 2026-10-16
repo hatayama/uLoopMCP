@@ -130,10 +130,10 @@ func (run *schedulerRun) offer(index int) {
 	state.enqueue(index)
 }
 
-// releaseAndOffer tells the units waiting on one that just got its final state, and queues those that
-// may start now.
-func (run *schedulerRun) releaseAndOffer(index int, changed bool) {
-	for _, dependent := range run.state.release(index, changed) {
+// releaseAndOffer tells the units waiting on one that just got its final state what its verdict means
+// for each of them, and queues those that may start now.
+func (run *schedulerRun) releaseAndOffer(index int, verdict SurfaceVerdict) {
+	for _, dependent := range run.state.release(index, run.effectsOf(index, verdict)) {
 		run.offer(dependent)
 	}
 }
@@ -198,7 +198,7 @@ func (run *schedulerRun) settle(index int) error {
 			return err
 		}
 		state.blockDependents(index)
-		run.releaseAndOffer(index, false)
+		run.releaseAndOffer(index, SurfaceVerdict{Kept: true})
 	case state.stale[index]:
 		state.discarded[index] = run.results[index].Duration
 		run.results[index] = UnitResult{}
@@ -226,6 +226,7 @@ func (run *schedulerRun) adopt(index int) error {
 		result.CompiledAgainAfter = run.plan.Units[cause].Assembly.AssemblyName
 		result.DiscardedDuration = state.discarded[index]
 	}
+	result.ChangedReferences = run.changedReferencesOf(index)
 	run.results[index] = result
 	if err := run.markFinal(index); err != nil {
 		return err
@@ -235,7 +236,10 @@ func (run *schedulerRun) adopt(index int) error {
 	if !result.Succeeded {
 		state.blockDependents(index)
 	}
-	run.releaseAndOffer(index, !state.keptSurface[index])
+	// Why the result's verdict rather than keptSurface alone: a unit compared and found changed
+	// carries the names its change touches, and a unit not compared - failed, or read by nothing -
+	// carries the zero verdict, which touches every unit waiting on it.
+	run.releaseAndOffer(index, result.Surface)
 
 	return nil
 }
