@@ -470,6 +470,29 @@ func TestRevertedContentIsReused(t *testing.T) {
 	}
 }
 
+// Verifies that a run leaving an assembly out of its plan, because nothing it compiles from changed,
+// keeps that assembly's outputs, result, and baseline as they were, whether the run compiles nothing
+// or only another assembly, so the next body edit of it is checked against that baseline.
+func TestRunLeavingAnAssemblyOutKeepsItsBaseline(t *testing.T) {
+	for label, planned := range map[string][]string{"nothing": {}, "another assembly": {"Beta"}} {
+		t.Run(label, func(t *testing.T) {
+			project := newFastPathProject(t, fastPathMinimumSources)
+			project.recordBaseline(t)
+			before := project.outputSnapshot(t)
+			full := project.plan
+			project.plan = project.withOnlyUnits(planned...)
+			project.run(t, newCachedSchedulerRecorder(planned...), false)
+			project.plan = full
+
+			if after := project.outputSnapshot(t); !reflect.DeepEqual(after, before) {
+				t.Fatalf("expected the outputs, result, and baseline to stay, got %v then %v", before, after)
+			}
+			project.editBody(t, 0, "edited")
+			project.runFastChecked(t)
+		})
+	}
+}
+
 // Verifies that a baseline agreeing with every source but disagreeing with the current key is
 // dropped, and the unit compiles in full.
 func TestZeroChangedFilesDropsBaselineAndFallsBack(t *testing.T) {
