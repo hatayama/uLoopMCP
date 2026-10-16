@@ -94,6 +94,20 @@ namespace UnityCliLoop.CompileCheckWorker.UnitTests
         }
 
         /// <summary>
+        /// Asserts that the reference assembly defines a type whose name starts with the prefix, so a
+        /// test about a compiler-owned type fails loudly when the compiler stops writing it.
+        /// </summary>
+        internal static void AssertDefinesTypeStartingWith(byte[] referenceAssembly, string prefix)
+        {
+            using PEReader peReader = new PEReader(ImmutableArray.Create(referenceAssembly));
+            MetadataReader reader = peReader.GetMetadataReader();
+            bool found = reader.TypeDefinitions
+                .Select(handle => reader.GetString(reader.GetTypeDefinition(handle).Name))
+                .Any(name => name.StartsWith(prefix, StringComparison.Ordinal));
+            Assert.That(found, Is.True, "no type named " + prefix + "* in the reference assembly");
+        }
+
+        /// <summary>
         /// Lists the identifiers a dependent's source writes, comments and strings included.
         /// </summary>
         internal static HashSet<string> SourceIdentifiers(string source)

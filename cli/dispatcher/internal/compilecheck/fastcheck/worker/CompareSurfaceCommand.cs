@@ -17,7 +17,7 @@ namespace UnityCliLoop.CompileCheckWorker
     {
         // Raise whenever what the description writes changes, so a recorded answer is not reused for
         // a comparison that would now come out differently.
-        private const string DescriptionVersion = "sv2";
+        private const string DescriptionVersion = "sv3";
         private const string NullabilitySection = "== nullability";
         private const string EndOfDescription = "(end)";
 

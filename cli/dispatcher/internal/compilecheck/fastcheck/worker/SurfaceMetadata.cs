@@ -37,6 +37,7 @@ namespace UnityCliLoop.CompileCheckWorker
         };
 
         private readonly HashSet<TypeDefinitionHandle> embeddedTypes;
+        private readonly HashSet<TypeDefinitionHandle> compilerOwnedTypes;
         private readonly HashSet<TypeDefinitionHandle> hiddenNestedTypes;
         private readonly HashSet<string> hiddenNestedReflectionNames = new HashSet<string>(StringComparer.Ordinal);
 
@@ -46,7 +47,10 @@ namespace UnityCliLoop.CompileCheckWorker
             Reader = peReader.GetMetadataReader();
             Provider = new SurfaceSignatureProvider();
             embeddedTypes = FindEmbeddedTypes(Reader);
-            hiddenNestedTypes = SurfaceReachability.UnreferencedPrivateNestedTypes(Reader, embeddedTypes);
+            compilerOwnedTypes = FindCompilerOwnedTypes(Reader);
+            HashSet<TypeDefinitionHandle> notVisited = new HashSet<TypeDefinitionHandle>(embeddedTypes);
+            notVisited.UnionWith(compilerOwnedTypes);
+            hiddenNestedTypes = SurfaceReachability.UnreferencedPrivateNestedTypes(Reader, notVisited);
             foreach (TypeDefinitionHandle handle in hiddenNestedTypes)
             {
                 hiddenNestedReflectionNames.Add(SurfaceTypeNames.ReflectionName(Reader, handle));
@@ -59,11 +63,12 @@ namespace UnityCliLoop.CompileCheckWorker
 
         public SurfaceSignatureProvider Provider { get; }
 
-        // A type no dependent can see: one the compiler embedded, or a private nested type nothing kept
-        // refers to. Its members, parameters and attributes go with it.
+        // A type no dependent can see: one the compiler embedded, a top-level type the compiler owns
+        // outright along with everything nested in it, or a private nested type nothing kept refers to.
+        // Its members, parameters and attributes go with it.
         public bool IsLeftOut(TypeDefinitionHandle handle)
         {
-            return embeddedTypes.Contains(handle) || hiddenNestedTypes.Contains(handle);
+            return embeddedTypes.Contains(handle) || compilerOwnedTypes.Contains(handle) || hiddenNestedTypes.Contains(handle);
         }
 
         public string TypeName(EntityHandle handle)
@@ -217,6 +222,38 @@ namespace UnityCliLoop.CompileCheckWorker
             }
 
             return embedded;
+        }
+
+        // Why the outermost name decides: the compiler starts the names of the types it owns outright
+        // (<Module>, <PrivateImplementationDetails>) with '<', which no C# source can write, so neither
+        // they nor anything nested in them is a surface a dependent can read. Generated types nested in
+        // a hand-written type (closures, state machines) are left to the reachability pass.
+        private static HashSet<TypeDefinitionHandle> FindCompilerOwnedTypes(MetadataReader reader)
+        {
+            HashSet<TypeDefinitionHandle> owned = new HashSet<TypeDefinitionHandle>();
+            foreach (TypeDefinitionHandle handle in reader.TypeDefinitions)
+            {
+                if (IsUnderCompilerOwnedRoot(reader, handle))
+                {
+                    owned.Add(handle);
+                }
+            }
+
+            return owned;
+        }
+
+        private static bool IsUnderCompilerOwnedRoot(MetadataReader reader, TypeDefinitionHandle handle)
+        {
+            TypeDefinitionHandle root = handle;
+            for (TypeDefinitionHandle declaring = reader.GetTypeDefinition(root).GetDeclaringType();
+                 !declaring.IsNil;
+                 declaring = reader.GetTypeDefinition(root).GetDeclaringType())
+            {
+                root = declaring;
+            }
+            string name = reader.GetString(reader.GetTypeDefinition(root).Name);
+
+            return name.Length > 0 && name[0] == '<';
         }
 
         // [Microsoft.CodeAnalysis.Embedded] as the compiler writes it: a type defined in this very module.

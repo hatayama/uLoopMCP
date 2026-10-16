@@ -10,6 +10,8 @@ namespace UnityCliLoop.CompileCheckWorker.UnitTests
     {
         private const string TwoPrivateStrings = " private string pa = \"\"; private string pb = \"\"; ";
         private const string ThreePrivateNullableObjects = " private object? pa; private object? pb; private object? pc; ";
+        private const string PrivateImplementationDetails = "<PrivateImplementationDetails>";
+        private const string Dependent = "public class D { int x = new C().X; }";
         private const string InternalsVisibleToDependent =
             "[assembly: System.Runtime.CompilerServices.InternalsVisibleTo(\"" + SurfaceFixture.DependentAssemblyName + "\")]\n";
 
@@ -469,6 +471,56 @@ namespace UnityCliLoop.CompileCheckWorker.UnitTests
                 "public class C { public static void M(int a) { } }",
                 "public class C { public static void M(int b) { } }",
                 "class D { void F() => C.M(a: 1); }");
+        }
+
+        /// <summary>
+        /// Verifies that a private method whose body holds an array literal, which makes the compiler
+        /// write its own type for the array data, keeps the surface.
+        /// </summary>
+        [Test]
+        public void PrivateArrayInitializerAddedKeepsTheSurface()
+        {
+            const string OldSource = "public class C { public int X; }";
+            const string NewSource =
+                "public class C { public int X; private static int A() { int[] table = { 11, 12, 13, 14, 15, 16, 17 }; return table[3]; } }";
+            SurfaceFixture.AssertDefinesTypeStartingWith(SurfaceFixture.EmitReferenceAssembly(NewSource), PrivateImplementationDetails);
+            SurfaceFixture.AssertSame(OldSource, NewSource, Dependent);
+        }
+
+        /// <summary>
+        /// Verifies that adding array data to the compiler's own type that both versions already have
+        /// keeps the surface, whatever the name the compiler gives the new data.
+        /// </summary>
+        [TestCase("{ 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27 }")]
+        [TestCase("{ 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 28 }")]
+        public void PrivateArrayInitializerDataAddedKeepsTheSurface(string arrayLiteral)
+        {
+            string newSource = WithPrivateArrayData(" private static int B() { int[] t = " + arrayLiteral + "; return t[0]; }");
+            SurfaceFixture.AssertDefinesTypeStartingWith(SurfaceFixture.EmitReferenceAssembly(WithPrivateArrayData("")), PrivateImplementationDetails);
+            SurfaceFixture.AssertDefinesTypeStartingWith(SurfaceFixture.EmitReferenceAssembly(newSource), PrivateImplementationDetails);
+            SurfaceFixture.AssertSame(WithPrivateArrayData(""), newSource, Dependent);
+        }
+
+        /// <summary>
+        /// Verifies that a private method switching on a string, which makes the compiler add a string
+        /// hash method to its own type, keeps the surface.
+        /// </summary>
+        [Test]
+        public void PrivateStringSwitchAddedKeepsTheSurface()
+        {
+            const string StringSwitch =
+                " private static int S(string s) { switch (s) { case \"a\": return 1; case \"b\": return 2; case \"c\": return 3;"
+                + " case \"d\": return 4; case \"e\": return 5; case \"f\": return 6; case \"g\": return 7; default: return 0; } }";
+            string newSource = WithPrivateArrayData(StringSwitch);
+            SurfaceFixture.AssertDefinesTypeStartingWith(SurfaceFixture.EmitReferenceAssembly(newSource), PrivateImplementationDetails);
+            SurfaceFixture.AssertSame(WithPrivateArrayData(""), newSource, Dependent);
+        }
+
+        // A library whose private array literal already makes the compiler write its own type, so a
+        // change to that type's members is compared on both sides.
+        private static string WithPrivateArrayData(string addedMembers)
+        {
+            return "public class C { public int X; private static int A() { int[] t = { 1, 2, 3, 4, 5, 6, 7 }; return t[0]; }" + addedMembers + " }";
         }
 
         private static void AssertOnlyPrivateNestedTypesDiffer(string oldSource, string newSource)
