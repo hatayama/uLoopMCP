@@ -249,7 +249,7 @@ func TestCompileCheckVibeLogRecordsUnitsCompiledAgain(t *testing.T) {
 }
 
 // Verifies a run that narrowed dependents by names logs which references touched each unit and by
-// which name, which units it left out by names, and what reading the names took.
+// which name or for which reason, which units it left out by names, and what reading the names took.
 func TestCompileCheckVibeLogRecordsNameNarrowing(t *testing.T) {
 	t.Setenv(vibelog.CLIVibeLogEnvName, "1")
 	projectRoot := t.TempDir()
@@ -258,12 +258,16 @@ func TestCompileCheckVibeLogRecordsNameNarrowing(t *testing.T) {
 			{Assembly: "Alpha", Succeeded: true, Duration: 100 * time.Millisecond},
 			{
 				Assembly: "Beta", Succeeded: true, Duration: 200 * time.Millisecond,
-				ChangedReferences: []compilecheck.ChangedReference{{Assembly: "Alpha", Name: "Foo"}, {Assembly: "Gamma"}},
+				ChangedReferences: []compilecheck.ChangedReference{
+					{Assembly: "Alpha", Name: "Foo"}, {Assembly: "Gamma"}, {Assembly: "Epsilon", Reason: "no saved generator output"},
+				},
 			},
 		},
 		Skipped:   1,
 		NameSkips: []compilecheck.NameSkip{{Assembly: "Delta", ChangedReferences: []string{"Alpha"}}},
-		NameIndex: compilecheck.NameIndexReport{Duration: 30 * time.Millisecond, Units: 3, WithGenerated: 1, Unreadable: 1, SourcesRead: true},
+		NameIndex: compilecheck.NameIndexReport{
+			Duration: 30 * time.Millisecond, Units: 3, WithGenerated: 1, WithoutGenerated: 1, Unreadable: 1, SourcesRead: true,
+		},
 	}
 
 	logRun := startCompileCheckVibeLog(projectRoot, compileCheckOptions{})
@@ -272,11 +276,12 @@ func TestCompileCheckVibeLogRecordsNameNarrowing(t *testing.T) {
 	complete := assertCompileCheckVibeRun(t, readCompileCheckVibeLog(t, projectRoot))
 	assertVibeContextJSON(t, complete, "units",
 		`[{"assembly":"Alpha","duration_ms":100,"succeeded":true},`+
-			`{"assembly":"Beta","changed_by":[{"name":"Foo","reference":"Alpha"},{"name":"","reference":"Gamma"}],`+
+			`{"assembly":"Beta","changed_by":[{"name":"Foo","reference":"Alpha"},{"name":"","reference":"Gamma"},`+
+			`{"name":"","reason":"no saved generator output","reference":"Epsilon"}],`+
 			`"duration_ms":200,"succeeded":true}]`)
 	assertVibeContextJSON(t, complete, "name_skips", `[{"assembly":"Delta","unaffected_by":["Alpha"]}]`)
 	assertVibeContextJSON(t, complete, "name_index",
-		`{"duration_ms":30,"sources_read":true,"units":3,"unreadable":1,"with_generated":1}`)
+		`{"duration_ms":30,"sources_read":true,"units":3,"unreadable":1,"with_generated":1,"without_generated":1}`)
 }
 
 // Verifies a run that read only the saved generator output of the units with references logs the
@@ -295,7 +300,7 @@ func TestCompileCheckVibeLogRecordsANameIndexWhoseSourcesWereNotRead(t *testing.
 
 	complete := assertCompileCheckVibeRun(t, readCompileCheckVibeLog(t, projectRoot))
 	assertVibeContextJSON(t, complete, "name_index",
-		`{"duration_ms":2,"sources_read":false,"units":2,"unreadable":0,"with_generated":0}`)
+		`{"duration_ms":2,"sources_read":false,"units":2,"unreadable":0,"with_generated":0,"without_generated":0}`)
 }
 
 // Verifies a run that read no names and left nothing out by names logs neither.
