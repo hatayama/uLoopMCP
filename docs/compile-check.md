@@ -105,11 +105,17 @@ references, scripting defines and analyzers. `compile-check` replays those respo
    their `.asmref` folders are re-globbed. A source
    the last build recorded for this assembly that no glob produces any more stops the run unless an
    `.asmref` still attaches its folder to this assembly: the walk up from the file to the first
-   folder holding an `.asmref` or an `.asmdef` says which assembly owns it today. An `.asmref` naming an assembly the build never produced — an
-   unresolvable reference, or one excluded by platform or package settings — attaches nothing, so
-   its folder is treated as an ordinary part of the assembly around it, which is what Unity compiles
-   it as. A package shipping a sample for a render pipeline the project does not install is the
-   ordinary case. Membership is compared without looking at any timestamp, because
+   folder holding an `.asmref` or an `.asmdef` says which assembly owns it today. An `.asmref` whose
+   reference resolves to no `.asmdef` in the project attaches nothing, so its folder is treated as an
+   ordinary part of the assembly around it, which is what Unity compiles it as. A package shipping a
+   sample for a render pipeline the project does not install is the ordinary case. An `.asmref`
+   naming an `.asmdef` the build left out by platform or package settings still owns its folder:
+   Unity attaches the folder to that assembly and then drops it, so the folder's sources go into no
+   assembly. Scripts under `Assets` that no `.asmdef` or `.asmref` owns are walked once per run and
+   given to the four predefined assemblies by Unity's own path rules: a folder named `Editor`
+   anywhere sends a script to an editor assembly, and `Assets/Plugins`, `Assets/Standard Assets`,
+   `Assets/Pro Standard Assets` and `Assets/iPhone Standard Assets` send it to a first-pass one, so
+   a new script there is compiled with the assembly Unity would put it in. Membership is compared without looking at any timestamp, because
    moving a file carries its modification time along, and either an `.asmdef` or an `.asmref` can
    hand a folder's sources to a different assembly without editing a single `.cs` file. The
    recorded sources keep the order of the response file, and the ones added since the last Unity
@@ -386,8 +392,11 @@ happened, and how long each assembly took. `docs/vibe-logs.md` lists their field
   - a Unity 6 build profile that overrides Player Settings or carries its own scripting defines:
     only the global ProjectSettings defines are compared, and a global define the build lacks is
     refused only when `ProjectSettings.asset` was saved after the last build.
-- **The predefined assemblies** (`Assembly-CSharp` and friends) keep the source list of the last
-  build, so a brand-new `.cs` file outside any `.asmdef` is not compiled until Unity imports it.
+- **A new script outside every `.asmdef` is given to one of the four predefined assemblies by
+  Unity's path rules.** When that assembly is one the last build did not produce - the first
+  editor script of a project that had none - the run stops with `COMPILE_CHECK_UNITY_BUILD_REQUIRED`.
+  A new script in a package folder that has no `.asmdef` is not seen, because where Unity puts
+  such a script differs between Unity versions.
 - **A dependent compile-check has never compiled is compiled, not narrowed by names, the first time
   a reference changes.** The names are read from the dependent's sources and from the generator
   output its last finished compile saved; a unit with analyzers and no saved output, whether it was
@@ -452,6 +461,12 @@ The message reads `<setting> changed since the last Unity build` - for example
 settings of the last Unity build, so compiling against them would check a configuration the project
 no longer has. Run `uloop compile` once; the build moves the build-trace file forward, the next run
 records the settings as they are now, and `compile-check` works again.
+
+**`COMPILE_CHECK_UNITY_BUILD_REQUIRED`: a script belongs to an assembly the last build did not produce**
+The message reads `<script> belongs to <assembly>, which the last Unity build did not produce`. The
+script sits outside every `.asmdef`, and Unity's path rules give it to a predefined assembly - such
+as `Assembly-CSharp-Editor` for the first script in an `Editor` folder - that has no response file
+yet. Run `uloop compile` once so Unity creates that assembly.
 
 **`COMPILE_CHECK_UNITY_BUILD_REQUIRED`: cannot tell which Bee build to check**
 Both a debug and a release dag exist and neither `tundra.log.json` nor
