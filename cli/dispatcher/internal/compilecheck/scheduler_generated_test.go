@@ -1,7 +1,9 @@
 package compilecheck
 
 import (
+	"context"
 	"testing"
+	"time"
 )
 
 // withAnalyzer gives the named unit of the project an analyzer, which is how a source generator
@@ -75,6 +77,68 @@ func TestCompileUnitsLeavesOutADependentOnceItHasSavedGeneratorOutput(t *testing
 			recorder.runs["B"], outcome.NameIndex)
 	}
 	if outcome.NameIndex.WithGenerated != 1 {
+		t.Errorf("name index = %+v, want B read with its saved generator output", outcome.NameIndex)
+	}
+}
+
+// Verifies a dependent whose compile never ran is compiled again for want of saved generator output
+// on the next named change, since the failed compile saved none.
+func TestCompileUnitsCompilesAgainADependentWhoseCompileNeverRan(t *testing.T) {
+	project, recorder := newNamesProject(t, "class B { int Bar; }")
+	withAnalyzer(t, project, "B")
+	recorder.failingUnit = "B"
+	failing := Compiler{
+		Paths: project.paths, ProjectRoot: project.root, Timeout: time.Minute, Run: recorder.runner(),
+		compareSurface: namedVerdicts{"A": namedChangeOf("Foo")}.compare,
+	}
+	if _, err := compileUnits(context.Background(), failing, project.plan, 4); err == nil {
+		t.Fatal("expected the first run to fail when B's compiler cannot start")
+	}
+
+	recorder.failingUnit = ""
+	project.editSource(t, "A", "class A { void Body() { } }")
+	outcome := project.compileWithVerdicts(t, recorder, namedVerdicts{"A": namedChangeOf("Foo")})
+
+	assertChangedReferences(t, resultOf(t, outcome.Units, "B"),
+		[]ChangedReference{{Assembly: "A", Reason: noSavedGeneratorOutputReason}})
+	if outcome.NameIndex.WithoutGenerated != 1 || len(outcome.NameSkips) != 0 {
+		t.Errorf("name index = %+v, name skips = %+v; want B compiled for want of generator output",
+			outcome.NameIndex, outcome.NameSkips)
+	}
+}
+
+// Verifies a dependent touched for want of saved generator output but blocked by another reference's
+// errors is not counted, since it never compiled.
+func TestCompileUnitsDoesNotCountABlockedDependentAsCompiledWithoutGeneratorOutput(t *testing.T) {
+	project, recorder := newOptimisticCachedProject(t, map[string][]string{"D": {"A", "C"}}, []string{"D"}, "A", "C", "D")
+	project.editSource(t, "D", "class D { int Bar; }")
+	withAnalyzer(t, project, "D")
+	recorder.output["C"] = fakeCompilerOutput{stdout: "Assets/C/C.cs(1,1): error CS1002: ; expected", exitCode: 1}
+
+	outcome := project.compileWithVerdicts(t, recorder, namedVerdicts{"A": namedChangeOf("Foo")})
+
+	assertStrings(t, "blocked", outcome.Blocked, []string{"D"})
+	if outcome.NameIndex.WithoutGenerated != 0 {
+		t.Errorf("name index = %+v, want the blocked dependent left out of the count", outcome.NameIndex)
+	}
+}
+
+// Verifies a dependent left out by names keeps its saved generator output, so a later named change
+// it writes no name of still leaves it out with that output read.
+func TestCompileUnitsKeepsTheSavedGeneratorOutputOfASkippedDependent(t *testing.T) {
+	project, recorder := newNamesProject(t, "class B { int Bar; }")
+	withAnalyzer(t, project, "B")
+	project.compileWithVerdicts(t, recorder, namedVerdicts{"A": namedChangeOf("Foo")})
+	project.editSource(t, "A", "class A { void Body() { } }")
+	project.compileWithVerdicts(t, recorder, namedVerdicts{"A": namedChangeOf("Foo")})
+
+	project.editSource(t, "A", "class A { void Body() { int x; } }")
+	outcome := project.compileWithVerdicts(t, recorder, namedVerdicts{"A": namedChangeOf("Foo")})
+
+	if recorder.runs["B"] != 1 {
+		t.Errorf("B compiled %d times in all, want once", recorder.runs["B"])
+	}
+	if outcome.NameIndex.WithGenerated != 1 || outcome.NameIndex.WithoutGenerated != 0 {
 		t.Errorf("name index = %+v, want B read with its saved generator output", outcome.NameIndex)
 	}
 }

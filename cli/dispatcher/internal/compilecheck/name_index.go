@@ -427,10 +427,16 @@ func (run *schedulerRun) nameIndexReport() NameIndexReport {
 	return report
 }
 
-// withoutGeneratedCount counts the units a named change touched for want of saved generator output.
+// withoutGeneratedCount counts the units compiled because a named change touched them for want of
+// saved generator output.
 func (run *schedulerRun) withoutGeneratedCount() int {
 	count := 0
-	for _, touched := range run.state.changedBy {
+	for index, touched := range run.state.changedBy {
+		// Why only compiled units count: a unit touched for this reason and then blocked by another
+		// reference's errors never compiled, and its changed references are never reported either.
+		if !run.compiled[index] {
+			continue
+		}
 		if slices.ContainsFunc(touched, func(reference changedReference) bool { return reference.reason != "" }) {
 			count++
 		}
