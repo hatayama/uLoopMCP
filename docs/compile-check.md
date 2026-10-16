@@ -44,13 +44,16 @@ references, scripting defines and analyzers. `compile-check` replays those respo
    that came out byte-identical counts as the same, as it does for Unity. One whose bytes differ is
    handed to the changed-files check worker, which writes both out as text and counts them the same
    only when the texts match. The text leaves out what no dependent can read: the attribute types
-   the compiler embeds, private nested types nothing visible refers to (closures and async or
-   iterator state machines) along with the attributes naming them, and where the compiler happens to
-   put nullable annotations — each annotation is written as the value that applies to its member.
-   So a private reference-type field in a nullable-enabled assembly, a private generic method with
-   an `unmanaged` constraint, or a private member added before a lambda no longer compiles every
-   dependent again, which Unity, going by bytes, does. This is safe because a dependent cannot name
-   an embedded type or an unreferenced private nested type, and reads every annotation by the value
+   the compiler embeds, the top-level types the compiler owns outright, whose names start with `<`,
+   together with everything nested in them (such as `<PrivateImplementationDetails>`, which holds
+   array-initializer data and string-switch hashing), private nested types nothing visible refers to
+   (closures and async or iterator state machines) along with the attributes naming them, and where
+   the compiler happens to put nullable annotations — each annotation is written as the value that
+   applies to its member. So a private reference-type field in a nullable-enabled assembly, a
+   private generic method with an `unmanaged` constraint, or a private member added before a lambda
+   no longer compiles every dependent again, which Unity, going by bytes, does. This is safe because
+   a dependent cannot name an embedded type, a top-level type whose name starts with `<` or anything
+   nested in it, or an unreferenced private nested type, and reads every annotation by the value
    that applies to it. One difference remains: a dependent that already fails because it names a
    private nested type may report the error under another ID (CS0246, CS0426 or CS0117 in place of
    CS0122, or the other way round) until it compiles again; whether it compiles does not change.

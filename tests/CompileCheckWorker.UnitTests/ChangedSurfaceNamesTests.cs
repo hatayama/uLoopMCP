@@ -552,7 +552,7 @@ namespace UnityCliLoop.CompileCheckWorker.UnitTests
             {
                 string[] texts = CompareSurfaceCommand.Describe(path).Texts.ToArray();
 
-                Assert.That(texts[0], Is.EqualTo("sv2"));
+                Assert.That(texts[0], Is.EqualTo("sv3"));
                 Assert.That(texts.Where(text => text.StartsWith("type C ")).Single(), Does.Not.Contain("base="));
                 Assert.That(texts, Does.Contain("C base B"));
             }

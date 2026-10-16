@@ -23,10 +23,11 @@ namespace UnityCliLoop.CompileCheckWorker
 
         /// <summary>
         /// Lists every type left out of the surface for being private-nested, itself or through a type
-        /// around it, without any kept row referring to it or to a type around it.
+        /// around it, without any kept row referring to it or to a type around it. The rows of the types
+        /// in notVisited, which the surface leaves out anyway, keep nothing.
         /// </summary>
         internal static HashSet<TypeDefinitionHandle> UnreferencedPrivateNestedTypes(
-            MetadataReader reader, HashSet<TypeDefinitionHandle> embeddedTypes)
+            MetadataReader reader, HashSet<TypeDefinitionHandle> notVisited)
         {
             SurfaceReachability reachability = new SurfaceReachability();
             // Why to a fixpoint: a private nested type a kept row names is kept whole, and what its own
@@ -37,7 +38,7 @@ namespace UnityCliLoop.CompileCheckWorker
                 before = reachability.referenced.Count;
                 foreach (TypeDefinitionHandle handle in reader.TypeDefinitions)
                 {
-                    if (!embeddedTypes.Contains(handle) && reachability.IsKept(reader, handle))
+                    if (!notVisited.Contains(handle) && reachability.IsKept(reader, handle))
                     {
                         reachability.VisitType(reader, handle);
                     }
