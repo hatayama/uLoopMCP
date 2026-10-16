@@ -255,3 +255,27 @@ func planIndexOf(t *testing.T, plan BuildPlan, name string) int {
 
 	return -1
 }
+
+// Verifies a unit that started on the assumption that a reference keeps its surface compiles again
+// when the reference changed a name only the unit's saved generator output writes, although the unit's
+// own compile removes that output as soon as it starts.
+func TestCompileUnitsCompilesAgainOnANameOnlyGeneratedCodeWritesWhenTheEarlyCompileRemovesIt(t *testing.T) {
+	project, recorder := newOptimisticCachedProject(t,
+		map[string][]string{"D1": {"X"}, "D2": {"D1"}}, []string{"D1"}, "X", "D1", "D2")
+	project.editSource(t, "D2", "class D2 { int Bar; }")
+	project.writeFile(t, filepath.Join(project.records().GeneratedDirectory("D2"), "sub", "Gen.g.cs"), "partial class D2 { Foo f; }")
+
+	outcome := project.compileWithVerdicts(t, recorder, namedVerdicts{
+		"X":  {Reason: SurfaceChanged, Unnamed: "operator op_Addition"},
+		"D1": namedChangeOf("Foo"),
+	})
+
+	if recorder.runs["D2"] != 2 {
+		t.Fatalf("D2 compiled %d times, want 2", recorder.runs["D2"])
+	}
+	d2 := resultOf(t, outcome.Units, "D2")
+	if d2.CompiledAgainAfter != "D1" {
+		t.Errorf("D2 compiled again after %q, want D1", d2.CompiledAgainAfter)
+	}
+	assertChangedReferences(t, d2, []ChangedReference{{Assembly: "D1", Name: "Foo"}})
+}

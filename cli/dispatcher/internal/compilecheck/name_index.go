@@ -1,6 +1,7 @@
 package compilecheck
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -44,8 +45,9 @@ type NameIndexReport struct {
 // identifierSet is the identifiers one unit writes.
 type identifierSet map[string]struct{}
 
-// scanIdentifiers adds every identifier content holds to into: a letter or '_' followed by letters,
-// digits and '_'. Comments, strings and code a #if leaves out are read too, which can only make a
+// scanIdentifiers adds every identifier content holds to into, cut the way C# cuts one: a letter, a
+// letter number or '_', followed by those, decimal digits, combining marks, connectors and formatting
+// characters, the last left out of the name as the compiler leaves them out. Comments, strings and code a #if leaves out are read too, which can only make a
 // unit compile more often. A "new" followed by '(' also adds the target-typed new token.
 // Why \u escapes are not decoded: almost nobody writes one in an identifier, and the miss is named
 // among the limits of the check.
@@ -67,7 +69,7 @@ func scanIdentifiers(content []byte, into identifierSet) {
 			}
 			position += nextSize
 		}
-		identifier := string(content[start:position])
+		identifier := identifierText(content[start:position])
 		into[identifier] = struct{}{}
 		if identifier == "new" && opensParenthesis(content[position:]) {
 			into[targetTypedNewToken] = struct{}{}
@@ -76,41 +78,65 @@ func scanIdentifiers(content []byte, into identifierSet) {
 }
 
 func isIdentifierStart(character rune) bool {
-	return unicode.IsLetter(character) || character == '_'
+	return unicode.IsLetter(character) || unicode.Is(unicode.Nl, character) || character == '_'
 }
 
 func isIdentifierPart(character rune) bool {
-	return unicode.IsLetter(character) || unicode.IsDigit(character) || character == '_'
+	return isIdentifierStart(character) || unicode.In(character, unicode.Nd, unicode.Mn, unicode.Mc, unicode.Pc, unicode.Cf)
+}
+
+// identifierText is the name an identifier's text spells, without its formatting characters.
+func identifierText(text []byte) string {
+	if !bytes.ContainsFunc(text, isFormatting) {
+		return string(text)
+	}
+
+	return string(bytes.Map(func(character rune) rune {
+		if isFormatting(character) {
+			return -1
+		}
+
+		return character
+	}, text))
+}
+
+func isFormatting(character rune) bool {
+	return unicode.Is(unicode.Cf, character)
 }
 
 // opensParenthesis reports whether rest starts with '(' after any white space.
+// Why it walks the bytes in place: copying the rest of the file at every "new" makes a file full of
+// them take time in the square of its length.
 func opensParenthesis(rest []byte) bool {
-	trimmed := strings.TrimLeftFunc(string(rest), unicode.IsSpace)
+	trimmed := bytes.TrimLeftFunc(rest, unicode.IsSpace)
 
-	return strings.HasPrefix(trimmed, "(")
+	return len(trimmed) > 0 && trimmed[0] == '('
 }
 
-// buildUnitIdentifiers reads the identifiers of every source of a unit and, when the directory holds
-// any, of the generator output its last full compile saved, and reports whether that output was read.
+// readSourceIdentifiers adds the identifiers of every source of a unit to into.
 // Why a unit without sources is an error rather than an empty set: an empty set would read as a unit
 // that writes no changed name, and skip it on every change.
-// Why generator output is read: a generator can write a referenced name the unit's own sources never
-// do, and that code compiles with the unit.
-func buildUnitIdentifiers(
-	projectRoot string, unit CompileUnit, generatedDirectory string,
-) (identifierSet, bool, error) {
+func readSourceIdentifiers(projectRoot string, unit CompileUnit, into identifierSet) error {
 	if len(unit.Sources) == 0 {
-		return nil, false, fmt.Errorf("%s has no sources to read names from", unit.Assembly.AssemblyName)
+		return fmt.Errorf("%s has no sources to read names from", unit.Assembly.AssemblyName)
 	}
-	identifiers := identifierSet{}
 	for _, source := range unit.Sources {
 		content, err := os.ReadFile(sourcePath(projectRoot, filepath.FromSlash(source)))
 		if err != nil {
-			return nil, false, fmt.Errorf("failed to read the names of %s: %w", source, err)
+			return fmt.Errorf("failed to read the names of %s: %w", source, err)
 		}
-		scanIdentifiers(content, identifiers)
+		scanIdentifiers(content, into)
 	}
 
+	return nil
+}
+
+// readGeneratedIdentifiers reads the identifiers of the generator output a unit's last full compile
+// saved, and reports whether there was any.
+// Why generator output is read: a generator can write a referenced name the unit's own sources never
+// do, and that code compiles with the unit.
+func readGeneratedIdentifiers(generatedDirectory string) (identifierSet, bool, error) {
+	identifiers := identifierSet{}
 	if _, err := os.Stat(generatedDirectory); errors.Is(err, fs.ErrNotExist) {
 		return identifiers, false, nil
 	}
@@ -130,7 +156,7 @@ func buildUnitIdentifiers(
 		return nil
 	})
 	if err != nil {
-		return nil, false, fmt.Errorf("failed to read the generated names of %s: %w", unit.Assembly.AssemblyName, err)
+		return nil, false, fmt.Errorf("failed to read the generated names in %s: %w", generatedDirectory, err)
 	}
 
 	return identifiers, true, nil
@@ -152,7 +178,11 @@ type nameIndex struct {
 }
 
 // start reads the identifiers of the units marked in wanted, at most once per run. generated holds
-// the generator output directory of each unit.
+// the generator output directory of each unit. The generator output is read before start returns and
+// the sources in the background.
+// Why the generator output is read first: a unit's compile removes and rewrites that directory, and a
+// read racing it would lose the names only the generator wrote. Sources are never removed, and few
+// units have saved generator output, so only the sources are worth reading while compiles run.
 func (index *nameIndex) start(projectRoot string, units []CompileUnit, generated []string, wanted []bool) {
 	if index.started {
 		return
@@ -161,20 +191,31 @@ func (index *nameIndex) start(projectRoot string, units []CompileUnit, generated
 	index.done = make(chan struct{})
 	index.indexed = wanted
 	startedAt := time.Now()
+	type unitNames struct {
+		set           identifierSet
+		withGenerated bool
+		err           error
+	}
+	generatedNames := computeInParallel(len(units), func(position int) unitNames {
+		if !wanted[position] {
+			return unitNames{}
+		}
+		set, withGenerated, err := readGeneratedIdentifiers(generated[position])
+
+		return unitNames{set: set, withGenerated: withGenerated, err: err}
+	})
 	go func() {
 		defer close(index.done)
-		type unitNames struct {
-			set           identifierSet
-			withGenerated bool
-			err           error
-		}
 		results := computeInParallel(len(units), func(position int) unitNames {
-			if !wanted[position] {
-				return unitNames{}
+			names := generatedNames[position]
+			if !wanted[position] || names.err != nil {
+				return names
 			}
-			set, withGenerated, err := buildUnitIdentifiers(projectRoot, units[position], generated[position])
+			if err := readSourceIdentifiers(projectRoot, units[position], names.set); err != nil {
+				return unitNames{err: err}
+			}
 
-			return unitNames{set: set, withGenerated: withGenerated, err: err}
+			return names
 		})
 		index.sets = make([]identifierSet, len(units))
 		index.errs = make([]error, len(units))

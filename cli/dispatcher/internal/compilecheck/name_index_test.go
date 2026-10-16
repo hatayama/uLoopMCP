@@ -3,6 +3,7 @@ package compilecheck
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -24,6 +25,37 @@ func assertHasIdentifiers(t *testing.T, set identifierSet, present []string, abs
 		if _, found := set[name]; found {
 			t.Errorf("expected %q not to be among the identifiers, got %v", name, set)
 		}
+	}
+}
+
+// Verifies identifiers are cut by the characters C# allows in them: a spacing mark, a combining mark
+// and a connector stay inside one identifier, a letter number starts one, and a formatting character
+// is left out of the name, as the compiler leaves it out.
+func TestScanIdentifiersCutsIdentifiersByTheCharactersCSharpAllows(t *testing.T) {
+	set := identifiersOf("नाम cafe\u0301 a\u203fb \u216bth Fo\u200do")
+
+	assertHasIdentifiers(t, set,
+		[]string{"नाम", "cafe\u0301", "a\u203fb", "\u216bth", "Foo"},
+		[]string{"न", "म", "cafe", "a", "b", "th", "Fo", "o"})
+}
+
+// Verifies a target-typed new is found with any white space before its parenthesis, and only then.
+func TestScanIdentifiersFindsATargetTypedNewOnlyBeforeAParenthesis(t *testing.T) {
+	cases := map[string]bool{
+		"new(1)": true, "new   (1)": true, "new\n(1)": true, "new x(1)": false, "x = new": false, "new  ": false,
+	}
+	for content, want := range cases {
+		if _, found := identifiersOf(content)[targetTypedNewToken]; found != want {
+			t.Errorf("%q: target-typed new found = %v, want %v", content, found, want)
+		}
+	}
+}
+
+// BenchmarkScanIdentifiers reads a file holding many "new" expressions.
+func BenchmarkScanIdentifiers(b *testing.B) {
+	content := []byte(strings.Repeat("var x = new Thing(); ", 40_000))
+	for b.Loop() {
+		scanIdentifiers(content, identifierSet{})
 	}
 }
 
@@ -62,17 +94,19 @@ func writeUnitSources(t *testing.T, root string, files map[string]string) Compil
 	return unit
 }
 
-// Verifies a unit's identifiers come from every source and from every C# file under its saved
-// generator output, nested directories included, and that reading the latter is reported.
-func TestBuildUnitIdentifiersReadsSourcesAndGeneratedCode(t *testing.T) {
+// Verifies a unit's identifiers come from every source, and its generator output's from every C# file
+// under the directory, nested directories included, with reading the latter reported.
+func TestReadIdentifiersReadsSourcesAndGeneratedCode(t *testing.T) {
 	root := t.TempDir()
 	unit := writeUnitSources(t, root, map[string]string{"Assets/A.cs": "class First { }", "Assets/B.cs": "class Second { }"})
-	generated := filepath.Join(root, "Generated")
 	writeUnitSources(t, root, map[string]string{"Generated/sub/a.CS": "class Third { }", "Generated/notes.txt": "Fourth"})
 
-	set, withGenerated, err := buildUnitIdentifiers(root, unit, generated)
+	set, withGenerated, err := readGeneratedIdentifiers(filepath.Join(root, "Generated"))
 	if err != nil {
-		t.Fatalf("expected the identifiers to be read, got %v", err)
+		t.Fatalf("expected the generated identifiers to be read, got %v", err)
+	}
+	if err := readSourceIdentifiers(root, unit, set); err != nil {
+		t.Fatalf("expected the source identifiers to be read, got %v", err)
 	}
 
 	assertHasIdentifiers(t, set, []string{"First", "Second", "Third"}, []string{"Fourth"})
@@ -81,50 +115,64 @@ func TestBuildUnitIdentifiersReadsSourcesAndGeneratedCode(t *testing.T) {
 	}
 }
 
-// Verifies a unit without saved generator output is read from its sources alone and says so.
-func TestBuildUnitIdentifiersWithoutGeneratedCode(t *testing.T) {
-	root := t.TempDir()
-	unit := writeUnitSources(t, root, map[string]string{"Assets/A.cs": "class First { }"})
-
-	set, withGenerated, err := buildUnitIdentifiers(root, unit, filepath.Join(root, "Missing"))
+// Verifies a missing generator output directory reads as no generated code rather than an error.
+func TestReadGeneratedIdentifiersWithoutGeneratedCode(t *testing.T) {
+	set, withGenerated, err := readGeneratedIdentifiers(filepath.Join(t.TempDir(), "Missing"))
 	if err != nil {
-		t.Fatalf("expected the identifiers to be read, got %v", err)
+		t.Fatalf("expected no error, got %v", err)
 	}
-
-	assertHasIdentifiers(t, set, []string{"First"}, nil)
-	if withGenerated {
-		t.Error("expected no generated code to be reported")
+	if withGenerated || len(set) != 0 {
+		t.Errorf("expected no generated code, got %v (reported read: %v)", set, withGenerated)
 	}
 }
 
 // Verifies a source given by absolute path, as a local package's is, is read from that path.
-func TestBuildUnitIdentifiersReadsAnAbsoluteSource(t *testing.T) {
-	root := t.TempDir()
+func TestReadSourceIdentifiersReadsAnAbsoluteSource(t *testing.T) {
 	elsewhere := t.TempDir()
 	writeUnitSources(t, elsewhere, map[string]string{"Package/P.cs": "class Packaged { }"})
 	unit := CompileUnit{
 		Assembly: ResponseFile{AssemblyName: "Unit"},
 		Sources:  []string{filepath.ToSlash(filepath.Join(elsewhere, "Package", "P.cs"))},
 	}
+	set := identifierSet{}
 
-	set, _, err := buildUnitIdentifiers(root, unit, filepath.Join(root, "Missing"))
-	if err != nil {
+	if err := readSourceIdentifiers(t.TempDir(), unit, set); err != nil {
 		t.Fatalf("expected the identifiers to be read, got %v", err)
 	}
 
 	assertHasIdentifiers(t, set, []string{"Packaged"}, nil)
 }
 
-// Verifies a unit without sources, or with one that cannot be read, has no identifiers rather than
+// Verifies a unit without sources, or with one that cannot be read, is refused rather than read as
 // an empty set, so it is never read as writing no changed name.
-func TestBuildUnitIdentifiersRefusesAUnitItCannotRead(t *testing.T) {
+func TestReadSourceIdentifiersRefusesAUnitItCannotRead(t *testing.T) {
 	root := t.TempDir()
 	missing := CompileUnit{Assembly: ResponseFile{AssemblyName: "Unit"}, Sources: []string{"Assets/Missing.cs"}}
 	for label, unit := range map[string]CompileUnit{"no sources": {Assembly: ResponseFile{AssemblyName: "Unit"}}, "missing": missing} {
-		if set, _, err := buildUnitIdentifiers(root, unit, filepath.Join(root, "Missing")); err == nil {
-			t.Errorf("%s: expected an error, got %v", label, set)
+		if err := readSourceIdentifiers(root, unit, identifierSet{}); err == nil {
+			t.Errorf("%s: expected an error", label)
 		}
 	}
+}
+
+// Verifies the generator output is read before start returns: a compile that removes the directory
+// once the run is under way no longer takes the names only the generator wrote out of the index.
+func TestNameIndexReadsGeneratedCodeBeforeStartReturns(t *testing.T) {
+	root := t.TempDir()
+	unit := writeUnitSources(t, root, map[string]string{"Assets/A.cs": "class First { }"})
+	writeUnitSources(t, root, map[string]string{"Generated/Gen.g.cs": "partial class First { Foo f; }"})
+	index := nameIndex{}
+
+	index.start(root, []CompileUnit{unit}, []string{filepath.Join(root, "Generated")}, []bool{true})
+	if err := os.RemoveAll(filepath.Join(root, "Generated")); err != nil {
+		t.Fatalf("failed to remove the generated code: %v", err)
+	}
+
+	set, err := index.lookup(0)
+	if err != nil {
+		t.Fatalf("expected the identifiers of the unit, got %v", err)
+	}
+	assertHasIdentifiers(t, set, []string{"First", "Foo"}, nil)
 }
 
 // Verifies the background read is over once wait returns, and that lookup answers only for the

@@ -354,11 +354,14 @@ happened, and how long each assembly took. `docs/vibe-logs.md` lists their field
   dependent skip in step 3 already has. One handed to the compiler as `/analyzerconfig:` is read by
   content and does invalidate it. `--all` compiles everything again.
 - **A dependent left out by names can miss what a generator would write.** The names are read from
-  the dependent's sources and from the generator output its last full compile saved. A generator
-  that emits code using a member of a referenced type whose name the dependent's own sources never
-  write, in a dependent with no saved output, is not seen. Neither is a change to the type of an
-  async method builder, which a dependent never names; a change to its members is unnamed and
-  compiles every dependent.
+  the dependent's sources and from the generator output its last full compile saved. Leaving a
+  dependent out - because its references kept their surface or changed only names it never writes -
+  removes that saved output, so in steady use the names come from the hand-written sources alone and
+  the VibeLog's `name_index.with_generated` stays near 0. A generator that emits code using a member
+  of a referenced type whose name the dependent's own sources never write is then not seen. Closing
+  that gap needs a left-out dependent to keep its outputs and record, which this check does not do
+  yet. Neither is a change to the type of an async method builder seen, which a dependent never
+  names; a change to its members is unnamed and compiles every dependent.
 - **Every change to a type in `System`, `Microsoft.CodeAnalysis` or a namespace under them compiles
   every dependent.** The compiler looks these types up by name, so only polyfills normally live
   there; a project that puts its own extension classes in `System.*` gets no narrowing for them.
