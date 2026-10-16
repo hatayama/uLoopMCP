@@ -1,0 +1,94 @@
+# Compile Check Is Its Own Command and Is Shown
+
+Date: 2026-10-17
+
+## Decision
+
+`uloop compile-check` stays a command of its own rather than an option of `uloop compile`, and it
+is listed in `--help`, `uloop list`, shell completion and the installed skills.
+
+It is shown once the inputs that can change after the last Unity build and that it cannot detect
+are only the ones under "What Stays Undetected" below. Every other input that moved since the last
+Unity build either is compiled from the current files or makes the command refuse with
+`COMPILE_CHECK_UNITY_BUILD_REQUIRED`, which a Unity build clears.
+
+## Context
+
+`uloop compile-check` replays the response files of the last Unity build through the
+Editor-bundled Roslyn compiler. It was hidden because a build setting that changed after that
+build, and that the replay could not see, made it miss errors silently.
+
+It was not made an option of `uloop compile`, for three reasons:
+
+1. `uloop compile` produces the assemblies Unity loads and changes the Editor's state. The offline
+   check touches no Editor and nothing it produces is ever loaded. If a flag decided whether the
+   result reaches Unity, an agent would read a passing check as an applied change. `uloop
+   hot-reload` is a separate command for the same reason.
+2. `uloop compile` is a Unity tool reached over IPC: it needs a running Editor and is rejected with
+   BUSY while another command runs. The offline check runs without an Editor, takes its own
+   project lock and fails with its own `COMPILE_CHECK_*` errors.
+3. The options of `uloop compile` come from the Unity-side tool schema, which generates the skill
+   table and the default tool catalog, and the generator rejects an option the Unity tool does not
+   accept. A flag the dispatcher intercepts would be a special case for one tool.
+
+## What It Detects
+
+The command refuses with `COMPILE_CHECK_UNITY_BUILD_REQUIRED` when:
+
+- there are no Bee build outputs, or which build to replay cannot be decided;
+- an assembly definition was added or removed;
+- an assembly definition gained a reference, or lost one - except the four Unity adds without an
+  `.asmdef` line: `UnityEngine.UI`, `UnityEditor.UI`, `UnityEngine.TestRunner`,
+  `UnityEditor.TestRunner`;
+- `allowUnsafeCode` was turned on, or a precompiled reference was added under
+  `overrideReferences`;
+- an assembly definition or assembly definition reference moved;
+- a scripting define of the active build target group is missing from the last build;
+- since the last Unity build, a scripting define, a `csc.rsp`, the `defineConstraints` or
+  `versionDefines` of an assembly definition, `Packages/packages-lock.json` or
+  `Packages/manifest.json` changed. This compares against a record tied to the files Bee rewrites
+  on every build (`Library/Bee/tundra.log.json` and its neighbours);
+- a new script outside every assembly definition belongs to a predefined assembly
+  (`Assembly-CSharp` and its three siblings) that the last build did not produce.
+
+## What It Compiles Rather Than Narrows
+
+A dependent with no saved generator output - one the command has never compiled - is compiled when
+a reference it uses changes its surface, instead of being left out by the names it writes. After
+that compile its generator output is saved and read like its sources.
+
+## What Stays Undetected
+
+These are documented and not detected; after any of them, run `uloop compile`:
+
+- (a) a source generator in a dependent that changes what it generates by reading a referenced
+  assembly's contents rather than the dependent's own code;
+- (b) a change to the type of an async method builder;
+- (c) on a Unity version whose `Library/Bee` has none of the build-trace files, a scripting define
+  removed since the last build and a changed `csc.rsp` and the other recorded settings (an added
+  define is still seen);
+- (d) a change made before the record exists - that is, before the first run after that build -
+  other than an added scripting define: a removed define, or a changed `csc.rsp`,
+  `defineConstraints`, `versionDefines` or `packages-lock.json`;
+- (e) a new script in a package folder that has no assembly definition;
+- (f) an analyzer config Unity passes with `/analyzerconfig:` that was added since the last build;
+- (g) scripting defines are not compared in a project whose active build target is Dedicated
+  Server (the response files carry `UNITY_SERVER`), because which settings group Unity reads for it
+  cannot be determined.
+
+## Consequences
+
+- Agents find the command through help, the command list and its skill, and can check C# edits
+  without a running Editor.
+- A refusal means "build once in Unity"; a refusal that a Unity build does not clear would make the
+  command unusable, so every refusal above is cleared by the next `uloop compile`.
+- The limitations above stay in `docs/compile-check.md` and the skill, so an agent knows when to
+  fall back to `uloop compile`.
+
+## Revisit When
+
+- A tester round shows the check reporting an error `uloop compile` does not report, or a refusal
+  that `uloop compile` does not clear. Then hide the command again until the cause is closed.
+- Running the check offline before `uloop compile` - returning its errors without touching Unity -
+  is decided in a separate ADR, once the detection above has gone through one tester round without
+  a miss.
