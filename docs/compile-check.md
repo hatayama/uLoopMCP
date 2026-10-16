@@ -380,7 +380,8 @@ happened, and how long each assembly took. `docs/vibe-logs.md` lists their field
   - the scripting defines of a project whose active build target is Dedicated Server (the
     response files carry `UNITY_SERVER`), because which settings group Unity reads for it cannot be
     determined, and those of a `ProjectSettings.asset` saved in binary;
-  - an analyzer config added since the last build that Unity passes with `/analyzerconfig:`.
+  - an analyzer config added since the last build that Unity passes with `/analyzerconfig:`; one a
+    response file already names is read by content and invalidates a reused result.
 - **The predefined assemblies** (`Assembly-CSharp` and friends) keep the source list of the last
   build, so a brand-new `.cs` file outside any `.asmdef` is not compiled until Unity imports it.
 - **A dependent left out by names can miss what a generator would write.** The names are read from
