@@ -109,6 +109,8 @@ func DetectBuildSettingsChange(
 	report.DefinesChecked = !found || projectSettingsSavedAfter(projectRoot, stamp)
 	if report.DefinesChecked {
 		if define := defineTheBuildLacks(current, graph); define != "" {
+			report.RefusedPart = fmt.Sprintf(
+				"scripting defines of %s (not in the last build: %s)", current.DefineGroup, define)
 			return report, unityBuildRequired("scripting define %s is not in the last Unity build", define)
 		}
 	}

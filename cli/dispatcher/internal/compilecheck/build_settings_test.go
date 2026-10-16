@@ -145,6 +145,9 @@ func TestDetectBuildSettingsChangeRefusesADefineTheLastBuildLacks(t *testing.T) 
 	if !report.StampFound || !report.DefinesChecked {
 		t.Errorf("report = %+v, want the build-trace file found and the defines checked", report)
 	}
+	if want := "scripting defines of Standalone (not in the last build: ADDED_LATER)"; report.RefusedPart != want {
+		t.Errorf("refused part = %q, want %q", report.RefusedPart, want)
+	}
 	if _, statErr := os.Stat(project.recordPath()); statErr == nil {
 		t.Error("expected no record to be written for a refused run")
 	}
