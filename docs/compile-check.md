@@ -258,14 +258,14 @@ So the first body edit is compiled in full more often than it looks:
   reads Unity's build instead, does the first body edit of an assembly referencing it fall back
   with `inputs other than source contents changed: references`.
 - An assembly a run leaves out because nothing it compiles from changed keeps its result and
-  baseline, so its next body edit is checked against them. What a run removes is the result and
-  baseline of an assembly it picked up only because a reference changed and then skipped, because
-  every such reference kept its public surface or changed only names the assembly never writes; the
-  next body edit of that assembly is compiled in full. A run that blocks an assembly because one it
-  references has errors keeps its result and baseline: the next run checks them against the inputs
-  and output hashes they were recorded with before using them, so a reference that comes back the
-  same leaves the assembly reused or checked on its changed files, and one that comes back changed
-  compiles it.
+  baseline, so its next body edit is checked against them. An assembly a run picks up only because
+  a reference changed loses its result and baseline either way: compiled, it records no baseline,
+  and left out, because every such reference kept its public surface or changed only names the
+  assembly never writes, its result and baseline are removed. The next body edit of that assembly
+  is compiled in full. A run that blocks an assembly because one it references has errors keeps
+  its result and baseline: the next run checks them against the inputs and output hashes they were
+  recorded with before using them, so a reference that comes back the same leaves the assembly
+  reused or checked on its changed files, and one that comes back changed compiles it.
 - A full compile while the assembly still has errors, whether a `--full` run or a run that fell
   back to one, drops its baseline, so the run after the fix is compiled in full. Running `--full`
   once the errors are fixed keeps it.
