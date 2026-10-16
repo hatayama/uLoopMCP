@@ -31,7 +31,7 @@ type ChangedReference struct {
 	Name     string
 	// Reason says why the change was not narrowed by names when it was told by names; today only
 	// "no saved generator output".
-	Reason string `json:",omitempty"`
+	Reason string
 }
 
 // NameSkip names a unit left out although a reference it reads changed its surface, because the unit
