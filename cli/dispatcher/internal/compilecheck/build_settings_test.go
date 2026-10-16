@@ -57,7 +57,21 @@ func (project buildSettingsProject) writeProjectSettings(t *testing.T, standalon
 			"  scriptingDefineSymbols:\n"+
 			"    Standalone: "+standaloneDefines+"\n"+
 			"    iPhone: IOS_ONLY\n"+
-			"  additionalCompilerArguments: {}\n")
+			"  additionalCompilerArguments: {}\n"+
+			"  scriptingBackend:\n"+
+			"    Android: 1\n")
+}
+
+// dateProjectSettings sets the modification time of ProjectSettings to the build-trace file's plus
+// offset.
+func (project buildSettingsProject) dateProjectSettings(t *testing.T, offset time.Duration) {
+	t.Helper()
+	stampInfo, err := os.Stat(filepath.Join(project.root, filepath.FromSlash(buildSettingsStampPath)))
+	if err != nil {
+		t.Fatalf("failed to stat the build-trace file: %v", err)
+	}
+	setModificationTime(t, filepath.Join(project.root, filepath.FromSlash(projectSettingsRelativePath)),
+		stampInfo.ModTime().Add(offset))
 }
 
 // write writes a project-relative file.
@@ -123,15 +137,30 @@ func assertBuildRequired(t *testing.T, err error, fragments ...string) {
 // any record exists.
 func TestDetectBuildSettingsChangeRefusesADefineTheLastBuildLacks(t *testing.T) {
 	project := newBuildSettingsProject(t, []string{"FOO"}, "FOO;ADDED_LATER")
+	project.dateProjectSettings(t, time.Hour)
 
 	report, err := project.detect(t)
 
 	assertBuildRequired(t, err, "ADDED_LATER", "not in the last Unity build")
-	if !report.StampFound {
-		t.Error("expected the report to say the build-trace file exists")
+	if !report.StampFound || !report.DefinesChecked {
+		t.Errorf("report = %+v, want the build-trace file found and the defines checked", report)
 	}
 	if _, statErr := os.Stat(project.recordPath()); statErr == nil {
 		t.Error("expected no record to be written for a refused run")
+	}
+}
+
+// Verifies a define the response files lack is left to the record when ProjectSettings is older than
+// the last build: the build already had it in force and left it out for a reason of its own, such as
+// a build profile overriding Player Settings, so refusing it would never clear.
+func TestDetectBuildSettingsChangeLeavesADefineOfAnOlderProjectSettingsToTheRecord(t *testing.T) {
+	project := newBuildSettingsProject(t, []string{"FOO"}, "FOO;OVERRIDDEN_AWAY")
+	project.dateProjectSettings(t, -time.Hour)
+
+	report := project.mustDetect(t)
+
+	if report.Record != buildSettingsRecordNew || report.DefinesChecked {
+		t.Errorf("report = %+v, want a new record without the defines checked", report)
 	}
 }
 
@@ -415,6 +444,20 @@ func TestReadProjectDefinesSplitsOnEverySeparator(t *testing.T) {
 	}
 	if !reflect.DeepEqual(defines, []string{"A", "B", "C", "D"}) {
 		t.Errorf("defines = %v, want [A B C D]", defines)
+	}
+}
+
+// Verifies the scan of one group's defines ends where the next map of the same depth begins, so a
+// group with no defines does not take another map's value for its own.
+func TestReadProjectDefinesStopsAtTheNextMap(t *testing.T) {
+	project := newBuildSettingsProject(t, []string{}, "")
+
+	content, err := os.ReadFile(filepath.Join(project.root, filepath.FromSlash(projectSettingsRelativePath)))
+	if err != nil {
+		t.Fatalf("failed to read the fixture: %v", err)
+	}
+	if value, found := scriptingDefinesValue(content, "Android"); found {
+		t.Errorf("Android defines = %q, want none found", value)
 	}
 }
 

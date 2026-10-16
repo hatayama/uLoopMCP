@@ -51,6 +51,9 @@ type BuildSettingsReport struct {
 	// RefusedPart names the setting that moved since the recorded build when the run was refused
 	// for it.
 	RefusedPart string
+	// DefinesChecked says the run looked for a project define the build lacks, which it does only
+	// when there is no build-trace file or ProjectSettings was saved after the last build.
+	DefinesChecked bool
 }
 
 // BuildSettingsError carries the build-settings report of a run that stopped with an error after
@@ -103,8 +106,11 @@ func DetectBuildSettingsChange(
 	}
 	stamp, found := readBuildStamp(projectRoot)
 	report.StampFound = found
-	if define := defineTheBuildLacks(current, graph); define != "" {
-		return report, unityBuildRequired("scripting define %s is not in the last Unity build", define)
+	report.DefinesChecked = !found || projectSettingsSavedAfter(projectRoot, stamp)
+	if report.DefinesChecked {
+		if define := defineTheBuildLacks(current, graph); define != "" {
+			return report, unityBuildRequired("scripting define %s is not in the last Unity build", define)
+		}
 	}
 	if !found {
 		return report, nil
@@ -131,6 +137,21 @@ func DetectBuildSettingsChange(
 	}
 
 	return report, writeBuildSettingsRecord(recordPath, record)
+}
+
+// projectSettingsSavedAfter reports whether ProjectSettings was saved after the build the stamp
+// belongs to.
+// Why an older ProjectSettings is not checked for defines the build lacks: its defines were already
+// in force when Unity built, so one missing from the response files was left out for a reason this
+// check cannot see - a Unity 6 build profile that overrides Player Settings is one - and refusing it
+// would refuse every run, since building again writes the same response files.
+func projectSettingsSavedAfter(projectRoot string, stamp buildStamp) bool {
+	info, err := os.Stat(filepath.Join(projectRoot, filepath.FromSlash(projectSettingsRelativePath)))
+	if err != nil {
+		return false
+	}
+
+	return info.ModTime().UnixNano() > stamp.ModTime
 }
 
 // defineTheBuildLacks names a scripting define of the active group that some response file lacks.

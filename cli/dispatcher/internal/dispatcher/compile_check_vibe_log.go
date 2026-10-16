@@ -122,9 +122,10 @@ func (logRun compileCheckVibeLog) write(level string, operation string, message 
 // happened to the build-settings record, and which setting a refusal was for.
 func compileCheckVibeBuildSettings(report compilecheck.BuildSettingsReport) map[string]any {
 	return map[string]any{
-		"stamp_found":  report.StampFound,
-		"record":       report.Record,
-		"refused_part": report.RefusedPart,
+		"stamp_found":     report.StampFound,
+		"record":          report.Record,
+		"refused_part":    report.RefusedPart,
+		"defines_checked": report.DefinesChecked,
 	}
 }
 

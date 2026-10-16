@@ -321,7 +321,7 @@ func TestCompileCheckVibeLogRecordsTheBuildSettingsOfACompletedRun(t *testing.T)
 	t.Setenv(vibelog.CLIVibeLogEnvName, "1")
 	projectRoot := t.TempDir()
 	result := compilecheck.Result{
-		BuildSettings: compilecheck.BuildSettingsReport{StampFound: true, Record: "new"},
+		BuildSettings: compilecheck.BuildSettingsReport{StampFound: true, Record: "new", DefinesChecked: true},
 	}
 
 	logRun := startCompileCheckVibeLog(projectRoot, compileCheckOptions{})
@@ -329,7 +329,7 @@ func TestCompileCheckVibeLogRecordsTheBuildSettingsOfACompletedRun(t *testing.T)
 
 	complete := assertCompileCheckVibeRun(t, readCompileCheckVibeLog(t, projectRoot))
 	assertVibeContextJSON(t, complete, "build_settings",
-		`{"record":"new","refused_part":"","stamp_found":true}`)
+		`{"defines_checked":true,"record":"new","refused_part":"","stamp_found":true}`)
 }
 
 // Verifies a run refused for a build setting that moved logs the refused setting on the failed
@@ -347,7 +347,7 @@ func TestCompileCheckVibeLogRecordsTheBuildSettingOfARefusedRun(t *testing.T) {
 
 	complete := assertCompileCheckVibeRun(t, readCompileCheckVibeLog(t, projectRoot))
 	assertVibeContextJSON(t, complete, "build_settings",
-		`{"record":"kept","refused_part":"Assets/csc.rsp","stamp_found":true}`)
+		`{"defines_checked":false,"record":"kept","refused_part":"Assets/csc.rsp","stamp_found":true}`)
 	assertVibeContextJSON(t, complete, "error_code", `"`+clierrors.ErrorCodeCompileCheckUnityBuildRequired+`"`)
 }
 
