@@ -172,13 +172,13 @@ func TestNameIndexIsOverOnceWaitReturns(t *testing.T) {
 	default:
 		t.Fatal("expected the read to be over once wait returned")
 	}
-	if _, err := index.lookup(0); err != nil {
+	if _, _, err := index.lookup(0); err != nil {
 		t.Errorf("expected the identifiers of the read unit, got %v", err)
 	}
-	if _, err := index.lookup(1); err == nil {
+	if _, _, err := index.lookup(1); err == nil {
 		t.Error("expected no identifiers for a unit that was not read")
 	}
-	if _, err := (&nameIndex{}).lookup(0); err == nil {
+	if _, _, err := (&nameIndex{}).lookup(0); err == nil {
 		t.Error("expected no identifiers from an index that never started")
 	}
 }

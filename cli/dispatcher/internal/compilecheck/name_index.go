@@ -20,11 +20,18 @@ import (
 // names a changed constructor.
 const targetTypedNewToken = "new("
 
+// noSavedGeneratorOutputReason says a unit compiled on a reference's named change without being
+// narrowed by names, because nothing tells what its generators would write.
+const noSavedGeneratorOutputReason = "no saved generator output"
+
 // ChangedReference names a referenced assembly whose changed surface made a unit compile, and the
 // first of its changed names the unit writes; empty when the change could not be told by names.
 type ChangedReference struct {
 	Assembly string
 	Name     string
+	// Reason says why the change was not narrowed by names when it was told by names; today only
+	// "no saved generator output".
+	Reason string `json:",omitempty"`
 }
 
 // NameSkip names a unit left out although a reference it reads changed its surface, because the unit
@@ -43,6 +50,9 @@ type NameIndexReport struct {
 	Units         int
 	WithGenerated int
 	Unreadable    int
+	// WithoutGenerated counts the units compiled on a named change without being narrowed by names,
+	// because they have analyzers and no saved generator output.
+	WithoutGenerated int
 	// SourcesRead says whether the run needed the sources, by compiling a unit, by having the worker
 	// check its changed files, or by asking a verdict for names.
 	SourcesRead bool
@@ -268,21 +278,21 @@ func (index *nameIndex) keep(results []unitIdentifiers) {
 }
 
 // lookup reads the sources when nothing has yet, waits for them and returns the identifiers of one
-// unit, or an error when it has none.
-func (index *nameIndex) lookup(position int) (identifierSet, error) {
+// unit and whether its saved generator output was among them, or an error when it has none.
+func (index *nameIndex) lookup(position int) (identifierSet, bool, error) {
 	if !index.started {
-		return nil, errors.New("the names of the plan were never read")
+		return nil, false, errors.New("the names of the plan were never read")
 	}
 	index.readSources()
 	<-index.done
 	if !index.indexed[position] {
-		return nil, errors.New("the names of this unit were not read")
+		return nil, false, errors.New("the names of this unit were not read")
 	}
 	if index.errs[position] != nil {
-		return nil, index.errs[position]
+		return nil, false, index.errs[position]
 	}
 
-	return index.sets[position], nil
+	return index.sets[position], index.withGenerated[position], nil
 }
 
 // wait returns once the background read of the sources is over, so nothing outlives the run that
@@ -352,8 +362,9 @@ type referenceEffect struct {
 	touches   bool
 	// named marks a reference whose change was told by names, so one that does not touch was
 	// changed rather than kept.
-	named bool
-	name  string
+	named  bool
+	name   string
+	reason string // why a named change touched the unit without a name it writes
 }
 
 // changedReference is a reference that touched a unit, by its position in the plan, with the first
@@ -361,6 +372,7 @@ type referenceEffect struct {
 type changedReference struct {
 	reference int
 	name      string
+	reason    string
 }
 
 // effectsOf decides, for every unit reading the unit at index, whether its verdict touches that unit:
@@ -383,8 +395,14 @@ func (run *schedulerRun) effectsOf(index int, verdict SurfaceVerdict) []referenc
 	return effects
 }
 
+// namedEffect decides whether a change told by names touches one unit: when the unit writes one of
+// the names, or when it has analyzers and no saved generator output.
+// Why the names are matched first: a name the unit writes tells a reader more than the reason does.
+// Why a unit without saved generator output compiles: its generators may write a changed name its
+// own sources never do, and nothing on disk says what they write. A compile saves that output, even
+// empty, so this happens once per unit. Without analyzers there are no generators to miss.
 func (run *schedulerRun) namedEffect(dependent int, changedNames []string) referenceEffect {
-	identifiers, err := run.names.lookup(dependent)
+	identifiers, withGenerated, err := run.names.lookup(dependent)
 	if err != nil {
 		return referenceEffect{dependent: dependent, touches: true}
 	}
@@ -393,8 +411,32 @@ func (run *schedulerRun) namedEffect(dependent int, changedNames []string) refer
 			return referenceEffect{dependent: dependent, touches: true, named: true, name: name}
 		}
 	}
+	if !withGenerated && len(run.plan.Units[dependent].Assembly.Analyzers) > 0 {
+		return referenceEffect{dependent: dependent, touches: true, reason: noSavedGeneratorOutputReason}
+	}
 
 	return referenceEffect{dependent: dependent, named: true}
+}
+
+// nameIndexReport is what reading the names took, with the units compiled for want of saved
+// generator output.
+func (run *schedulerRun) nameIndexReport() NameIndexReport {
+	report := run.names.report()
+	report.WithoutGenerated = run.withoutGeneratedCount()
+
+	return report
+}
+
+// withoutGeneratedCount counts the units a named change touched for want of saved generator output.
+func (run *schedulerRun) withoutGeneratedCount() int {
+	count := 0
+	for _, touched := range run.state.changedBy {
+		if slices.ContainsFunc(touched, func(reference changedReference) bool { return reference.reason != "" }) {
+			count++
+		}
+	}
+
+	return count
 }
 
 // changedReferencesOf names the references that touched the unit at index, in the plan's order.
@@ -408,6 +450,7 @@ func (run *schedulerRun) changedReferencesOf(index int) []ChangedReference {
 	for _, reference := range touched {
 		references = append(references, ChangedReference{
 			Assembly: run.plan.Units[reference.reference].Assembly.AssemblyName, Name: reference.name,
+			Reason: reference.reason,
 		})
 	}
 

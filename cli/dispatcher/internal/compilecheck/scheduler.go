@@ -169,7 +169,7 @@ func compileUnits(
 		Skipped:   run.referenceSkips,
 		Blocked:   run.blockedNames(),
 		NameSkips: run.nameSkips,
-		NameIndex: run.names.report(),
+		NameIndex: run.nameIndexReport(),
 	}, nil
 }
 
@@ -435,7 +435,8 @@ func (state *schedule) release(index int, effects []referenceEffect) []int {
 			continue
 		}
 		state.changedInputs[dependent]++
-		state.changedBy[dependent] = append(state.changedBy[dependent], changedReference{reference: index, name: effect.name})
+		state.changedBy[dependent] = append(state.changedBy[dependent],
+			changedReference{reference: index, name: effect.name, reason: effect.reason})
 		if !state.stale[dependent] && containsIndex(state.assumed[dependent], index) {
 			state.stale[dependent] = true
 			state.staleCause[dependent] = index
