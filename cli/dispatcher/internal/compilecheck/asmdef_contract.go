@@ -97,14 +97,17 @@ func detectContractDisagreement(
 	if name, found := missingPrecompiledReference(contract, rsp); found {
 		return fmt.Sprintf("now requires the precompiled reference %s", name)
 	}
+	if name, found := lostProjectReference(contract, rsp, dagDir, context); found {
+		return fmt.Sprintf("no longer references %s", name)
+	}
 
 	return ""
 }
 
 // missingProjectReference names an assembly the .asmdef references that the response file lacks.
-// Why the check is one-directional: Unity injects references of its own (the UI and test-runner
-// assemblies) that no .asmdef declares, so demanding equality would reject healthy projects. Only a
-// reference the .asmdef gained is detectable; a removed one is documented as undetectable instead.
+// Why a removed reference is checked separately: the only references Unity adds without an .asmdef
+// line are the four in unityInjectedProjectReferences, so a response-file reference outside the
+// .asmdef and that list is one the .asmdef lost; lostProjectReference reports it.
 func missingProjectReference(
 	contract assemblyDefinitionContract, rsp ResponseFile, dagDir string, context AssemblyContext,
 ) (string, bool) {
