@@ -63,11 +63,12 @@ same result, and only spend the time.
 - A dependent left out by names is not compiled, so an error only compiling it would show is
   missed when the names miss it. These are the known gaps:
   - a source generator that generates from a referenced assembly's contents rather than from the
-    dependent's own code. A dependent with analyzers and no saved generator output - one the check
-    has never compiled - is compiled on a named change rather than narrowed, and leaving a
+    dependent's own code. A unit with analyzers and no saved generator output - one the check has
+    never compiled to the end - is compiled on a named change rather than narrowed, whether it was
+    picked up as a dependent or started on its own sources ahead of the reference, and leaving a
     dependent out keeps its saved generator output, so after its first compile the names its
     generators write are read along with its sources (VibeLog `name_index.with_generated`, and
-    `name_index.without_generated` for the dependents compiled for want of that output);
+    `name_index.without_generated` for the units compiled for want of that output);
   - a change to the type of an async method builder, which a dependent never names (a change to
     its members is unnamed);
   - an identifier a dependent writes only with `\u` escapes.
@@ -87,4 +88,5 @@ same result, and only spend the time.
   changed by names. Then start reading the names only when the first named change arrives.
 
 Amended 2026-10-17 by PR-3 of feature/compile-check-visible: a left-out dependent keeps its outputs
-and records, and a dependent without saved generator output is compiled rather than narrowed.
+and records, and a unit with analyzers and no saved generator output, whether it was picked up as a
+dependent or started on its own sources ahead of the reference, is compiled rather than narrowed.

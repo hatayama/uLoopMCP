@@ -228,10 +228,9 @@ build - does not call the worker again: it reports what the previous check repor
 
 Otherwise the assembly is compiled in full as before, and `FastPathFallbacks` says why:
 
-- `no baseline: no full compile of this assembly is on record` (none ran yet, a later run
-  picked the assembly up only because a reference changed and then skipped it, which removes its
-  result and baseline, or an input changed while the last full compile ran, so it left no record;
-  `FastPathBaselineNotes` of that run says which)
+- `no baseline: no full compile of this assembly is on record` (none ran yet, or an input changed
+  while the last full compile ran, so it left no record; `FastPathBaselineNotes` of that run says
+  which)
 - `no baseline: the last full compile had errors; the first full compile without errors records one`
   (a full compile that fails drops the baseline an earlier one left, and the assembly is
   compiled in full until a compile succeeds)
@@ -391,7 +390,8 @@ happened, and how long each assembly took. `docs/vibe-logs.md` lists their field
   build, so a brand-new `.cs` file outside any `.asmdef` is not compiled until Unity imports it.
 - **A dependent compile-check has never compiled is compiled, not narrowed by names, the first time
   a reference changes.** The names are read from the dependent's sources and from the generator
-  output its last compile saved; a dependent with analyzers and no saved output compiles on any
+  output its last finished compile saved; a unit with analyzers and no saved output, whether it was
+  picked up as a dependent or started on its own sources ahead of the reference, compiles on any
   named change, and the VibeLog reports it with `changed_by.reason` `no saved generator output` and
   counts it in `name_index.without_generated`. After that its saved generator output is read, and
   leaving it out keeps that output. What stays invisible is a generator that generates from a
