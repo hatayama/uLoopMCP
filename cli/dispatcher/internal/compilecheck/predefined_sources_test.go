@@ -252,3 +252,20 @@ func TestSelectChangedAssembliesRefusesAScriptForAPredefinedAssemblyTheLastBuild
 
 	assertBuildRequired(t, err, "Assets/Editor/FirstEditorScript.cs", assemblyCSharpEditor, "did not produce")
 }
+
+// Verifies the scripts of the folders Unity imports but never compiles are left out, in any case,
+// while a deeper folder of the same name and the other platform folders under Plugins are not.
+func TestGlobPredefinedSourcesLeavesOutTheFoldersUnityNeverCompiles(t *testing.T) {
+	projectRoot := t.TempDir()
+	writeProjectFiles(t, projectRoot,
+		"Assets/StreamingAssets/A.cs", "Assets/WebPlayerTemplates/B.cs", "Assets/webgltemplates/C.cs",
+		"Assets/Plugins/Android/D.cs", "Assets/Plugins/iOS/X.cs", "Assets/Game/StreamingAssets/X.cs")
+
+	predefined := predefinedOwnersFor(t, projectRoot).predefinedSources
+
+	assertStrings(t, assemblyCSharpFirstpass, predefined[assemblyCSharpFirstpass], []string{"Assets/Plugins/iOS/X.cs"})
+	assertStrings(t, assemblyCSharp, predefined[assemblyCSharp], []string{"Assets/Game/StreamingAssets/X.cs"})
+	if len(predefined) != 2 {
+		t.Errorf("predefined = %v, want only %s and %s", predefined, assemblyCSharp, assemblyCSharpFirstpass)
+	}
+}
