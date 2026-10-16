@@ -401,8 +401,6 @@ happened, and how long each assembly took. `docs/vibe-logs.md` lists their field
 - **Every change to a type in `System`, `Microsoft.CodeAnalysis` or a namespace under them compiles
   every dependent.** The compiler looks these types up by name, so only polyfills normally live
   there; a project that puts its own extension classes in `System.*` gets no narrowing for them.
-- **Identifiers written with `\u` escapes are not decoded** when the dependent's names are read, so
-  a dependent that writes a changed name only that way is left out. `--all` compiles everything.
 - **Linux (x86_64) is supported.** The Editor is looked up under `~/Unity/Hub/Editor/<version>/Editor/Unity`.
 
 ## Troubleshooting

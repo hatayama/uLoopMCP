@@ -70,8 +70,7 @@ same result, and only spend the time.
     generators write are read along with its sources (VibeLog `name_index.with_generated`, and
     `name_index.without_generated` for the units compiled for want of that output);
   - a change to the type of an async method builder, which a dependent never names (a change to
-    its members is unnamed);
-  - an identifier a dependent writes only with `\u` escapes.
+    its members is unnamed).
 - A project that puts its own extension classes in `System.*` gets every dependent compiled when one
   of their members changes, because the whole namespace is unnamed.
 - The members C# binds by pattern include common method names such as `Create`, `Add`, `Count` and
@@ -90,3 +89,5 @@ same result, and only spend the time.
 Amended 2026-10-17 by PR-3 of feature/compile-check-visible: a left-out dependent keeps its outputs
 and records, and a unit with analyzers and no saved generator output, whether it was picked up as a
 dependent or started on its own sources ahead of the reference, is compiled rather than narrowed.
+Amended 2026-10-17 by PR-4 of feature/compile-check-visible: identifiers written with `\u` escapes
+are read decoded, so that gap is closed.

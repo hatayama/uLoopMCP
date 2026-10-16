@@ -371,3 +371,13 @@ func TestCompileUnitsReadsTheSourcesOnceAUnitCompilesInFull(t *testing.T) {
 		t.Errorf("name index = %+v, want the sources read", outcome.NameIndex)
 	}
 }
+
+// Verifies a dependent that writes a changed name only with a \u escape compiles for that name.
+func TestCompileUnitsCompilesADependentThatWritesTheChangedNameWithAnEscape(t *testing.T) {
+	project, recorder := newNamesProject(t, "class B { int x = "+escapeOf("u0046")+"oo(); }")
+
+	outcome := project.compileWithVerdicts(t, recorder, namedVerdicts{"A": namedChangeOf("Foo")})
+
+	assertStrings(t, "results", compiledNames(outcome.Units), []string{"A", "B"})
+	assertChangedReferences(t, resultOf(t, outcome.Units, "B"), []ChangedReference{{Assembly: "A", Name: "Foo"}})
+}
