@@ -61,15 +61,16 @@ func BenchmarkScanIdentifiers(b *testing.B) {
 }
 
 // Verifies identifiers are cut the way C# spells them: a verbatim '@' left off, Unicode letters
-// kept, words in strings and comments read too, a target-typed new found with or without a space,
-// and an identifier that only starts with "new" not taken for one.
+// kept, words in strings and comments read too - a \u escape in a literal decoded like one in an
+// identifier - a target-typed new found with or without a space, and an identifier that only starts
+// with "new" not taken for one.
 func TestScanIdentifiersCutsIdentifiersTheWayCSharpSpellsThem(t *testing.T) {
 	set := identifiersOf("var @class = new (1); Point p = new(2); newFoo(3); // Commented\n" +
 		"string s = \"Quoted\"; int 名前 = _under9; char c = '\\u0041';")
 
 	assertHasIdentifiers(t, set,
-		[]string{"class", "new(", "newFoo", "Commented", "Quoted", "名前", "_under9", "Point", "u0041"},
-		[]string{"@class", "A", "9"})
+		[]string{"class", "new(", "newFoo", "Commented", "Quoted", "名前", "_under9", "Point", "A"},
+		[]string{"@class", "u0041", "9"})
 }
 
 // Verifies "newFoo(" alone is not read as a target-typed new.
@@ -200,5 +201,40 @@ func TestNameIndexReportCountsOnlyTheTimeSpentReading(t *testing.T) {
 
 	if report := index.report(); !report.SourcesRead || report.Duration >= 150*time.Millisecond {
 		t.Errorf("report = %+v, want the sources read in well under 150 ms", report)
+	}
+}
+
+// escapeOf spells a \u or \U escape: the backslash followed by the given text.
+func escapeOf(text string) string {
+	return string(rune(0x5C)) + text
+}
+
+// Verifies \u and \U escapes are decoded into the identifier they spell, at its start or inside it.
+func TestScanIdentifiersDecodesUnicodeEscapes(t *testing.T) {
+	cases := map[string]string{
+		escapeOf("u0041") + "bc":    "Abc",
+		"A" + escapeOf("u0042"):     "AB",
+		escapeOf("U00000041"):       "A",
+		"A" + escapeOf("U00000042"): "AB",
+	}
+	for content, want := range cases {
+		set := identifiersOf(content + " ")
+		if _, found := set[want]; !found || len(set) != 1 {
+			t.Errorf("%q: identifiers = %v, want only %q", content, set, want)
+		}
+	}
+}
+
+// Verifies an escape with a digit that is not hexadecimal, or with too few digits, is left as text.
+func TestScanIdentifiersLeavesAMalformedEscapeAlone(t *testing.T) {
+	assertHasIdentifiers(t, identifiersOf(`\u00G1 `), []string{"u00G1"}, []string{"A"})
+	assertHasIdentifiers(t, identifiersOf(`\u004 `), []string{"u004"}, []string{"\x04"})
+}
+
+// Verifies an escape spelling a surrogate is not decoded, as the compiler takes none as an
+// identifier character.
+func TestDecodeUnicodeEscapeRejectsASurrogate(t *testing.T) {
+	if character, _, ok := decodeUnicodeEscape([]byte(escapeOf("uD800")), 0); ok {
+		t.Errorf("expected a surrogate escape to be rejected, got %q", character)
 	}
 }

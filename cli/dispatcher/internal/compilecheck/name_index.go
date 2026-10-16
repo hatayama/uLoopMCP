@@ -13,7 +13,6 @@ import (
 	"sync/atomic"
 	"time"
 	"unicode"
-	"unicode/utf8"
 )
 
 // targetTypedNewToken stands for a target-typed new in a dependent's identifiers, the way the worker
@@ -63,14 +62,14 @@ type identifierSet map[string]struct{}
 
 // scanIdentifiers adds every identifier content holds to into, cut the way C# cuts one: a letter, a
 // letter number or '_', followed by those, decimal digits, combining marks, connectors and formatting
-// characters, the last left out of the name as the compiler leaves them out. Comments, strings and code a #if leaves out are read too, which can only make a
-// unit compile more often. A "new" followed by '(' also adds the target-typed new token.
-// Why \u escapes are not decoded: almost nobody writes one in an identifier, and the miss is named
-// among the limits of the check.
+// characters, the last left out of the name as the compiler leaves them out. A \u or \U escape counts
+// as the character it spells, as it does for the compiler. Comments, strings and code a #if leaves
+// out are read too, which can only make a unit compile more often. A "new" followed by '(' also adds
+// the target-typed new token.
 func scanIdentifiers(content []byte, into identifierSet) {
 	position := 0
 	for position < len(content) {
-		character, size := utf8.DecodeRune(content[position:])
+		character, size, escaped := runeAt(content, position)
 		if !isIdentifierStart(character) {
 			position += size
 
@@ -79,13 +78,20 @@ func scanIdentifiers(content []byte, into identifierSet) {
 		start := position
 		position += size
 		for position < len(content) {
-			next, nextSize := utf8.DecodeRune(content[position:])
+			next, nextSize, nextEscaped := runeAt(content, position)
 			if !isIdentifierPart(next) {
 				break
 			}
+			escaped = escaped || nextEscaped
 			position += nextSize
 		}
-		identifier := identifierText(content[start:position])
+		text := content[start:position]
+		// Why the text is decoded only when it holds an escape: nearly no identifier does, and
+		// decoding every one would copy each name the scan meets.
+		if escaped {
+			text = decodedText(text)
+		}
+		identifier := identifierText(text)
 		into[identifier] = struct{}{}
 		if identifier == "new" && opensParenthesis(content[position:]) {
 			into[targetTypedNewToken] = struct{}{}
