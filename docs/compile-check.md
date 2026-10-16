@@ -69,8 +69,9 @@ references, scripting defines and analyzers. `compile-check` replays those respo
    a parameterless constructor or an indexer; an abstract member added; an operator; a
    compiler-generated member; a member C# binds by pattern (`GetEnumerator`, `GetAwaiter`, `Add`,
    `Deconstruct`, `Dispose`, `SetResult`, the LINQ query methods and the like); every member of an
-   interpolated string handler or collection builder type; members that only moved; and a change
-   naming more than 2000 names. A dependent whose sources cannot be read compiles too.
+   interpolated string handler or collection builder type; every member of a type in `System`,
+   `Microsoft.CodeAnalysis` or a namespace under them, which the compiler looks up by name for
+   `init`, `^1` and the like; members that only moved; and a change naming more than 2000 names. A dependent whose sources cannot be read compiles too.
    Its answer is kept in `<Assembly>.surface.json`, keyed by the content of both reference
    assemblies and the worker build, so the runs until Unity builds again do not compare the same
    pair twice. The comparison is always against Unity's own artifact, never against the
@@ -358,6 +359,9 @@ happened, and how long each assembly took. `docs/vibe-logs.md` lists their field
   write, in a dependent with no saved output, is not seen. Neither is a change to the type of an
   async method builder, which a dependent never names; a change to its members is unnamed and
   compiles every dependent.
+- **Every change to a type in `System`, `Microsoft.CodeAnalysis` or a namespace under them compiles
+  every dependent.** The compiler looks these types up by name, so only polyfills normally live
+  there; a project that puts its own extension classes in `System.*` gets no narrowing for them.
 - **Identifiers written with `\u` escapes are not decoded** when the dependent's names are read, so
   a dependent that writes a changed name only that way is left out. `--all` compiles everything.
 - **Linux (x86_64) is supported.** The Editor is looked up under `~/Unity/Hub/Editor/<version>/Editor/Unity`.
