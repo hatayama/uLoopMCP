@@ -121,9 +121,17 @@ references, scripting defines and analyzers. `compile-check` replays those respo
    reference that was added to one, and a project reference it lost (a reference in the response
    file that the `.asmdef` no longer declares and Unity does not add on its own: `UnityEngine.UI`,
    `UnityEditor.UI`, `UnityEngine.TestRunner`, `UnityEditor.TestRunner`), invalidate the recorded
-   build. The run then stops with
-   `COMPILE_CHECK_UNITY_BUILD_REQUIRED` rather than reporting diagnostics for a configuration the
-   project no longer has.
+   build. The run then stops with `COMPILE_CHECK_UNITY_BUILD_REQUIRED` rather than reporting
+   diagnostics for a configuration the project no longer has.
+
+   The build settings the response files cannot be read back into - scripting defines,
+   `csc.rsp`, `defineConstraints` and `versionDefines`, and the package manifest and lock file -
+   are recorded by the first run after a Unity build in
+   `Library/uloop/compile-check/<dag>/build-settings.json`, keyed to the build-trace file Bee
+   rewrites on every build. A later run against the same build refuses any of them that moved; a
+   run after another Unity build replaces the record instead. A scripting define of the active
+   build target group that the response files lack is refused whenever `ProjectSettings.asset` was
+   saved after the last build, or there is no build-trace file.
 5. **Compile in dependency order** and parse the compiler's diagnostics into JSON. An assembly
    starts once every assembly it references that this run also compiles has finished, so
    independent assemblies compile at the same time. An assembly selected for its own sources, or a
@@ -353,19 +361,34 @@ happened, and how long each assembly took. `docs/vibe-logs.md` lists their field
   any source its response file recorded (it was moved into another assembly's folder), an `.asmref`
   whose folder holds sources the assembly it names does not record (it was added or moved), and a
   recorded source no `.asmref` attaches to its assembly any more (one was removed or retargeted).
-  Those cases — and only those — stop the run with `COMPILE_CHECK_UNITY_BUILD_REQUIRED` and ask for
-  `uloop compile`.
+  So do the build settings described below. Those cases — and only those — stop the run with
+  `COMPILE_CHECK_UNITY_BUILD_REQUIRED` and ask for `uloop compile`.
   Every other edit listed below is invisible to the check: the run proceeds and silently reuses
   what the last build recorded.
-- **`defineConstraints` and `versionDefines` changes are not detected**, because they depend on
-  scripting defines and package versions that can only be evaluated inside the Editor.
-- **Changed scripting defines are not detected**; the defines recorded in the last build are reused.
+- **Build settings are compared against a record keyed to the last Unity build.** The scripting
+  defines of the active build target group (from `ProjectSettings/ProjectSettings.asset`), every
+  `csc.rsp` Unity may read (`Assets/csc.rsp` and the one beside each `.asmdef` outside the package
+  cache), the `defineConstraints` and `versionDefines` of each such `.asmdef`,
+  `Packages/packages-lock.json` and `Packages/manifest.json` are recorded by the first run after a
+  Unity build, keyed to the build-trace file Bee rewrites on every build
+  (`Library/Bee/tundra.log.json`, `TundraBuildState.state` or `fullprofile.json`, whichever is
+  newest). A later run against the same build refuses any of them that moved. A scripting define
+  that the response files lack is refused, record or not, whenever `ProjectSettings.asset` was
+  saved after the last build or there is no build-trace file. What stays invisible:
+  - on a Unity version whose `Library/Bee` has none of the build-trace files, only an added
+    scripting define is seen - not a removed one, and not the other recorded settings;
+  - a change made before the record exists (before the first run after that build), other than an
+    added scripting define;
+  - the scripting defines of a project whose active build target is Dedicated Server (the
+    response files carry `UNITY_SERVER`), because which settings group Unity reads for it cannot be
+    determined, and those of a `ProjectSettings.asset` saved in binary;
+  - an analyzer config added since the last build that Unity passes with `/analyzerconfig:`; one a
+    response file already names is read by content and invalidates a reused result;
+  - a Unity 6 build profile that overrides Player Settings or carries its own scripting defines:
+    only the global ProjectSettings defines are compared, and a global define the build lacks is
+    refused only when `ProjectSettings.asset` was saved after the last build.
 - **The predefined assemblies** (`Assembly-CSharp` and friends) keep the source list of the last
   build, so a brand-new `.cs` file outside any `.asmdef` is not compiled until Unity imports it.
-- **An `.editorconfig` or global analyzer config that is not named by a response file does not
-  invalidate a reused result**, because it is not part of the input digest — the same exposure the
-  dependent skip in step 3 already has. One handed to the compiler as `/analyzerconfig:` is read by
-  content and does invalidate it. `--all` compiles everything again.
 - **A dependent left out by names can miss what a generator would write.** The names are read from
   the dependent's sources and from the generator output its last full compile saved. Leaving a
   dependent out - because its references kept their surface or changed only names it never writes -
@@ -404,8 +427,8 @@ headless run imports the project, writes the response files and exits.
 `uloop launch` is the same first build with the Editor window open; use whichever fits. The run
 takes as long as the project's initial import (about a minute for a 100-assembly project, longer
 for a large one). Once `Library` exists, compile-check runs without the Editor; it refuses again only
-when it detects an `.asmdef` change. A scripting define change is not detected (see Limitations), so
-run `uloop compile` yourself after one. The same applies on CI: restore `Library` from a cache or
+when it detects an `.asmdef` change or a build setting that moved (see Limitations for what stays
+unseen). The same applies on CI: restore `Library` from a cache or
 run this headless build once per job before calling compile-check.
 
 **`COMPILE_CHECK_UNITY_BUILD_REQUIRED`: an assembly definition no longer matches the last build**
@@ -422,6 +445,15 @@ the new configuration.
 An `.asmdef` edit that is not one of those does **not** raise this error — see Limitations for what
 goes undetected. In that case the run succeeds against the previous configuration, so run
 `uloop compile` yourself after such an edit rather than trusting a clean result.
+
+**`COMPILE_CHECK_UNITY_BUILD_REQUIRED`: a build setting changed since the last Unity build**
+The message reads `<setting> changed since the last Unity build` - for example
+`scripting defines of Standalone (removed: FOO)`, `Assets/csc.rsp`,
+`defineConstraints or versionDefines of Assets/X/X.asmdef` or `Packages/packages-lock.json` - or
+`scripting define <NAME> is not in the last Unity build`. The response files were written with the
+settings of the last Unity build, so compiling against them would check a configuration the project
+no longer has. Run `uloop compile` once; the build moves the build-trace file forward, the next run
+records the settings as they are now, and `compile-check` works again.
 
 **`COMPILE_CHECK_UNITY_BUILD_REQUIRED`: cannot tell which Bee build to check**
 Both a debug and a release dag exist and neither `tundra.log.json` nor

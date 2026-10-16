@@ -314,3 +314,54 @@ func TestCompileCheckVibeLogLeavesOutNameNarrowingWhenNothingWasRead(t *testing.
 		}
 	}
 }
+
+// Verifies a completed run logs whether the last Unity build left a build-trace file and what
+// happened to the build-settings record.
+func TestCompileCheckVibeLogRecordsTheBuildSettingsOfACompletedRun(t *testing.T) {
+	t.Setenv(vibelog.CLIVibeLogEnvName, "1")
+	projectRoot := t.TempDir()
+	result := compilecheck.Result{
+		BuildSettings: compilecheck.BuildSettingsReport{StampFound: true, Record: "new", DefinesChecked: true},
+	}
+
+	logRun := startCompileCheckVibeLog(projectRoot, compileCheckOptions{})
+	logRun.completed(buildCompileCheckResponse(result, projectRoot), result)
+
+	complete := assertCompileCheckVibeRun(t, readCompileCheckVibeLog(t, projectRoot))
+	assertVibeContextJSON(t, complete, "build_settings",
+		`{"defines_checked":true,"record":"new","refused_part":"","stamp_found":true}`)
+}
+
+// Verifies a run refused for a build setting that moved logs the refused setting on the failed
+// complete entry, and the error still classifies as a Unity build being required.
+func TestCompileCheckVibeLogRecordsTheBuildSettingOfARefusedRun(t *testing.T) {
+	t.Setenv(vibelog.CLIVibeLogEnvName, "1")
+	projectRoot := t.TempDir()
+	refusal := compilecheck.BuildSettingsError{
+		Report: compilecheck.BuildSettingsReport{StampFound: true, Record: "kept", RefusedPart: "Assets/csc.rsp"},
+		Err:    compilecheck.UnityBuildRequiredError{Reason: "Assets/csc.rsp changed since the last Unity build"},
+	}
+
+	logRun := startCompileCheckVibeLog(projectRoot, compileCheckOptions{})
+	logRun.failed(refusal)
+
+	complete := assertCompileCheckVibeRun(t, readCompileCheckVibeLog(t, projectRoot))
+	assertVibeContextJSON(t, complete, "build_settings",
+		`{"defines_checked":false,"record":"kept","refused_part":"Assets/csc.rsp","stamp_found":true}`)
+	assertVibeContextJSON(t, complete, "error_code", `"`+clierrors.ErrorCodeCompileCheckUnityBuildRequired+`"`)
+}
+
+// Verifies a run that failed before the build settings were compared logs no build_settings field.
+func TestCompileCheckVibeLogLeavesOutBuildSettingsOfARunThatFailedEarlier(t *testing.T) {
+	t.Setenv(vibelog.CLIVibeLogEnvName, "1")
+	projectRoot := t.TempDir()
+
+	logRun := startCompileCheckVibeLog(projectRoot, compileCheckOptions{})
+	logRun.failed(errors.New("no Bee build found"))
+
+	complete := assertCompileCheckVibeRun(t, readCompileCheckVibeLog(t, projectRoot))
+	if _, found := complete.Context["build_settings"]; found {
+		t.Errorf("expected no build_settings on a run that failed before comparing, got %v",
+			complete.Context["build_settings"])
+	}
+}
