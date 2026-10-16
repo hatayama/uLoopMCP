@@ -117,6 +117,7 @@ compile-check once more rather than retrying in a loop.
 - A reference removed from an `.asmdef` stops the run with `COMPILE_CHECK_UNITY_BUILD_REQUIRED`; the
   four references Unity adds on its own are allowed, and an `.asmdef` with a reference that matches
   no `.asmdef` in the project is not judged.
-- The predefined assemblies (`Assembly-CSharp` and friends) keep the source list of the last build,
-  so a brand-new `.cs` file outside an `.asmdef` is not compiled until Unity imports it.
+- A new `.cs` file outside every `.asmdef` goes to `Assembly-CSharp` or a sibling by Unity's path
+  rules (`Editor` folders, `Assets/Plugins`); if the last build did not produce that assembly, the run
+  stops and asks for `uloop compile`. A new script in a package folder without an `.asmdef` is not seen.
 - The produced DLLs are never loaded by Unity, and the command never contacts a running Editor.

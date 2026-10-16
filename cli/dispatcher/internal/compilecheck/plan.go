@@ -214,6 +214,16 @@ func selectAssembliesByOwnership(
 
 	context := NewAssemblyContext(graph, assemblyDefinitions)
 	owners := newAssemblyOwnerIndex(assemblyDefinitions, references, context, tree)
+	// Why Assets is walked once here rather than per assembly: one walk decides the assembly of every
+	// script outside the assembly definitions, and each predefined assembly takes its share of it.
+	predefined, predefinedErr := globPredefinedSources(projectRoot, owners)
+	if predefinedErr != nil {
+		return nil, predefinedErr
+	}
+	if lackErr := detectPredefinedAssemblyTheBuildLacks(predefined, graph); lackErr != nil {
+		return nil, lackErr
+	}
+	owners.predefinedSources = predefined
 	if referenceErr := DetectAssemblyReferenceChange(
 		projectRoot, graph, context, references, owners); referenceErr != nil {
 		return nil, referenceErr
