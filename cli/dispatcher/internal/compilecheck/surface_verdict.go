@@ -46,6 +46,18 @@ type SurfaceVerdict struct {
 	FromRecord bool
 	// Duration is how long asking took, record lookup included.
 	Duration time.Duration
+	// ChangedNames are the identifiers a dependent has to write to be affected by the change, sorted;
+	// empty when kept and when unnamed.
+	ChangedNames []string
+	// Unnamed says why the change cannot be told by names; empty when kept and when named.
+	Unnamed string
+}
+
+// namedChange reports whether a dependent that writes none of the verdict's names can treat the
+// reference as kept. Every other verdict that is not kept - unnamed, not compared, the zero value
+// of a unit that failed or has no dependents - affects every dependent.
+func (v SurfaceVerdict) namedChange() bool {
+	return !v.Kept && v.Unnamed == "" && len(v.ChangedNames) > 0
 }
 
 // surfaceComparer is what the surface comparison needs from the worker.
@@ -69,18 +81,18 @@ type surfaceComparer interface {
 // it costs time, while skipping one that did costs a missed error.
 func (c Compiler) referenceSurfaceVerdict(ctx context.Context, plan BuildPlan, unit CompileUnit) SurfaceVerdict {
 	if unit.Assembly.RefOutputPath == "" {
-		return SurfaceVerdict{Reason: SurfaceCouldNotReadPrefix + "the assembly has no reference assembly"}
+		return unnamedVerdict(SurfaceCouldNotReadPrefix + "the assembly has no reference assembly")
 	}
 
 	producedPath := filepath.Join(c.ProjectRoot, plan.OutputDir, filepath.Base(unit.Assembly.RefOutputPath))
 	produced, err := os.ReadFile(producedPath)
 	if err != nil {
-		return SurfaceVerdict{Reason: SurfaceCouldNotReadPrefix + "this run produced no reference assembly"}
+		return unnamedVerdict(SurfaceCouldNotReadPrefix + "this run produced no reference assembly")
 	}
 	unityBuildPath := filepath.Join(c.ProjectRoot, unit.Assembly.RefOutputPath)
 	unityBuild, err := os.ReadFile(unityBuildPath)
 	if err != nil {
-		return SurfaceVerdict{Reason: SurfaceCouldNotReadPrefix + "the last Unity build left no reference assembly"}
+		return unnamedVerdict(SurfaceCouldNotReadPrefix + "the last Unity build left no reference assembly")
 	}
 	if bytes.Equal(produced, unityBuild) {
 		return SurfaceVerdict{Kept: true, Reason: SurfaceSameBytes}
@@ -88,7 +100,7 @@ func (c Compiler) referenceSurfaceVerdict(ctx context.Context, plan BuildPlan, u
 
 	comparer := c.surfaceComparer()
 	if comparer == nil {
-		return SurfaceVerdict{Reason: SurfaceBytesDiffer}
+		return unnamedVerdict(SurfaceBytesDiffer)
 	}
 
 	startedAt := time.Now()
@@ -130,7 +142,7 @@ func (c Compiler) askSurface(
 ) SurfaceVerdict {
 	worker, err := comparer.Ensure(ctx)
 	if err != nil {
-		return SurfaceVerdict{Reason: SurfaceCouldNotComparePrefix + err.Error()}
+		return unnamedVerdict(SurfaceCouldNotComparePrefix + err.Error())
 	}
 
 	inputs := resultstore.SurfaceInputs{
@@ -147,16 +159,19 @@ func (c Compiler) askSurface(
 
 	request, cleanup, err := writeComparedPair(filepath.Join(c.ProjectRoot, plan.OutputDir), assembly, pair)
 	if err != nil {
-		return SurfaceVerdict{Reason: SurfaceCouldNotComparePrefix + err.Error()}
+		return unnamedVerdict(SurfaceCouldNotComparePrefix + err.Error())
 	}
 	defer cleanup()
 
 	response, err := comparer.CompareSurface(ctx, worker, request)
 	if err != nil {
-		return SurfaceVerdict{Reason: SurfaceCouldNotComparePrefix + err.Error()}
+		return unnamedVerdict(SurfaceCouldNotComparePrefix + err.Error())
 	}
 
-	answer := resultstore.SurfaceVerdict{Same: response.Outcome == fastcheck.SameSurfaceOutcome, Detail: response.Detail}
+	answer := resultstore.SurfaceVerdict{
+		Same: response.Outcome == fastcheck.SameSurfaceOutcome, Detail: response.Detail,
+		ChangedNames: response.ChangedNames, UnnamedReason: response.UnnamedReason,
+	}
 	_ = records.RecordSurfaceVerdict(assembly, inputs, answer)
 
 	return verdictFromWorker(answer)
@@ -202,12 +217,30 @@ func writeComparedCopy(directory string, assembly string, content []byte) (strin
 	return file.Name(), nil
 }
 
+// unnamedVerdict is a verdict reached without the worker's answer: it affects every dependent.
+func unnamedVerdict(reason string) SurfaceVerdict {
+	return SurfaceVerdict{Reason: reason, Unnamed: reason}
+}
+
+// verdictFromWorker turns an answer into a verdict. Why a difference naming nothing is unnamed here
+// and not only in the client: an answer reaches this point from a record or from any comparer, and
+// a change that names nothing must never read as one no dependent writes.
 func verdictFromWorker(answer resultstore.SurfaceVerdict) SurfaceVerdict {
 	if answer.Same {
 		return SurfaceVerdict{Kept: true, Reason: SurfaceSameAPI, Detail: answer.Detail}
 	}
 
-	return SurfaceVerdict{Reason: SurfaceChanged, Detail: answer.Detail}
+	verdict := SurfaceVerdict{Reason: SurfaceChanged, Detail: answer.Detail}
+	switch {
+	case answer.UnnamedReason != "":
+		verdict.Unnamed = answer.UnnamedReason
+	case len(answer.ChangedNames) == 0:
+		verdict.Unnamed = fastcheck.WorkerNamedNoChange
+	default:
+		verdict.ChangedNames = answer.ChangedNames
+	}
+
+	return verdict
 }
 
 func sha256Hex(content []byte) string {

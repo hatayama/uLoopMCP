@@ -240,7 +240,7 @@ func TestCompareSurfaceParsesResponse(t *testing.T) {
 			return "", err.Error(), 1, err
 		}
 
-		response := `{"Outcome":"different","Detail":"produced: a / Unity build: b"}`
+		response := `{"Outcome":"different","Detail":"produced: a / Unity build: b","ChangedNames":["C","M"],"UnnamedReason":""}`
 		return "", "", 0, os.WriteFile(cmd.Args[len(cmd.Args)-1], []byte(response), cacheFilePermissions)
 	})
 
@@ -249,8 +249,10 @@ func TestCompareSurfaceParsesResponse(t *testing.T) {
 		t.Fatalf("expected the comparison to succeed, got error: %v", err)
 	}
 
-	want := CompareSurfaceResponse{Outcome: DifferentSurfaceOutcome, Detail: "produced: a / Unity build: b"}
-	if got != want {
+	want := CompareSurfaceResponse{
+		Outcome: DifferentSurfaceOutcome, Detail: "produced: a / Unity build: b", ChangedNames: []string{"C", "M"},
+	}
+	if !reflect.DeepEqual(got, want) {
 		t.Errorf("expected %+v, got %+v", want, got)
 	}
 	if sentArguments[len(sentArguments)-3] != "compare-surface" {
@@ -261,6 +263,58 @@ func TestCompareSurfaceParsesResponse(t *testing.T) {
 		t.Errorf("expected the request %v, got %v", wantRequest, sentRequest)
 	}
 	assertNoRequestFilesLeft(t, client.TempDirectory)
+}
+
+// Verifies that CompareSurface reads the reason a different answer cannot be told by names.
+func TestCompareSurfaceParsesChangedNames(t *testing.T) {
+	client := newTestClient(t, func(_ context.Context, cmd *exec.Cmd) (string, string, int, error) {
+		response := `{"Outcome":"different","Detail":"d","ChangedNames":[],"UnnamedReason":"operator op_Addition"}`
+		return "", "", 0, os.WriteFile(cmd.Args[len(cmd.Args)-1], []byte(response), cacheFilePermissions)
+	})
+
+	got, err := client.CompareSurface(context.Background(), CompareSurfaceRequest{})
+	if err != nil {
+		t.Fatalf("expected the comparison to succeed, got error: %v", err)
+	}
+
+	if got.UnnamedReason != "operator op_Addition" || len(got.ChangedNames) != 0 {
+		t.Errorf("expected the unnamed reason and no names, got %+v", got)
+	}
+}
+
+// Verifies that a different answer carrying neither names nor a reason, as an older worker or a
+// broken response gives, reads as unnamed rather than as an error or as a change no name touches.
+func TestCompareSurfaceDifferentWithoutNamesIsUnnamed(t *testing.T) {
+	for _, response := range []string{`{"Outcome":"different","Detail":"d"}`, `{"Outcome":"different","ChangedNames":[],"UnnamedReason":""}`} {
+		client := newTestClient(t, func(_ context.Context, cmd *exec.Cmd) (string, string, int, error) {
+			return "", "", 0, os.WriteFile(cmd.Args[len(cmd.Args)-1], []byte(response), cacheFilePermissions)
+		})
+
+		got, err := client.CompareSurface(context.Background(), CompareSurfaceRequest{})
+		if err != nil {
+			t.Fatalf("expected %s to be read, got error: %v", response, err)
+		}
+
+		if got.UnnamedReason == "" || len(got.ChangedNames) != 0 {
+			t.Errorf("expected %s to read as unnamed, got %+v", response, got)
+		}
+	}
+}
+
+// Verifies that a same answer stays without names or a reason.
+func TestCompareSurfaceSameCarriesNoUnnamedReason(t *testing.T) {
+	client := newTestClient(t, func(_ context.Context, cmd *exec.Cmd) (string, string, int, error) {
+		return "", "", 0, os.WriteFile(cmd.Args[len(cmd.Args)-1], []byte(`{"Outcome":"same"}`), cacheFilePermissions)
+	})
+
+	got, err := client.CompareSurface(context.Background(), CompareSurfaceRequest{})
+	if err != nil {
+		t.Fatalf("expected the comparison to succeed, got error: %v", err)
+	}
+
+	if got.UnnamedReason != "" || len(got.ChangedNames) != 0 {
+		t.Errorf("expected a same answer without names or a reason, got %+v", got)
+	}
 }
 
 // Verifies that a comparison answer other than same or different is an error, so a caller never

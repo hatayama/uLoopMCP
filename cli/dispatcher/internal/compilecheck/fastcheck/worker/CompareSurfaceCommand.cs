@@ -10,20 +10,21 @@ namespace UnityCliLoop.CompileCheckWorker
     /// Answers whether two reference assemblies of one assembly describe the same surface to every
     /// assembly that compiles against them. Each is written out as text - its structure with what no
     /// dependent can see left out, then the effective nullable annotation of every row - and only
-    /// identical texts are the same surface. Reads metadata alone; no compiler is loaded.
+    /// identical texts are the same surface. Reads metadata alone; no compiler is loaded. A different
+    /// surface also says which names its change touches, or why no names can tell it.
     /// </summary>
     internal static class CompareSurfaceCommand
     {
         // Raise whenever what the description writes changes, so a recorded answer is not reused for
         // a comparison that would now come out differently.
-        private const string DescriptionVersion = "sv1";
+        private const string DescriptionVersion = "sv2";
         private const string NullabilitySection = "== nullability";
         private const string EndOfDescription = "(end)";
 
         internal static CompareSurfaceResponse Run(CompareSurfaceRequest request)
         {
-            List<string> produced;
-            List<string> unityBuild;
+            SurfaceDescription produced;
+            SurfaceDescription unityBuild;
             // Why every failure answers "different": compiling a dependent that did not need it costs
             // time, while calling a surface the same without having read it costs a missed error.
             try
@@ -36,14 +37,19 @@ namespace UnityCliLoop.CompileCheckWorker
                 return CompareSurfaceResponse.Different("could not read: " + exception.GetType().Name);
             }
 
-            int length = Math.Max(produced.Count, unityBuild.Count);
+            IReadOnlyList<string> producedTexts = produced.Texts;
+            IReadOnlyList<string> unityBuildTexts = unityBuild.Texts;
+            int length = Math.Max(producedTexts.Count, unityBuildTexts.Count);
             for (int index = 0; index < length; index++)
             {
-                string producedLine = index < produced.Count ? produced[index] : EndOfDescription;
-                string unityBuildLine = index < unityBuild.Count ? unityBuild[index] : EndOfDescription;
+                string producedLine = index < producedTexts.Count ? producedTexts[index] : EndOfDescription;
+                string unityBuildLine = index < unityBuildTexts.Count ? unityBuildTexts[index] : EndOfDescription;
                 if (producedLine != unityBuildLine)
                 {
-                    return CompareSurfaceResponse.Different("produced: " + producedLine + " / Unity build: " + unityBuildLine);
+                    ChangedSurfaceNames changed = ChangedSurfaceNames.Collect(produced, unityBuild);
+
+                    return CompareSurfaceResponse.DifferentWithNames(
+                        "produced: " + producedLine + " / Unity build: " + unityBuildLine, changed.Names, changed.UnnamedReason);
                 }
             }
 
@@ -53,16 +59,17 @@ namespace UnityCliLoop.CompileCheckWorker
         /// <summary>
         /// Writes the surface description of one reference assembly.
         /// </summary>
-        internal static List<string> Describe(string path)
+        internal static SurfaceDescription Describe(string path)
         {
             using PEReader peReader = new PEReader(ImmutableArray.Create(File.ReadAllBytes(path)));
             SurfaceMetadata metadata = new SurfaceMetadata(peReader);
-            List<string> lines = new List<string> { DescriptionVersion };
-            SurfaceStructureWriter.Write(metadata, lines);
-            lines.Add(NullabilitySection);
-            SurfaceNullabilityWriter.Write(metadata, lines);
+            SurfaceDescription description = new SurfaceDescription();
+            description.Add(DescriptionVersion, SurfaceOwner.Manifest);
+            SurfaceStructureWriter.Write(metadata, description);
+            description.Add(NullabilitySection, SurfaceOwner.Manifest);
+            SurfaceNullabilityWriter.Write(metadata, description);
 
-            return lines;
+            return description;
         }
     }
 }

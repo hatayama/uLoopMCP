@@ -71,8 +71,8 @@ func assertVibeContextJSON(t *testing.T, entry vibelog.CLIVibeLogEntry, key stri
 }
 
 // loggedCompileCheckResult is a run that compiled, fast-checked, replayed a fast check of, reused,
-// and blocked one assembly each, and settled the surface of three of them three ways, so a field the
-// log drops or mixes up shows.
+// and blocked one assembly each, and settled the surface of four of them four ways - one change with
+// more names than the log keeps, one no name tells - so a field the log drops or mixes up shows.
 func loggedCompileCheckResult() compilecheck.Result {
 	return compilecheck.Result{
 		DagDir:  "Library/Bee/artifacts/1300b0aE.dag",
@@ -95,12 +95,16 @@ func loggedCompileCheckResult() compilecheck.Result {
 			{
 				Assembly: "Epsilon", Succeeded: true, FastChecked: true, FastCheckReused: true,
 				FastCheckChangedFiles: []string{"Assets/E.cs"},
+				Surface: compilecheck.SurfaceVerdict{
+					Reason: compilecheck.SurfaceChanged, Unnamed: "operator op_Addition", Asked: true, Duration: 3 * time.Millisecond,
+				},
 			},
 			{
 				Assembly: "Gamma", Succeeded: true, Reused: true,
 				Surface: compilecheck.SurfaceVerdict{
 					Reason: compilecheck.SurfaceChanged, Detail: "produced: a / Unity build: b", Asked: true, FromRecord: true,
-					Duration: 2 * time.Millisecond,
+					Duration:     2 * time.Millisecond,
+					ChangedNames: []string{"N01", "N02", "N03", "N04", "N05", "N06", "N07", "N08", "N09", "N10", "N11", "N12"},
 				},
 			},
 		},
@@ -143,8 +147,13 @@ func TestCompileCheckVibeLogRecordsASucceededRun(t *testing.T) {
 	assertVibeContextJSON(t, complete, "units",
 		`[{"assembly":"Alpha","duration_ms":1500,"succeeded":true},{"assembly":"Beta","duration_ms":250,"succeeded":true}]`)
 	assertVibeContextJSON(t, complete, "surface_checks",
-		`[{"assembly":"Alpha","detail":"","duration_ms":400,"from_record":false,"verdict":"same API"},`+
-			`{"assembly":"Gamma","detail":"produced: a / Unity build: b","duration_ms":2,"from_record":true,"verdict":"changed"}]`)
+		`[{"assembly":"Alpha","changed_name_count":0,"changed_names":[],"detail":"","duration_ms":400,"from_record":false,`+
+			`"verdict":"same API"},`+
+			`{"assembly":"Epsilon","changed_name_count":0,"changed_names":[],"detail":"","duration_ms":3,"from_record":false,`+
+			`"unnamed":"operator op_Addition","verdict":"changed"},`+
+			`{"assembly":"Gamma","changed_name_count":12,`+
+			`"changed_names":["N01","N02","N03","N04","N05","N06","N07","N08","N09","N10"],`+
+			`"detail":"produced: a / Unity build: b","duration_ms":2,"from_record":true,"verdict":"changed"}]`)
 	if _, found := complete.Context["duration_ms"]; !found {
 		t.Error("expected the run's duration to be logged")
 	}

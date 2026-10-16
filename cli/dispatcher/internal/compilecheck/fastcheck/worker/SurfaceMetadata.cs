@@ -25,6 +25,8 @@ namespace UnityCliLoop.CompileCheckWorker
         private const string CompilerServicesNamespace = "System.Runtime.CompilerServices";
         private const string NullableAttributeName = CompilerServicesNamespace + ".NullableAttribute";
         private const string NullableContextAttributeName = CompilerServicesNamespace + ".NullableContextAttribute";
+        private const string InterpolatedStringHandlerAttributeName = CompilerServicesNamespace + ".InterpolatedStringHandlerAttribute";
+        private const string CollectionBuilderAttributeName = CompilerServicesNamespace + ".CollectionBuilderAttribute";
         private const ushort AttributeBlobProlog = 1;
 
         private static readonly string[] StateMachineAttributeNames =
@@ -122,6 +124,82 @@ namespace UnityCliLoop.CompileCheckWorker
             lines.Sort(StringComparer.Ordinal);
 
             return lines;
+        }
+
+        /// <summary>
+        /// Says whether a row carries an attribute of the given namespace-qualified type, whether the type
+        /// comes from another assembly or is defined in this one (as a polyfill would be).
+        /// </summary>
+        public bool HasAttribute(CustomAttributeHandleCollection attributes, string namespaceAndName)
+        {
+            foreach (CustomAttributeHandle handle in attributes)
+            {
+                if (AttributeTypeName(Reader.GetCustomAttribute(handle)) == namespaceAndName)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Says whether the compiler binds the members of a type by pattern without a dependent writing
+        /// their names: an interpolated string handler or a collection builder target.
+        /// </summary>
+        public bool IsPatternBoundType(TypeDefinitionHandle handle)
+        {
+            CustomAttributeHandleCollection attributes = Reader.GetTypeDefinition(handle).GetCustomAttributes();
+
+            return HasAttribute(attributes, InterpolatedStringHandlerAttributeName)
+                || HasAttribute(attributes, CollectionBuilderAttributeName);
+        }
+
+        /// <summary>
+        /// The namespace-qualified name of a type defined in or referenced by this assembly, without the
+        /// assembly it comes from; "" for no type and for any other row, such as a constructed generic type.
+        /// </summary>
+        public string NamespaceAndName(EntityHandle type)
+        {
+            if (type.IsNil)
+            {
+                return "";
+            }
+
+            switch (type.Kind)
+            {
+                case HandleKind.TypeDefinition:
+                    return SurfaceTypeNames.Definition(Reader, (TypeDefinitionHandle)type);
+                case HandleKind.TypeReference:
+                    TypeReference reference = Reader.GetTypeReference((TypeReferenceHandle)type);
+                    string space = Reader.GetString(reference.Namespace);
+                    string name = Reader.GetString(reference.Name);
+
+                    return space.Length == 0 ? name : space + "." + name;
+                default:
+                    return "";
+            }
+        }
+
+        // The namespace-qualified name of an attribute's type, or "" when its constructor is not a method
+        // of a type this reader can name.
+        private string AttributeTypeName(CustomAttribute attribute)
+        {
+            EntityHandle type;
+            if (attribute.Constructor.Kind == HandleKind.MethodDefinition)
+            {
+                type = Reader.GetMethodDefinition((MethodDefinitionHandle)attribute.Constructor).GetDeclaringType();
+            }
+            else if (attribute.Constructor.Kind == HandleKind.MemberReference)
+            {
+                type = Reader.GetMemberReference((MemberReferenceHandle)attribute.Constructor).Parent;
+            }
+            else
+            {
+                return "";
+            }
+
+            return NamespaceAndName(type);
         }
 
         private static HashSet<TypeDefinitionHandle> FindEmbeddedTypes(MetadataReader reader)

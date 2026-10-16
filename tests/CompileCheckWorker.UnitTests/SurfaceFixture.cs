@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
+using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Emit;
@@ -23,6 +24,12 @@ namespace UnityCliLoop.CompileCheckWorker.UnitTests
 
         // The name a library's InternalsVisibleTo has to give for the dependent to see its internals.
         internal const string DependentAssemblyName = "Dep";
+
+        // The identifiers of a dependent's source, cut the way the scheduler cuts them: a letter or '_'
+        // and then letters, digits and '_', with '@' left off, and "new" followed by '(' as "new(".
+        private static readonly Regex Identifier = new Regex(@"[\p{L}_][\p{L}\p{Nd}_]*", RegexOptions.CultureInvariant);
+        private static readonly Regex TargetTypedNew = new Regex(@"(?<![\p{L}\p{Nd}_])new\s*\(", RegexOptions.CultureInvariant);
+        private const string TargetTypedNewToken = "new(";
 
         /// <summary>
         /// Asserts that the two versions build different bytes that a dependent reads the same way,
@@ -54,6 +61,54 @@ namespace UnityCliLoop.CompileCheckWorker.UnitTests
                 "the dependent compiles the same way, so the case does not show a real difference");
             CompareSurfaceResponse response = Compare(oldAssembly, newAssembly);
             Assert.That(response.Outcome, Is.EqualTo(CompareSurfaceResponse.DifferentOutcome));
+            // A dependent that compiles differently must be compiled: either the change cannot be told
+            // by names, or one of its names is written in the dependent.
+            HashSet<string> identifiers = SourceIdentifiers(dependentSource);
+            Assert.That(response.UnnamedReason != "" || response.ChangedNames.Any(identifiers.Contains), Is.True,
+                "the dependent compiles differently but writes none of the changed names ["
+                + string.Join(", ", response.ChangedNames) + "] and the change was not called unnamed");
+        }
+
+        /// <summary>
+        /// Asserts that the two versions are different surfaces whose change is told by exactly the
+        /// expected names.
+        /// </summary>
+        internal static void AssertChangedNames(string oldSource, string newSource, string[] expectedNames)
+        {
+            CompareSurfaceResponse response = Compare(EmitReferenceAssembly(oldSource), EmitReferenceAssembly(newSource));
+            Assert.That(response.Outcome, Is.EqualTo(CompareSurfaceResponse.DifferentOutcome));
+            Assert.That(response.UnnamedReason, Is.Empty);
+            Assert.That(response.ChangedNames, Is.EquivalentTo(expectedNames));
+        }
+
+        /// <summary>
+        /// Asserts that the two versions are different surfaces whose change cannot be told by names,
+        /// for the expected reason, and that no names come with it.
+        /// </summary>
+        internal static void AssertUnnamed(string oldSource, string newSource, string reasonPrefix)
+        {
+            CompareSurfaceResponse response = Compare(EmitReferenceAssembly(oldSource), EmitReferenceAssembly(newSource));
+            Assert.That(response.Outcome, Is.EqualTo(CompareSurfaceResponse.DifferentOutcome));
+            Assert.That(response.UnnamedReason, Does.StartWith(reasonPrefix));
+            Assert.That(response.ChangedNames, Is.Empty);
+        }
+
+        /// <summary>
+        /// Lists the identifiers a dependent's source writes, comments and strings included.
+        /// </summary>
+        internal static HashSet<string> SourceIdentifiers(string source)
+        {
+            HashSet<string> identifiers = new HashSet<string>(StringComparer.Ordinal);
+            foreach (Match match in Identifier.Matches(source))
+            {
+                identifiers.Add(match.Value);
+            }
+            if (TargetTypedNew.IsMatch(source))
+            {
+                identifiers.Add(TargetTypedNewToken);
+            }
+
+            return identifiers;
         }
 
         /// <summary>

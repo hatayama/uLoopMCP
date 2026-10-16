@@ -81,7 +81,16 @@ type CompareSurfaceRequest struct {
 type CompareSurfaceResponse struct {
 	Outcome string
 	Detail  string // the first line of the two descriptions that differs, or why one could not be read
+	// ChangedNames are the identifiers a dependent has to write to be affected by a different answer,
+	// sorted; empty for same and for an unnamed change.
+	ChangedNames []string
+	// UnnamedReason says why a different answer cannot be told by names; empty when it can.
+	UnnamedReason string
 }
+
+// WorkerNamedNoChange is the unnamed reason of a different answer that came with neither names nor
+// a reason of its own.
+const WorkerNamedNoChange = "the worker named no change"
 
 // WorkerDiagnostic is one error or warning in a changed file, with a 1-based line and column.
 type WorkerDiagnostic struct {
@@ -138,7 +147,16 @@ func (c Client) CompareSurface(ctx context.Context, request CompareSurfaceReques
 
 	// Rejected here so an answer the worker does not define is never read as either.
 	switch response.Outcome {
-	case SameSurfaceOutcome, DifferentSurfaceOutcome:
+	case SameSurfaceOutcome:
+		return response, nil
+	case DifferentSurfaceOutcome:
+		// Why an answer naming nothing is unnamed rather than an error: a worker older than the names,
+		// or one whose answer lost them, still found a difference, and reading it as touching no
+		// dependent would skip them all.
+		if len(response.ChangedNames) == 0 && response.UnnamedReason == "" {
+			response.UnnamedReason = WorkerNamedNoChange
+		}
+
 		return response, nil
 	default:
 		return CompareSurfaceResponse{}, fmt.Errorf("changed-files check worker returned an unknown outcome %q", response.Outcome)

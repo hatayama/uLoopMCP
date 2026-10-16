@@ -42,6 +42,10 @@ type fakeFastCheckWorker struct {
 	// surfaceOutcome is what CompareSurface answers; empty answers different, so a test that does
 	// not care about the comparison sees every differing reference assembly as a changed surface.
 	surfaceOutcome string
+	// surfaceNames and surfaceUnnamed go with a different answer, as the worker's changed names and
+	// the reason no name tells the change.
+	surfaceNames   []string
+	surfaceUnnamed string
 	surfaceErr     error
 	// surfaceByContent answers same exactly when the two files handed over hold the same bytes,
 	// instead of answering surfaceOutcome.
@@ -152,7 +156,10 @@ func (worker *fakeFastCheckWorker) CompareSurface(
 		return fastcheck.CompareSurfaceResponse{Outcome: outcome}, nil
 	}
 	if worker.surfaceOutcome == "" {
-		return fastcheck.CompareSurfaceResponse{Outcome: fastcheck.DifferentSurfaceOutcome, Detail: "fake difference"}, nil
+		return fastcheck.CompareSurfaceResponse{
+			Outcome: fastcheck.DifferentSurfaceOutcome, Detail: "fake difference",
+			ChangedNames: worker.surfaceNames, UnnamedReason: worker.surfaceUnnamed,
+		}, nil
 	}
 
 	return fastcheck.CompareSurfaceResponse{Outcome: worker.surfaceOutcome}, nil

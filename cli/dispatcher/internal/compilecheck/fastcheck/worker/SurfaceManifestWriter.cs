@@ -16,26 +16,19 @@ namespace UnityCliLoop.CompileCheckWorker
     /// </summary>
     internal static class SurfaceManifestWriter
     {
-        internal static void Write(SurfaceMetadata metadata, List<string> lines)
+        // Every row here belongs to the assembly rather than to a type, so no name tells a change of it.
+        internal static void Write(SurfaceMetadata metadata, SurfaceDescription description)
         {
             MetadataReader reader = metadata.Reader;
-            WriteAssembly(metadata, lines);
+            WriteAssembly(metadata, description);
             ModuleDefinition module = reader.GetModuleDefinition();
-            lines.Add("module " + reader.GetString(module.Name));
-            AddPrefixed(lines, "module ", metadata.AttributeLines(module.GetCustomAttributes()));
-            lines.AddRange(AssemblyReferenceLines(reader));
-            lines.AddRange(ModuleReferenceLines(reader));
-            lines.AddRange(FileLines(reader));
-            lines.AddRange(ExportedTypeLines(metadata));
-            lines.AddRange(ResourceLines(metadata));
-        }
-
-        internal static void AddPrefixed(List<string> lines, string prefix, List<string> entries)
-        {
-            foreach (string entry in entries)
-            {
-                lines.Add(prefix + entry);
-            }
+            description.Add("module " + reader.GetString(module.Name), SurfaceOwner.Manifest);
+            description.AddPrefixed("module ", metadata.AttributeLines(module.GetCustomAttributes()), SurfaceOwner.Manifest);
+            description.AddPrefixed("", AssemblyReferenceLines(reader), SurfaceOwner.Manifest);
+            description.AddPrefixed("", ModuleReferenceLines(reader), SurfaceOwner.Manifest);
+            description.AddPrefixed("", FileLines(reader), SurfaceOwner.Manifest);
+            description.AddPrefixed("", ExportedTypeLines(metadata), SurfaceOwner.Manifest);
+            description.AddPrefixed("", ResourceLines(metadata), SurfaceOwner.Manifest);
         }
 
         internal static List<string> SecurityLines(MetadataReader reader, DeclarativeSecurityAttributeHandleCollection attributes)
@@ -51,21 +44,21 @@ namespace UnityCliLoop.CompileCheckWorker
             return entries;
         }
 
-        private static void WriteAssembly(SurfaceMetadata metadata, List<string> lines)
+        private static void WriteAssembly(SurfaceMetadata metadata, SurfaceDescription description)
         {
             MetadataReader reader = metadata.Reader;
             if (!reader.IsAssembly)
             {
-                lines.Add("no assembly manifest");
+                description.Add("no assembly manifest", SurfaceOwner.Manifest);
                 return;
             }
 
             AssemblyDefinition assembly = reader.GetAssemblyDefinition();
-            lines.Add("assembly " + reader.GetString(assembly.Name) + " " + assembly.Version
+            description.Add("assembly " + reader.GetString(assembly.Name) + " " + assembly.Version
                 + " culture=" + reader.GetString(assembly.Culture) + " flags=" + assembly.Flags
-                + " key=" + SurfaceTypeNames.BlobHex(reader, assembly.PublicKey) + " hash=" + assembly.HashAlgorithm);
-            AddPrefixed(lines, "assembly ", metadata.AttributeLines(assembly.GetCustomAttributes()));
-            AddPrefixed(lines, "assembly ", SecurityLines(reader, assembly.GetDeclarativeSecurityAttributes()));
+                + " key=" + SurfaceTypeNames.BlobHex(reader, assembly.PublicKey) + " hash=" + assembly.HashAlgorithm, SurfaceOwner.Manifest);
+            description.AddPrefixed("assembly ", metadata.AttributeLines(assembly.GetCustomAttributes()), SurfaceOwner.Manifest);
+            description.AddPrefixed("assembly ", SecurityLines(reader, assembly.GetDeclarativeSecurityAttributes()), SurfaceOwner.Manifest);
         }
 
         private static List<string> AssemblyReferenceLines(MetadataReader reader)
