@@ -107,13 +107,14 @@ compile-check once more rather than retrying in a loop.
 - It replays the last Unity build's response files. A new or deleted `.asmdef`, a changed `.asmdef`
   reference, an `.asmdef` that stopped building for the Editor, or a newly required precompiled
   reference stops the run and asks for `uloop compile`.
-- Changes to `defineConstraints` and `versionDefines` are **not** detected, because they depend on
-  scripting defines and package versions that cannot be evaluated outside the Editor. Run
-  `uloop compile` after editing them.
+- Build settings are compared against a record the first run after a Unity build writes: a
+  removed scripting define, a changed `csc.rsp`, `defineConstraints`, `versionDefines`,
+  `packages-lock.json` or `manifest.json` stops the run, and a scripting define the last build lacks
+  stops it on every run. A change made before that first run (other than an added define) is not
+  seen, so run `uloop compile` after one.
 - A reference removed from an `.asmdef` stops the run with `COMPILE_CHECK_UNITY_BUILD_REQUIRED`; the
   four references Unity adds on its own are allowed, and an `.asmdef` with a reference that matches
   no `.asmdef` in the project is not judged.
-- Changed scripting defines are not detected; the defines from the last build are reused.
 - The predefined assemblies (`Assembly-CSharp` and friends) keep the source list of the last build,
   so a brand-new `.cs` file outside an `.asmdef` is not compiled until Unity imports it.
 - The produced DLLs are never loaded by Unity, and the command never contacts a running Editor.
