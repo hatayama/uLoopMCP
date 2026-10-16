@@ -38,7 +38,7 @@ namespace UnityCliLoop.CompileCheckWorker.UnitTests
             SurfaceFixture.AssertChangedNames(
                 "namespace A.B { public class Outer<T> { public class Inner { public int P { get; set; } } } }",
                 "namespace A.B { public class Outer<T> { public class Inner { public long P { get; set; } } } }",
-                new[] { "Outer", "Inner", "P" });
+                new[] { "Outer", "Inner", "P", "get_P", "set_P" });
         }
 
         /// <summary>
@@ -75,7 +75,7 @@ namespace UnityCliLoop.CompileCheckWorker.UnitTests
             SurfaceFixture.AssertChangedNames(
                 "public class FooAttribute : System.Attribute { }",
                 "public class FooAttribute : System.Attribute { public int Level { get; set; } }",
-                new[] { "Foo", "FooAttribute", "Level" });
+                new[] { "Foo", "FooAttribute", "Level", "get_Level", "set_Level" });
         }
 
         /// <summary>
@@ -91,15 +91,71 @@ namespace UnityCliLoop.CompileCheckWorker.UnitTests
         }
 
         /// <summary>
-        /// Verifies that an accessor change names the property rather than the accessor method.
+        /// Verifies that a change on an accessor names both the property and the accessor, since only the
+        /// member's metadata tells an accessor from a method declared under the same name.
         /// </summary>
         [Test]
-        public void AccessorChangeNamesThePropertyNotTheAccessor()
+        public void AccessorChangeNamesThePropertyAndTheAccessor()
         {
             SurfaceFixture.AssertChangedNames(
                 "public class C { public int P { get; } }",
-                "public class C { public int P { get; set; } }",
-                new[] { "C", "P" });
+                "public class C { public int P { get; [System.Obsolete] set; } }",
+                new[] { "C", "P", "set_P" });
+        }
+
+        /// <summary>
+        /// Verifies that a dependent calling a method declared as get_Value is compiled when that method
+        /// changes: the name it writes keeps the prefix.
+        /// </summary>
+        [Test]
+        public void MethodNamedLikeAnAccessorIsCompiled()
+        {
+            const string OldSource = "public class T { public int get_Value() => 0; }\n" + Getter;
+            const string NewSource = "public class T { public long get_Value() => 0; }\n" + Getter;
+            SurfaceFixture.AssertDifferent(OldSource, NewSource, "class D { int M() => F.Get().get_Value(); }");
+            SurfaceFixture.AssertChangedNames(OldSource, NewSource, new[] { "T", "Value", "get_Value" });
+        }
+
+        /// <summary>
+        /// Verifies that a change on an explicit implementation of an accessor names the accessor and the
+        /// property without their interface qualifier.
+        /// </summary>
+        [Test]
+        public void ExplicitAccessorImplementationChangeNamesTheBareAccessorAndProperty()
+        {
+            const string Interface = "namespace N { public interface IFoo { int P { get; } } }\n";
+            SurfaceFixture.AssertChangedNames(
+                Interface + "public class C : N.IFoo { int N.IFoo.P => 0; }",
+                Interface + "public class C : N.IFoo { int N.IFoo.P { [System.Obsolete] get => 0; } }",
+                new[] { "C", "P", "get_P" });
+        }
+
+        /// <summary>
+        /// Verifies that a dependent writing only init is compiled when the well-known type the compiler
+        /// looks up for it is removed, though the dependent never writes its name.
+        /// </summary>
+        [Test]
+        public void WellKnownTypeRemovedIsCompiled()
+        {
+            const string Kept = "namespace System.Runtime.CompilerServices { public sealed class KeepPolyfill { } }\n";
+            const string OldSource = Kept + "namespace System.Runtime.CompilerServices { public static class IsExternalInit { } }";
+            SurfaceFixture.AssertDifferent(OldSource, Kept, "public class D { public int P { get; init; } }");
+            SurfaceFixture.AssertUnnamed(OldSource, Kept, "well-known type System.Runtime.CompilerServices.IsExternalInit");
+        }
+
+        /// <summary>
+        /// Verifies that a dependent writing only ^1 is compiled when a member of the well-known type the
+        /// compiler binds it to changes, though the dependent writes neither the type nor the member.
+        /// </summary>
+        [Test]
+        public void WellKnownTypeMemberChangeIsCompiled()
+        {
+            const string OldSource = "namespace System { public readonly struct Index { public Index(int value, bool fromEnd = false) { }"
+                + " public int GetOffset(int length) => 0; } }";
+            const string NewSource = "namespace System { public readonly struct Index { public Index(int value) { }"
+                + " public int GetOffset(int length) => 0; } }";
+            SurfaceFixture.AssertDifferent(OldSource, NewSource, "class D { object M() { var i = ^1; return i; } }");
+            SurfaceFixture.AssertUnnamed(OldSource, NewSource, "well-known type System.Index");
         }
 
         /// <summary>
@@ -481,7 +537,7 @@ namespace UnityCliLoop.CompileCheckWorker.UnitTests
             const string OldSource = "public class T { }\n" + Getter;
             const string NewSource = "public class T { public int P { get; set; } }\n" + Getter;
             SurfaceFixture.AssertDifferent(OldSource, NewSource, "class D { int M() => F.Get().P; }");
-            SurfaceFixture.AssertChangedNames(OldSource, NewSource, new[] { "T", "P" });
+            SurfaceFixture.AssertChangedNames(OldSource, NewSource, new[] { "T", "P", "get_P", "set_P" });
         }
 
         /// <summary>

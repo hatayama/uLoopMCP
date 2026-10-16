@@ -23,6 +23,11 @@ namespace UnityCliLoop.CompileCheckWorker
         private const string OperatorPrefix = "op_";
         private static readonly string[] AccessorPrefixes = { "get_", "set_", "add_", "remove_", "raise_" };
 
+        // Namespaces whose types the compiler looks up by name: a dependent writing init, ^1, a tuple or
+        // an interpolated string uses them without writing any of their names. Only polyfills declare
+        // types there in a project, so leaving every change of theirs unnamed costs little.
+        private static readonly string[] WellKnownNamespaces = { "System", "Microsoft.CodeAnalysis" };
+
         // Members C# binds without the dependent writing their names: foreach, await, using, collection
         // initializers, deconstruction, indexers, fixed, ranges and list patterns, LINQ query syntax,
         // delegate invocation, async method builders, interpolated string handlers, collection builders.
@@ -121,6 +126,11 @@ namespace UnityCliLoop.CompileCheckWorker
                 AddReason("manifest: " + (entry.Text.Length > ManifestTextLength ? entry.Text.Substring(0, ManifestTextLength) : entry.Text));
                 return;
             }
+            if (IsInWellKnownNamespace(owner.TypeName))
+            {
+                AddReason("well-known type " + owner.TypeName);
+                return;
+            }
             if (producedTypes.Contains(owner.TypeName) != unityBuildTypes.Contains(owner.TypeName))
             {
                 ReadOneSidedType(owner);
@@ -161,10 +171,12 @@ namespace UnityCliLoop.CompileCheckWorker
                 return;
             }
 
-            string member = NormalizeMember(owner.MemberName);
+            string unqualified = Unqualified(owner.MemberName);
+            string member = StripAccessorPrefix(unqualified);
             if (IsCSharpIdentifier(member) && !member.StartsWith(OperatorPrefix, StringComparison.Ordinal))
             {
                 names.Add(member);
+                AddUnstripped(unqualified, member);
             }
         }
 
@@ -188,7 +200,8 @@ namespace UnityCliLoop.CompileCheckWorker
                 return;
             }
 
-            member = NormalizeMember(member);
+            string unqualified = Unqualified(member);
+            member = StripAccessorPrefix(unqualified);
             if (member.StartsWith(OperatorPrefix, StringComparison.Ordinal))
             {
                 AddReason("operator " + member);
@@ -204,6 +217,17 @@ namespace UnityCliLoop.CompileCheckWorker
             else
             {
                 names.Add(member);
+                AddUnstripped(unqualified, member);
+            }
+        }
+
+        // Why the name before the prefix is kept as well: only a member's metadata tells an accessor from
+        // a method declared as get_Value, which a dependent writes with its prefix.
+        private void AddUnstripped(string unqualified, string member)
+        {
+            if (unqualified != member && IsCSharpIdentifier(unqualified))
+            {
+                names.Add(unqualified);
             }
         }
 
@@ -232,14 +256,16 @@ namespace UnityCliLoop.CompileCheckWorker
             }
         }
 
-        // An explicit implementation "Ns.IFoo.get_P" is written as P.
-        private static string NormalizeMember(string member)
+        // An explicit implementation "Ns.IFoo.get_P" is written as get_P or P.
+        private static string Unqualified(string member)
         {
             int dot = member.LastIndexOf('.');
-            if (dot >= 0)
-            {
-                member = member.Substring(dot + 1);
-            }
+
+            return dot >= 0 ? member.Substring(dot + 1) : member;
+        }
+
+        private static string StripAccessorPrefix(string member)
+        {
             foreach (string prefix in AccessorPrefixes)
             {
                 if (member.StartsWith(prefix, StringComparison.Ordinal) && member.Length > prefix.Length)
@@ -249,6 +275,21 @@ namespace UnityCliLoop.CompileCheckWorker
             }
 
             return member;
+        }
+
+        // "System.Runtime.CompilerServices.IsExternalInit" and "System.Index/Inner" are in System.
+        private static bool IsInWellKnownNamespace(string metadataName)
+        {
+            string outermost = metadataName.Split('/')[0];
+            int dot = outermost.LastIndexOf('.');
+            if (dot < 0)
+            {
+                return false;
+            }
+
+            string typeNamespace = outermost.Substring(0, dot);
+
+            return WellKnownNamespaces.Any(root => typeNamespace == root || typeNamespace.StartsWith(root + ".", StringComparison.Ordinal));
         }
 
         internal static bool IsCSharpIdentifier(string text)
