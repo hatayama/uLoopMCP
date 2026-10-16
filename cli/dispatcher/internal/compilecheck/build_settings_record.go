@@ -48,8 +48,8 @@ type buildSettingsRecord struct {
 type BuildSettingsReport struct {
 	StampFound bool   // a build-trace file of the last Unity build exists
 	Record     string // "new", "replaced", "kept", or "" when nothing was recorded or compared
-	// RefusedPart names the setting that moved since the recorded build when the run was refused
-	// for it.
+	// RefusedPart names the setting the run was refused for: a setting that moved since the recorded
+	// build, or a scripting define the last build lacks, which is checked before the record is read.
 	RefusedPart string
 	// DefinesChecked says the run looked for a project define the build lacks, which it does only
 	// when there is no build-trace file or ProjectSettings was saved after the last build.
@@ -109,6 +109,8 @@ func DetectBuildSettingsChange(
 	report.DefinesChecked = !found || projectSettingsSavedAfter(projectRoot, stamp)
 	if report.DefinesChecked {
 		if define := defineTheBuildLacks(current, graph); define != "" {
+			report.RefusedPart = fmt.Sprintf(
+				"scripting defines of %s (not in the last build: %s)", current.DefineGroup, define)
 			return report, unityBuildRequired("scripting define %s is not in the last Unity build", define)
 		}
 	}
