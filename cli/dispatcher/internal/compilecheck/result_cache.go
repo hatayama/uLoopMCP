@@ -53,9 +53,7 @@ func (c Compiler) reuseOrCompile(
 	// Why nothing is recorded unless csc ran to completion: a compile that was cancelled or never
 	// started says nothing about the inputs, and CompileUnit has already removed the manifest of the
 	// compile this one replaces, so an interrupted run leaves no record at all rather than a stale one.
-	if c.onFullCompile != nil {
-		c.onFullCompile()
-	}
+	c.startCompilerWork()
 	result, err := c.CompileUnit(ctx, plan, unit)
 	result.FastPathFallbackReason = fallbackReason
 	if err != nil || key == "" || result.RawOutput != "" {

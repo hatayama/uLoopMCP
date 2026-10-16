@@ -140,6 +140,7 @@ func (runner *fastPathRunner) check(
 		return fastPathAttempt{Used: true, Result: fastCheckedUnitResult(unit, recorded, time.Since(startedAt), true)}
 	}
 
+	c.startCompilerWork()
 	responseFilePath, err := writeRewrittenResponseFile(
 		c.ProjectRoot, plan, unit, unit.Assembly.AssemblyName+fastCheckResponseFileSuffix, nil)
 	if err != nil {

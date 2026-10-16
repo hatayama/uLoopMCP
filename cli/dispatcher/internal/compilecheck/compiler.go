@@ -113,9 +113,17 @@ type Compiler struct {
 	// compares the two. Why it can be replaced: the tests have to see which units the run compares at
 	// all, and a byte comparison leaves nothing behind to count.
 	compareSurface func(projectRoot string, plan BuildPlan, unit CompileUnit) SurfaceVerdict
-	// onFullCompile is called right before a unit compiles in full; nil calls nothing. Why: a run
-	// that compiles reads what it may need later while csc runs, and one that only replays never does.
-	onFullCompile func()
+	// beforeCompilerWork is called right before a unit compiles in full or the worker checks its
+	// changed files; nil calls nothing. Why: a run that does either reads what it may need later while
+	// that work runs, and one that only replays never does.
+	beforeCompilerWork func()
+}
+
+// startCompilerWork calls the hook set for the moment a unit's compile or check begins, if any.
+func (c Compiler) startCompilerWork() {
+	if c.beforeCompilerWork != nil {
+		c.beforeCompilerWork()
+	}
 }
 
 // surfaceVerdict says whether compiling this unit left its reference assembly showing its dependents

@@ -36,14 +36,15 @@ type NameSkip struct {
 
 // NameIndexReport says what reading the identifiers of the units with references in the plan took.
 type NameIndexReport struct {
+	// Duration is the time spent reading the generator output and, when they were read, the sources.
 	Duration time.Duration
 	// Units counts the units whose identifiers were read, WithGenerated those whose saved generator
 	// output was read too, and Unreadable those that could not be read and so compile on any change.
 	Units         int
 	WithGenerated int
 	Unreadable    int
-	// SourcesRead says whether the run needed the sources, by compiling a unit in full or by asking
-	// a verdict for names.
+	// SourcesRead says whether the run needed the sources, by compiling a unit, by having the worker
+	// check its changed files, or by asking a verdict for names.
 	SourcesRead bool
 }
 
@@ -180,11 +181,13 @@ type nameIndex struct {
 	withGenerated []bool
 	indexed       []bool
 	done          chan struct{}
-	startedAt     time.Time
-	duration      time.Duration
-	started       bool
-	sourcesOnce   sync.Once
-	sourcesRead   atomic.Bool
+	// generatedDuration and sourcesDuration are how long each read took, measured from its own start
+	// so the time the run spent before asking for the sources is not counted.
+	generatedDuration time.Duration
+	sourcesDuration   time.Duration
+	started           bool
+	sourcesOnce       sync.Once
+	sourcesRead       atomic.Bool
 }
 
 // unitIdentifiers is what was read of one unit's identifiers.
@@ -208,7 +211,7 @@ func (index *nameIndex) start(projectRoot string, units []CompileUnit, generated
 	index.units = units
 	index.done = make(chan struct{})
 	index.indexed = wanted
-	index.startedAt = time.Now()
+	startedAt := time.Now()
 	generatedNames := computeInParallel(len(units), func(position int) unitIdentifiers {
 		if !wanted[position] {
 			return unitIdentifiers{}
@@ -218,13 +221,14 @@ func (index *nameIndex) start(projectRoot string, units []CompileUnit, generated
 		return unitIdentifiers{set: set, withGenerated: withGenerated, err: err}
 	})
 	index.keep(generatedNames)
+	index.generatedDuration = time.Since(startedAt)
 }
 
 // readSources starts reading, in the background, the sources of the units start read the generator
 // output of, at most once per run; nothing when start never ran.
-// Why the read waits for this call: a run that compiles nothing in full and asks no verdict for names
-// would otherwise spend most of its time reading names it never uses. A run that does compile reads
-// them while csc runs, and a verdict that needs them waits for them.
+// Why the read waits for this call: a run that only replays and asks no verdict for names would
+// otherwise spend most of its time reading names it never uses. A run that compiles or checks reads
+// them while that runs, and a verdict that needs them waits for them.
 // Safe to call from any goroutine.
 func (index *nameIndex) readSources() {
 	if !index.started {
@@ -234,6 +238,8 @@ func (index *nameIndex) readSources() {
 		index.sourcesRead.Store(true)
 		go func() {
 			defer close(index.done)
+			startedAt := time.Now()
+			defer func() { index.sourcesDuration = time.Since(startedAt) }()
 			index.keep(computeInParallel(len(index.units), func(position int) unitIdentifiers {
 				names := unitIdentifiers{set: index.sets[position], withGenerated: index.withGenerated[position], err: index.errs[position]}
 				if !index.indexed[position] || names.err != nil {
@@ -249,7 +255,7 @@ func (index *nameIndex) readSources() {
 	})
 }
 
-// keep holds what was read so far, and how long reading it took.
+// keep holds what was read so far.
 func (index *nameIndex) keep(results []unitIdentifiers) {
 	index.sets = make([]identifierSet, len(results))
 	index.errs = make([]error, len(results))
@@ -259,7 +265,6 @@ func (index *nameIndex) keep(results []unitIdentifiers) {
 		index.errs[position] = result.err
 		index.withGenerated[position] = result.withGenerated
 	}
-	index.duration = time.Since(index.startedAt)
 }
 
 // lookup reads the sources when nothing has yet, waits for them and returns the identifiers of one
@@ -300,7 +305,7 @@ func (index *nameIndex) report() NameIndexReport {
 	if sourcesRead {
 		<-index.done
 	}
-	report := NameIndexReport{Duration: index.duration, SourcesRead: sourcesRead}
+	report := NameIndexReport{Duration: index.generatedDuration + index.sourcesDuration, SourcesRead: sourcesRead}
 	for position, indexed := range index.indexed {
 		if !indexed {
 			continue
@@ -317,7 +322,8 @@ func (index *nameIndex) report() NameIndexReport {
 }
 
 // startNameIndex reads the generator output of the units that reference another unit of the plan,
-// when there is any, and has the run read their sources once it first compiles a unit in full.
+// when there is any, and has the run read their sources once it first compiles a unit in full or has
+// the worker check its changed files.
 func (run *schedulerRun) startNameIndex() {
 	wanted := make([]bool, len(run.plan.Units))
 	any := false
@@ -334,9 +340,9 @@ func (run *schedulerRun) startNameIndex() {
 		generated[position] = filepath.Join(run.compiler.ProjectRoot, records.GeneratedDirectory(unit.Assembly.AssemblyName))
 	}
 	run.names.start(run.compiler.ProjectRoot, run.plan.Units, generated, wanted)
-	// Why a full compile starts the read of the sources: it runs long enough to hide the read, while
-	// a run that only replays would wait for it.
-	run.compiler.onFullCompile = run.names.readSources
+	// Why a compile or a check of changed files starts the read of the sources: either runs long
+	// enough to hide the read, while a run that only replays would wait for it.
+	run.compiler.beforeCompilerWork = run.names.readSources
 }
 
 // referenceEffect is what one reference's final state means for one unit that reads it: whether it
