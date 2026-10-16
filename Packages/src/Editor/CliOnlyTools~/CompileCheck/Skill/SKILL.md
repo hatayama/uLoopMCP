@@ -1,7 +1,6 @@
 ---
 name: uloop-compile-check
 description: "Compile C# with the Unity-bundled Roslyn compiler without launching or contacting the Unity Editor; reports errors and warnings only."
-internal: true
 ---
 
 # uloop compile-check
@@ -18,6 +17,10 @@ in `Library/uloop/compile-check/` and are never handed to the Editor.
 - The Editor is not running and you only want to know whether the code compiles.
 - You want compiler errors quickly, without waiting for an import and a domain reload.
 - You are iterating on code whose result does not need to be live in the Editor yet.
+
+Unseen edits (see Limitations): a generator reading a referenced assembly, a new script in a package
+folder without an `.asmdef`, build-profile defines, a setting changed before the first run after a
+build. Run `uloop compile` after one.
 
 ## When not to use
 
