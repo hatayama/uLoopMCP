@@ -89,6 +89,7 @@ func (logRun compileCheckVibeLog) completed(response compileCheckResponse, resul
 	context["baseline_notes"] = compileCheckVibeReasons(response.FastPathBaselineNotes)
 	context["units"] = compileCheckVibeUnits(result.Units)
 	context["surface_checks"] = compileCheckVibeSurfaceChecks(result.Units)
+	addCompileCheckVibeNameNarrowing(context, result)
 	logRun.write(level, compileCheckVibeCompleteOperation, "compile-check finished.", context)
 }
 
@@ -177,6 +178,33 @@ func addCompileCheckVibeScheduling(entry map[string]any, unit compilecheck.UnitR
 	}
 	if unit.WaitedForRecord {
 		entry["waited_for_record"] = true
+	}
+	if len(unit.ChangedReferences) > 0 {
+		changedBy := make([]map[string]any, 0, len(unit.ChangedReferences))
+		for _, reference := range unit.ChangedReferences {
+			changedBy = append(changedBy, map[string]any{"reference": reference.Assembly, "name": reference.Name})
+		}
+		entry["changed_by"] = changedBy
+	}
+}
+
+// addCompileCheckVibeNameNarrowing adds the units left out because they write none of the names a
+// reference's change touches, and what reading the names took, each only when there is any.
+func addCompileCheckVibeNameNarrowing(context map[string]any, result compilecheck.Result) {
+	if len(result.NameSkips) > 0 {
+		skips := make([]map[string]any, 0, len(result.NameSkips))
+		for _, skip := range result.NameSkips {
+			skips = append(skips, map[string]any{"assembly": skip.Assembly, "unaffected_by": skip.ChangedReferences})
+		}
+		context["name_skips"] = skips
+	}
+	if result.NameIndex.Units > 0 {
+		context["name_index"] = map[string]any{
+			"duration_ms":    result.NameIndex.Duration.Milliseconds(),
+			"units":          result.NameIndex.Units,
+			"with_generated": result.NameIndex.WithGenerated,
+			"unreadable":     result.NameIndex.Unreadable,
+		}
 	}
 }
 

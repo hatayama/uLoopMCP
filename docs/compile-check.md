@@ -55,6 +55,23 @@ references, scripting defines and analyzers. `compile-check` replays those respo
    private nested type may report the error under another ID (CS0246, CS0426 or CS0117 in place of
    CS0122, or the other way round) until it compiles again; whether it compiles does not change.
    When the worker cannot be built or cannot answer, the dependents are compiled.
+   When the API did change, the worker also says which names the change touches: the simple name of
+   the type at each level of nesting (with and without an `Attribute` suffix), a namespace segment
+   only when one side lacks that namespace, the member's name (a property or event rather than its
+   accessor, the member alone for an explicit implementation), and `new(` for a constructor that a
+   target-typed `new` can reach. A dependent that writes none of those names - in its own sources
+   or in the generator output its last full compile saved, comments and strings included - is
+   dropped the same way, and counts as keeping its surface for the assemblies below it. Whether
+   a reference touches a dependent never decides which reference assembly the dependent reads when
+   it compiles for another reason. A change a dependent can feel without writing any name is
+   unnamed and compiles every dependent: an assembly-level row; for a type both sides have, its
+   flags or attributes, base type, interfaces, type parameters, an instance field of a value type,
+   a parameterless constructor or an indexer; an abstract member added; an operator; a
+   compiler-generated member; a member C# binds by pattern (`GetEnumerator`, `GetAwaiter`, `Add`,
+   `Deconstruct`, `Dispose`, `SetResult`, the LINQ query methods and the like); every member of an
+   interpolated string handler or collection builder type; every member of a type in `System`,
+   `Microsoft.CodeAnalysis` or a namespace under them, which the compiler looks up by name for
+   `init`, `^1` and the like; members that only moved; and a change naming more than 2000 names. A dependent whose sources cannot be read compiles too.
    Its answer is kept in `<Assembly>.surface.json`, keyed by the content of both reference
    assemblies and the worker build, so the runs until Unity builds again do not compare the same
    pair twice. The comparison is always against Unity's own artifact, never against the
@@ -336,6 +353,20 @@ happened, and how long each assembly took. `docs/vibe-logs.md` lists their field
   invalidate a reused result**, because it is not part of the input digest — the same exposure the
   dependent skip in step 3 already has. One handed to the compiler as `/analyzerconfig:` is read by
   content and does invalidate it. `--all` compiles everything again.
+- **A dependent left out by names can miss what a generator would write.** The names are read from
+  the dependent's sources and from the generator output its last full compile saved. Leaving a
+  dependent out - because its references kept their surface or changed only names it never writes -
+  removes that saved output, so in steady use the names come from the hand-written sources alone and
+  the VibeLog's `name_index.with_generated` stays near 0. A generator that emits code using a member
+  of a referenced type whose name the dependent's own sources never write is then not seen. Closing
+  that gap needs a left-out dependent to keep its outputs and record, which this check does not do
+  yet. Neither is a change to the type of an async method builder seen, which a dependent never
+  names; a change to its members is unnamed and compiles every dependent.
+- **Every change to a type in `System`, `Microsoft.CodeAnalysis` or a namespace under them compiles
+  every dependent.** The compiler looks these types up by name, so only polyfills normally live
+  there; a project that puts its own extension classes in `System.*` gets no narrowing for them.
+- **Identifiers written with `\u` escapes are not decoded** when the dependent's names are read, so
+  a dependent that writes a changed name only that way is left out. `--all` compiles everything.
 - **Linux (x86_64) is supported.** The Editor is looked up under `~/Unity/Hub/Editor/<version>/Editor/Unity`.
 
 ## Troubleshooting

@@ -247,3 +247,51 @@ func TestCompileCheckVibeLogRecordsUnitsCompiledAgain(t *testing.T) {
 			`{"assembly":"Epsilon","compiled_again_after":"Gamma","discarded_ms":50,"duration_ms":300,`+
 			`"succeeded":true,"waited_for_record":true}]`)
 }
+
+// Verifies a run that narrowed dependents by names logs which references touched each unit and by
+// which name, which units it left out by names, and what reading the names took.
+func TestCompileCheckVibeLogRecordsNameNarrowing(t *testing.T) {
+	t.Setenv(vibelog.CLIVibeLogEnvName, "1")
+	projectRoot := t.TempDir()
+	result := compilecheck.Result{
+		Units: []compilecheck.UnitResult{
+			{Assembly: "Alpha", Succeeded: true, Duration: 100 * time.Millisecond},
+			{
+				Assembly: "Beta", Succeeded: true, Duration: 200 * time.Millisecond,
+				ChangedReferences: []compilecheck.ChangedReference{{Assembly: "Alpha", Name: "Foo"}, {Assembly: "Gamma"}},
+			},
+		},
+		Skipped:   1,
+		NameSkips: []compilecheck.NameSkip{{Assembly: "Delta", ChangedReferences: []string{"Alpha"}}},
+		NameIndex: compilecheck.NameIndexReport{Duration: 30 * time.Millisecond, Units: 3, WithGenerated: 1, Unreadable: 1},
+	}
+
+	logRun := startCompileCheckVibeLog(projectRoot, compileCheckOptions{})
+	logRun.completed(buildCompileCheckResponse(result, projectRoot), result)
+
+	complete := assertCompileCheckVibeRun(t, readCompileCheckVibeLog(t, projectRoot))
+	assertVibeContextJSON(t, complete, "units",
+		`[{"assembly":"Alpha","duration_ms":100,"succeeded":true},`+
+			`{"assembly":"Beta","changed_by":[{"name":"Foo","reference":"Alpha"},{"name":"","reference":"Gamma"}],`+
+			`"duration_ms":200,"succeeded":true}]`)
+	assertVibeContextJSON(t, complete, "name_skips", `[{"assembly":"Delta","unaffected_by":["Alpha"]}]`)
+	assertVibeContextJSON(t, complete, "name_index",
+		`{"duration_ms":30,"units":3,"unreadable":1,"with_generated":1}`)
+}
+
+// Verifies a run that read no names and left nothing out by names logs neither.
+func TestCompileCheckVibeLogLeavesOutNameNarrowingWhenNothingWasRead(t *testing.T) {
+	t.Setenv(vibelog.CLIVibeLogEnvName, "1")
+	projectRoot := t.TempDir()
+	result := compilecheck.Result{Units: []compilecheck.UnitResult{{Assembly: "Alpha", Succeeded: true}}}
+
+	logRun := startCompileCheckVibeLog(projectRoot, compileCheckOptions{})
+	logRun.completed(buildCompileCheckResponse(result, projectRoot), result)
+
+	complete := assertCompileCheckVibeRun(t, readCompileCheckVibeLog(t, projectRoot))
+	for _, key := range []string{"name_skips", "name_index"} {
+		if _, found := complete.Context[key]; found {
+			t.Errorf("expected no %s in the log, got %v", key, complete.Context[key])
+		}
+	}
+}
