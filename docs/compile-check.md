@@ -414,7 +414,7 @@ or retargeted so that a folder's sources now belong to a different assembly than
 build compiled them into, or when one of the five compared settings changed (no longer builds for
 the Editor, gained a project reference, lost a project reference, turned on `allowUnsafeCode`,
 gained a precompiled reference under `overrideReferences`). A lost reference reads
-`no longer references <assembly>`; a reference whose GUID resolves to no `.asmdef` in the project
+`no longer references <assembly>`; a reference, by GUID or by name, that matches no `.asmdef` in the project
 makes the check skip that `.asmdef` rather than guess. This is the intended refusal, not a bug. Run
 `uloop compile` once so Unity rewrites the response files, then `compile-check` works again against
 the new configuration.

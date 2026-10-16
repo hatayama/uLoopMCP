@@ -110,9 +110,9 @@ compile-check once more rather than retrying in a loop.
 - Changes to `defineConstraints` and `versionDefines` are **not** detected, because they depend on
   scripting defines and package versions that cannot be evaluated outside the Editor. Run
   `uloop compile` after editing them.
-- A reference **removed** from an `.asmdef` is not detected either: Unity injects references of its
-  own that no `.asmdef` declares, so only added references can be told apart from those. Diagnostics
-  may therefore miss an error that the removal would cause. Run `uloop compile` after removing one.
+- A reference removed from an `.asmdef` stops the run with `COMPILE_CHECK_UNITY_BUILD_REQUIRED`; the
+  four references Unity adds on its own are allowed, and an `.asmdef` with a reference that matches
+  no `.asmdef` in the project is not judged.
 - Changed scripting defines are not detected; the defines from the last build are reused.
 - The predefined assemblies (`Assembly-CSharp` and friends) keep the source list of the last build,
   so a brand-new `.cs` file outside an `.asmdef` is not compiled until Unity imports it.
