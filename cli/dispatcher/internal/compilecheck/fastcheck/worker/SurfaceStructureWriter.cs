@@ -14,46 +14,51 @@ namespace UnityCliLoop.CompileCheckWorker
     /// </summary>
     internal static class SurfaceStructureWriter
     {
-        internal static void Write(SurfaceMetadata metadata, List<string> lines)
+        internal static void Write(SurfaceMetadata metadata, SurfaceDescription description)
         {
-            SurfaceManifestWriter.Write(metadata, lines);
+            SurfaceManifestWriter.Write(metadata, description);
             foreach (TypeDefinitionHandle handle in metadata.Reader.TypeDefinitions)
             {
                 if (!metadata.IsLeftOut(handle))
                 {
-                    WriteType(metadata, handle, lines);
+                    WriteType(metadata, handle, description);
                 }
             }
         }
 
-        private static void WriteType(SurfaceMetadata metadata, TypeDefinitionHandle handle, List<string> lines)
+        // Why the base type has a row of its own: a change of it alone then reads as a change of the
+        // type's shape, apart from its flags and layout.
+        private static void WriteType(SurfaceMetadata metadata, TypeDefinitionHandle handle, SurfaceDescription description)
         {
             MetadataReader reader = metadata.Reader;
             TypeDefinition type = reader.GetTypeDefinition(handle);
-            string name = SurfaceTypeNames.Definition(reader, handle);
+            SurfaceTypeOwners owners = new SurfaceTypeOwners(metadata, handle);
+            string name = owners.TypeName;
             TypeLayout layout = type.GetLayout();
-            lines.Add("type " + name + " flags=" + type.Attributes + " base=" + metadata.TypeName(type.BaseType)
-                + " layout=" + layout.PackingSize.ToString(CultureInfo.InvariantCulture) + "," + layout.Size.ToString(CultureInfo.InvariantCulture));
-            WriteGenericParameters(metadata, type.GetGenericParameters(), name, lines);
-            SurfaceManifestWriter.AddPrefixed(lines, name + " ", InterfaceEntries(metadata, type));
-            SurfaceManifestWriter.AddPrefixed(lines, name + " ", SurfaceManifestWriter.SecurityLines(reader, type.GetDeclarativeSecurityAttributes()));
-            SurfaceManifestWriter.AddPrefixed(lines, name + " ", metadata.AttributeLines(type.GetCustomAttributes()));
-            SurfaceManifestWriter.AddPrefixed(lines, name + " ", ImplementationEntries(metadata, type));
+            description.Add("type " + name + " flags=" + type.Attributes
+                + " layout=" + layout.PackingSize.ToString(CultureInfo.InvariantCulture) + "," + layout.Size.ToString(CultureInfo.InvariantCulture),
+                owners.Type());
+            description.Add(name + " base " + metadata.TypeName(type.BaseType), owners.Shape());
+            WriteGenericParameters(metadata, type.GetGenericParameters(), name, owners.Shape(), description);
+            description.AddPrefixed(name + " ", InterfaceEntries(metadata, type), owners.Shape());
+            description.AddPrefixed(name + " ", SurfaceManifestWriter.SecurityLines(reader, type.GetDeclarativeSecurityAttributes()), owners.Type());
+            description.AddPrefixed(name + " ", metadata.AttributeLines(type.GetCustomAttributes()), owners.Type());
+            description.AddPrefixed(name + " ", ImplementationEntries(metadata, type), owners.Type());
             foreach (FieldDefinitionHandle field in type.GetFields())
             {
-                WriteField(metadata, name, field, lines);
+                WriteField(metadata, name, field, owners.Field(field), description);
             }
             foreach (MethodDefinitionHandle method in type.GetMethods())
             {
-                WriteMethod(metadata, method, lines);
+                WriteMethod(metadata, method, owners.Method(method), description);
             }
             foreach (PropertyDefinitionHandle property in type.GetProperties())
             {
-                WriteProperty(metadata, name, property, lines);
+                WriteProperty(metadata, name, property, owners.Property(property), description);
             }
             foreach (EventDefinitionHandle eventHandle in type.GetEvents())
             {
-                WriteEvent(metadata, name, eventHandle, lines);
+                WriteEvent(metadata, name, eventHandle, owners.Event(eventHandle), description);
             }
         }
 
@@ -85,16 +90,16 @@ namespace UnityCliLoop.CompileCheckWorker
             return entries;
         }
 
-        private static void WriteGenericParameters(
-            SurfaceMetadata metadata, GenericParameterHandleCollection parameters, string owner, List<string> lines)
+        private static void WriteGenericParameters(SurfaceMetadata metadata, GenericParameterHandleCollection parameters,
+            string owner, SurfaceOwner rowOwner, SurfaceDescription description)
         {
             MetadataReader reader = metadata.Reader;
             foreach (GenericParameterHandle handle in parameters)
             {
                 GenericParameter parameter = reader.GetGenericParameter(handle);
                 string name = owner + " !" + parameter.Index.ToString(CultureInfo.InvariantCulture);
-                lines.Add(name + " " + reader.GetString(parameter.Name) + " flags=" + parameter.Attributes);
-                SurfaceManifestWriter.AddPrefixed(lines, name + " ", metadata.AttributeLines(parameter.GetCustomAttributes()));
+                description.Add(name + " " + reader.GetString(parameter.Name) + " flags=" + parameter.Attributes, rowOwner);
+                description.AddPrefixed(name + " ", metadata.AttributeLines(parameter.GetCustomAttributes()), rowOwner);
                 List<string> constraints = new List<string>();
                 foreach (GenericParameterConstraintHandle constraintHandle in parameter.GetConstraints())
                 {
@@ -103,36 +108,37 @@ namespace UnityCliLoop.CompileCheckWorker
                         + " [" + string.Join("; ", metadata.AttributeLines(constraint.GetCustomAttributes())) + "]");
                 }
                 constraints.Sort(StringComparer.Ordinal);
-                SurfaceManifestWriter.AddPrefixed(lines, name + " ", constraints);
+                description.AddPrefixed(name + " ", constraints, rowOwner);
             }
         }
 
-        private static void WriteField(SurfaceMetadata metadata, string typeName, FieldDefinitionHandle handle, List<string> lines)
+        private static void WriteField(
+            SurfaceMetadata metadata, string typeName, FieldDefinitionHandle handle, SurfaceOwner owner, SurfaceDescription description)
         {
             MetadataReader reader = metadata.Reader;
             FieldDefinition field = reader.GetFieldDefinition(handle);
             string name = "field " + typeName + "::" + reader.GetString(field.Name);
-            lines.Add(name + " flags=" + field.Attributes + " type=" + field.DecodeSignature(metadata.Provider, null).Name
+            description.Add(name + " flags=" + field.Attributes + " type=" + field.DecodeSignature(metadata.Provider, null).Name
                 + " const=" + ConstantText(reader, field.GetDefaultValue())
                 + " marshal=" + SurfaceTypeNames.BlobHex(reader, field.GetMarshallingDescriptor())
                 + " offset=" + field.GetOffset().ToString(CultureInfo.InvariantCulture)
-                + " rva=" + (field.GetRelativeVirtualAddress() != 0));
-            SurfaceManifestWriter.AddPrefixed(lines, name + " ", metadata.AttributeLines(field.GetCustomAttributes()));
+                + " rva=" + (field.GetRelativeVirtualAddress() != 0), owner);
+            description.AddPrefixed(name + " ", metadata.AttributeLines(field.GetCustomAttributes()), owner);
         }
 
-        private static void WriteMethod(SurfaceMetadata metadata, MethodDefinitionHandle handle, List<string> lines)
+        private static void WriteMethod(SurfaceMetadata metadata, MethodDefinitionHandle handle, SurfaceOwner owner, SurfaceDescription description)
         {
             MetadataReader reader = metadata.Reader;
             MethodDefinition method = reader.GetMethodDefinition(handle);
             string name = "method " + metadata.MethodName(handle);
-            lines.Add(name + " flags=" + method.Attributes + " impl=" + method.ImplAttributes + ImportText(reader, method.GetImport()));
-            WriteGenericParameters(metadata, method.GetGenericParameters(), name, lines);
+            description.Add(name + " flags=" + method.Attributes + " impl=" + method.ImplAttributes + ImportText(reader, method.GetImport()), owner);
+            WriteGenericParameters(metadata, method.GetGenericParameters(), name, owner, description);
             foreach (ParameterHandle parameterHandle in method.GetParameters())
             {
-                lines.Add(name + " " + ParameterLine(metadata, reader.GetParameter(parameterHandle)));
+                description.Add(name + " " + ParameterLine(metadata, reader.GetParameter(parameterHandle)), owner);
             }
-            SurfaceManifestWriter.AddPrefixed(lines, name + " ", SurfaceManifestWriter.SecurityLines(reader, method.GetDeclarativeSecurityAttributes()));
-            SurfaceManifestWriter.AddPrefixed(lines, name + " ", metadata.AttributeLines(method.GetCustomAttributes()));
+            description.AddPrefixed(name + " ", SurfaceManifestWriter.SecurityLines(reader, method.GetDeclarativeSecurityAttributes()), owner);
+            description.AddPrefixed(name + " ", metadata.AttributeLines(method.GetCustomAttributes()), owner);
         }
 
         // One parameter row, the return value's included. Why a return-value row that only carries a
@@ -151,31 +157,33 @@ namespace UnityCliLoop.CompileCheckWorker
                 + " [" + string.Join("; ", attributes) + "]";
         }
 
-        private static void WriteProperty(SurfaceMetadata metadata, string typeName, PropertyDefinitionHandle handle, List<string> lines)
+        private static void WriteProperty(
+            SurfaceMetadata metadata, string typeName, PropertyDefinitionHandle handle, SurfaceOwner owner, SurfaceDescription description)
         {
             MetadataReader reader = metadata.Reader;
             PropertyDefinition property = reader.GetPropertyDefinition(handle);
             PropertyAccessors accessors = property.GetAccessors();
             string name = "property " + typeName + "::" + reader.GetString(property.Name);
-            lines.Add(name + " flags=" + property.Attributes
+            description.Add(name + " flags=" + property.Attributes
                 + " sig=" + SurfaceTypeNames.Signature(property.DecodeSignature(metadata.Provider, null))
                 + " const=" + ConstantText(reader, property.GetDefaultValue())
                 + " get=" + AccessorName(metadata, accessors.Getter) + " set=" + AccessorName(metadata, accessors.Setter)
-                + " other=[" + string.Join("; ", OtherAccessorNames(metadata, accessors.Others)) + "]");
-            SurfaceManifestWriter.AddPrefixed(lines, name + " ", metadata.AttributeLines(property.GetCustomAttributes()));
+                + " other=[" + string.Join("; ", OtherAccessorNames(metadata, accessors.Others)) + "]", owner);
+            description.AddPrefixed(name + " ", metadata.AttributeLines(property.GetCustomAttributes()), owner);
         }
 
-        private static void WriteEvent(SurfaceMetadata metadata, string typeName, EventDefinitionHandle handle, List<string> lines)
+        private static void WriteEvent(
+            SurfaceMetadata metadata, string typeName, EventDefinitionHandle handle, SurfaceOwner owner, SurfaceDescription description)
         {
             MetadataReader reader = metadata.Reader;
             EventDefinition eventDefinition = reader.GetEventDefinition(handle);
             EventAccessors accessors = eventDefinition.GetAccessors();
             string name = "event " + typeName + "::" + reader.GetString(eventDefinition.Name);
-            lines.Add(name + " flags=" + eventDefinition.Attributes + " type=" + metadata.TypeName(eventDefinition.Type)
+            description.Add(name + " flags=" + eventDefinition.Attributes + " type=" + metadata.TypeName(eventDefinition.Type)
                 + " add=" + AccessorName(metadata, accessors.Adder) + " remove=" + AccessorName(metadata, accessors.Remover)
                 + " raise=" + AccessorName(metadata, accessors.Raiser)
-                + " other=[" + string.Join("; ", OtherAccessorNames(metadata, accessors.Others)) + "]");
-            SurfaceManifestWriter.AddPrefixed(lines, name + " ", metadata.AttributeLines(eventDefinition.GetCustomAttributes()));
+                + " other=[" + string.Join("; ", OtherAccessorNames(metadata, accessors.Others)) + "]", owner);
+            description.AddPrefixed(name + " ", metadata.AttributeLines(eventDefinition.GetCustomAttributes()), owner);
         }
 
         private static string AccessorName(SurfaceMetadata metadata, MethodDefinitionHandle handle)

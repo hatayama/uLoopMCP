@@ -60,6 +60,13 @@ namespace UnityCliLoop.CompileCheckWorker
         // The first line the two descriptions disagree on, or why they could not be read; empty for "same".
         public string Detail { get; set; } = "";
 
+        // The identifiers a dependent has to write to be affected, sorted ordinal; empty for "same", for an
+        // unnamed change, and when the descriptions could not be read.
+        public string[] ChangedNames { get; set; } = System.Array.Empty<string>();
+
+        // Why the change cannot be told by names; empty for "same" and for a named change.
+        public string UnnamedReason { get; set; } = "";
+
         public static CompareSurfaceResponse Same()
         {
             return new CompareSurfaceResponse { Outcome = SameOutcome };
@@ -68,6 +75,18 @@ namespace UnityCliLoop.CompileCheckWorker
         public static CompareSurfaceResponse Different(string detail)
         {
             return new CompareSurfaceResponse { Outcome = DifferentOutcome, Detail = detail };
+        }
+
+        // A difference whose descriptions were read: names, or the reason no names tell it.
+        public static CompareSurfaceResponse DifferentWithNames(string detail, string[] changedNames, string unnamedReason)
+        {
+            return new CompareSurfaceResponse
+            {
+                Outcome = DifferentOutcome,
+                Detail = detail,
+                ChangedNames = changedNames,
+                UnnamedReason = unnamedReason,
+            };
         }
     }
 

@@ -30,14 +30,14 @@ namespace UnityCliLoop.CompileCheckWorker
 
         private static readonly HandleKind[] ContextRowKinds = { HandleKind.TypeDefinition, HandleKind.MethodDefinition };
 
-        internal static void Write(SurfaceMetadata metadata, List<string> lines)
+        internal static void Write(SurfaceMetadata metadata, SurfaceDescription description)
         {
             RejectUnexpectedRows(metadata);
             foreach (TypeDefinitionHandle handle in metadata.Reader.TypeDefinitions)
             {
                 if (!metadata.IsLeftOut(handle))
                 {
-                    WriteType(metadata, handle, lines);
+                    WriteType(metadata, handle, description);
                 }
             }
         }
@@ -59,16 +59,17 @@ namespace UnityCliLoop.CompileCheckWorker
             }
         }
 
-        private static void WriteType(SurfaceMetadata metadata, TypeDefinitionHandle handle, List<string> lines)
+        private static void WriteType(SurfaceMetadata metadata, TypeDefinitionHandle handle, SurfaceDescription description)
         {
             MetadataReader reader = metadata.Reader;
             TypeDefinition type = reader.GetTypeDefinition(handle);
-            string name = SurfaceTypeNames.Definition(reader, handle);
+            SurfaceTypeOwners owners = new SurfaceTypeOwners(metadata, handle);
+            string name = owners.TypeName;
             byte typeContext = TypeContext(metadata, handle);
             // The annotation of the base type sits on the type's own row.
             if (!type.BaseType.IsNil)
             {
-                lines.Add("base " + name + " " + Effective(metadata, type.GetCustomAttributes(), typeContext));
+                description.Add("base " + name + " " + Effective(metadata, type.GetCustomAttributes(), typeContext), owners.Shape());
             }
             List<string> interfaces = new List<string>();
             foreach (InterfaceImplementationHandle interfaceHandle in type.GetInterfaceImplementations())
@@ -78,20 +79,23 @@ namespace UnityCliLoop.CompileCheckWorker
                     + " " + Effective(metadata, implementation.GetCustomAttributes(), typeContext));
             }
             interfaces.Sort(StringComparer.Ordinal);
-            lines.AddRange(interfaces);
-            WriteGenericParameters(metadata, type.GetGenericParameters(), "gp " + name, typeContext, lines);
-            WriteMembers(metadata, type, name, typeContext, lines);
+            description.AddPrefixed("", interfaces, owners.Shape());
+            WriteGenericParameters(metadata, type.GetGenericParameters(), "gp " + name, typeContext, owners.Shape(), description);
+            WriteMembers(metadata, type, owners, typeContext, description);
         }
 
-        private static void WriteMembers(SurfaceMetadata metadata, TypeDefinition type, string name, byte typeContext, List<string> lines)
+        private static void WriteMembers(
+            SurfaceMetadata metadata, TypeDefinition type, SurfaceTypeOwners owners, byte typeContext, SurfaceDescription description)
         {
             MetadataReader reader = metadata.Reader;
+            string name = owners.TypeName;
             foreach (FieldDefinitionHandle fieldHandle in type.GetFields())
             {
                 FieldDefinition field = reader.GetFieldDefinition(fieldHandle);
                 if (field.DecodeSignature(metadata.Provider, null).HasNullablePosition)
                 {
-                    lines.Add("field " + name + "::" + reader.GetString(field.Name) + " " + Effective(metadata, field.GetCustomAttributes(), typeContext));
+                    description.Add("field " + name + "::" + reader.GetString(field.Name) + " " + Effective(metadata, field.GetCustomAttributes(), typeContext),
+                        owners.Field(fieldHandle));
                 }
             }
             foreach (PropertyDefinitionHandle propertyHandle in type.GetProperties())
@@ -99,28 +103,31 @@ namespace UnityCliLoop.CompileCheckWorker
                 PropertyDefinition property = reader.GetPropertyDefinition(propertyHandle);
                 if (property.DecodeSignature(metadata.Provider, null).ReturnType.HasNullablePosition)
                 {
-                    lines.Add("property " + name + "::" + reader.GetString(property.Name) + " " + Effective(metadata, property.GetCustomAttributes(), typeContext));
+                    description.Add("property " + name + "::" + reader.GetString(property.Name) + " " + Effective(metadata, property.GetCustomAttributes(), typeContext),
+                        owners.Property(propertyHandle));
                 }
             }
             foreach (EventDefinitionHandle eventHandle in type.GetEvents())
             {
                 EventDefinition eventDefinition = reader.GetEventDefinition(eventHandle);
-                lines.Add("event " + name + "::" + reader.GetString(eventDefinition.Name) + " " + Effective(metadata, eventDefinition.GetCustomAttributes(), typeContext));
+                description.Add("event " + name + "::" + reader.GetString(eventDefinition.Name) + " " + Effective(metadata, eventDefinition.GetCustomAttributes(), typeContext),
+                    owners.Event(eventHandle));
             }
             foreach (MethodDefinitionHandle methodHandle in type.GetMethods())
             {
-                WriteMethod(metadata, methodHandle, typeContext, lines);
+                WriteMethod(metadata, methodHandle, typeContext, owners.Method(methodHandle), description);
             }
         }
 
-        private static void WriteMethod(SurfaceMetadata metadata, MethodDefinitionHandle handle, byte typeContext, List<string> lines)
+        private static void WriteMethod(
+            SurfaceMetadata metadata, MethodDefinitionHandle handle, byte typeContext, SurfaceOwner owner, SurfaceDescription description)
         {
             MetadataReader reader = metadata.Reader;
             MethodDefinition method = reader.GetMethodDefinition(handle);
             string name = metadata.MethodName(handle);
             byte? ownContext = OwnContext(metadata, method.GetCustomAttributes());
             byte context = ownContext ?? typeContext;
-            WriteGenericParameters(metadata, method.GetGenericParameters(), "gp " + name, context, lines);
+            WriteGenericParameters(metadata, method.GetGenericParameters(), "gp " + name, context, owner, description);
 
             Dictionary<int, Parameter> rows = new Dictionary<int, Parameter>();
             foreach (ParameterHandle parameterHandle in method.GetParameters())
@@ -131,15 +138,15 @@ namespace UnityCliLoop.CompileCheckWorker
             MethodSignature<SurfaceType> signature = method.DecodeSignature(metadata.Provider, null);
             if (signature.ReturnType.HasNullablePosition)
             {
-                lines.Add("ret " + name + " " + Effective(metadata, RowAttributes(rows, ReturnParameterSequence), context));
+                description.Add("ret " + name + " " + Effective(metadata, RowAttributes(rows, ReturnParameterSequence), context), owner);
             }
             for (int index = 0; index < signature.ParameterTypes.Length; index++)
             {
                 if (signature.ParameterTypes[index].HasNullablePosition)
                 {
                     int sequence = index + 1;
-                    lines.Add("param " + name + "#" + sequence.ToString(CultureInfo.InvariantCulture)
-                        + " " + Effective(metadata, RowAttributes(rows, sequence), context));
+                    description.Add("param " + name + "#" + sequence.ToString(CultureInfo.InvariantCulture)
+                        + " " + Effective(metadata, RowAttributes(rows, sequence), context), owner);
                 }
             }
         }
@@ -153,15 +160,15 @@ namespace UnityCliLoop.CompileCheckWorker
         }
 
         // Type parameters and their constraints always carry a position, whatever their constraints are.
-        private static void WriteGenericParameters(
-            SurfaceMetadata metadata, GenericParameterHandleCollection parameters, string owner, byte context, List<string> lines)
+        private static void WriteGenericParameters(SurfaceMetadata metadata, GenericParameterHandleCollection parameters,
+            string owner, byte context, SurfaceOwner rowOwner, SurfaceDescription description)
         {
             MetadataReader reader = metadata.Reader;
             foreach (GenericParameterHandle handle in parameters)
             {
                 GenericParameter parameter = reader.GetGenericParameter(handle);
                 string name = owner + "!" + parameter.Index.ToString(CultureInfo.InvariantCulture);
-                lines.Add(name + " " + Effective(metadata, parameter.GetCustomAttributes(), context));
+                description.Add(name + " " + Effective(metadata, parameter.GetCustomAttributes(), context), rowOwner);
                 List<string> constraints = new List<string>();
                 foreach (GenericParameterConstraintHandle constraintHandle in parameter.GetConstraints())
                 {
@@ -170,7 +177,7 @@ namespace UnityCliLoop.CompileCheckWorker
                         + " " + Effective(metadata, constraint.GetCustomAttributes(), context));
                 }
                 constraints.Sort(StringComparer.Ordinal);
-                lines.AddRange(constraints);
+                description.AddPrefixed("", constraints, rowOwner);
             }
         }
 
