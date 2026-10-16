@@ -12,6 +12,8 @@ import (
 const (
 	compileCheckVibeStartOperation    = "cli_compile_check_start"
 	compileCheckVibeCompleteOperation = "cli_compile_check_complete"
+	// loggedChangedNames is how many of a surface change's names a log entry keeps.
+	loggedChangedNames = 10
 )
 
 // compileCheckVibeLog writes what one compile-check run did to the CLI VibeLog: a start entry, and a
@@ -188,14 +190,32 @@ func compileCheckVibeSurfaceChecks(units []compilecheck.UnitResult) []map[string
 		if !unit.Surface.Asked {
 			continue
 		}
-		entries = append(entries, map[string]any{
-			"assembly":    unit.Assembly,
-			"verdict":     unit.Surface.Reason,
-			"detail":      unit.Surface.Detail,
-			"duration_ms": unit.Surface.Duration.Milliseconds(),
-			"from_record": unit.Surface.FromRecord,
-		})
+		entry := map[string]any{
+			"assembly":           unit.Assembly,
+			"verdict":            unit.Surface.Reason,
+			"detail":             unit.Surface.Detail,
+			"duration_ms":        unit.Surface.Duration.Milliseconds(),
+			"from_record":        unit.Surface.FromRecord,
+			"changed_name_count": len(unit.Surface.ChangedNames),
+			"changed_names":      firstChangedNames(unit.Surface.ChangedNames),
+		}
+		if unit.Surface.Unnamed != "" {
+			entry["unnamed"] = unit.Surface.Unnamed
+		}
+		entries = append(entries, entry)
 	}
 
 	return entries
+}
+
+// firstChangedNames keeps the log line short: a change can name thousands of identifiers.
+func firstChangedNames(names []string) []string {
+	if len(names) > loggedChangedNames {
+		return names[:loggedChangedNames]
+	}
+	if names == nil {
+		return []string{}
+	}
+
+	return names
 }

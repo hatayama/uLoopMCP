@@ -3,6 +3,7 @@ package resultstore
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 )
 
@@ -27,7 +28,7 @@ func TestReusableSurfaceVerdictReadsBackTheRecordedVerdict(t *testing.T) {
 
 	got, found := directoryStore(directoryPath).ReusableSurfaceVerdict("Alpha", comparedInputs())
 
-	if !found || got != (SurfaceVerdict{Same: true, Detail: "detail"}) {
+	if !found || !reflect.DeepEqual(got, SurfaceVerdict{Same: true, Detail: "detail"}) {
 		t.Errorf("expected the recorded verdict, got %+v (found %v)", got, found)
 	}
 }
@@ -51,12 +52,46 @@ func TestReusableSurfaceVerdictRejectsAnotherComparison(t *testing.T) {
 	}
 }
 
+// Verifies a changed verdict is read back with its changed names and its unnamed reason.
+func TestReusableSurfaceVerdictReadsBackChangedNames(t *testing.T) {
+	directoryPath := t.TempDir()
+	recorded := []SurfaceVerdict{
+		{Detail: "named", ChangedNames: []string{"C", "M"}},
+		{Detail: "unnamed", UnnamedReason: "operator op_Addition"},
+	}
+	for _, verdict := range recorded {
+		if err := directoryStore(directoryPath).RecordSurfaceVerdict("Alpha", comparedInputs(), verdict); err != nil {
+			t.Fatalf("failed to record the surface verdict: %v", err)
+		}
+
+		got, found := directoryStore(directoryPath).ReusableSurfaceVerdict("Alpha", comparedInputs())
+
+		if !found || !reflect.DeepEqual(got, verdict) {
+			t.Errorf("expected %+v back, got %+v (found %v)", verdict, got, found)
+		}
+	}
+}
+
+// Verifies a record written before verdicts carried changed names is not used, so a change it
+// recorded is asked again rather than read as naming nothing.
+func TestReusableSurfaceVerdictRejectsAVersionOneRecord(t *testing.T) {
+	directoryPath := t.TempDir()
+	content := `{"FormatVersion":1,"ProducedSha256":"produced","UnityBuildSha256":"unity","WorkerKey":"worker","Same":false,"Detail":"d"}`
+	if err := os.WriteFile(filepath.Join(directoryPath, "Alpha"+surfaceRecordExtension), []byte(content), 0o600); err != nil {
+		t.Fatalf("failed to write the record: %v", err)
+	}
+
+	if _, found := directoryStore(directoryPath).ReusableSurfaceVerdict("Alpha", comparedInputs()); found {
+		t.Error("expected a version 1 record not to be used")
+	}
+}
+
 // Verifies a record that is not one this build writes is not used.
 func TestReusableSurfaceVerdictRejectsAnUnreadableRecord(t *testing.T) {
 	directoryPath := t.TempDir()
 	for name, content := range map[string]string{
 		"not json":      "not json",
-		"other version": `{"FormatVersion":2,"ProducedSha256":"produced","UnityBuildSha256":"unity","WorkerKey":"worker","Same":true}`,
+		"other version": `{"FormatVersion":3,"ProducedSha256":"produced","UnityBuildSha256":"unity","WorkerKey":"worker","Same":true}`,
 	} {
 		if err := os.WriteFile(filepath.Join(directoryPath, "Alpha"+surfaceRecordExtension), []byte(content), 0o600); err != nil {
 			t.Fatalf("failed to write the record: %v", err)

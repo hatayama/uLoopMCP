@@ -9,7 +9,8 @@ import (
 
 const (
 	// surfaceRecordFormatVersion guards against reading a verdict an older or newer build recorded.
-	surfaceRecordFormatVersion = 1
+	// Version 1 had no changed names.
+	surfaceRecordFormatVersion = 2
 
 	surfaceRecordExtension = ".surface.json"
 )
@@ -27,6 +28,9 @@ type SurfaceInputs struct {
 type SurfaceVerdict struct {
 	Same   bool
 	Detail string
+	// ChangedNames and UnnamedReason are what a different answer said its change touches.
+	ChangedNames  []string
+	UnnamedReason string
 }
 
 // surfaceRecord is one recorded surface verdict with the comparison it answered.
@@ -37,6 +41,8 @@ type surfaceRecord struct {
 	WorkerKey        string
 	Same             bool
 	Detail           string
+	ChangedNames     []string
+	UnnamedReason    string
 }
 
 func surfaceRecordPath(directoryPath string, assembly string) string {
@@ -65,7 +71,9 @@ func (s Store[D]) ReusableSurfaceVerdict(assembly string, inputs SurfaceInputs) 
 		return SurfaceVerdict{}, false
 	}
 
-	return SurfaceVerdict{Same: record.Same, Detail: record.Detail}, true
+	return SurfaceVerdict{
+		Same: record.Same, Detail: record.Detail, ChangedNames: record.ChangedNames, UnnamedReason: record.UnnamedReason,
+	}, true
 }
 
 // RecordSurfaceVerdict records what the worker answered for one comparison of the assembly's
@@ -78,6 +86,8 @@ func (s Store[D]) RecordSurfaceVerdict(assembly string, inputs SurfaceInputs, ve
 		WorkerKey:        inputs.WorkerKey,
 		Same:             verdict.Same,
 		Detail:           verdict.Detail,
+		ChangedNames:     verdict.ChangedNames,
+		UnnamedReason:    verdict.UnnamedReason,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to encode the surface verdict of %s: %w", assembly, err)

@@ -6,9 +6,12 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/hatayama/unity-cli-loop/dispatcher/internal/compilecheck/resultstore"
 )
 
 // surfaceVerdictProject is one assembly whose rebuilt reference assembly differs in bytes from the
@@ -172,6 +175,91 @@ func TestReferenceSurfaceVerdictComparesTheBytesItKeysTheRecordBy(t *testing.T) 
 	project.worker.surfaceByContent = false
 
 	assertVerdict(t, project.verdict(), false, SurfaceChanged)
+}
+
+// Verifies a difference the worker tells by names carries them and no unnamed reason.
+func TestReferenceSurfaceVerdictCarriesTheChangedNames(t *testing.T) {
+	project := newSurfaceVerdictProject(t)
+	project.worker.surfaceNames = []string{"C", "M"}
+
+	got := project.verdict()
+
+	assertVerdict(t, got, false, SurfaceChanged)
+	if !reflect.DeepEqual(got.ChangedNames, []string{"C", "M"}) || got.Unnamed != "" || !got.namedChange() {
+		t.Errorf("expected a named change of C and M, got %+v", got)
+	}
+}
+
+// Verifies a difference the worker cannot tell by names is unnamed and carries no names.
+func TestReferenceSurfaceVerdictTreatsAnUnnamedAnswerAsUnnamed(t *testing.T) {
+	project := newSurfaceVerdictProject(t)
+	project.worker.surfaceUnnamed = "operator op_Addition"
+
+	got := project.verdict()
+
+	if got.Unnamed != "operator op_Addition" || len(got.ChangedNames) != 0 || got.namedChange() {
+		t.Errorf("expected an unnamed change, got %+v", got)
+	}
+}
+
+// Verifies a verdict given without the worker is unnamed, with its reason as the reason.
+func TestReferenceSurfaceVerdictWithoutAWorkerIsUnnamed(t *testing.T) {
+	project := newSurfaceVerdictProject(t)
+	compiler := Compiler{ProjectRoot: project.root}
+
+	got := compiler.referenceSurfaceVerdict(context.Background(), project.plan, project.unit)
+
+	assertVerdict(t, got, false, SurfaceBytesDiffer)
+	if got.Unnamed != SurfaceBytesDiffer || got.namedChange() {
+		t.Errorf("expected an unnamed verdict, got %+v", got)
+	}
+}
+
+// Verifies the record of a named difference answers again with the same names.
+func TestReferenceSurfaceVerdictFromRecordCarriesTheChangedNames(t *testing.T) {
+	project := newSurfaceVerdictProject(t)
+	project.worker.surfaceNames = []string{"C", "M"}
+	project.verdict()
+	project.worker.surfaceNames = nil
+	project.worker.surfaceUnnamed = "asked again"
+
+	got := project.verdict()
+
+	assertComparisons(t, project.worker, 1)
+	if !got.FromRecord || !reflect.DeepEqual(got.ChangedNames, []string{"C", "M"}) || got.Unnamed != "" {
+		t.Errorf("expected the recorded names, got %+v", got)
+	}
+}
+
+// Verifies a different answer carrying neither names nor a reason is unnamed: the fake worker in
+// the scheduler tests hands its answer over without the client's own check, so this is the one
+// place such an answer is kept from reading as a change no dependent writes.
+func TestVerdictFromWorkerTreatsADifferenceWithoutNamesAsUnnamed(t *testing.T) {
+	got := verdictFromWorker(resultstore.SurfaceVerdict{Same: false})
+
+	if got.Unnamed == "" || got.namedChange() {
+		t.Errorf("expected an unnamed verdict, got %+v", got)
+	}
+}
+
+// Verifies the verdicts nobody named a change in - kept, the zero value of a unit that failed or
+// has no dependents, and every reason the worker was not asked - never read as a named change.
+func TestOnlyANamedVerdictIsANamedChange(t *testing.T) {
+	verdicts := []SurfaceVerdict{
+		{Kept: true, Reason: SurfaceSameAPI},
+		{},
+		{Reason: SurfaceBytesDiffer, Unnamed: SurfaceBytesDiffer},
+		{Reason: SurfaceChanged, ChangedNames: []string{"C"}, Unnamed: "operator op_Addition"},
+		{Reason: SurfaceChanged},
+	}
+	for _, verdict := range verdicts {
+		if verdict.namedChange() {
+			t.Errorf("expected %+v not to be a named change", verdict)
+		}
+	}
+	if !(SurfaceVerdict{Reason: SurfaceChanged, ChangedNames: []string{"C"}}).namedChange() {
+		t.Error("expected a verdict with names and no unnamed reason to be a named change")
+	}
 }
 
 // Verifies a matching record answers "same" without asking the worker again.
