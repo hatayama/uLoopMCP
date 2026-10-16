@@ -62,6 +62,9 @@ func (logRun compileCheckVibeLog) failed(err error) {
 	context["error_code"] = clierrors.ClassifyError(err, clierrors.ErrorContext{
 		Command: clicore.CompileCheckCommandName, ProjectRoot: logRun.projectRoot,
 	}).ErrorCode
+	if report, found := compilecheck.BuildSettingsReportOf(err); found {
+		context["build_settings"] = compileCheckVibeBuildSettings(report)
+	}
 	logRun.write("ERROR", compileCheckVibeCompleteOperation, "compile-check failed.", context)
 }
 
@@ -90,6 +93,7 @@ func (logRun compileCheckVibeLog) completed(response compileCheckResponse, resul
 	context["units"] = compileCheckVibeUnits(result.Units)
 	context["surface_checks"] = compileCheckVibeSurfaceChecks(result.Units)
 	addCompileCheckVibeNameNarrowing(context, result)
+	context["build_settings"] = compileCheckVibeBuildSettings(result.BuildSettings)
 	logRun.write(level, compileCheckVibeCompleteOperation, "compile-check finished.", context)
 }
 
@@ -112,6 +116,16 @@ func (logRun compileCheckVibeLog) write(level string, operation string, message 
 		Context:       context,
 		CorrelationID: logRun.correlationID,
 	})
+}
+
+// compileCheckVibeBuildSettings says whether the last Unity build left a build-trace file, what
+// happened to the build-settings record, and which setting a refusal was for.
+func compileCheckVibeBuildSettings(report compilecheck.BuildSettingsReport) map[string]any {
+	return map[string]any{
+		"stamp_found":  report.StampFound,
+		"record":       report.Record,
+		"refused_part": report.RefusedPart,
+	}
 }
 
 // compileCheckVibeFastChecks lists each fast check by assembly, whether it was replayed, and how
