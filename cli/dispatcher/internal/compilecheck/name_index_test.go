@@ -216,6 +216,7 @@ func TestScanIdentifiersDecodesUnicodeEscapes(t *testing.T) {
 		"A" + escapeOf("u0042"):     "AB",
 		escapeOf("U00000041"):       "A",
 		"A" + escapeOf("U00000042"): "AB",
+		escapeOf("uFF21") + "oo":    "\uFF21oo",
 	}
 	for content, want := range cases {
 		set := identifiersOf(content + " ")
@@ -231,18 +232,31 @@ func TestScanIdentifiersLeavesAMalformedEscapeAlone(t *testing.T) {
 	assertHasIdentifiers(t, identifiersOf(`\u004 `), []string{"u004"}, []string{"\x04"})
 }
 
-// Verifies an escape spelling a surrogate is not decoded, as the compiler takes none as an
-// identifier character.
+// Verifies an escape spelling a surrogate, at either end of the range, is not decoded, while the
+// first value past the range is.
 func TestDecodeUnicodeEscapeRejectsASurrogate(t *testing.T) {
-	if character, _, ok := decodeUnicodeEscape([]byte(escapeOf("uD800")), 0); ok {
-		t.Errorf("expected a surrogate escape to be rejected, got %q", character)
+	for _, content := range []string{escapeOf("uD800"), escapeOf("uDFFF")} {
+		if character, _, ok := decodeUnicodeEscape([]byte(content), 0); ok {
+			t.Errorf("%q: expected a surrogate escape to be rejected, got %q", content, character)
+		}
+	}
+	if character, _, ok := decodeUnicodeEscape([]byte(escapeOf("uE000")), 0); !ok || character != 0xE000 {
+		t.Errorf("expected the first value past the surrogates to decode, got %q (ok %v)", character, ok)
 	}
 }
 
-// Verifies an escape cut short by the end of the file, or spelling a value past the last code point,
-// is not decoded.
+// Verifies a file ending in a lone backslash is read to its end without failing.
+func TestScanIdentifiersReadsAFileEndingInABackslash(t *testing.T) {
+	assertHasIdentifiers(t, identifiersOf("x "+escapeOf("")), []string{"x"}, []string{})
+}
+
+// Verifies an escape cut short by the end of the file - down to a lone backslash - or spelling a
+// value past the last code point, even one that overflows a signed 32-bit value, is not decoded.
 func TestDecodeUnicodeEscapeRejectsATruncatedOrOutOfRangeEscape(t *testing.T) {
-	for _, content := range []string{escapeOf("u004"), escapeOf("U0000004"), escapeOf("U00110000")} {
+	for _, content := range []string{
+		escapeOf(""), escapeOf("u004"), escapeOf("U0000004"), escapeOf("U00110000"),
+		escapeOf("U80000000"), escapeOf("UFFFFFFFF"),
+	} {
 		if character, size, ok := decodeUnicodeEscape([]byte(content), 0); ok {
 			t.Errorf("%q: decoded %q (size %d), want it rejected", content, character, size)
 		}

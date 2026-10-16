@@ -34,19 +34,21 @@ func decodeUnicodeEscape(content []byte, position int) (rune, int, bool) {
 		return 0, 0, false
 	}
 
-	value := rune(0)
+	// Why the value is gathered unsigned: eight digits from 8 up overflow a rune into a negative
+	// value, which would slip past the upper bound.
+	value := uint32(0)
 	for _, digit := range content[position+2 : position+size] {
 		nibble, isHex := hexValue(digit)
 		if !isHex {
 			return 0, 0, false
 		}
-		value = value<<4 | nibble
+		value = value<<4 | uint32(nibble)
 	}
 	if (value >= surrogateFirst && value <= surrogateLast) || value > utf8.MaxRune {
 		return 0, 0, false
 	}
 
-	return value, size, true
+	return rune(value), size, true
 }
 
 // hexValue is the value of one hexadecimal digit.
