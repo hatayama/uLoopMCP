@@ -117,8 +117,11 @@ references, scripting defines and analyzers. `compile-check` replays those respo
    order gives an assembly nobody edited a reference assembly in other bytes than Unity's, and
    every assembly that references it compiles again.
 4. **Check that the response files still describe the project.** An assembly definition that was
-   added, removed, or that stopped building for the Editor, and a reference or a precompiled
-   reference that was added to one, invalidate the recorded build. The run then stops with
+   added, removed, or that stopped building for the Editor, a reference or a precompiled
+   reference that was added to one, and a project reference it lost (a reference in the response
+   file that the `.asmdef` no longer declares and Unity does not add on its own: `UnityEngine.UI`,
+   `UnityEditor.UI`, `UnityEngine.TestRunner`, `UnityEditor.TestRunner`), invalidate the recorded
+   build. The run then stops with
    `COMPILE_CHECK_UNITY_BUILD_REQUIRED` rather than reporting diagnostics for a configuration the
    project no longer has.
 5. **Compile in dependency order** and parse the compiler's diagnostics into JSON. An assembly
@@ -339,10 +342,12 @@ happened, and how long each assembly took. `docs/vibe-logs.md` lists their field
 
 ## Limitations
 
-- **It replays the last Unity build, and only some staleness is detectable.** Four `.asmdef`
+- **It replays the last Unity build, and only some staleness is detectable.** Five `.asmdef`
   settings are compared against the response file, because they reach `csc` and can be read without
   evaluating defines or package versions: whether the assembly still builds for the Editor, a
-  project reference it gained, `allowUnsafeCode` turning on, and a precompiled reference it gained
+  project reference it gained, a project reference it lost (a reference in the response file that
+  the `.asmdef` no longer declares and Unity does not add on its own: `UnityEngine.UI`,
+  `UnityEditor.UI`, `UnityEngine.TestRunner`, `UnityEditor.TestRunner`), `allowUnsafeCode` turning on, and a precompiled reference it gained
   under `overrideReferences`. A new or deleted `.asmdef` is detected too, as is every way
   assembly membership moves without any `.cs` file changing: an `.asmdef` that no longer sits over
   any source its response file recorded (it was moved into another assembly's folder), an `.asmref`
@@ -352,10 +357,6 @@ happened, and how long each assembly took. `docs/vibe-logs.md` lists their field
   `uloop compile`.
   Every other edit listed below is invisible to the check: the run proceeds and silently reuses
   what the last build recorded.
-- **A removed `.asmdef` reference is not detected.** Unity injects references of its own that no
-  `.asmdef` declares, so a reference present in the response file but absent from the `.asmdef`
-  cannot be told apart from an injected one. Diagnostics may therefore miss an error that removing
-  a reference would cause. Run `uloop compile` after removing one.
 - **`defineConstraints` and `versionDefines` changes are not detected**, because they depend on
   scripting defines and package versions that can only be evaluated inside the Editor.
 - **Changed scripting defines are not detected**; the defines recorded in the last build are reused.
@@ -410,9 +411,11 @@ run this headless build once per job before calling compile-check.
 **`COMPILE_CHECK_UNITY_BUILD_REQUIRED`: an assembly definition no longer matches the last build**
 Raised when an `.asmdef` was added, deleted or moved, when an `.asmref` was added, moved, removed
 or retargeted so that a folder's sources now belong to a different assembly than the one the last
-build compiled them into, or when one of the four compared settings changed (no longer builds for
-the Editor, gained a project reference, turned on `allowUnsafeCode`, gained a precompiled reference
-under `overrideReferences`). This is the intended refusal, not a bug. Run
+build compiled them into, or when one of the five compared settings changed (no longer builds for
+the Editor, gained a project reference, lost a project reference, turned on `allowUnsafeCode`,
+gained a precompiled reference under `overrideReferences`). A lost reference reads
+`no longer references <assembly>`; a reference, by GUID or by name, that matches no `.asmdef` in the project
+makes the check skip that `.asmdef` rather than guess. This is the intended refusal, not a bug. Run
 `uloop compile` once so Unity rewrites the response files, then `compile-check` works again against
 the new configuration.
 
