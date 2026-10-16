@@ -1,6 +1,7 @@
 package compilecheck
 
 import (
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -123,9 +124,12 @@ func assertBuildRequired(t *testing.T, err error, fragments ...string) {
 func TestDetectBuildSettingsChangeRefusesADefineTheLastBuildLacks(t *testing.T) {
 	project := newBuildSettingsProject(t, []string{"FOO"}, "FOO;ADDED_LATER")
 
-	_, err := project.detect(t)
+	report, err := project.detect(t)
 
 	assertBuildRequired(t, err, "ADDED_LATER", "not in the last Unity build")
+	if !report.StampFound {
+		t.Error("expected the report to say the build-trace file exists")
+	}
 	if _, statErr := os.Stat(project.recordPath()); statErr == nil {
 		t.Error("expected no record to be written for a refused run")
 	}
@@ -205,6 +209,46 @@ func TestDetectBuildSettingsChangeReplacesTheRecordAfterAnotherUnityBuild(t *tes
 
 	if report.Record != buildSettingsRecordReplaced {
 		t.Errorf("record = %q, want %q", report.Record, buildSettingsRecordReplaced)
+	}
+}
+
+// Verifies a record this version cannot read - written by another format version, or not JSON at
+// all - is replaced rather than compared, even when it carries the current stamp and other settings.
+func TestDetectBuildSettingsChangeReplacesARecordItCannotRead(t *testing.T) {
+	cases := map[string]func(stamp buildStamp) string{
+		"another format version": func(stamp buildStamp) string {
+			encoded, err := json.Marshal(buildSettingsRecord{
+				FormatVersion: buildSettingsRecordFormatVersion + 1,
+				Stamp:         stamp,
+				Settings:      buildSettings{ResponseFileDigests: map[string]string{assetsResponseFileRelative: "0000"}},
+			})
+			if err != nil {
+				t.Fatalf("failed to encode the record: %v", err)
+			}
+			return string(encoded)
+		},
+		"not JSON": func(buildStamp) string { return "{" },
+	}
+	for name, recordOf := range cases {
+		t.Run(name, func(t *testing.T) {
+			project := newBuildSettingsProject(t, []string{"FOO"}, "FOO")
+			stamp, found := readBuildStamp(project.root)
+			if !found {
+				t.Fatal("expected the fixture to have a build-trace file")
+			}
+			writeFileAt(t, project.recordPath(), recordOf(stamp))
+
+			report := project.mustDetect(t)
+
+			if report.Record != buildSettingsRecordNew {
+				t.Errorf("record = %q, want %q", report.Record, buildSettingsRecordNew)
+			}
+			rewritten, loaded := loadBuildSettingsRecord(project.recordPath())
+			if !loaded || rewritten.FormatVersion != buildSettingsRecordFormatVersion {
+				t.Errorf("rewritten record = %+v (loaded %v), want format version %d",
+					rewritten, loaded, buildSettingsRecordFormatVersion)
+			}
+		})
 	}
 }
 

@@ -9,6 +9,8 @@ import (
 	"slices"
 	"sort"
 	"strings"
+
+	"github.com/hatayama/unity-cli-loop/dispatcher/internal/compilecheck/resultstore"
 )
 
 const (
@@ -99,15 +101,14 @@ func DetectBuildSettingsChange(
 	if err != nil {
 		return report, err
 	}
+	stamp, found := readBuildStamp(projectRoot)
+	report.StampFound = found
 	if define := defineTheBuildLacks(current, graph); define != "" {
 		return report, unityBuildRequired("scripting define %s is not in the last Unity build", define)
 	}
-
-	stamp, found := readBuildStamp(projectRoot)
 	if !found {
 		return report, nil
 	}
-	report.StampFound = true
 
 	recordPath := filepath.Join(projectRoot, filepath.FromSlash(compileCheckOutputRoot),
 		filepath.Base(dagDir), buildSettingsRecordFileName)
@@ -198,27 +199,8 @@ func writeBuildSettingsRecord(path string, record buildSettingsRecord) error {
 	if err := os.MkdirAll(directory, 0o755); err != nil {
 		return fmt.Errorf("failed to create %s: %w", directory, err)
 	}
-	// Why the temporary name is unique per writer: two runs writing the record at once must not
-	// rename each other's half-written file into place.
-	temporary, err := os.CreateTemp(directory, buildSettingsRecordFileName+".*.tmp")
-	if err != nil {
-		return fmt.Errorf("failed to write %s: %w", path, err)
-	}
-	temporaryPath := temporary.Name()
-	_, writeErr := temporary.Write(content)
-	closeErr := temporary.Close()
-	if writeErr == nil {
-		writeErr = closeErr
-	}
-	if writeErr == nil {
-		writeErr = os.Rename(temporaryPath, path)
-	}
-	if writeErr != nil {
-		_ = os.Remove(temporaryPath)
-		return fmt.Errorf("failed to write %s: %w", path, writeErr)
-	}
 
-	return nil
+	return resultstore.WriteFileAtomically(directory, path, content)
 }
 
 // firstDifference names the first recorded setting that differs now, or "" when none does.

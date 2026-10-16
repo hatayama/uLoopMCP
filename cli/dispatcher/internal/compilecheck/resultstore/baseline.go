@@ -233,7 +233,7 @@ func writeBaselineRecord(directoryPath string, assembly string, record baselineR
 		return fmt.Errorf("failed to record the baseline of %s: %w", assembly, err)
 	}
 
-	return writeFileAtomically(directoryPath, baselineRecordPath(directoryPath, assembly), content)
+	return WriteFileAtomically(directoryPath, baselineRecordPath(directoryPath, assembly), content)
 }
 
 // baselineRecordPath names where one assembly's baseline lives.
