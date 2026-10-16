@@ -108,6 +108,29 @@ namespace UnityCliLoop.CompileCheckWorker.UnitTests
         }
 
         /// <summary>
+        /// Lists the field and method names of a top-level type, and the names of the types nested in
+        /// it, so a test can show that a change reached a type the compiler owns.
+        /// </summary>
+        internal static List<string> TopLevelTypeMemberNames(byte[] referenceAssembly, string typeName)
+        {
+            using PEReader peReader = new PEReader(ImmutableArray.Create(referenceAssembly));
+            MetadataReader reader = peReader.GetMetadataReader();
+            List<string> names = new List<string>();
+            foreach (TypeDefinitionHandle handle in reader.TypeDefinitions)
+            {
+                TypeDefinition type = reader.GetTypeDefinition(handle);
+                if (type.GetDeclaringType().IsNil && reader.GetString(type.Name) == typeName)
+                {
+                    names.AddRange(type.GetFields().Select(field => reader.GetString(reader.GetFieldDefinition(field).Name)));
+                    names.AddRange(type.GetMethods().Select(method => reader.GetString(reader.GetMethodDefinition(method).Name)));
+                    names.AddRange(type.GetNestedTypes().Select(nested => reader.GetString(reader.GetTypeDefinition(nested).Name)));
+                }
+            }
+
+            return names;
+        }
+
+        /// <summary>
         /// Lists the identifiers a dependent's source writes, comments and strings included.
         /// </summary>
         internal static HashSet<string> SourceIdentifiers(string source)

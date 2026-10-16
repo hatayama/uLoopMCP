@@ -496,8 +496,7 @@ namespace UnityCliLoop.CompileCheckWorker.UnitTests
         public void PrivateArrayInitializerDataAddedKeepsTheSurface(string arrayLiteral)
         {
             string newSource = WithPrivateArrayData(" private static int B() { int[] t = " + arrayLiteral + "; return t[0]; }");
-            SurfaceFixture.AssertDefinesTypeStartingWith(SurfaceFixture.EmitReferenceAssembly(WithPrivateArrayData("")), PrivateImplementationDetails);
-            SurfaceFixture.AssertDefinesTypeStartingWith(SurfaceFixture.EmitReferenceAssembly(newSource), PrivateImplementationDetails);
+            AssertPrivateImplementationDetailsChanged(WithPrivateArrayData(""), newSource);
             SurfaceFixture.AssertSame(WithPrivateArrayData(""), newSource, Dependent);
         }
 
@@ -512,7 +511,7 @@ namespace UnityCliLoop.CompileCheckWorker.UnitTests
                 " private static int S(string s) { switch (s) { case \"a\": return 1; case \"b\": return 2; case \"c\": return 3;"
                 + " case \"d\": return 4; case \"e\": return 5; case \"f\": return 6; case \"g\": return 7; default: return 0; } }";
             string newSource = WithPrivateArrayData(StringSwitch);
-            SurfaceFixture.AssertDefinesTypeStartingWith(SurfaceFixture.EmitReferenceAssembly(newSource), PrivateImplementationDetails);
+            AssertPrivateImplementationDetailsChanged(WithPrivateArrayData(""), newSource);
             SurfaceFixture.AssertSame(WithPrivateArrayData(""), newSource, Dependent);
         }
 
@@ -521,6 +520,20 @@ namespace UnityCliLoop.CompileCheckWorker.UnitTests
         private static string WithPrivateArrayData(string addedMembers)
         {
             return "public class C { public int X; private static int A() { int[] t = { 1, 2, 3, 4, 5, 6, 7 }; return t[0]; }" + addedMembers + " }";
+        }
+
+        // Both versions must have the compiler's own type and differ inside it, or the case would pass
+        // without the comparison ever seeing a change to that type.
+        private static void AssertPrivateImplementationDetailsChanged(string oldSource, string newSource)
+        {
+            byte[] oldAssembly = SurfaceFixture.EmitReferenceAssembly(oldSource);
+            byte[] newAssembly = SurfaceFixture.EmitReferenceAssembly(newSource);
+            SurfaceFixture.AssertDefinesTypeStartingWith(oldAssembly, PrivateImplementationDetails);
+            SurfaceFixture.AssertDefinesTypeStartingWith(newAssembly, PrivateImplementationDetails);
+            Assert.That(
+                SurfaceFixture.TopLevelTypeMemberNames(newAssembly, PrivateImplementationDetails),
+                Is.Not.EquivalentTo(SurfaceFixture.TopLevelTypeMemberNames(oldAssembly, PrivateImplementationDetails)),
+                "the compiler's own type has the same members in both versions, so the case does not change it");
         }
 
         private static void AssertOnlyPrivateNestedTypesDiffer(string oldSource, string newSource)
