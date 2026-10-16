@@ -184,10 +184,11 @@ That's it! After installing Skills, LLM tools can automatically handle instructi
 
 
 <details>
-<summary>All 22 Bundled Skills</summary>
+<summary>All 23 Bundled Skills</summary>
 
 - `/uloop-launch` - Launch Unity with correct version
 - `/uloop-status` - Check whether Unity can take a command now
+- `/uloop-cancel` - Cancel the command Unity is running now, when BUSY keeps rejecting commands
 - `/uloop-compile` - Execute compilation
 - `/uloop-verify-project` - Check .meta files, GUIDs, conflict markers, and the package manifest without Unity
 - `/uloop-compile-check` - Check that C# compiles without launching or contacting Unity

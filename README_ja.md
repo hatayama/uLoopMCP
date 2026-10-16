@@ -184,10 +184,11 @@ V2 のプロジェクトの Settings ウィンドウで **Update CLI** や **Dow
 
 
 <details>
-<summary>バンドルされている全22個のSkills一覧</summary>
+<summary>バンドルされている全23個のSkills一覧</summary>
 
 - `/uloop-launch` - 正しいバージョンでUnityを起動
 - `/uloop-status` - Unityが今コマンドを受け付けられるかを確認
+- `/uloop-cancel` - BUSYでコマンドが拒否され続けるときに、Unityが実行中のコマンドをキャンセル
 - `/uloop-compile` - コンパイルの実行
 - `/uloop-verify-project` - Unityを起動せずに.metaファイル・GUID・コンフリクトマーカー・パッケージmanifestを検査
 - `/uloop-compile-check` - Unityを起動・接続せずにC#がコンパイルできるかを確認
