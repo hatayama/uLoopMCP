@@ -215,8 +215,9 @@ build - does not call the worker again: it reports what the previous check repor
 Otherwise the assembly is compiled in full as before, and `FastPathFallbacks` says why:
 
 - `no baseline: no full compile of this assembly is on record` (none ran yet, a later run
-  skipped the assembly, which removes its result and baseline, or an input changed while
-  the last full compile ran, so it left no record; `FastPathBaselineNotes` of that run says which)
+  picked the assembly up only because a reference changed and then skipped it, which removes its
+  result and baseline, or an input changed while the last full compile ran, so it left no record;
+  `FastPathBaselineNotes` of that run says which)
 - `no baseline: the last full compile had errors; the first full compile without errors records one`
   (a full compile that fails drops the baseline an earlier one left, and the assembly is
   compiled in full until a compile succeeds)
@@ -256,11 +257,15 @@ So the first body edit is compiled in full more often than it looks:
   and the first body edit is checked as usual. Only when that run leaves the reference out, so it
   reads Unity's build instead, does the first body edit of an assembly referencing it fall back
   with `inputs other than source contents changed: references`.
-- A run that skips an assembly because nothing it compiles from changed removes its result and
-  baseline, so its next body edit is compiled in full. A run that blocks it because an assembly it
-  references has errors keeps them: the next run checks them against the inputs and output hashes
-  they were recorded with before using them, so a reference that comes back the same leaves the
-  assembly reused or checked on its changed files, and one that comes back changed compiles it.
+- An assembly a run leaves out because nothing it compiles from changed keeps its result and
+  baseline, so its next body edit is checked against them. What a run removes is the result and
+  baseline of an assembly it picked up only because a reference changed and then skipped, because
+  every such reference kept its public surface or changed only names the assembly never writes; the
+  next body edit of that assembly is compiled in full. A run that blocks an assembly because one it
+  references has errors keeps its result and baseline: the next run checks them against the inputs
+  and output hashes they were recorded with before using them, so a reference that comes back the
+  same leaves the assembly reused or checked on its changed files, and one that comes back changed
+  compiles it.
 - A full compile while the assembly still has errors, whether a `--full` run or a run that fell
   back to one, drops its baseline, so the run after the fix is compiled in full. Running `--full`
   once the errors are fixed keeps it.
