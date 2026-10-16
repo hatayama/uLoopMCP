@@ -342,7 +342,7 @@ happened, and how long each assembly took. `docs/vibe-logs.md` lists their field
 
 ## Limitations
 
-- **It replays the last Unity build, and only some staleness is detectable.** Four `.asmdef`
+- **It replays the last Unity build, and only some staleness is detectable.** Five `.asmdef`
   settings are compared against the response file, because they reach `csc` and can be read without
   evaluating defines or package versions: whether the assembly still builds for the Editor, a
   project reference it gained, a project reference it lost (a reference in the response file that
@@ -411,7 +411,7 @@ run this headless build once per job before calling compile-check.
 **`COMPILE_CHECK_UNITY_BUILD_REQUIRED`: an assembly definition no longer matches the last build**
 Raised when an `.asmdef` was added, deleted or moved, when an `.asmref` was added, moved, removed
 or retargeted so that a folder's sources now belong to a different assembly than the one the last
-build compiled them into, or when one of the four compared settings changed (no longer builds for
+build compiled them into, or when one of the five compared settings changed (no longer builds for
 the Editor, gained a project reference, lost a project reference, turned on `allowUnsafeCode`,
 gained a precompiled reference under `overrideReferences`). A lost reference reads
 `no longer references <assembly>`; a reference whose GUID resolves to no `.asmdef` in the project
