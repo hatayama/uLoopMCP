@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func identifiersOf(content string) identifierSet {
@@ -155,13 +156,14 @@ func TestReadSourceIdentifiersRefusesAUnitItCannotRead(t *testing.T) {
 	}
 }
 
-// Verifies the background read is over once wait returns, and that lookup answers only for the
-// units it was asked to read.
+// Verifies the background read of the sources is over once wait returns after it was asked for, and
+// that lookup answers only for the units it was asked to read.
 func TestNameIndexIsOverOnceWaitReturns(t *testing.T) {
 	root := t.TempDir()
 	unit := writeUnitSources(t, root, map[string]string{"Assets/A.cs": "class First { }"})
 	index := nameIndex{}
 	index.start(root, []CompileUnit{unit, unit}, []string{filepath.Join(root, "Missing"), ""}, []bool{true, false})
+	index.readSources()
 
 	index.wait()
 
@@ -178,5 +180,25 @@ func TestNameIndexIsOverOnceWaitReturns(t *testing.T) {
 	}
 	if _, err := (&nameIndex{}).lookup(0); err == nil {
 		t.Error("expected no identifiers from an index that never started")
+	}
+}
+
+// Verifies the reported duration counts only the time spent reading, not the time the run spent
+// before it asked for the sources.
+// Why the bounds hold without flaking: the test waits 300 ms between start and readSources, so a
+// duration measured from start is at least 300 ms, while reading one small file takes well under a
+// millisecond; 150 ms leaves room on both sides for a slow machine.
+func TestNameIndexReportCountsOnlyTheTimeSpentReading(t *testing.T) {
+	root := t.TempDir()
+	unit := writeUnitSources(t, root, map[string]string{"Assets/A.cs": "class First { }"})
+	index := nameIndex{}
+	index.start(root, []CompileUnit{unit}, []string{filepath.Join(root, "Missing")}, []bool{true})
+	time.Sleep(300 * time.Millisecond)
+
+	index.readSources()
+	index.wait()
+
+	if report := index.report(); !report.SourcesRead || report.Duration >= 150*time.Millisecond {
+		t.Errorf("report = %+v, want the sources read in well under 150 ms", report)
 	}
 }

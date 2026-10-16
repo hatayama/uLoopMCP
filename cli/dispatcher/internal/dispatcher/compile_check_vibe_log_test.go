@@ -263,7 +263,7 @@ func TestCompileCheckVibeLogRecordsNameNarrowing(t *testing.T) {
 		},
 		Skipped:   1,
 		NameSkips: []compilecheck.NameSkip{{Assembly: "Delta", ChangedReferences: []string{"Alpha"}}},
-		NameIndex: compilecheck.NameIndexReport{Duration: 30 * time.Millisecond, Units: 3, WithGenerated: 1, Unreadable: 1},
+		NameIndex: compilecheck.NameIndexReport{Duration: 30 * time.Millisecond, Units: 3, WithGenerated: 1, Unreadable: 1, SourcesRead: true},
 	}
 
 	logRun := startCompileCheckVibeLog(projectRoot, compileCheckOptions{})
@@ -276,7 +276,26 @@ func TestCompileCheckVibeLogRecordsNameNarrowing(t *testing.T) {
 			`"duration_ms":200,"succeeded":true}]`)
 	assertVibeContextJSON(t, complete, "name_skips", `[{"assembly":"Delta","unaffected_by":["Alpha"]}]`)
 	assertVibeContextJSON(t, complete, "name_index",
-		`{"duration_ms":30,"units":3,"unreadable":1,"with_generated":1}`)
+		`{"duration_ms":30,"sources_read":true,"units":3,"unreadable":1,"with_generated":1}`)
+}
+
+// Verifies a run that read only the saved generator output of the units with references logs the
+// name index and says it never read their sources.
+func TestCompileCheckVibeLogRecordsANameIndexWhoseSourcesWereNotRead(t *testing.T) {
+	t.Setenv(vibelog.CLIVibeLogEnvName, "1")
+	projectRoot := t.TempDir()
+	result := compilecheck.Result{
+		Units:     []compilecheck.UnitResult{{Assembly: "Alpha", Succeeded: true, Reused: true}},
+		Skipped:   2,
+		NameIndex: compilecheck.NameIndexReport{Duration: 2 * time.Millisecond, Units: 2},
+	}
+
+	logRun := startCompileCheckVibeLog(projectRoot, compileCheckOptions{})
+	logRun.completed(buildCompileCheckResponse(result, projectRoot), result)
+
+	complete := assertCompileCheckVibeRun(t, readCompileCheckVibeLog(t, projectRoot))
+	assertVibeContextJSON(t, complete, "name_index",
+		`{"duration_ms":2,"sources_read":false,"units":2,"unreadable":0,"with_generated":0}`)
 }
 
 // Verifies a run that read no names and left nothing out by names logs neither.
