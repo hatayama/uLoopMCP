@@ -23,15 +23,17 @@ It was not made an option of `uloop compile`, for three reasons:
 
 1. `uloop compile` produces the assemblies Unity loads and changes the Editor's state. The offline
    check touches no Editor and nothing it produces is ever loaded. If a flag decided whether the
-   result reaches Unity, an agent would read a passing check as an applied change. `uloop
-   hot-reload` is a separate command for the same reason.
+   result reaches Unity, an agent would read a passing check as an applied change.
 2. `uloop compile` is a Unity tool reached over IPC: it needs a running Editor and is rejected with
    BUSY while another command runs. The offline check runs without an Editor, takes its own
    project lock and fails with its own `COMPILE_CHECK_*` errors.
-3. The options of `uloop compile` are defined by the Unity-side tool schema. The skill's parameter
-   table has to match that schema, and the default tool catalog is generated from the table; the
-   generator rejects a row for an option the Unity tool does not accept. A flag the dispatcher
-   intercepts would have no schema entry, so it would be a special case for one tool.
+3. The options of `uloop compile` are defined by the Unity-side tool schema; the skill's parameter
+   table has to match it, and the default tool catalog is generated from the table. The generator
+   keeps a short allowlist of options the runner reads before Unity sees them
+   (`run-tests --skip-compile`, `clear-pause-point --file` and `--line`), so a `--check` flag could
+   be added the same way. Those options tune how the Unity tool runs; `--check` would make
+   `compile` never reach Unity at all, so the flag would change what the command is rather than how
+   it runs.
 
 ## What It Detects
 
@@ -59,6 +61,9 @@ A dependent with no saved generator output - one the command has never compiled 
 a reference it uses changes its surface, instead of being left out by the names it writes. After
 that compile its generator output is saved and read like its sources.
 
+A dependent that writes a changed name only with `\u` escapes is compiled too: the names it writes
+are read with the escapes decoded, where ADR 0017 left such a name unseen.
+
 ## What Stays Undetected
 
 These are documented and not detected; after any of them, run `uloop compile`:
@@ -71,7 +76,7 @@ These are documented and not detected; after any of them, run `uloop compile`:
   define is still seen);
 - (d) a change made before the record exists - that is, before the first run after that build -
   other than an added scripting define: a removed define, or a changed `csc.rsp`,
-  `defineConstraints`, `versionDefines` or `packages-lock.json`;
+  `defineConstraints`, `versionDefines`, `packages-lock.json` or `manifest.json`;
 - (e) a new script in a package folder that has no assembly definition;
 - (f) an analyzer config Unity passes with `/analyzerconfig:` that was added since the last build;
 - (g) scripting defines are not compared in a project whose active build target is Dedicated
