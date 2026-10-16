@@ -238,3 +238,13 @@ func TestDecodeUnicodeEscapeRejectsASurrogate(t *testing.T) {
 		t.Errorf("expected a surrogate escape to be rejected, got %q", character)
 	}
 }
+
+// Verifies an escape cut short by the end of the file, or spelling a value past the last code point,
+// is not decoded.
+func TestDecodeUnicodeEscapeRejectsATruncatedOrOutOfRangeEscape(t *testing.T) {
+	for _, content := range []string{escapeOf("u004"), escapeOf("U0000004"), escapeOf("U00110000")} {
+		if character, size, ok := decodeUnicodeEscape([]byte(content), 0); ok {
+			t.Errorf("%q: decoded %q (size %d), want it rejected", content, character, size)
+		}
+	}
+}
