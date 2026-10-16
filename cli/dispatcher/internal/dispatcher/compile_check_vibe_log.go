@@ -204,6 +204,7 @@ func addCompileCheckVibeNameNarrowing(context map[string]any, result compilechec
 			"units":          result.NameIndex.Units,
 			"with_generated": result.NameIndex.WithGenerated,
 			"unreadable":     result.NameIndex.Unreadable,
+			"sources_read":   result.NameIndex.SourcesRead,
 		}
 	}
 }

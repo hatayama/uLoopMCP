@@ -72,6 +72,9 @@ references, scripting defines and analyzers. `compile-check` replays those respo
    interpolated string handler or collection builder type; every member of a type in `System`,
    `Microsoft.CodeAnalysis` or a namespace under them, which the compiler looks up by name for
    `init`, `^1` and the like; members that only moved; and a change naming more than 2000 names. A dependent whose sources cannot be read compiles too.
+   The saved generator output is read before any assembly compiles; the sources are read from the
+   moment the run first compiles an assembly in full or first needs the names for a verdict,
+   whichever comes first, and a run that does neither never reads them.
    Its answer is kept in `<Assembly>.surface.json`, keyed by the content of both reference
    assemblies and the worker build, so the runs until Unity builds again do not compare the same
    pair twice. The comparison is always against Unity's own artifact, never against the

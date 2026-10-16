@@ -279,3 +279,52 @@ func TestCompileUnitsCompilesAgainOnANameOnlyGeneratedCodeWritesWhenTheEarlyComp
 	}
 	assertChangedReferences(t, d2, []ChangedReference{{Assembly: "D1", Name: "Foo"}})
 }
+
+// replayedNamesProject is newNamesProject after a first run that compiled A with a kept surface, so
+// the next run replays A. B's sources are moved to a file that does not exist, so any read of them
+// is counted as unreadable.
+func replayedNamesProject(t *testing.T) (*cachedSchedulerProject, *schedulerRecorder) {
+	t.Helper()
+	project, recorder := newNamesProject(t, "class B { int Bar; }")
+	project.compileWithVerdicts(t, recorder, namedVerdicts{"A": {Kept: true, Reason: SurfaceSameAPI}})
+	index := planIndexOf(t, project.plan, "B")
+	project.plan.Units[index].Sources = []string{"Assets/B/Missing.cs"}
+
+	return project, recorder
+}
+
+// Verifies a run that compiles nothing in full and whose every verdict is kept never reads the
+// sources of the plan.
+func TestCompileUnitsReadsNoSourcesWhenNothingCompilesAndEveryVerdictIsKept(t *testing.T) {
+	project, recorder := replayedNamesProject(t)
+
+	outcome := project.compileWithVerdicts(t, recorder, namedVerdicts{"A": {Kept: true, Reason: SurfaceSameAPI}})
+
+	if !resultOf(t, outcome.Units, "A").Reused || outcome.Skipped != 1 {
+		t.Fatalf("A reused = %v, skipped = %d; want A replayed and B left out",
+			resultOf(t, outcome.Units, "A").Reused, outcome.Skipped)
+	}
+	if outcome.NameIndex.SourcesRead || outcome.NameIndex.Unreadable != 0 {
+		t.Errorf("name index = %+v, want the sources never read", outcome.NameIndex)
+	}
+}
+
+// Verifies a replayed verdict that names its change reads the sources of the dependents it asks
+// about, and a dependent writing none of the names is left out by names.
+func TestCompileUnitsReadsTheSourcesWhenAReplayedVerdictNamesAChange(t *testing.T) {
+	project, recorder := replayedNamesProject(t)
+	project.plan.Units[planIndexOf(t, project.plan, "B")].Sources = []string{"Assets/B/B.cs"}
+
+	outcome := project.compileWithVerdicts(t, recorder, namedVerdicts{"A": namedChangeOf("Foo")})
+
+	if !resultOf(t, outcome.Units, "A").Reused {
+		t.Fatal("expected A to be replayed")
+	}
+	want := []NameSkip{{Assembly: "B", ChangedReferences: []string{"A"}}}
+	if !reflect.DeepEqual(outcome.NameSkips, want) {
+		t.Errorf("name skips = %+v, want %+v", outcome.NameSkips, want)
+	}
+	if !outcome.NameIndex.SourcesRead || outcome.NameIndex.Unreadable != 0 {
+		t.Errorf("name index = %+v, want the sources read", outcome.NameIndex)
+	}
+}

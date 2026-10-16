@@ -155,13 +155,14 @@ func TestReadSourceIdentifiersRefusesAUnitItCannotRead(t *testing.T) {
 	}
 }
 
-// Verifies the background read is over once wait returns, and that lookup answers only for the
-// units it was asked to read.
+// Verifies the background read of the sources is over once wait returns after it was asked for, and
+// that lookup answers only for the units it was asked to read.
 func TestNameIndexIsOverOnceWaitReturns(t *testing.T) {
 	root := t.TempDir()
 	unit := writeUnitSources(t, root, map[string]string{"Assets/A.cs": "class First { }"})
 	index := nameIndex{}
 	index.start(root, []CompileUnit{unit, unit}, []string{filepath.Join(root, "Missing"), ""}, []bool{true, false})
+	index.readSources()
 
 	index.wait()
 
