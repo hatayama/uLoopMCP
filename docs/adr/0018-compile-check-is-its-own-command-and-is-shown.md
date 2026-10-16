@@ -15,8 +15,9 @@ Unity build either is compiled from the current files or makes the command refus
 ## Context
 
 `uloop compile-check` replays the response files of the last Unity build through the
-Editor-bundled Roslyn compiler. It was hidden because a build setting that changed after that
-build, and that the replay could not see, made it miss errors silently.
+Editor-bundled Roslyn compiler. It was hidden because the inputs that could change after that
+build without the replay seeing them - the limitations listed in `docs/compile-check.md` - were
+too many to recommend it; each of them made it miss errors silently.
 
 It was not made an option of `uloop compile`, for three reasons:
 
@@ -27,9 +28,10 @@ It was not made an option of `uloop compile`, for three reasons:
 2. `uloop compile` is a Unity tool reached over IPC: it needs a running Editor and is rejected with
    BUSY while another command runs. The offline check runs without an Editor, takes its own
    project lock and fails with its own `COMPILE_CHECK_*` errors.
-3. The options of `uloop compile` come from the Unity-side tool schema, which generates the skill
-   table and the default tool catalog, and the generator rejects an option the Unity tool does not
-   accept. A flag the dispatcher intercepts would be a special case for one tool.
+3. The options of `uloop compile` are defined by the Unity-side tool schema. The skill's parameter
+   table has to match that schema, and the default tool catalog is generated from the table; the
+   generator rejects a row for an option the Unity tool does not accept. A flag the dispatcher
+   intercepts would have no schema entry, so it would be a special case for one tool.
 
 ## What It Detects
 
