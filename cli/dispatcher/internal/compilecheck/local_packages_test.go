@@ -2,6 +2,7 @@ package compilecheck
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -51,7 +52,7 @@ func newLocalPackageProject(t *testing.T) (string, string) {
 func TestIndexAssemblyDefinitionsFindsLocallyReferencedPackages(t *testing.T) {
 	projectRoot, packageRoot := newLocalPackageProject(t)
 
-	assemblyDefinitions, err := IndexAssemblyDefinitions(projectRoot)
+	assemblyDefinitions, err := IndexAssemblyDefinitions(walkProjectTree(projectRoot))
 	if err != nil {
 		t.Fatalf("failed to index the assembly definitions: %v", err)
 	}
@@ -85,7 +86,7 @@ func TestRebuildSourcesKeepsAbsolutePathsOfALocalPackage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load the assembly graph: %v", err)
 	}
-	assemblyDefinitions, err := IndexAssemblyDefinitions(projectRoot)
+	assemblyDefinitions, err := IndexAssemblyDefinitions(walkProjectTree(projectRoot))
 	if err != nil {
 		t.Fatalf("failed to index the assembly definitions: %v", err)
 	}
@@ -140,7 +141,7 @@ func TestIndexAssemblyDefinitionsReadsAnAssemblyDefinitionWithAByteOrderMark(t *
 	writeFileAt(t, filepath.Join(projectRoot, "Assets", "A", "A.asmdef"),
 		byteOrderMark+`{"name":"A"}`)
 
-	assemblyDefinitions, err := IndexAssemblyDefinitions(projectRoot)
+	assemblyDefinitions, err := IndexAssemblyDefinitions(walkProjectTree(projectRoot))
 	if err != nil {
 		t.Fatalf("expected the byte order mark to be tolerated, got error: %v", err)
 	}
@@ -178,5 +179,50 @@ func TestLocalPackageRootsReadsAManifestWithAByteOrderMark(t *testing.T) {
 	}
 	if filepath.Base(roots[0]) != "Package" {
 		t.Errorf("root = %q, want the directory the manifest points at", roots[0])
+	}
+}
+
+// Verifies local package roots come in dependency name order on every run, whatever order the
+// manifest lists them in and wherever registry dependencies sit among them.
+func TestLocalPackageRootsFollowTheDependencyNameOrder(t *testing.T) {
+	projectRoot := filepath.Join(t.TempDir(), "Project")
+	writeFileAt(t, filepath.Join(projectRoot, "Packages", "manifest.json"),
+		`{"dependencies":{`+
+			`"com.example.c":"file:../../C",`+
+			`"com.unity.test-framework":"1.1.33",`+
+			`"com.example.a":"file:../../A",`+
+			`"com.example.d":"file:../../D",`+
+			`"com.example.b":"file:../../B"}}`)
+
+	for run := range 20 {
+		bases := []string{}
+		for _, root := range localPackageRoots(projectRoot) {
+			bases = append(bases, filepath.Base(root))
+		}
+		if strings.Join(bases, ",") != "A,B,C,D" {
+			t.Fatalf("run %d: roots = %v, want A, B, C, D", run, bases)
+		}
+	}
+}
+
+// Verifies that of two local packages declaring the same assembly name, the one whose dependency
+// name comes first wins on every run.
+func TestIndexAssemblyDefinitionsPicksTheSameDuplicateEveryRun(t *testing.T) {
+	parent := t.TempDir()
+	projectRoot := filepath.Join(parent, "Project")
+	writeFileAt(t, filepath.Join(projectRoot, "Packages", "manifest.json"),
+		`{"dependencies":{"com.example.b":"file:../../B","com.example.a":"file:../../A"}}`)
+	for _, packageName := range []string{"A", "B"} {
+		writeFileAt(t, filepath.Join(parent, packageName, "Runtime", "Dup.asmdef"), `{"name":"Dup"}`)
+	}
+
+	for run := range 20 {
+		assemblyDefinitions, err := IndexAssemblyDefinitions(walkProjectTree(projectRoot))
+		if err != nil {
+			t.Fatalf("run %d: failed to index the assembly definitions: %v", run, err)
+		}
+		if !isUnderDirectory(assemblyDefinitions["Dup"].Path, filepath.Join(parent, "A")) {
+			t.Fatalf("run %d: Dup = %q, want the one in package A", run, assemblyDefinitions["Dup"].Path)
+		}
 	}
 }

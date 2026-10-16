@@ -53,11 +53,23 @@ An assembly whose inputs are all exactly as the previous `compile-check` read th
 again: the run reports the diagnostics recorded then, errors included. `--all` compiles
 everything from scratch, which is the way out if a reused result ever looks wrong.
 
+In a large assembly whose last compile-check compile succeeded, an edit that keeps every
+declaration is checked on the changed files only, in a few seconds. Adding or removing a using
+directive counts as a declaration change. Such a check skips a few assembly-wide rules, so run once
+with `--full` before finishing. When the project treats warnings as errors, a rule listed in
+`UncheckedCodes`, such as CS0414, can fail that `--full` run only. The first body edit after a Unity
+build, after a full compile that had errors (a `--full` run or a run that fell back to one), after
+a run that picked it up only because an assembly it references changed, whether it compiled or
+skipped the assembly, or after `--all` in an assembly that references one whose rebuilt API
+differed from the last Unity build and that the next run no longer rebuilds is compiled in full and
+records what the next check compares against; `FastPathFallbacks` says why.
+
 ## Parameters
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `--all` | flag | Compile every assembly instead of only the changed ones and their dependents |
+| `--full` | flag | Compile changed assemblies in full instead of checking only their changed files |
 | `--editor-version <version>` | string | Use this Unity Editor version's compiler instead of ProjectVersion.txt |
 | `--jobs <N>` | number | Compile up to N assemblies at once (default: half the CPUs, at least 1; `1` compiles sequentially) |
 | `--max-depth <N>` | number | Search depth when locating the project (default: 3, -1 for unlimited) |
@@ -73,12 +85,18 @@ A JSON payload:
 - `CompiledAssemblies`: the assemblies this run compiled, in dependency order
 - `ReusedAssemblies`: the assemblies reported from the previous run's recorded result, without compiling
 - `BlockedAssemblies`: the assemblies not compiled because an assembly they reference has errors, as Unity's own build would stop there; fix those errors and run again
-- `SkippedAssemblies`: how many assemblies were left out: nothing they compile from changed, or every assembly they reference kept the same public surface
+- `FastCheckedAssemblies`: the assemblies checked on their changed files only
+- `FastChecks`: per fast-checked assembly, `ChangedFiles`, `UncheckedCodes` (rules only `--full` runs), `GeneratorsNotRerun`, and `Reused` (the previous run's check of the same edit, reported again)
+- `FastPathFallbacks`: `Assembly` and `Reason` for each assembly that was compiled in full instead
+- `FastPathBaselineNotes`: `Assembly` and `Reason` for each successful full compile that left no baseline for the next changed-files check
+- `SkippedAssemblies`: how many assemblies were left out: nothing they compile from changed, or every assembly they reference kept the same public surface or changed only names they never write
 - `ResponseFileSet`: the Bee build the run replayed
 - `ProjectRoot`: resolved project root
 - `Message`: one-line summary
 
-The process exits 1 when `ErrorCount` is greater than zero.
+The process exits 1 when `ErrorCount` is greater than zero. A failure of the command itself, such
+as `COMPILE_CHECK_UNITY_BUILD_REQUIRED`, also exits 1 but prints no payload: the error, with its
+`ErrorCode`, goes to stderr.
 
 Only one compile-check runs per project at a time. A second one waits for the first, up to five
 minutes, then fails with `COMPILE_CHECK_PROJECT_BUSY`: wait for the other run to finish and run

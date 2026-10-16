@@ -2,6 +2,7 @@ package compilecheck
 
 import (
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -17,6 +18,9 @@ const (
 // the package owns then looks like one Unity built and the project since deleted.
 // A missing or unreadable manifest yields no roots rather than an error: the built-in roots still
 // describe the project, and a manifest problem must not turn into a removed-assembly refusal.
+// Why they come in dependency name order: the walk meets the roots in this order, and it decides
+// which of two same-named assembly definitions wins and which error is reported first, so a map's
+// random order would change both from run to run.
 func localPackageRoots(projectRoot string) []string {
 	packagesDirectory := filepath.Join(projectRoot, packagesDirectoryName)
 
@@ -28,9 +32,15 @@ func localPackageRoots(projectRoot string) []string {
 		return nil
 	}
 
+	names := make([]string, 0, len(manifest.Dependencies))
+	for name := range manifest.Dependencies {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
 	roots := []string{}
-	for _, location := range manifest.Dependencies {
-		root, isLocal := resolveLocalPackagePath(packagesDirectory, location)
+	for _, name := range names {
+		root, isLocal := resolveLocalPackagePath(packagesDirectory, manifest.Dependencies[name])
 		if !isLocal {
 			continue
 		}

@@ -93,7 +93,7 @@ func TestIndexAssemblyReferencesReportsAMalformedAsmref(t *testing.T) {
 	path := filepath.Join(projectRoot, "Assets", "Broken", "Broken.asmref")
 	writeFileAt(t, path, "not json")
 
-	_, err := IndexAssemblyReferences(projectRoot)
+	_, err := IndexAssemblyReferences(walkProjectTree(projectRoot))
 
 	if err == nil || !strings.HasPrefix(err.Error(), "failed to index assembly references under ") || !strings.Contains(err.Error(), "failed to read "+path) {
 		t.Fatalf("err = %v", err)
@@ -140,7 +140,7 @@ func TestIndexAssemblyDefinitionsReportsUnusableAsmdefs(t *testing.T) {
 		path := filepath.Join(projectRoot, "Assets", "Broken", "Broken.asmdef")
 		writeFileAt(t, path, content)
 
-		_, err := IndexAssemblyDefinitions(projectRoot)
+		_, err := IndexAssemblyDefinitions(walkProjectTree(projectRoot))
 
 		if err == nil || !strings.HasPrefix(err.Error(), "failed to index ") || !strings.Contains(err.Error(), path) || !strings.Contains(err.Error(), wantMessage) {
 			t.Fatalf("content %q: err = %v, want %q", content, err, wantMessage)

@@ -47,7 +47,7 @@ func newContractProject(
 	if err != nil {
 		t.Fatalf("failed to load the assembly graph: %v", err)
 	}
-	assemblyDefinitions, err := IndexAssemblyDefinitions(projectRoot)
+	assemblyDefinitions, err := IndexAssemblyDefinitions(walkProjectTree(projectRoot))
 	if err != nil {
 		t.Fatalf("failed to index the assembly definitions: %v", err)
 	}

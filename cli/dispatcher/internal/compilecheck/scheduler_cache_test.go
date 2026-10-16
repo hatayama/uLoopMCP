@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/hatayama/unity-cli-loop/dispatcher/internal/compilecheck/resultstore"
 )
 
 // cachedSchedulerProject is a project laid out on disk in enough detail for the input key to read
@@ -108,16 +110,38 @@ func (project *cachedSchedulerProject) outputDirectory() string {
 	return filepath.Join(project.root, project.plan.OutputDir)
 }
 
-// manifestPathOf names one assembly's result manifest.
-func (project *cachedSchedulerProject) manifestPathOf(name string) string {
-	return filepath.Join(project.outputDirectory(), name+resultManifestExtension)
+// writeOutputFile writes one file into the check's own output directory.
+func writeOutputFile(t *testing.T, outputDirectoryPath string, name string, content string) {
+	t.Helper()
+	if err := os.WriteFile(
+		filepath.Join(outputDirectoryPath, name), []byte(content), 0o600); err != nil {
+		t.Fatalf("failed to write %s: %v", name, err)
+	}
 }
 
-// hasManifest reports whether one assembly has a recorded result right now.
-func (project *cachedSchedulerProject) hasManifest(name string) bool {
-	_, err := os.Stat(project.manifestPathOf(name))
+// records opens the store the runs of this test project write to.
+func (project *cachedSchedulerProject) records() resultstore.Store[Diagnostic] {
+	return resultstore.Open[Diagnostic](project.root, project.plan.OutputDir)
+}
 
-	return err == nil
+// hasBaselineOf reports whether a baseline of the current format is on disk for the assembly.
+// Why the "no baseline:" prefix tells: the store gives it only when the baseline file is missing or
+// was written by another version; a baseline file that disagrees with its compile result is
+// reported as "baseline compile is no longer on disk" instead.
+func (project *cachedSchedulerProject) hasBaselineOf(name string) bool {
+	_, reason := project.records().LoadBaseline(name)
+
+	return !strings.HasPrefix(reason, "no baseline:")
+}
+
+// hasRecordedCompile reports whether a compile result of the assembly is on record.
+// Why the baseline reason tells: these assemblies have fewer sources than the changed-files check
+// needs, so they never get a baseline, and the store explains the missing baseline from the
+// compile result alone - this reason is the one it gives when there is no compile result.
+func (project *cachedSchedulerProject) hasRecordedCompile(name string) bool {
+	_, reason := project.records().LoadBaseline(name)
+
+	return reason != "no baseline: no full compile of this assembly is on record"
 }
 
 // compile runs the whole plan through the scheduler with a fake compiler.
@@ -197,6 +221,27 @@ func TestCompileUnitsReusesEveryUnitWhoseInputsDidNotMove(t *testing.T) {
 		if !reflect.DeepEqual(reused.Diagnostics, recorded.Diagnostics) {
 			t.Errorf("%s diagnostics = %+v, want %+v", name, reused.Diagnostics, recorded.Diagnostics)
 		}
+	}
+}
+
+// Verifies a unit whose response file names no reference assembly is recorded by its assembly alone
+// and reused on the next run, rather than being taken for a successful compile that lost an output.
+func TestCompileUnitsReusesAUnitWithoutAReferenceAssembly(t *testing.T) {
+	project := newCachedSchedulerProject(t, nil, "Alpha")
+	project.plan.Units[0].Assembly.RefOutputPath = ""
+	first := newCachedSchedulerRecorder("Alpha")
+	delete(first.surfaces, "Alpha")
+	project.compileOrFail(t, first)
+	if _, err := os.Stat(filepath.Join(project.outputDirectory(), "Alpha"+referenceAssemblyExtension)); !os.IsNotExist(err) {
+		t.Fatalf("expected the compile to write no reference assembly, got %v", err)
+	}
+
+	recorder := newCachedSchedulerRecorder("Alpha")
+	delete(recorder.surfaces, "Alpha")
+	second := project.compileOrFail(t, recorder)
+
+	if !resultOf(t, second, "Alpha").Reused || len(recorder.runs) != 0 {
+		t.Errorf("expected Alpha to be reused without a compile, got %+v after %v", resultOf(t, second, "Alpha"), recorder.runs)
 	}
 }
 
@@ -285,20 +330,20 @@ func TestCompileUnitsBlocksTheDependentsOfAReplayedFailure(t *testing.T) {
 func TestCompileUnitsHasNoManifestWhileAUnitIsCompiling(t *testing.T) {
 	project := newCachedSchedulerProject(t, nil, "Alpha")
 	project.compileOrFail(t, newCachedSchedulerRecorder("Alpha"))
-	if !project.hasManifest("Alpha") {
+	if !project.hasRecordedCompile("Alpha") {
 		t.Fatal("the first run should have recorded a result")
 	}
 
 	project.editSource(t, "Alpha", "class Alpha { void Body() { } }")
 	recorder := newCachedSchedulerRecorder("Alpha")
 	present := map[string]bool{}
-	recorder.during = func(name string) { present[name] = project.hasManifest(name) }
+	recorder.during = func(name string) { present[name] = project.hasRecordedCompile(name) }
 	project.compileOrFail(t, recorder)
 
 	if present["Alpha"] {
 		t.Error("the manifest of the previous compile should be gone while the unit compiles")
 	}
-	if !project.hasManifest("Alpha") {
+	if !project.hasRecordedCompile("Alpha") {
 		t.Error("the finished compile should have been recorded")
 	}
 }
@@ -312,7 +357,7 @@ func TestCompileUnitsRecordsNothingForAUnitThatCouldNotBeStarted(t *testing.T) {
 	if _, err := project.compile(context.Background(), failing); err == nil {
 		t.Fatal("expected the failure to start the compiler to be reported")
 	}
-	if project.hasManifest("Alpha") {
+	if project.hasRecordedCompile("Alpha") {
 		t.Error("a unit whose compiler never ran should have no recorded result")
 	}
 
@@ -335,7 +380,7 @@ func TestCompileUnitsRecordsNothingForACancelledUnit(t *testing.T) {
 		t.Fatal("expected the cancelled run to be reported as a failure")
 	}
 	cancel()
-	if project.hasManifest("Alpha") {
+	if project.hasRecordedCompile("Alpha") {
 		t.Error("a cancelled compile should have no recorded result")
 	}
 
@@ -377,7 +422,7 @@ func TestCompileUnitsRecordsNothingWhenTheCompilerFailedWithoutADiagnostic(t *te
 	broken.output["Alpha"] = fakeCompilerOutput{stdout: "csc : fatal error", exitCode: 1}
 	project.compileOrFail(t, broken)
 
-	if project.hasManifest("Alpha") {
+	if project.hasRecordedCompile("Alpha") {
 		t.Error("a compile that failed without a diagnostic should have no recorded result")
 	}
 
@@ -389,21 +434,31 @@ func TestCompileUnitsRecordsNothingWhenTheCompilerFailedWithoutADiagnostic(t *te
 	}
 }
 
-// Verifies an output that no longer holds what the compile wrote sends the unit back through the
-// compiler: the assemblies below it read those bytes.
+// Verifies that either output - the assembly or the reference assembly - no longer holding what the
+// compile wrote sends the unit back through the compiler: the assemblies below it read those bytes.
 func TestCompileUnitsCompilesAgainWhenAnOutputWasChanged(t *testing.T) {
-	project := newCachedSchedulerProject(t, nil, "Alpha")
-	project.compileOrFail(t, newCachedSchedulerRecorder("Alpha"))
+	for name, output := range map[string]string{
+		"assembly":           "Alpha" + assemblyExtension,
+		"reference assembly": "Alpha" + referenceAssemblyExtension,
+	} {
+		t.Run(name, func(t *testing.T) {
+			project := newCachedSchedulerProject(t, nil, "Alpha")
+			project.compileOrFail(t, newCachedSchedulerRecorder("Alpha"))
 
-	assemblyPath := filepath.Join(project.outputDirectory(), "Alpha"+assemblyExtension)
-	if err := os.WriteFile(assemblyPath, []byte("something else"), 0o600); err != nil {
-		t.Fatalf("failed to change the output: %v", err)
-	}
-	recorder := newCachedSchedulerRecorder("Alpha")
-	project.compileOrFail(t, recorder)
+			outputPath := filepath.Join(project.outputDirectory(), output)
+			if _, err := os.Stat(outputPath); err != nil {
+				t.Fatalf("expected the compile to write %s: %v", output, err)
+			}
+			if err := os.WriteFile(outputPath, []byte("something else"), 0o600); err != nil {
+				t.Fatalf("failed to change the output: %v", err)
+			}
+			recorder := newCachedSchedulerRecorder("Alpha")
+			project.compileOrFail(t, recorder)
 
-	if recorder.runs["Alpha"] != 1 {
-		t.Errorf("a unit whose output changed should have compiled, got %d runs", recorder.runs["Alpha"])
+			if recorder.runs["Alpha"] != 1 {
+				t.Errorf("a unit whose %s changed should have compiled, got %d runs", name, recorder.runs["Alpha"])
+			}
+		})
 	}
 }
 
@@ -412,7 +467,7 @@ func TestCompileUnitsCompilesAgainWhenAnOutputWasChanged(t *testing.T) {
 func TestCompileUnitsLeavesNoManifestForASkippedDependent(t *testing.T) {
 	project := newCachedSchedulerProject(t, map[string][]string{"Beta": {"Alpha"}}, "Alpha", "Beta")
 	project.compileOrFail(t, newCachedSchedulerRecorder("Alpha", "Beta"))
-	if !project.hasManifest("Beta") {
+	if !project.hasRecordedCompile("Beta") {
 		t.Fatal("the first run should have recorded a result for the dependent")
 	}
 
@@ -433,7 +488,7 @@ func TestCompileUnitsLeavesNoManifestForASkippedDependent(t *testing.T) {
 	if recorder.runs["Beta"] != 0 {
 		t.Errorf("the skipped dependent should not have compiled, got %d runs", recorder.runs["Beta"])
 	}
-	if project.hasManifest("Beta") {
+	if project.hasRecordedCompile("Beta") {
 		t.Error("the skipped dependent's recorded result should have been removed with its outputs")
 	}
 }
@@ -457,7 +512,7 @@ func TestCompileUnitsRecordsNothingForAUnitKilledWhileItWasReportingDiagnostics(
 	}
 	cancel()
 
-	if project.hasManifest("Alpha") {
+	if project.hasRecordedCompile("Alpha") {
 		t.Fatal("a killed compile must leave no recorded result to replay")
 	}
 
@@ -479,7 +534,7 @@ func TestCompileUnitsRecordsNothingWhenASuccessfulCompileWroteNoOutput(t *testin
 
 	project.compileOrFail(t, silent)
 
-	if project.hasManifest("Alpha") {
+	if project.hasRecordedCompile("Alpha") {
 		t.Fatal("a compile that produced no output must leave no recorded result")
 	}
 
@@ -487,5 +542,37 @@ func TestCompileUnitsRecordsNothingWhenASuccessfulCompileWroteNoOutput(t *testin
 	project.compileOrFail(t, recorder)
 	if recorder.runs["Alpha"] != 1 {
 		t.Errorf("the next run should have compiled the unit, got %d runs", recorder.runs["Alpha"])
+	}
+}
+
+// Verifies a compile of sources edited while csc ran is not recorded under the key of the bytes
+// before the edit, so putting those bytes back compiles them again rather than reusing what the
+// edited file reported.
+func TestCompileUnitsDoesNotRecordACompileOfSourcesEditedDuringIt(t *testing.T) {
+	project := newCachedSchedulerProject(t, nil, "Alpha")
+	project.compileOrFail(t, newCachedSchedulerRecorder("Alpha"))
+	project.editSource(t, "Alpha", "class Alpha { void X() { } }")
+	edited := newCachedSchedulerRecorder("Alpha")
+	var editErr error
+	edited.during = func(name string) {
+		if name == "Alpha" {
+			editErr = os.WriteFile(filepath.Join(project.root, "Assets", "Alpha", "Alpha.cs"),
+				[]byte("class Alpha { void Y() { } }"), 0o600)
+		}
+	}
+	project.compileOrFail(t, edited)
+	if editErr != nil {
+		t.Fatalf("failed to edit the source during the compile: %v", editErr)
+	}
+	if edited.runs["Alpha"] != 1 {
+		t.Fatalf("expected the edited unit to compile, got %d runs", edited.runs["Alpha"])
+	}
+	project.editSource(t, "Alpha", "class Alpha { void X() { } }")
+
+	recorder := newCachedSchedulerRecorder("Alpha")
+	project.compileOrFail(t, recorder)
+
+	if recorder.runs["Alpha"] != 1 {
+		t.Errorf("expected the reverted source to compile again, got %d runs", recorder.runs["Alpha"])
 	}
 }

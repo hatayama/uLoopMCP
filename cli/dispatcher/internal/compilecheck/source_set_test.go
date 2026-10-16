@@ -26,11 +26,12 @@ func newAssemblyProject(t *testing.T) string {
 // an assembly that was never built owns nothing, which the unbuilt-target test covers on its own.
 func newOwnerIndexForProject(t *testing.T, projectRoot string) assemblyOwnerIndex {
 	t.Helper()
-	definitions, err := IndexAssemblyDefinitions(projectRoot)
+	tree := walkProjectTree(projectRoot)
+	definitions, err := IndexAssemblyDefinitions(tree)
 	if err != nil {
 		t.Fatalf("failed to index the assembly definitions: %v", err)
 	}
-	references, referenceErr := IndexAssemblyReferences(projectRoot)
+	references, referenceErr := IndexAssemblyReferences(tree)
 	if referenceErr != nil {
 		t.Fatalf("failed to index the assembly references: %v", referenceErr)
 	}
@@ -40,7 +41,7 @@ func newOwnerIndexForProject(t *testing.T, projectRoot string) assemblyOwnerInde
 		graph.byName[name] = ResponseFile{AssemblyName: name}
 	}
 
-	return newAssemblyOwnerIndex(definitions, references, NewAssemblyContext(graph, definitions))
+	return newAssemblyOwnerIndex(definitions, references, NewAssemblyContext(graph, definitions), tree)
 }
 
 // Verifies deleted sources drop out, new sources appear, and nested or ignored folders stay excluded.
@@ -90,8 +91,8 @@ func TestRebuildSourcesKeepsSourcesOutsideTheAssemblyDirectory(t *testing.T) {
 
 	assertStrings(t, "sources", sources, []string{
 		"Assets/Foo/A.cs",
-		"Assets/Foo/Sub/B.cs",
 		"Assets/Shared/E.cs",
+		"Assets/Foo/Sub/B.cs",
 	})
 }
 
@@ -103,7 +104,7 @@ func TestRebuildSourcesWithoutAssemblyDefinitionKeepsExistingSourcesOnly(t *test
 		"Assets/Foo/Deleted.cs",
 	}}
 
-	sources, err := RebuildSources(projectRoot, rsp, nil, assemblyOwnerIndex{})
+	sources, err := RebuildSources(projectRoot, rsp, nil, newOwnerIndexForProject(t, projectRoot))
 	if err != nil {
 		t.Fatalf("expected the rebuild to succeed, got error: %v", err)
 	}
@@ -146,7 +147,7 @@ func TestIndexAssemblyDefinitionsCoversEveryProjectRoot(t *testing.T) {
 		`{"name":"Pkg"}`)
 	writeFileAt(t, filepath.Join(projectRoot, "Assets", "Foo", "Tmp~", "Hidden.asmdef"), `{"name":"Hidden"}`)
 
-	index, err := IndexAssemblyDefinitions(projectRoot)
+	index, err := IndexAssemblyDefinitions(walkProjectTree(projectRoot))
 	if err != nil {
 		t.Fatalf("expected the index to build, got error: %v", err)
 	}
@@ -172,7 +173,7 @@ func TestIndexAssemblyDefinitionsSkipsFilesUnityIgnores(t *testing.T) {
 		filepath.Join(projectRoot, "Assets", "Foo", "._Foo.asmdef"),
 		"\x00\x05\x16\x07\x00\x02\x00\x00Mac OS X")
 
-	index, err := IndexAssemblyDefinitions(projectRoot)
+	index, err := IndexAssemblyDefinitions(walkProjectTree(projectRoot))
 	if err != nil {
 		t.Fatalf("expected the index to build, got error: %v", err)
 	}
@@ -480,8 +481,8 @@ func TestRebuildSourcesGlobsANewSourceInsideAnOutsideAsmrefFolder(t *testing.T) 
 	}
 
 	assertStrings(t, "sources", sources, []string{
-		"Assets/Ext/Ext.cs",
 		"Assets/P/A.cs",
 		"Assets/P/Core/Dialog/Dialog.cs",
+		"Assets/Ext/Ext.cs",
 	})
 }

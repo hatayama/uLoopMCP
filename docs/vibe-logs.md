@@ -222,8 +222,9 @@ command ran against:
 - A missing line is evidence only when the define was set and the code path logs at all.
   Coverage is per call site, not per command: for example, `execute-dynamic-code`,
   `simulate-keyboard`, `screenshot`, compile, domain reload, server binding, and hot reload log
-  start and completion, while the CLI side logs compile requests, window focus, and the tool
-  requests described under "CLI entries for tool commands" below.
+  start and completion, while the CLI side logs compile requests, window focus, the tool
+  requests described under "CLI entries for tool commands" below, and `compile-check` runs
+  ("CLI entries for compile-check").
   Check that the operation you expect is logged somewhere (`git grep` the operation name) before
   reading its absence as "it never ran".
 
@@ -269,6 +270,21 @@ or `control-play-mode` that waits for a domain reload or a Play Mode change, and
   request itself got through.
 - The `cli_tool_*` entries of one command share one `correlation_id`, and the two
   `cli_hot_reload_*` entries share another. Pair the two groups by time.
+
+## CLI entries for compile-check
+
+`compile-check` never talks to the Editor, so these two entries are the only record of what a run
+did. Both carry the same `correlation_id`. A run that cannot find its project writes neither,
+because there is no project to write into.
+
+| `operation` | Written | `context` |
+|---|---|---|
+| `cli_compile_check_start` | once the project is found | `command`, `all`, `full`, `jobs`, `project_identity` |
+| `cli_compile_check_complete` (`INFO`; `WARNING` when the run found compile errors; `ERROR` when it could not finish) | on every way out of a run that wrote the start entry | `command`, `outcome` (`succeeded`, `errors`, or `failed`), `duration_ms`; for `failed`, `error` and `error_code`; otherwise `error_count`, `warning_count`, `compiled`, `reused`, `fast_checked`, `blocked` (assembly names, as in the response), `skipped_count`, `fast_checks` (`assembly`, `reused`, `changed_file_count`), `fallbacks` and `baseline_notes` (`assembly`, `reason`), `units` (`assembly`, `duration_ms`, `succeeded` of each assembly the run compiled or checked; replayed ones are left out; `assumed_kept` names the references it started ahead of, assuming they kept Unity's surface, `compiled_again_after` the one whose changed surface made it compile again and `discarded_ms` how long the compile it threw away took, `waited_for_record` says it waited for its references for a record that then did not apply, and `changed_by` lists the references whose changed surface counted for it (`reference`, and `name`, the first changed name it writes, empty when no name tells the change) - each only when it applies), and `surface_checks` (`assembly`, `verdict`, `detail`, `duration_ms`, `from_record` of each assembly whose rebuilt reference assembly differed in bytes from Unity's and was compared by the worker or taken from its record, replayed ones included; `changed_name_count` and `changed_names`, the first 10 of the identifiers a dependent has to write to be affected by the change, and `unnamed`, why no name tells the change, only when it applies), `name_skips` (`assembly`, `unaffected_by`: the assemblies left out although a reference changed, because they write none of the names the change touches; only when there is any), and `name_index` (`duration_ms`, `units`, `with_generated`, `unreadable`, `sources_read`: what reading the names of the assemblies with references in the plan took, and whether the run read their sources - it does only once it compiles an assembly, has the worker check changed files, or a verdict needs the names; only when the plan has an assembly with references) |
+
+- Unlike the tool-command entries, the complete entry holds the run's error message and fallback
+  reasons: they can name assemblies and files of the project, which the command's own output prints
+  as well.
 
 ## How to use them in an investigation
 
