@@ -328,3 +328,16 @@ func TestCompileUnitsReadsTheSourcesWhenAReplayedVerdictNamesAChange(t *testing.
 		t.Errorf("name index = %+v, want the sources read", outcome.NameIndex)
 	}
 }
+
+// Verifies a run that compiles a unit in full reads the sources while it does, even when no verdict
+// needs the names.
+func TestCompileUnitsReadsTheSourcesOnceAUnitCompilesInFull(t *testing.T) {
+	project, recorder := newNamesProject(t, "class B { int Bar; }")
+
+	outcome := project.compileWithVerdicts(t, recorder, namedVerdicts{"A": {Kept: true, Reason: SurfaceSameAPI}})
+
+	assertStrings(t, "results", compiledNames(outcome.Units), []string{"A"})
+	if !outcome.NameIndex.SourcesRead {
+		t.Errorf("name index = %+v, want the sources read", outcome.NameIndex)
+	}
+}
