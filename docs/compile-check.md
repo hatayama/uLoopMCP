@@ -228,10 +228,9 @@ build - does not call the worker again: it reports what the previous check repor
 
 Otherwise the assembly is compiled in full as before, and `FastPathFallbacks` says why:
 
-- `no baseline: no full compile of this assembly is on record` (none ran yet, a later run
-  picked the assembly up only because a reference changed and then skipped it, which removes its
-  result and baseline, or an input changed while the last full compile ran, so it left no record;
-  `FastPathBaselineNotes` of that run says which)
+- `no baseline: no full compile of this assembly is on record` (none ran yet, or an input changed
+  while the last full compile ran, so it left no record; `FastPathBaselineNotes` of that run says
+  which)
 - `no baseline: the last full compile had errors; the first full compile without errors records one`
   (a full compile that fails drops the baseline an earlier one left, and the assembly is
   compiled in full until a compile succeeds)
@@ -273,10 +272,10 @@ So the first body edit is compiled in full more often than it looks:
   with `inputs other than source contents changed: references`.
 - An assembly a run leaves out because nothing it compiles from changed keeps its result and
   baseline, so its next body edit is checked against them. An assembly a run picks up only because
-  a reference changed loses its result and baseline either way: compiled, it records no baseline,
-  and left out, because every such reference kept its public surface or changed only names the
-  assembly never writes, its result and baseline are removed. The next body edit of that assembly
-  is compiled in full. A run that blocks an assembly because one it references has errors keeps
+  a reference changed records no baseline when it is compiled, so its next body edit is compiled in
+  full. When it is left out instead, because every such reference kept its public surface or
+  changed only names the assembly never writes, it keeps its result, baseline and saved generator
+  output, so its next body edit is checked against them as before. A run that blocks an assembly because one it references has errors keeps
   its result and baseline: the next run checks them against the inputs and output hashes they were
   recorded with before using them, so a reference that comes back the same leaves the assembly
   reused or checked on its changed files, and one that comes back changed compiles it.
@@ -389,15 +388,16 @@ happened, and how long each assembly took. `docs/vibe-logs.md` lists their field
     refused only when `ProjectSettings.asset` was saved after the last build.
 - **The predefined assemblies** (`Assembly-CSharp` and friends) keep the source list of the last
   build, so a brand-new `.cs` file outside any `.asmdef` is not compiled until Unity imports it.
-- **A dependent left out by names can miss what a generator would write.** The names are read from
-  the dependent's sources and from the generator output its last full compile saved. Leaving a
-  dependent out - because its references kept their surface or changed only names it never writes -
-  removes that saved output, so in steady use the names come from the hand-written sources alone and
-  the VibeLog's `name_index.with_generated` stays near 0. A generator that emits code using a member
-  of a referenced type whose name the dependent's own sources never write is then not seen. Closing
-  that gap needs a left-out dependent to keep its outputs and record, which this check does not do
-  yet. Neither is a change to the type of an async method builder seen, which a dependent never
-  names; a change to its members is unnamed and compiles every dependent.
+- **A dependent compile-check has never compiled is compiled, not narrowed by names, the first time
+  a reference changes.** The names are read from the dependent's sources and from the generator
+  output its last finished compile saved; a unit with analyzers and no saved output, whether it was
+  picked up as a dependent or started on its own sources ahead of the reference, compiles on any
+  named change, and the VibeLog reports it with `changed_by.reason` `no saved generator output` and
+  counts it in `name_index.without_generated`. After that its saved generator output is read, and
+  leaving it out keeps that output. What stays invisible is a generator that generates from a
+  referenced assembly's contents rather than from the dependent's own code. Neither is a change to
+  the type of an async method builder seen, which a dependent never names; a change to its members
+  is unnamed and compiles every dependent.
 - **Every change to a type in `System`, `Microsoft.CodeAnalysis` or a namespace under them compiles
   every dependent.** The compiler looks these types up by name, so only polyfills normally live
   there; a project that puts its own extension classes in `System.*` gets no narrowing for them.

@@ -197,7 +197,11 @@ func addCompileCheckVibeScheduling(entry map[string]any, unit compilecheck.UnitR
 	if len(unit.ChangedReferences) > 0 {
 		changedBy := make([]map[string]any, 0, len(unit.ChangedReferences))
 		for _, reference := range unit.ChangedReferences {
-			changedBy = append(changedBy, map[string]any{"reference": reference.Assembly, "name": reference.Name})
+			entry := map[string]any{"reference": reference.Assembly, "name": reference.Name}
+			if reference.Reason != "" {
+				entry["reason"] = reference.Reason
+			}
+			changedBy = append(changedBy, entry)
 		}
 		entry["changed_by"] = changedBy
 	}
@@ -215,11 +219,12 @@ func addCompileCheckVibeNameNarrowing(context map[string]any, result compilechec
 	}
 	if result.NameIndex.Units > 0 {
 		context["name_index"] = map[string]any{
-			"duration_ms":    result.NameIndex.Duration.Milliseconds(),
-			"units":          result.NameIndex.Units,
-			"with_generated": result.NameIndex.WithGenerated,
-			"unreadable":     result.NameIndex.Unreadable,
-			"sources_read":   result.NameIndex.SourcesRead,
+			"duration_ms":       result.NameIndex.Duration.Milliseconds(),
+			"units":             result.NameIndex.Units,
+			"with_generated":    result.NameIndex.WithGenerated,
+			"without_generated": result.NameIndex.WithoutGenerated,
+			"unreadable":        result.NameIndex.Unreadable,
+			"sources_read":      result.NameIndex.SourcesRead,
 		}
 	}
 }
