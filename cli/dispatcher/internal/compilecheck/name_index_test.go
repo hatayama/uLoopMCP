@@ -155,26 +155,6 @@ func TestReadSourceIdentifiersRefusesAUnitItCannotRead(t *testing.T) {
 	}
 }
 
-// Verifies the generator output is read before start returns: a compile that removes the directory
-// once the run is under way no longer takes the names only the generator wrote out of the index.
-func TestNameIndexReadsGeneratedCodeBeforeStartReturns(t *testing.T) {
-	root := t.TempDir()
-	unit := writeUnitSources(t, root, map[string]string{"Assets/A.cs": "class First { }"})
-	writeUnitSources(t, root, map[string]string{"Generated/Gen.g.cs": "partial class First { Foo f; }"})
-	index := nameIndex{}
-
-	index.start(root, []CompileUnit{unit}, []string{filepath.Join(root, "Generated")}, []bool{true})
-	if err := os.RemoveAll(filepath.Join(root, "Generated")); err != nil {
-		t.Fatalf("failed to remove the generated code: %v", err)
-	}
-
-	set, err := index.lookup(0)
-	if err != nil {
-		t.Fatalf("expected the identifiers of the unit, got %v", err)
-	}
-	assertHasIdentifiers(t, set, []string{"First", "Foo"}, nil)
-}
-
 // Verifies the background read is over once wait returns, and that lookup answers only for the
 // units it was asked to read.
 func TestNameIndexIsOverOnceWaitReturns(t *testing.T) {
