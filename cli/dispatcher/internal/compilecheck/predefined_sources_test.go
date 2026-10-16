@@ -3,6 +3,7 @@ package compilecheck
 import (
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 // predefinedOwnersFor indexes a project the way one run does, with only the named assemblies built,
@@ -267,5 +268,56 @@ func TestGlobPredefinedSourcesLeavesOutTheFoldersUnityNeverCompiles(t *testing.T
 	assertStrings(t, assemblyCSharp, predefined[assemblyCSharp], []string{"Assets/Game/StreamingAssets/X.cs"})
 	if len(predefined) != 2 {
 		t.Errorf("predefined = %v, want only %s and %s", predefined, assemblyCSharp, assemblyCSharpFirstpass)
+	}
+}
+
+// writeBuiltAssemblyCSharp adds an Assembly-CSharp the last build produced from Assets/Old.cs, with
+// the source dated before the build.
+func writeBuiltAssemblyCSharp(t *testing.T, projectRoot string) {
+	t.Helper()
+	writeFileAt(t, filepath.Join(projectRoot, planDagDirectory, assemblyCSharp+".rsp"), joinLines([]string{
+		`-out:"` + planDagDirectory + `/` + assemblyCSharp + `.dll"`,
+		`-refout:"` + planDagDirectory + `/` + assemblyCSharp + `.ref.dll"`,
+		`/additionalfile:"` + planDagDirectory + `/` + assemblyCSharp + `.UnityAdditionalFile.txt"`,
+		`"Assets/Old.cs"`,
+	}))
+	writeFileAt(t, filepath.Join(projectRoot, planDagDirectory, assemblyCSharp+".UnityAdditionalFile.txt"), "")
+	writeFileAt(t, filepath.Join(projectRoot, planDagDirectory, assemblyCSharp+".dll"), "")
+	writeProjectFiles(t, projectRoot, "Assets/Old.cs")
+	buildTime := time.Now()
+	setModificationTime(t, filepath.Join(projectRoot, "Assets", "Old.cs"), buildTime.Add(-time.Hour))
+	setModificationTime(t, filepath.Join(projectRoot, planDagDirectory, assemblyCSharp+".dll"), buildTime)
+}
+
+// Verifies a plan compiles a script created outside every assembly definition with the predefined
+// assembly the last build produced, after its recorded sources, rather than refusing the run.
+func TestBuildCompilePlanPicksUpANewScriptOutsideEveryAssemblyDefinition(t *testing.T) {
+	projectRoot := newPlanProject(t)
+	writeBuiltAssemblyCSharp(t, projectRoot)
+	writeProjectFiles(t, projectRoot, "Assets/New.cs")
+
+	plan, err := BuildCompilePlan(projectRoot, planDagDirectory, false)
+	if err != nil {
+		t.Fatalf("expected the plan to build, got error: %v", err)
+	}
+
+	for _, unit := range plan.Units {
+		if unit.Assembly.AssemblyName == assemblyCSharp {
+			assertStrings(t, "sources", unit.Sources, []string{"Assets/Old.cs", "Assets/New.cs"})
+			return
+		}
+	}
+	t.Fatalf("units = %v, want %s compiled for its new script", unitNames(plan), assemblyCSharp)
+}
+
+// Verifies the sources of a predefined assembly are refused when Assets was never walked, rather
+// than rebuilt without the scripts created since the build.
+func TestRebuildSourcesRefusesAPredefinedAssemblyWhenAssetsWasNeverWalked(t *testing.T) {
+	projectRoot := t.TempDir()
+	writeProjectFiles(t, projectRoot, "Assets/Old.cs")
+	rsp := ResponseFile{AssemblyName: assemblyCSharp, Sources: []string{"Assets/Old.cs"}}
+
+	if _, err := RebuildSources(projectRoot, rsp, nil, newOwnerIndexForProject(t, projectRoot)); err == nil {
+		t.Fatal("expected an unwalked Assets to be refused for a predefined assembly")
 	}
 }

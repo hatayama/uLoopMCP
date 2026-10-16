@@ -21,7 +21,9 @@ type assemblyOwnerIndex struct {
 	referencesByDirectory map[string]string
 	tree                  projectTree // the listing the run took, which the source globs read
 	// predefinedSources are the scripts under Assets no assembly definition owns, by the predefined
-	// assembly each belongs to; set once the index is built, because the walk needs the index.
+	// assembly each belongs to; set once the index is built, because the walk needs the index. Nil
+	// means Assets was never walked, which RebuildSources refuses for a predefined assembly as a
+	// broken contract; an empty map means the walk found none.
 	predefinedSources map[string][]string
 }
 

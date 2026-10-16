@@ -190,6 +190,11 @@ func RebuildSources(
 	// owns.
 	if asmdef == nil {
 		if predefinedAssemblyNames[rsp.AssemblyName] {
+			if owners.predefinedSources == nil {
+				return nil, fmt.Errorf(
+					"the scripts outside every assembly definition were never listed for %s", rsp.AssemblyName)
+			}
+
 			return appendPredefinedSources(existing, owners.predefinedSources[rsp.AssemblyName]), nil
 		}
 
