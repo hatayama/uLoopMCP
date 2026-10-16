@@ -29,6 +29,19 @@ func TestDetectContractDisagreementSkipsTheLostReferenceCheckWhenAReferenceGUIDI
 	}
 }
 
+// Verifies the lost-reference check is skipped when a declared name matches no assembly definition,
+// such as an old render-pipeline name Unity rewrites to the one the response file carries.
+func TestDetectContractDisagreementSkipsTheLostReferenceCheckWhenAReferenceNamesNoAssemblyDefinition(t *testing.T) {
+	_, rsp, asmdef, context := newContractProject(
+		t, `{"name":"A","references":["B","Unity.RenderPipelines.Lightweight.Runtime"]}`)
+	rsp.References = append(rsp.References,
+		planDagDirectory+"/Unity.RenderPipelines.Universal.Runtime.ref.dll")
+
+	if reason := contractDisagreementOf(t, rsp, asmdef, context); reason != "" {
+		t.Fatalf("expected a name no assembly definition declares to skip the lost-reference check, got %q", reason)
+	}
+}
+
 // Verifies a response-file reference the assembly definition still declares, by name or by GUID, is
 // not reported as lost.
 func TestDetectContractDisagreementAcceptsAReferenceTheAssemblyDefinitionStillDeclares(t *testing.T) {

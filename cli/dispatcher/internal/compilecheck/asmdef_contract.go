@@ -15,8 +15,9 @@ const (
 
 // AssemblyContext is what the contract check needs to know about the rest of the project.
 type AssemblyContext struct {
-	BuiltAssemblies map[string]bool   // assembly names Bee wrote a response file for
-	AssemblyByGUID  map[string]string // .asmdef GUID -> the assembly name it declares
+	BuiltAssemblies   map[string]bool   // assembly names Bee wrote a response file for
+	DefinedAssemblies map[string]bool   // assembly names an .asmdef in the project declares, built or not
+	AssemblyByGUID    map[string]string // .asmdef GUID -> the assembly name it declares
 }
 
 // NewAssemblyContext collects the project-wide lookups the contract check compares against.
@@ -28,14 +29,16 @@ func NewAssemblyContext(
 		built[name] = true
 	}
 
+	defined := make(map[string]bool, len(assemblyDefinitions))
 	byGUID := make(map[string]string, len(assemblyDefinitions))
 	for name, definition := range assemblyDefinitions {
+		defined[name] = true
 		if definition.GUID != "" {
 			byGUID[definition.GUID] = name
 		}
 	}
 
-	return AssemblyContext{BuiltAssemblies: built, AssemblyByGUID: byGUID}
+	return AssemblyContext{BuiltAssemblies: built, DefinedAssemblies: defined, AssemblyByGUID: byGUID}
 }
 
 // assemblyDefinitionContract is the part of an .asmdef the response file has to agree with.
@@ -130,10 +133,14 @@ func missingProjectReference(
 	return "", false
 }
 
-// resolveReferenceName turns one .asmdef reference, in GUID or name form, into an assembly name.
+// resolveReferenceName turns one .asmdef reference, in GUID or name form, into the name of an
+// assembly an .asmdef in the project declares. false means no .asmdef matches it.
+// Why a name reference is looked up too: Unity rewrites some names when it reads an .asmdef - the old
+// Unity.RenderPipelines.Lightweight.* names become Unity.RenderPipelines.Universal.* - so a name no
+// .asmdef declares may still stand for a reference the response file carries under another name.
 func resolveReferenceName(reference string, context AssemblyContext) (string, bool) {
 	if !strings.HasPrefix(reference, guidReferencePrefix) {
-		return reference, reference != ""
+		return reference, context.DefinedAssemblies[reference]
 	}
 
 	name, found := context.AssemblyByGUID[strings.TrimPrefix(reference, guidReferencePrefix)]
