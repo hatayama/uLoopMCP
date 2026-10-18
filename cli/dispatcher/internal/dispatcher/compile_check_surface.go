@@ -6,7 +6,7 @@ import "github.com/hatayama/unity-cli-loop/dispatcher/internal/compilecheck"
 // touch thousands of them; ChangedNameCount still says how many there are.
 const reportedChangedNames = 20
 
-// compileCheckSurfaceCheck says what compiling (or replaying) an assembly that others reference
+// compileCheckSurfaceCheck says what compiling, replaying or fast-checking an assembly that others reference
 // did to its public surface, and which dependents this run compiled because of that.
 type compileCheckSurfaceCheck struct {
 	Assembly string `json:"Assembly"`
@@ -21,7 +21,8 @@ type compileCheckSurfaceCheck struct {
 	ChangedNameCount int      `json:"ChangedNameCount"`
 	// Unnamed: why no name tells the change, so every dependent is affected. Empty when kept or named.
 	Unnamed string `json:"Unnamed"`
-	// Dependents: the assemblies this run compiled that this change counted for, in the run's order.
+	// Dependents: the assemblies this run compiled that this change reached, in the run's order; an
+	// assembly compiled for its own sources is among them when the change reaches it too.
 	Dependents []compileCheckDependentCompile `json:"Dependents"`
 	// UnaffectedDependents: how many dependents were left out because they write none of the names.
 	UnaffectedDependents int `json:"UnaffectedDependents"`

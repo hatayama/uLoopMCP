@@ -71,9 +71,9 @@ type compileCheckResponse struct {
 	// changed-files check, so the next fallback for lack of one is not a mystery.
 	FastPathBaselineNotes []compileCheckFastPathFallback `json:"FastPathBaselineNotes"`
 	// SurfaceChecks says, per assembly that others reference, whether its public surface changed
-	// and which dependents this run compiled because of it, so the reader can tell why a dependent
-	// compiled. It reads the same verdicts and changed references as the VibeLog's surface_checks
-	// and changed_by.
+	// and which of the assemblies this run compiled its change reached, so the reader can tell why
+	// a dependent compiled. It reads the same verdicts and changed references as the VibeLog's
+	// surface_checks and changed_by.
 	SurfaceChecks     []compileCheckSurfaceCheck `json:"SurfaceChecks"`
 	SkippedAssemblies int                        `json:"SkippedAssemblies"`
 	ResponseFileSet   string                     `json:"ResponseFileSet"`

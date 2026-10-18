@@ -52,11 +52,11 @@ change; `SurfaceChecks` says which and why. Details and times: `references/full-
 
 Full compiles run the project's analyzers with the response file's flags, `-warnaserror` included.
 The changed-files check skips the assembly-wide rules in `FastChecks[].UncheckedCodes`, so run once
-with `--full` before finishing: it recompiles what was fast-checked since its last full compile,
-plus dependents its rebuilt reference assemblies reach, and reuses the rest (about a second when
-nothing was). When warnings are errors, such a rule (CS0414, for example) can fail that run only. A
-run that stops on declaration errors (an unknown type, say) reports neither body errors nor analyzer
-diagnostics: fix them and run again.
+with `--full` before finishing: it compiles in full what differs from its last full compile and
+reuses the rest; right after a run that compiled in full it takes about a second. When warnings are
+errors, such a rule (CS0414, for example) can fail that run only. A run that stops on declaration
+errors (an unknown type, say) reports neither body errors nor analyzer diagnostics: fix them and run
+again.
 
 ## Parameters
 
@@ -81,15 +81,15 @@ A JSON payload; an empty list means the case did not occur in this run:
 - `BlockedAssemblies`: not compiled because an assembly they reference has errors, as in Unity's
   build; fix those and run again
 - `FastCheckedAssemblies`: checked on their changed files only
-- `FastChecks`: per fast-checked assembly, `ChangedFiles`, `UncheckedCodes` (rules only `--full`
-  runs), `GeneratorsNotRerun`, and `Reused` (the same edit's previous check, reported again)
+- `FastChecks`: per fast-checked assembly, `ChangedFiles`, `UncheckedCodes` (rules only `--full` runs),
+  `GeneratorsNotRerun`, and `Reused` (the same edit's previous check, reported again)
 - `FastPathFallbacks`: `Assembly` and `Reason` for each assembly compiled in full instead
 - `FastPathBaselineNotes`: `Assembly` and `Reason` for each successful full compile that left no
   baseline for the next check
 - `SurfaceChecks`: per assembly others reference that this run compiled, replayed or fast-checked
   without errors: `Kept`, or the `ChangedNames` a dependent must write to be affected (`Unnamed`
-  says why no name tells the change), and the `Dependents` compiled for it, each with the `Name`
-  that selected it
+  says why no name tells the change), and the compiled `Dependents` it reached, each with the
+  `Name` that selected it
 - `SkippedAssemblies`: how many were left out because nothing they can see changed
 - `ResponseFileSet`, `ProjectRoot`: the Bee build the run replayed and the resolved project root
 - `Message`: one-line summary
@@ -117,8 +117,7 @@ a loop.
 - A reference removed from an `.asmdef` stops the run too; the four references Unity adds on its own
   are allowed, and a reference that matches no `.asmdef` in the project is not judged.
 - A new `.cs` file outside every `.asmdef` goes to `Assembly-CSharp` or a sibling by Unity's path
-  rules (`Editor` folders, `Assets/Plugins`); if the last build did not produce that assembly, the
-  run stops and asks for `uloop compile`. A new script in a package folder without an `.asmdef` is
-  not seen.
+  rules (`Editor` folders, `Assets/Plugins`); if the last build did not produce that assembly, the run
+  stops and asks for `uloop compile`. A new script in a package folder without an `.asmdef` is not seen.
 - A generator that reads a referenced assembly is not rerun for a change in that assembly; run
   `uloop compile` after one.

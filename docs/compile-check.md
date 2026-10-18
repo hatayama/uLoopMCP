@@ -314,8 +314,9 @@ What the check does not guarantee, so run `--full` before finishing:
   not run them again; `FastChecks[].GeneratorsNotRerun` says so.
 
 That run compiles in full the assemblies whose inputs differ from their last full compile - the ones
-fast-checked since, and the dependents their rebuilt reference assemblies reach - and reuses the
-rest; after a run that compiled everything in full it takes about a second.
+fast-checked since, the dependents their rebuilt reference assemblies reach, and anything edited
+since the last run - and reuses the rest; after a run that compiled everything in full it takes
+about a second.
 
 The check keeps its state next to the compile outputs: `<Assembly>.fastcheck.json` (the baseline),
 `<Assembly>.generated/` (the saved generator output, whose files the baseline records by content
@@ -363,9 +364,11 @@ gives the `Assembly` and `Reason` of each successful full compile that left no b
 `SurfaceChecks` lists each assembly that others reference and that this run compiled, replayed or
 fast-checked without errors: whether its public surface was `Kept` and the `Verdict` that decided
 it, the first 20 `ChangedNames` a dependent has to write to be affected with their
-`ChangedNameCount`, `Unnamed` when no name tells the change, the `Dependents` this run compiled for
-it (each with the `Name` that selected it, or the `Reason` the names were not applied), and
-`UnaffectedDependents`, how many were left out because they write none of the names.
+`ChangedNameCount`, `Unnamed` when no name tells the change, the `Dependents` the change reached
+among the assemblies this run compiled (each with the `Name` that selected it, or the `Reason` the
+names were not applied), and `UnaffectedDependents`, how many were left out because they write none
+of the names. An assembly compiled for its own sources is listed when the change reaches it, so
+`Dependents` and `UnaffectedDependents` need not add up to every dependent.
 `NextActions` names the next step: fix the errors and run again while errors remain; after a clean
 run, `--full` when an assembly was fast-checked and then `uloop compile` to make the result live; and
 nothing when no assembly changed since the last Unity build. The
