@@ -199,3 +199,39 @@ func TestCompileCheckSurfaceChecksCountADependentOncePerReference(t *testing.T) 
 		t.Fatalf("expected one dependent and one unaffected, got %+v", check)
 	}
 }
+
+// Verifies that with two changed references each one lists only the dependents it reached and counts
+// only the dependents left out under it.
+func TestCompileCheckSurfaceChecksFileEachDependentUnderItsOwnReference(t *testing.T) {
+	checks := compileCheckSurfaceChecks(compilecheck.Result{
+		Units: []compilecheck.UnitResult{
+			{
+				Assembly: "Core", Succeeded: true,
+				Surface: compilecheck.SurfaceVerdict{Reason: compilecheck.SurfaceChanged, ChangedNames: []string{"Player"}},
+			},
+			{
+				Assembly: "Util", Succeeded: true,
+				Surface: compilecheck.SurfaceVerdict{Reason: compilecheck.SurfaceChanged, ChangedNames: []string{"Log"}},
+			},
+			{Assembly: "Game", Succeeded: true, ChangedReferences: []compilecheck.ChangedReference{
+				{Assembly: "Core", Name: "Player"}, {Assembly: "Util", Name: "Log"},
+			}},
+		},
+		NameSkips: []compilecheck.NameSkip{
+			{Assembly: "Audio", ChangedReferences: []string{"Core", "Util"}},
+			{Assembly: "Input", ChangedReferences: []string{"Util"}},
+		},
+	})
+
+	core := surfaceCheckFor(t, checks, "Core")
+	util := surfaceCheckFor(t, checks, "Util")
+	if want := []compileCheckDependentCompile{{Assembly: "Game", Name: "Player"}}; !reflect.DeepEqual(core.Dependents, want) {
+		t.Errorf("Core dependents = %+v, want %+v", core.Dependents, want)
+	}
+	if want := []compileCheckDependentCompile{{Assembly: "Game", Name: "Log"}}; !reflect.DeepEqual(util.Dependents, want) {
+		t.Errorf("Util dependents = %+v, want %+v", util.Dependents, want)
+	}
+	if core.UnaffectedDependents != 1 || util.UnaffectedDependents != 2 {
+		t.Errorf("unaffected = Core %d, Util %d, want 1 and 2", core.UnaffectedDependents, util.UnaffectedDependents)
+	}
+}
