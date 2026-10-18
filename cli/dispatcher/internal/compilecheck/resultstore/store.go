@@ -20,10 +20,11 @@
 //     same key, a successful compile, and outputs that still match. Otherwise LoadBaseline says why
 //     there is none, in one of these reasons:
 //     "no baseline: no full compile of this assembly is on record",
-//     "no baseline: the last full compile had errors; the first full compile without errors records one",
-//     "no baseline: the last full compile did not record one",
+//     "no baseline: the last full compile (at <time>) had errors; the first full compile without errors records one",
+//     "no baseline: the last full compile (at <time>) did not record one",
 //     "no baseline: it was recorded by another version of compile-check",
 //     "baseline compile is no longer on disk".
+//     <time> is the compile result's modification time, in UTC and RFC 3339.
 //   - A changed-files check is reusable only under the input key, the baseline and the worker build
 //     it was recorded with, and is never recorded without all three.
 //   - Forget removes every kind of record of an assembly. It does not touch the assembly's outputs,

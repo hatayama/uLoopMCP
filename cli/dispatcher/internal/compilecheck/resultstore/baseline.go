@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 const (
@@ -133,7 +134,8 @@ func (s Store[D]) LoadBaseline(assembly string) (Baseline[D], string) {
 // nothing tells that apart from no compile at all.
 func (s Store[D]) missingBaselineReason(assembly string) string {
 	const notOnRecord = "no baseline: no full compile of this assembly is on record"
-	content, err := os.ReadFile(manifestPath(s.directoryPath(), assembly))
+	path := manifestPath(s.directoryPath(), assembly)
+	content, err := os.ReadFile(path)
 	if err != nil {
 		return notOnRecord
 	}
@@ -142,11 +144,19 @@ func (s Store[D]) missingBaselineReason(assembly string) string {
 	if err := json.Unmarshal(content, &manifest); err != nil {
 		return notOnRecord
 	}
+	// Why the time is the manifest's modification time: the manifest is written when the full
+	// compile finishes and a changed-files check never rewrites it, so it dates that compile; the
+	// reason has read as this session's compile when it was an earlier one's. A Stat that fails
+	// right after the read succeeded leaves the reason without a time rather than failing it.
+	when := ""
+	if info, statErr := os.Stat(path); statErr == nil {
+		when = " (at " + info.ModTime().UTC().Format(time.RFC3339) + ")"
+	}
 	if !manifest.Succeeded {
-		return "no baseline: the last full compile had errors; the first full compile without errors records one"
+		return "no baseline: the last full compile" + when + " had errors; the first full compile without errors records one"
 	}
 
-	return "no baseline: the last full compile did not record one"
+	return "no baseline: the last full compile" + when + " did not record one"
 }
 
 // GeneratorOutputUnchanged reports whether the generator output on disk is exactly what the

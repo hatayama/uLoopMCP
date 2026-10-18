@@ -94,6 +94,7 @@ namespace UnityCliLoop.CompileCheckWorker
                 return CheckResponse.Unsupported("response file: " + argumentError);
             }
 
+            List<string> changedDeclarations = new List<string>();
             foreach (string changed in request.ChangedFiles)
             {
                 string baseline;
@@ -105,10 +106,17 @@ namespace UnityCliLoop.CompileCheckWorker
                 byte[] bytes = File.ReadAllBytes(changed);
                 changedBytes[Path.GetFullPath(changed)] = bytes;
                 SyntaxTree tree = ResponseFileCompilationLoader.ParseSource(changed, bytes, arguments);
+                // Why the loop goes on past the first changed declaration: the reason names every edit
+                // that costs the full compile, and naming one hid the rest until the next run.
                 if (!string.Equals(DeclarationFingerprint.Compute(tree), baseline, StringComparison.Ordinal))
                 {
-                    return CheckResponse.DeclarationChanged(changed);
+                    changedDeclarations.Add(changed);
                 }
+            }
+
+            if (changedDeclarations.Count > 0)
+            {
+                return CheckResponse.DeclarationChanged(string.Join(", ", changedDeclarations));
             }
 
             return null;

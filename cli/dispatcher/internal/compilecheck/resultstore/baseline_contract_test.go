@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 // projectStore is a store over an output directory inside a project root, laid out the way the
@@ -179,6 +180,16 @@ func TestLoadBaselineRefusesABaselineWhoseCompileIsGone(t *testing.T) {
 	}
 }
 
+// dateManifest sets the modification time of an assembly's compile result to a fixed instant, so a
+// reason that dates that compile can be compared whole.
+func dateManifest(t *testing.T, project projectStore, assembly string) {
+	t.Helper()
+	instant := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
+	if err := os.Chtimes(manifestPath(project.outputPath(), assembly), instant, instant); err != nil {
+		t.Fatalf("date the compile result: %v", err)
+	}
+}
+
 // Verifies a missing baseline is explained from the compile result recorded without it.
 func TestLoadBaselineExplainsAMissingBaseline(t *testing.T) {
 	for name, testCase := range map[string]struct {
@@ -196,12 +207,18 @@ func TestLoadBaselineExplainsAMissingBaseline(t *testing.T) {
 			want: "no baseline: no full compile of this assembly is on record",
 		},
 		"failed compile": {
-			record: func(t *testing.T, project projectStore) { project.recordCompile(t, "input", false) },
-			want:   "no baseline: the last full compile had errors; the first full compile without errors records one",
+			record: func(t *testing.T, project projectStore) {
+				project.recordCompile(t, "input", false)
+				dateManifest(t, project, "Alpha")
+			},
+			want: "no baseline: the last full compile (at 2026-01-02T03:04:05Z) had errors; the first full compile without errors records one",
 		},
 		"successful compile": {
-			record: func(t *testing.T, project projectStore) { project.recordCompile(t, "input", true) },
-			want:   "no baseline: the last full compile did not record one",
+			record: func(t *testing.T, project projectStore) {
+				project.recordCompile(t, "input", true)
+				dateManifest(t, project, "Alpha")
+			},
+			want: "no baseline: the last full compile (at 2026-01-02T03:04:05Z) did not record one",
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
