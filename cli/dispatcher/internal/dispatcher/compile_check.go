@@ -74,6 +74,10 @@ type compileCheckResponse struct {
 	ResponseFileSet       string                         `json:"ResponseFileSet"`
 	ProjectRoot           string                         `json:"ProjectRoot"`
 	Message               string                         `json:"Message"`
+	// NextActions says what to do after this run: fix the errors and run again, cover the rules a
+	// changed-files check skipped with --full, or make the result live with uloop compile. It is
+	// empty when nothing changed since the last Unity build, since the Editor already has that result.
+	NextActions []string `json:"NextActions"`
 }
 
 // compileCheckFastCheck describes one assembly checked on its changed files only.
@@ -258,6 +262,7 @@ func buildCompileCheckResponse(result compilecheck.Result, projectRoot string) c
 	response.WarningCount = len(response.Warnings)
 	response.Success = response.ErrorCount == 0
 	response.Message = compileCheckMessage(response)
+	response.NextActions = compileCheckNextActions(response)
 
 	return response
 }

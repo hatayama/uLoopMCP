@@ -5,6 +5,12 @@ import (
 	"strings"
 )
 
+const (
+	compileCheckFixErrorsAction    = "Fix the errors, then run `uloop compile-check` again."
+	compileCheckFullRunAction      = "Run `uloop compile-check --full` before finishing to cover the rules listed in FastChecks[].UncheckedCodes."
+	compileCheckUnityCompileAction = "Run `uloop compile` when the result must be live in the Editor."
+)
+
 // compileCheckMessage states what the run did in one line.
 // Why the blocked assemblies are added rather than folded in: without them a run that reports one
 // error and hundreds of assemblies it never got to reads as a run that lost them.
@@ -81,4 +87,26 @@ func joinCompileCheckSummaryParts(parts []string) string {
 	}
 
 	return strings.Join(parts[:len(parts)-1], ", ") + " and " + parts[len(parts)-1]
+}
+
+// compileCheckNextActions names the next step after a run, so a reader need not derive it from the
+// counts.
+// Why errors leave out the --full reminder: fixing comes first, and the run after the fix gives the
+// reminder again.
+// Why an unchanged run names nothing: it compiled nothing, so the Editor already has its result.
+func compileCheckNextActions(response compileCheckResponse) []string {
+	actions := []string{}
+	if response.ErrorCount > 0 {
+		return append(actions, compileCheckFixErrorsAction)
+	}
+	reported := len(response.CompiledAssemblies) + len(response.ReusedAssemblies) +
+		len(response.FastCheckedAssemblies)
+	if reported == 0 {
+		return actions
+	}
+	if len(response.FastCheckedAssemblies) > 0 {
+		actions = append(actions, compileCheckFullRunAction)
+	}
+
+	return append(actions, compileCheckUnityCompileAction)
 }
