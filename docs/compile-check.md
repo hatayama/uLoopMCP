@@ -203,6 +203,14 @@ definitions were deleted.
 
 ## Checking only the changed files
 
+In short: once compile-check has compiled a large assembly in full without errors, an edit that
+keeps every declaration is checked on its changed files only. It compiles in full instead on the
+first run after a Unity build, when a `.cs` file is added, removed or renamed, when more than 30
+files changed, when a declaration changes (a `using` directive counts), on the first run after a
+full compile that had errors, and for an assembly compiled only because one it references changed. A
+change to the public surface also compiles the dependents that can see it: those that write a
+changed name, or all of them when no name carries the change.
+
 When an assembly would otherwise be compiled in full, compile-check first tries to check only its
 changed files against the last successful full compile of that assembly. The decision and the
 guarantees are recorded in `docs/adr/0015-compile-check-checks-only-changed-files-after-a-full-compile.md`.
@@ -332,8 +340,8 @@ The command prints a JSON payload with `Success`, `ErrorCount`, `WarningCount`, 
 `Warnings` (each diagnostic carrying `Message`, `Code`, `File`, `Line`, `Column`, `Assembly`),
 `CompiledAssemblies`, `ReusedAssemblies`, `BlockedAssemblies`, `FastCheckedAssemblies`,
 `FastChecks`, `FastPathFallbacks`, `FastPathBaselineNotes`, `SkippedAssemblies`,
-`ResponseFileSet`, `ProjectRoot` and
-a one-line `Message`. `CompiledAssemblies` names the assemblies this run handed to the compiler and
+`ResponseFileSet`, `ProjectRoot`,
+a one-line `Message` and `NextActions`. `CompiledAssemblies` names the assemblies this run handed to the compiler and
 `ReusedAssemblies` the ones it reported on without compiling; the diagnostics of both are in
 `Errors` and `Warnings` alike. `BlockedAssemblies` names the assemblies the run stopped short of
 because one they reference has errors — they are not counted in `SkippedAssemblies`, which counts
@@ -344,7 +352,10 @@ neither `CompiledAssemblies` nor `ReusedAssemblies`; `FastChecks` gives each one
 `UncheckedCodes`, `GeneratorsNotRerun`, and `Reused` (set when the run reported the previous run's
 check of the same changed files instead of checking them again), and `FastPathFallbacks` gives the `Assembly` and
 `Reason` of each assembly the check was tried on and compiled in full. `FastPathBaselineNotes`
-gives the `Assembly` and `Reason` of each successful full compile that left no baseline. The
+gives the `Assembly` and `Reason` of each successful full compile that left no baseline.
+`NextActions` names the next step: fix the errors and run again while errors remain; after a clean
+run, `--full` when an assembly was fast-checked and then `uloop compile` to make the result live; and
+nothing when no assembly changed since the last Unity build. The
 process exits 1 when
 `ErrorCount` is greater than zero. A failure of the command itself also exits 1 but writes nothing to
 stdout: stderr gets `{"Success": false, "Error": {...}}`, whose `ErrorCode` names the failure.
@@ -413,6 +424,10 @@ happened, and how long each assembly took. `docs/vibe-logs.md` lists their field
 - **Every change to a type in `System`, `Microsoft.CodeAnalysis` or a namespace under them compiles
   every dependent.** The compiler looks these types up by name, so only polyfills normally live
   there; a project that puts its own extension classes in `System.*` gets no narrowing for them.
+- **A run that stops on declaration errors reports nothing else for that assembly.** With an
+  unknown type or an ambiguous name in it, the errors inside method bodies, the warnings of that
+  stage and the analyzer diagnostics are reported only by the run after the declaration errors are
+  fixed.
 - **Linux (x86_64) is supported.** The Editor is looked up under `~/Unity/Hub/Editor/<version>/Editor/Unity`.
 
 ## Troubleshooting
