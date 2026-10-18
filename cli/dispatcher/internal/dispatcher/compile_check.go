@@ -70,10 +70,15 @@ type compileCheckResponse struct {
 	// FastPathBaselineNotes says why a successful full compile left no baseline for the next run's
 	// changed-files check, so the next fallback for lack of one is not a mystery.
 	FastPathBaselineNotes []compileCheckFastPathFallback `json:"FastPathBaselineNotes"`
-	SkippedAssemblies     int                            `json:"SkippedAssemblies"`
-	ResponseFileSet       string                         `json:"ResponseFileSet"`
-	ProjectRoot           string                         `json:"ProjectRoot"`
-	Message               string                         `json:"Message"`
+	// SurfaceChecks says, per assembly that others reference, whether its public surface changed
+	// and which dependents this run compiled because of it, so the reader can tell why a dependent
+	// compiled. It reads the same verdicts and changed references as the VibeLog's surface_checks
+	// and changed_by.
+	SurfaceChecks     []compileCheckSurfaceCheck `json:"SurfaceChecks"`
+	SkippedAssemblies int                        `json:"SkippedAssemblies"`
+	ResponseFileSet   string                     `json:"ResponseFileSet"`
+	ProjectRoot       string                     `json:"ProjectRoot"`
+	Message           string                     `json:"Message"`
 	// NextActions says what to do after this run: fix the errors and run again, cover the rules a
 	// changed-files check skipped with --full, or make the result live with uloop compile. It is
 	// empty when nothing changed since the last Unity build, since the Editor already has that result.
@@ -231,6 +236,7 @@ func buildCompileCheckResponse(result compilecheck.Result, projectRoot string) c
 		FastChecks:            make([]compileCheckFastCheck, 0),
 		FastPathFallbacks:     make([]compileCheckFastPathFallback, 0),
 		FastPathBaselineNotes: make([]compileCheckFastPathFallback, 0),
+		SurfaceChecks:         compileCheckSurfaceChecks(result),
 		SkippedAssemblies:     result.Skipped,
 		ResponseFileSet:       filepath.Base(result.DagDir),
 		ProjectRoot:           projectRoot,
