@@ -4,14 +4,15 @@ Read this when a run took longer than you expected, when an assembly shows up in
 `FastPathFallbacks`, or when you want to know what the next edit will cost.
 
 The changed-files check applies to assemblies with at least 300 sources, once compile-check has
-compiled that assembly in full without errors and kept a baseline. Smaller assemblies are always
-compiled in full.
+compiled that assembly in full without errors and kept a baseline, and at most 30 of its files
+changed. Smaller assemblies are always compiled in full.
 
 ## What an edit costs
 
 | Edit | What runs | Typical time |
 |------|-----------|--------------|
-| A body-only edit in a large assembly with a baseline | Changed-files check | A few seconds |
+| A body-only edit of up to 30 files in a large assembly with a baseline | Changed-files check | A few seconds |
+| A body-only edit of more than 30 files | Full compile (`FastPathFallbacks`: too many changed files) | As for a full compile |
 | A new, deleted or renamed `.cs` file | Full compile of the assembly | About Unity's compile of it, without the import and the domain reload |
 | A declaration change (a member, a signature, a `using` directive) | Full compile, plus the dependents that can see the change | The assembly, then its dependents |
 | The first run after a Unity build | Full compile of every changed assembly | As for a full compile |
@@ -23,15 +24,20 @@ compiled in full.
 ## Dependents
 
 When an assembly compiles in full, its public surface (its reference assembly) is compared with the
-previous one. Only the dependents that write a name the change touches are compiled; adding a member
-counts the type's name among the changed names. A change a dependent can feel without writing any
-name is unnamed and compiles every dependent: a new base type or interface, an operator, an added
-abstract member, a member C# binds by pattern (`GetEnumerator`, `Deconstruct` and the like), among
-others.
+one from the last Unity build, not with the previous compile-check run; a surface that differs from
+Unity's keeps compiling its dependents until Unity builds again. Only the dependents that write a
+name the change touches are compiled; adding a member counts the type's name among the changed
+names. A change a dependent can feel without writing any name is unnamed and compiles every
+dependent: a new base type or interface, an operator, an added abstract member, a member C# binds by
+pattern (`GetEnumerator`, `Deconstruct` and the like), among others.
 
-Dependents wait for the assembly you edited to finish. Only transitive dependents start earlier:
-they assume that a dependent still compiling keeps its public surface, and they are compiled again
-when that turns out to be wrong.
+An assembly starts once every assembly it references that this run also compiles has finished. An
+assembly selected for its own sources, or a dependent already known to need compiling, starts
+sooner: as soon as every assembly it references that was selected for its own sources has finished.
+The dependents it references that are still compiling are assumed to keep Unity's public surface;
+when one of them turns out to have changed it, the assembly is compiled again after they finish, at
+most twice per run. A dependent whose recorded result may still apply once those finish waits for
+them instead.
 
 ## Baselines and `no baseline` reasons
 
@@ -49,6 +55,11 @@ there is none, `FastPathFallbacks[].Reason` says why:
 
 In every case the next full compile that succeeds records one, and body-only edits after it are
 fast-checked.
+
+A run with `--all` records baselines too. Under `--all`, a reference whose rebuilt API differs from
+Unity's build is read from this check's output; when a later run leaves that reference out and so
+reads Unity's build again, the first body edit of an assembly referencing it is compiled in full,
+with `inputs other than source contents changed: references` as the reason.
 
 ## Runs that stop on declaration errors
 

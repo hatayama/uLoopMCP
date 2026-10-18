@@ -52,12 +52,13 @@ scratch, which is the way out if a reused result ever looks wrong.
 
 Once compile-check has compiled a large assembly in full without errors, an edit that keeps every
 declaration is checked on its changed files only, in a few seconds, and the assembly is listed in
-`FastCheckedAssemblies`. Compiled in full instead, with the reason in `FastPathFallbacks`: the first
-run after a Unity build; a run that adds, removes or renames a `.cs` file; an edit that changes a
-declaration (a `using` directive counts); the first run after a full compile that had errors; and an
-assembly compiled only because one it references changed, which records no baseline. A change to the
-public surface also compiles the dependents that can see it: those that write a changed name, or
-all of them when no name carries the change. Details and times: `references/full-compiles.md`.
+`FastCheckedAssemblies`. Compiled in full instead (`FastPathFallbacks` says why when the check was
+tried): the first run after a Unity build; a run that adds, removes or renames a `.cs` file, or
+changes more than 30 files; an edit that changes a declaration (a `using` directive counts); the
+first run after a full compile that had errors; and an assembly compiled only because one it
+references changed, which records no baseline. A change to the public surface also compiles the
+dependents that can see it: those that write a changed name, or all of them when no name carries the
+change. Details and times: `references/full-compiles.md`.
 
 Full compiles run the project's analyzers with the response file's flags, `-warnaserror` included.
 The changed-files check skips the assembly-wide rules in `FastChecks[].UncheckedCodes`, so run once

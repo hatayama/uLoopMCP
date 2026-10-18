@@ -205,11 +205,11 @@ definitions were deleted.
 
 In short: once compile-check has compiled a large assembly in full without errors, an edit that
 keeps every declaration is checked on its changed files only. It compiles in full instead on the
-first run after a Unity build, when a `.cs` file is added, removed or renamed, when a declaration
-changes (a `using` directive counts), on the first run after a full compile that had errors, and
-for an assembly compiled only because one it references changed. A change to the public surface
-also compiles the dependents that can see it: those that write a changed name, or all of them when
-no name carries the change.
+first run after a Unity build, when a `.cs` file is added, removed or renamed, when more than 30
+files changed, when a declaration changes (a `using` directive counts), on the first run after a
+full compile that had errors, and for an assembly compiled only because one it references changed. A
+change to the public surface also compiles the dependents that can see it: those that write a
+changed name, or all of them when no name carries the change.
 
 When an assembly would otherwise be compiled in full, compile-check first tries to check only its
 changed files against the last successful full compile of that assembly. The decision and the
