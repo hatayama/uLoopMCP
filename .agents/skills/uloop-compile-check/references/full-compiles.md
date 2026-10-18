@@ -18,7 +18,7 @@ changed. Smaller assemblies are always compiled in full.
 | The first run after a Unity build | Full compile of every changed assembly | As for a full compile |
 | The first run after a full compile that had errors | Full compile (no baseline was recorded) | As for a full compile |
 | An assembly compiled only because a reference changed | Full compile now, and again on its next body-only edit (it records no baseline) | As for a full compile |
-| `--full` | Changed assemblies in full | As for a full compile |
+| `--full` | In full: whatever differs from its last full compile - the assemblies fast-checked since, the dependents their rebuilt reference assemblies reach, and anything edited since the last run; the rest reused | As for a full compile of those; about a second right after a run that compiled in full |
 | `--all` | Every assembly | The whole build |
 
 ## Dependents
@@ -29,7 +29,9 @@ Unity's keeps compiling its dependents until Unity builds again. Only the depend
 name the change touches are compiled; adding a member counts the type's name among the changed
 names. A change a dependent can feel without writing any name is unnamed and compiles every
 dependent: a new base type or interface, an operator, an added abstract member, a member C# binds by
-pattern (`GetEnumerator`, `Deconstruct` and the like), among others.
+pattern (`GetEnumerator`, `Deconstruct` and the like), among others. The output's `SurfaceChecks`
+lists, per assembly that others reference, the verdict, the changed names or the unnamed reason, and
+the compiled dependents the change reached, with the name that selected each.
 
 An assembly starts once every assembly it references that this run also compiles has finished. An
 assembly selected for its own sources, or a dependent already known to need compiling, starts
@@ -46,12 +48,15 @@ there is none, `FastPathFallbacks[].Reason` says why:
 
 - `no baseline: no full compile of this assembly is on record`: no full compile has run yet, or an
   input changed while it ran (`FastPathBaselineNotes` of that run says which).
-- `no baseline: the last full compile had errors; the first full compile without errors records one`:
-  a failed full compile drops the baseline an earlier one left.
-- `no baseline: the last full compile did not record one`: `FastPathBaselineNotes` of that run says
-  why, or the assembly was compiled only because a reference changed.
+- `no baseline: the last full compile (at <time>) had errors; the first full compile without errors
+  records one`: a failed full compile drops the baseline an earlier one left.
+- `no baseline: the last full compile (at <time>) did not record one`: `FastPathBaselineNotes` of
+  that run says why, or the assembly was compiled only because a reference changed.
 - `no baseline: it was recorded by another version of compile-check`: the baseline was written by a
   different compile-check build.
+
+`<time>` is when that full compile finished, in UTC; it can be from an earlier session or from
+before a Unity build in between.
 
 In every case the next full compile that succeeds records one, and body-only edits after it are
 fast-checked.
@@ -74,4 +79,7 @@ A full compile uses the response file as Unity wrote it, its `-analyzer:` entrie
 `-warnaserror` included; compile-check adds only the output folder for generated files. The
 changed-files check skips the rules listed in `FastChecks[].UncheckedCodes`: those of CS0067,
 CS0169, CS0414 and CS0649 that the project does not suppress, and the rules of analyzers that look
-at the whole compilation. Run once with `--full` before finishing to cover them.
+at the whole compilation. Run once with `--full` before finishing to cover them. That run compiles
+in full whatever differs from its last full compile - the assemblies fast-checked since, the
+dependents their rebuilt reference assemblies reach, and anything edited since the last run - and
+reuses the rest; right after a run that compiled in full it takes about a second.

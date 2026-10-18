@@ -367,6 +367,9 @@ func TestBuildCompileCheckResponseReportsNoBlockedAssembliesAsAnEmptyList(t *tes
 	if response.FastCheckedAssemblies == nil || response.FastChecks == nil || response.FastPathFallbacks == nil || response.FastPathBaselineNotes == nil {
 		t.Fatal("the fast-check lists should be empty lists rather than null in the JSON")
 	}
+	if response.SurfaceChecks == nil {
+		t.Fatal("SurfaceChecks should be an empty list rather than null in the JSON")
+	}
 }
 
 // Verifies that the summary says why assemblies went uncompiled, so a run reporting one error and

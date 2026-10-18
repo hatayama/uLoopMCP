@@ -176,4 +176,7 @@ func TestCompileCheckNextActionsAreEmptyWhenNothingChanged(t *testing.T) {
 	if !strings.Contains(string(encoded), `"NextActions":[]`) {
 		t.Fatalf("expected NextActions to serialize as an empty list, got %s", encoded)
 	}
+	if !strings.Contains(string(encoded), `"SurfaceChecks":[]`) {
+		t.Fatalf("expected SurfaceChecks to serialize as an empty list, got %s", encoded)
+	}
 }

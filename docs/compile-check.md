@@ -246,11 +246,11 @@ Otherwise the assembly is compiled in full as before, and `FastPathFallbacks` sa
 - `no baseline: no full compile of this assembly is on record` (none ran yet, or an input changed
   while the last full compile ran, so it left no record; `FastPathBaselineNotes` of that run says
   which)
-- `no baseline: the last full compile had errors; the first full compile without errors records one`
-  (a full compile that fails drops the baseline an earlier one left, and the assembly is
-  compiled in full until a compile succeeds)
-- `no baseline: the last full compile did not record one` (`FastPathBaselineNotes` of that run
-  says why, or the assembly was compiled only because a reference changed)
+- `no baseline: the last full compile (at <time>) had errors; the first full compile without errors
+  records one` (a full compile that fails drops the baseline an earlier one left, and the assembly
+  is compiled in full until a compile succeeds)
+- `no baseline: the last full compile (at <time>) did not record one` (`FastPathBaselineNotes` of
+  that run says why, or the assembly was compiled only because a reference changed)
 - `no baseline: it was recorded by another version of compile-check`
 - `baseline compile is no longer on disk`
 - `inputs other than source contents could not be read`
@@ -264,9 +264,12 @@ Otherwise the assembly is compiled in full as before, and `FastPathFallbacks` sa
   until the worker sources or the toolchain change)
 - `baseline was fingerprinted by another worker build`
 - `worker failed: ...`
-- `DeclarationChanged: ...`
+- `DeclarationChanged: <files>`, naming every changed file whose declarations differ, comma-separated
 - `Unsupported: ...` (for example an analyzer that threw, or a response file option the worker does
   not support)
+
+`<time>` is when that full compile finished, in UTC; it can be from an earlier session or from
+before a Unity build in between.
 
 A full compile that succeeds records a new baseline, `--full` runs included, so the run after it can
 use the check again. A source or another input edited while csc was compiling leaves no baseline
@@ -310,6 +313,11 @@ What the check does not guarantee, so run `--full` before finishing:
 - Source generators. The check reads the generator output saved by the last full compile and does
   not run them again; `FastChecks[].GeneratorsNotRerun` says so.
 
+That run compiles in full the assemblies whose inputs differ from their last full compile - the ones
+fast-checked since, the dependents their rebuilt reference assemblies reach, and anything edited
+since the last run - and reuses the rest; after a run that compiled everything in full it takes
+about a second.
+
 The check keeps its state next to the compile outputs: `<Assembly>.fastcheck.json` (the baseline),
 `<Assembly>.generated/` (the saved generator output, whose files the baseline records by content
 hash), `<Assembly>.fastresult.json` (the result of the last changed-files check, reported again
@@ -339,7 +347,7 @@ CPUs and never less than one, and `--jobs 1` compiles them one after another.
 The command prints a JSON payload with `Success`, `ErrorCount`, `WarningCount`, `Errors`,
 `Warnings` (each diagnostic carrying `Message`, `Code`, `File`, `Line`, `Column`, `Assembly`),
 `CompiledAssemblies`, `ReusedAssemblies`, `BlockedAssemblies`, `FastCheckedAssemblies`,
-`FastChecks`, `FastPathFallbacks`, `FastPathBaselineNotes`, `SkippedAssemblies`,
+`FastChecks`, `FastPathFallbacks`, `FastPathBaselineNotes`, `SurfaceChecks`, `SkippedAssemblies`,
 `ResponseFileSet`, `ProjectRoot`,
 a one-line `Message` and `NextActions`. `CompiledAssemblies` names the assemblies this run handed to the compiler and
 `ReusedAssemblies` the ones it reported on without compiling; the diagnostics of both are in
@@ -353,6 +361,14 @@ neither `CompiledAssemblies` nor `ReusedAssemblies`; `FastChecks` gives each one
 check of the same changed files instead of checking them again), and `FastPathFallbacks` gives the `Assembly` and
 `Reason` of each assembly the check was tried on and compiled in full. `FastPathBaselineNotes`
 gives the `Assembly` and `Reason` of each successful full compile that left no baseline.
+`SurfaceChecks` lists each assembly that others reference and that this run compiled, replayed or
+fast-checked without errors: whether its public surface was `Kept` and the `Verdict` that decided
+it, the first 20 `ChangedNames` a dependent has to write to be affected with their
+`ChangedNameCount`, `Unnamed` when no name tells the change, the `Dependents` the change reached
+among the assemblies this run compiled (each with the `Name` that selected it, or the `Reason` the
+names were not applied), and `UnaffectedDependents`, how many were left out because they write none
+of the names. An assembly compiled for its own sources is listed when the change reaches it, so
+`Dependents` and `UnaffectedDependents` need not add up to every dependent.
 `NextActions` names the next step: fix the errors and run again while errors remain; after a clean
 run, `--full` when an assembly was fast-checked and then `uloop compile` to make the result live; and
 nothing when no assembly changed since the last Unity build. The
