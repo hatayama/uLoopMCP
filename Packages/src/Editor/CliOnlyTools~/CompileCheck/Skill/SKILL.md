@@ -1,42 +1,31 @@
 ---
 name: uloop-compile-check
 description: "Compile C# with the Unity-bundled Roslyn compiler without launching or contacting the Unity Editor; reports errors and warnings only."
-internal: true
 ---
 
 # uloop compile-check
 
-Compile the project's C# offline and report the diagnostics, without starting Unity or sending
-anything to a running Editor.
-
-The command replays the response files Unity wrote during its last build, using the C# compiler
-bundled with the Unity Editor install. Nothing it produces is loaded by Unity: the assemblies land
-in `Library/uloop/compile-check/` and are never handed to the Editor.
+Compile the project's C# offline, without starting Unity or sending anything to a running Editor.
+It replays the response files Unity wrote during its last build with
+the C# compiler bundled in the Editor install; the output lands in `Library/uloop/compile-check/`
+and is never loaded by Unity.
 
 ## When to use
 
-- The Editor is not running and you only want to know whether the code compiles.
-- You want compiler errors quickly, without waiting for an import and a domain reload.
-- You are iterating on code whose result does not need to be live in the Editor yet.
+- You want to know whether the code compiles, without starting the Editor or waiting for an import
+  and a domain reload, and the result need not be live in the Editor yet.
 
 ## When not to use
 
 - You want the change reflected in the Editor (play mode, tests, a tool call): run `uloop compile`.
 - You just added or removed an `.asmdef`, added a reference to one, or changed scripting defines:
-  run `uloop compile` once first. The response files describe the previous build only, so
-  compile-check refuses the run with `COMPILE_CHECK_UNITY_BUILD_REQUIRED` instead of reporting
-  diagnostics for a configuration the project no longer has.
+  run `uloop compile` once first; the response files describe the previous build only, so the run
+  is refused with `COMPILE_CHECK_UNITY_BUILD_REQUIRED`.
 - The project has no `Library` yet (a fresh clone, or an Editor that has never opened it): there is
-  no build to replay, so the run is refused with the same code. Let Unity build once; a headless run
-  is enough and needs no window:
-
-  ```bash
-  <Unity executable> -batchmode -nographics -quit -projectPath /path/to/project
-  ```
-
-  `uloop launch` does the same with the Editor window open. After that one build, compile-check works
-  without the Editor; it asks for another build when it detects an `.asmdef` change. A scripting define
-  change it cannot detect, so run `uloop compile` yourself after one.
+  no build to replay, so the run is refused with the same code. Let Unity build once, with
+  `uloop launch` or headless (`<Unity executable> -batchmode -nographics -quit -projectPath <dir>`).
+  After that one build, compile-check works without the Editor until an `.asmdef` or build-setting
+  change makes it ask for another (see Limitations).
 
 ## Usage
 
@@ -46,23 +35,28 @@ uloop compile-check --all --project-path /path/to/project
 ```
 
 By default it compiles the assemblies whose sources changed since the last Unity build, plus every
-assembly that references one of them. `--all` compiles every assembly in the build. Assemblies that do not depend on each other compile at
-the same time; `--jobs` caps how many run at once, and `--jobs 1` compiles them one after another.
+assembly that references one of them. Independent assemblies compile at the same time (`--jobs`
+caps how many; `--jobs 1` is sequential). An assembly whose inputs are exactly as the previous run
+read them is not compiled again: its recorded diagnostics are reported, errors included. `--all`
+compiles every assembly from scratch, the way out if a reused result ever looks wrong.
 
-An assembly whose inputs are all exactly as the previous `compile-check` read them is not compiled
-again: the run reports the diagnostics recorded then, errors included. `--all` compiles
-everything from scratch, which is the way out if a reused result ever looks wrong.
+Once compile-check has compiled a large assembly in full without errors, an edit that keeps every
+declaration is checked on its changed files only, in a few seconds, and the assembly is listed in
+`FastCheckedAssemblies`. Compiled in full instead (`FastPathFallbacks` says why when the check was
+tried): the first run after a Unity build; a run that adds, removes or renames a `.cs` file, or
+changes more than 30 files; an edit that changes a declaration (a `using` directive counts); the
+first run after a full compile that had errors; and an assembly compiled only because one it
+references changed, which records no baseline. A change to the public surface also compiles the
+dependents that can see it: those that write a changed name, or all of them when no name carries the
+change; `SurfaceChecks` says which and why. Details and times: `references/full-compiles.md`.
 
-In a large assembly whose last compile-check compile succeeded, an edit that keeps every
-declaration is checked on the changed files only, in a few seconds. Adding or removing a using
-directive counts as a declaration change. Such a check skips a few assembly-wide rules, so run once
-with `--full` before finishing. When the project treats warnings as errors, a rule listed in
-`UncheckedCodes`, such as CS0414, can fail that `--full` run only. The first body edit after a Unity
-build, after a full compile that had errors (a `--full` run or a run that fell back to one), after
-a run that picked it up only because an assembly it references changed, whether it compiled or
-skipped the assembly, or after `--all` in an assembly that references one whose rebuilt API
-differed from the last Unity build and that the next run no longer rebuilds is compiled in full and
-records what the next check compares against; `FastPathFallbacks` says why.
+Full compiles run the project's analyzers with the response file's flags, `-warnaserror` included.
+The changed-files check skips the assembly-wide rules in `FastChecks[].UncheckedCodes`, so run once
+with `--full` before finishing: it compiles in full what differs from its last full compile and
+reuses the rest; right after a run that compiled in full it takes about a second. When warnings are
+errors, such a rule (CS0414, for example) can fail that run only. A run that stops on declaration
+errors (an unknown type, say) reports neither body errors nor analyzer diagnostics: fix them and run
+again.
 
 ## Parameters
 
@@ -77,43 +71,53 @@ records what the next check compares against; `FastPathFallbacks` says why.
 
 ## Output
 
-A JSON payload:
+A JSON payload; an empty list means the case did not occur in this run:
 
 - `Success`: whether the compile produced no errors
 - `ErrorCount`, `WarningCount`: totals across every compiled and reused assembly
 - `Errors`, `Warnings`: each with `Message`, `Code`, `File`, `Line`, `Column`, `Assembly`
-- `CompiledAssemblies`: the assemblies this run compiled, in dependency order
-- `ReusedAssemblies`: the assemblies reported from the previous run's recorded result, without compiling
-- `BlockedAssemblies`: the assemblies not compiled because an assembly they reference has errors, as Unity's own build would stop there; fix those errors and run again
-- `FastCheckedAssemblies`: the assemblies checked on their changed files only
-- `FastChecks`: per fast-checked assembly, `ChangedFiles`, `UncheckedCodes` (rules only `--full` runs), `GeneratorsNotRerun`, and `Reused` (the previous run's check of the same edit, reported again)
-- `FastPathFallbacks`: `Assembly` and `Reason` for each assembly that was compiled in full instead
-- `FastPathBaselineNotes`: `Assembly` and `Reason` for each successful full compile that left no baseline for the next changed-files check
-- `SkippedAssemblies`: how many assemblies were left out: nothing they compile from changed, or every assembly they reference kept the same public surface or changed only names they never write
-- `ResponseFileSet`: the Bee build the run replayed
-- `ProjectRoot`: resolved project root
+- `CompiledAssemblies`: compiled by this run, in dependency order
+- `ReusedAssemblies`: reported from the previous run's result, without compiling
+- `BlockedAssemblies`: not compiled because an assembly they reference has errors, as in Unity's
+  build; fix those and run again
+- `FastCheckedAssemblies`: checked on their changed files only
+- `FastChecks`: per fast-checked assembly, `ChangedFiles`, `UncheckedCodes` (rules only `--full` runs),
+  `GeneratorsNotRerun`, and `Reused` (the same edit's previous check, reported again)
+- `FastPathFallbacks`: `Assembly` and `Reason` for each assembly compiled in full instead
+- `FastPathBaselineNotes`: `Assembly` and `Reason` for each successful full compile that left no
+  baseline for the next check
+- `SurfaceChecks`: per assembly others reference that this run compiled, replayed or fast-checked
+  without errors: `Kept`, or the `ChangedNames` a dependent must write to be affected (`Unnamed`
+  says why no name tells the change), and the compiled `Dependents` it reached, each with the
+  `Name` that selected it
+- `SkippedAssemblies`: how many were left out because nothing they can see changed
+- `ResponseFileSet`, `ProjectRoot`: the Bee build the run replayed and the resolved project root
 - `Message`: one-line summary
+- `NextActions`: the next step (fix and rerun, `--full` for the skipped rules, or `uloop compile` to
+  make the result live); empty when nothing changed
 
-The process exits 1 when `ErrorCount` is greater than zero. A failure of the command itself, such
-as `COMPILE_CHECK_UNITY_BUILD_REQUIRED`, also exits 1 but prints no payload: the error, with its
-`ErrorCode`, goes to stderr.
-
-Only one compile-check runs per project at a time. A second one waits for the first, up to five
-minutes, then fails with `COMPILE_CHECK_PROJECT_BUSY`: wait for the other run to finish and run
-compile-check once more rather than retrying in a loop.
+The process exits 1 when `ErrorCount` is greater than zero, and when the command itself fails, such
+as with `COMPILE_CHECK_UNITY_BUILD_REQUIRED`; then no payload is printed and the error, with its
+`ErrorCode`, goes to stderr. One compile-check runs per project at a time; a second waits up to
+five minutes, then fails with `COMPILE_CHECK_PROJECT_BUSY`. Run it once more rather than retrying in
+a loop.
 
 ## Limitations
 
 - It replays the last Unity build's response files. A new or deleted `.asmdef`, a changed `.asmdef`
   reference, an `.asmdef` that stopped building for the Editor, or a newly required precompiled
   reference stops the run and asks for `uloop compile`.
-- Changes to `defineConstraints` and `versionDefines` are **not** detected, because they depend on
-  scripting defines and package versions that cannot be evaluated outside the Editor. Run
-  `uloop compile` after editing them.
-- A reference **removed** from an `.asmdef` is not detected either: Unity injects references of its
-  own that no `.asmdef` declares, so only added references can be told apart from those. Diagnostics
-  may therefore miss an error that the removal would cause. Run `uloop compile` after removing one.
-- Changed scripting defines are not detected; the defines from the last build are reused.
-- The predefined assemblies (`Assembly-CSharp` and friends) keep the source list of the last build,
-  so a brand-new `.cs` file outside an `.asmdef` is not compiled until Unity imports it.
-- The produced DLLs are never loaded by Unity, and the command never contacts a running Editor.
+- Build settings are compared against a record the first run after a Unity build writes: a
+  removed scripting define, a changed `csc.rsp`, `defineConstraints`, `versionDefines`,
+  `packages-lock.json` or `manifest.json` stops the run, and a scripting define the last build lacks
+  stops it when `ProjectSettings.asset` was saved after that build. A change made before that first
+  run (other than an added define) is not seen, so run `uloop compile` after one. Under a Unity 6
+  build profile that overrides Player Settings or carries its own defines, only the global
+  ProjectSettings defines are compared.
+- A reference removed from an `.asmdef` stops the run too; the four references Unity adds on its own
+  are allowed, and a reference that matches no `.asmdef` in the project is not judged.
+- A new `.cs` file outside every `.asmdef` goes to `Assembly-CSharp` or a sibling by Unity's path
+  rules (`Editor` folders, `Assets/Plugins`); if the last build did not produce that assembly, the run
+  stops and asks for `uloop compile`. A new script in a package folder without an `.asmdef` is not seen.
+- A generator that reads a referenced assembly is not rerun for a change in that assembly; run
+  `uloop compile` after one.

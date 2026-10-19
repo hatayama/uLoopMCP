@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hatayama/unity-cli-loop/dispatcher/internal/compilecheck/fastcheck"
 	"github.com/hatayama/unity-cli-loop/dispatcher/internal/compilecheck/resultstore"
@@ -176,11 +177,16 @@ func TestFailedFullCompileLeavesNoBaseline(t *testing.T) {
 		t.Fatal("expected the failed full compile to leave no baseline")
 	}
 
+	instant := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
+	if err := os.Chtimes(filepath.Join(project.outputDirectory(), "Alpha.result.json"), instant, instant); err != nil {
+		t.Fatalf("date the failed compile result: %v", err)
+	}
+
 	project.editBody(t, 1, "edited")
 	recorder := newCachedSchedulerRecorder("Alpha", "Beta")
 	outcome := project.run(t, recorder, false)
 
-	assertFallback(t, outcome, recorder, "no baseline: the last full compile had errors; the first full compile without errors records one")
+	assertFallback(t, outcome, recorder, "no baseline: the last full compile (at 2026-01-02T03:04:05Z) had errors; the first full compile without errors records one")
 }
 
 // Verifies that a change to an input other than source contents, such as a new source, compiles in full.
@@ -308,6 +314,20 @@ func TestDeclarationChangeFallsBackAndRerecords(t *testing.T) {
 	if file := project.baseline(t).Files[project.sourceName(0)]; file.Fingerprint != "class File000 : Base " {
 		t.Errorf("expected the new declaration in the baseline, got %+v", file)
 	}
+}
+
+// Verifies that a run whose declarations changed in two files names both, so the second edit that
+// costs the full compile is not hidden until the next run.
+func TestDeclarationChangesInSeveralFilesAreAllNamed(t *testing.T) {
+	project := newFastPathProject(t, fastPathMinimumSources)
+	project.recordBaseline(t)
+	project.editDeclaration(t, 0)
+	project.editDeclaration(t, 1)
+	recorder := newCachedSchedulerRecorder("Alpha", "Beta")
+
+	outcome := project.run(t, recorder, false)
+
+	assertFallback(t, outcome, recorder, fastcheck.DeclarationChangedOutcome+": "+project.sourceName(0)+", "+project.sourceName(1))
 }
 
 // Verifies that a worker that cannot be built makes the unit compile in full.

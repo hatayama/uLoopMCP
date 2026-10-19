@@ -110,14 +110,18 @@ func (worker *fakeFastCheckWorker) Check(
 		return fastcheck.CheckResponse{}, worker.checkErr
 	}
 
+	changedDeclarations := make([]string, 0)
 	for _, changed := range request.ChangedFiles {
 		content, err := os.ReadFile(changed)
 		if err != nil {
 			return fastcheck.CheckResponse{}, err
 		}
 		if fakeDeclarationOf(string(content)) != request.BaselineFingerprints[changed] {
-			return fastcheck.CheckResponse{Outcome: fastcheck.DeclarationChangedOutcome, Reason: changed}, nil
+			changedDeclarations = append(changedDeclarations, changed)
 		}
+	}
+	if len(changedDeclarations) > 0 {
+		return fastcheck.CheckResponse{Outcome: fastcheck.DeclarationChangedOutcome, Reason: strings.Join(changedDeclarations, ", ")}, nil
 	}
 
 	return fastcheck.CheckResponse{

@@ -162,6 +162,25 @@ namespace UnityCliLoop.CompileCheckWorker.UnitTests
         }
 
         /// <summary>
+        /// Verifies that when the declarations of two changed files differ, the reason names both, in
+        /// the order of the changed files, so the second edit that costs a full compile is not hidden.
+        /// </summary>
+        [Test]
+        public void DeclarationChangesInTwoFilesNameBoth()
+        {
+            string first = fixture.AddSource("Probe.cs", Probe("System.GC.KeepAlive(1);"));
+            string second = fixture.AddSource("OtherProbe.cs", OtherProbe("System.GC.KeepAlive(2);"));
+            Dictionary<string, string> baseline = fixture.FingerprintSources();
+            File.WriteAllText(first, Probe("System.GC.KeepAlive(1); } public static void Added() {"));
+            File.WriteAllText(second, OtherProbe("System.GC.KeepAlive(2); } public static void Added() {"));
+
+            CheckResponse response = fixture.Check(baseline, "", first, second);
+
+            Assert.That(response.Outcome, Is.EqualTo(CheckResponse.DeclarationChangedOutcome));
+            Assert.That(response.Reason, Is.EqualTo(first + ", " + second));
+        }
+
+        /// <summary>
         /// Verifies that a changed file with no baseline fingerprint asks for a full compile.
         /// </summary>
         [Test]
@@ -309,6 +328,11 @@ namespace UnityCliLoop.CompileCheckWorker.UnitTests
         private static string Probe(string statement)
         {
             return ProbeTemplate.Replace("{0}", statement);
+        }
+
+        private static string OtherProbe(string statement)
+        {
+            return Probe(statement).Replace("class Probe", "class OtherProbe");
         }
     }
 }

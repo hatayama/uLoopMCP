@@ -1,8 +1,13 @@
 package dispatcher
 
 import (
+	"encoding/json"
+	"reflect"
 	"strconv"
+	"strings"
 	"testing"
+
+	"github.com/hatayama/unity-cli-loop/dispatcher/internal/compilecheck"
 )
 
 const compileCheckFastCheckedReminder = "run with --full before finishing to cover assembly-wide rules."
@@ -103,5 +108,75 @@ func TestCompileCheckMessageUsesTheSingularOnlyForACountOfOne(t *testing.T) {
 				t.Fatalf("unexpected summary\n got: %q\nwant: %q", got, testCase.want)
 			}
 		})
+	}
+}
+
+// assertCompileCheckNextActions fails the test unless response names exactly want, in order.
+func assertCompileCheckNextActions(t *testing.T, response compileCheckResponse, want []string) {
+	t.Helper()
+	if got := compileCheckNextActions(response); !reflect.DeepEqual(got, want) {
+		t.Fatalf("unexpected next actions\n got: %q\nwant: %q", got, want)
+	}
+}
+
+// Verifies that a run with errors asks only for the errors to be fixed and the check rerun.
+func TestCompileCheckNextActionsTellsToFixErrorsFirst(t *testing.T) {
+	assertCompileCheckNextActions(t, compileCheckResponse{
+		ErrorCount:         1,
+		CompiledAssemblies: compileCheckMessageNames(1),
+	}, []string{compileCheckFixErrorsAction})
+}
+
+// Verifies that a run with errors leaves out the --full reminder even when it fast-checked an
+// assembly, because the run after the fix gives that reminder again.
+func TestCompileCheckNextActionsLeavesOutFullWhileErrorsRemain(t *testing.T) {
+	assertCompileCheckNextActions(t, compileCheckResponse{
+		ErrorCount:            1,
+		FastCheckedAssemblies: compileCheckMessageNames(1),
+	}, []string{compileCheckFixErrorsAction})
+}
+
+// Verifies that a clean run that only fast-checked an assembly, as a body edit of a large leaf
+// assembly does, asks for --full first and then for uloop compile, in that order.
+func TestCompileCheckNextActionsAsksForFullAfterAFastCheck(t *testing.T) {
+	assertCompileCheckNextActions(t, compileCheckResponse{
+		FastCheckedAssemblies: compileCheckMessageNames(1),
+	}, []string{compileCheckFullRunAction, compileCheckUnityCompileAction})
+}
+
+// Verifies that a clean run that only reused a previous result still points at uloop compile,
+// because a reused result differs from the Unity build just as a compiled one does.
+func TestCompileCheckNextActionsPointsAtUnityCompileForAReusedResult(t *testing.T) {
+	assertCompileCheckNextActions(t, compileCheckResponse{
+		ReusedAssemblies: compileCheckMessageNames(1),
+	}, []string{compileCheckUnityCompileAction})
+}
+
+// Verifies that a clean run without a fast check points only at uloop compile.
+func TestCompileCheckNextActionsPointsAtUnityCompileOnSuccess(t *testing.T) {
+	assertCompileCheckNextActions(t, compileCheckResponse{
+		CompiledAssemblies: compileCheckMessageNames(1),
+	}, []string{compileCheckUnityCompileAction})
+}
+
+// Verifies that a run where nothing changed since the Unity build names no next action and still
+// serializes the field as an empty list rather than null.
+func TestCompileCheckNextActionsAreEmptyWhenNothingChanged(t *testing.T) {
+	response := buildCompileCheckResponse(compilecheck.Result{
+		DagDir: "Library/Bee/artifacts/1234.dag", Skipped: 12,
+	}, "/projects/sample")
+
+	if len(response.NextActions) != 0 {
+		t.Fatalf("expected no next action for an unchanged project, got %q", response.NextActions)
+	}
+	encoded, err := json.Marshal(response)
+	if err != nil {
+		t.Fatalf("marshal the response: %v", err)
+	}
+	if !strings.Contains(string(encoded), `"NextActions":[]`) {
+		t.Fatalf("expected NextActions to serialize as an empty list, got %s", encoded)
+	}
+	if !strings.Contains(string(encoded), `"SurfaceChecks":[]`) {
+		t.Fatalf("expected SurfaceChecks to serialize as an empty list, got %s", encoded)
 	}
 }

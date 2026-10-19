@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 const (
@@ -128,11 +129,13 @@ func (s Store[D]) LoadBaseline(assembly string) (Baseline[D], string) {
 // compile.
 // Why the reasons are told apart: a full compile with errors drops the baseline an earlier compile
 // left, and a reason that read as "never compiled" sent users looking for a compile that had run.
-// Why a missing manifest says nothing about what happened: a run that skips the unit
-// removes the manifest and the baseline alike, so nothing on disk tells that apart from no compile.
+// Why a missing manifest says nothing about what happened: the records of a unit are removed only
+// when its next compile starts, so a compile that never finished leaves nothing on disk, and
+// nothing tells that apart from no compile at all.
 func (s Store[D]) missingBaselineReason(assembly string) string {
 	const notOnRecord = "no baseline: no full compile of this assembly is on record"
-	content, err := os.ReadFile(manifestPath(s.directoryPath(), assembly))
+	path := manifestPath(s.directoryPath(), assembly)
+	content, err := os.ReadFile(path)
 	if err != nil {
 		return notOnRecord
 	}
@@ -141,11 +144,19 @@ func (s Store[D]) missingBaselineReason(assembly string) string {
 	if err := json.Unmarshal(content, &manifest); err != nil {
 		return notOnRecord
 	}
+	// Why the time is the manifest's modification time: the manifest is written when the full
+	// compile finishes and a changed-files check never rewrites it, so it dates that compile; the
+	// reason has read as this session's compile when it was an earlier one's. A Stat that fails
+	// right after the read succeeded leaves the reason without a time rather than failing it.
+	when := ""
+	if info, statErr := os.Stat(path); statErr == nil {
+		when = " (at " + info.ModTime().UTC().Format(time.RFC3339) + ")"
+	}
 	if !manifest.Succeeded {
-		return "no baseline: the last full compile had errors; the first full compile without errors records one"
+		return "no baseline: the last full compile" + when + " had errors; the first full compile without errors records one"
 	}
 
-	return "no baseline: the last full compile did not record one"
+	return "no baseline: the last full compile" + when + " did not record one"
 }
 
 // GeneratorOutputUnchanged reports whether the generator output on disk is exactly what the
@@ -233,7 +244,7 @@ func writeBaselineRecord(directoryPath string, assembly string, record baselineR
 		return fmt.Errorf("failed to record the baseline of %s: %w", assembly, err)
 	}
 
-	return writeFileAtomically(directoryPath, baselineRecordPath(directoryPath, assembly), content)
+	return WriteFileAtomically(directoryPath, baselineRecordPath(directoryPath, assembly), content)
 }
 
 // baselineRecordPath names where one assembly's baseline lives.
