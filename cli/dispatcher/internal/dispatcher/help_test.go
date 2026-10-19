@@ -24,7 +24,6 @@ func TestPrintDispatcherHelpListsNativeCommandsAndLiveToolGuidance(t *testing.T)
 		"Dispatcher. Finds the Unity project, then dispatches live Unity tool commands.",
 		"Native commands:",
 		"  launch",
-		"  compile-check",
 		"  verify-project",
 		"  focus-window",
 		"  list",
@@ -46,9 +45,8 @@ func TestPrintDispatcherHelpListsNativeCommandsAndLiveToolGuidance(t *testing.T)
 		}
 	}
 	for _, unexpected := range []string{
-		// Why the trailing space: compile-check is listed now, and this element must still catch a
-		// baked-in Unity compile.
-		"  compile ",
+		// Why compile-check is here: it is a hidden native command, still routable but never listed.
+		"  compile",
 		"  get-logs",
 		"  run-tests",
 		"uloop --list-commands",
@@ -70,7 +68,6 @@ func TestPrintProjectLocalHelpListsNativeCommandsAndLiveToolGuidance(t *testing.
 	for _, expected := range []string{
 		"Native commands:",
 		"  launch",
-		"  compile-check",
 		"  verify-project",
 		"  focus-window",
 		"  list",
@@ -89,9 +86,8 @@ func TestPrintProjectLocalHelpListsNativeCommandsAndLiveToolGuidance(t *testing.
 		}
 	}
 	for _, unexpected := range []string{
-		// Why the trailing space: compile-check is listed now, and this element must still catch a
-		// baked-in Unity compile.
-		"  compile ",
+		// Why compile-check is here: it is a hidden native command, still routable but never listed.
+		"  compile",
 		"  get-logs",
 		"  run-tests",
 		"uloop --list-commands",

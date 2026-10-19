@@ -102,3 +102,12 @@ These are documented and not detected; after any of them, run `uloop compile`:
 - Running the check offline before `uloop compile` - returning its errors without touching Unity -
   is decided in a separate ADR, once the detection above has gone through one tester round without
   a miss.
+
+Amended 2026-10-20: the command is hidden again - `Hidden: true` on its native command entry and
+`internal: true` in its skill - so it stays routable by name but is left out of `--help`,
+`uloop list`, shell completion, the README and skill installs. This is not the reversal condition
+under "Revisit When": no tester round reported an error `uloop compile` does not report or a
+refusal it does not clear, and everything this record says the check detects stays in place. It is
+hidden because its place beside `uloop compile` - which edits an agent should check offline and
+when it should compile in the Editor instead - is not settled; the amendment is reversed by
+removing the two markers and restoring the README entries once that is decided.

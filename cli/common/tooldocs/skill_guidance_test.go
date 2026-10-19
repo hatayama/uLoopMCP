@@ -19,12 +19,12 @@ func TestSkillGuidanceLineNamesTheMatchingSkill(t *testing.T) {
 	}
 }
 
-// Verifies the CLI-only compile-check command points at its own skill, which it did not while the
-// command was hidden.
-func TestSkillGuidanceLineNamesTheCompileCheckSkill(t *testing.T) {
+// Verifies the hidden compile-check command gets no skill guidance line: its skill is internal and
+// not installed, so pointing at it would send the reader to a skill that does not exist.
+func TestSkillGuidanceLineLeavesOutTheHiddenCompileCheckCommand(t *testing.T) {
 	line, ok := SkillGuidanceLine("compile-check")
-	if !ok || !strings.Contains(line, "uloop-compile-check") {
-		t.Errorf("guidance line = %q (ok %v), want it to name uloop-compile-check", line, ok)
+	if ok {
+		t.Errorf("guidance line = %q, want none while compile-check is hidden", line)
 	}
 }
 

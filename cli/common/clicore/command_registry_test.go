@@ -118,6 +118,7 @@ func TestPausePointStatusNativeCommandDescription(t *testing.T) {
 func TestVisibleNativeCommandsLeaveOutAHiddenEntry(t *testing.T) {
 	original := NativeCommands
 	t.Cleanup(func() { NativeCommands = original })
+	visibleBefore := len(VisibleNativeCommands())
 	const probe = "hidden-probe"
 	NativeCommands = append(append([]NativeCommandEntry{}, original...),
 		NativeCommandEntry{Name: probe, Owner: DispatcherOwned, Hidden: true})
@@ -135,7 +136,28 @@ func TestVisibleNativeCommandsLeaveOutAHiddenEntry(t *testing.T) {
 			t.Fatalf("%s must not be offered as a completion: %#v", probe, NativeCommandNamesForCompletion())
 		}
 	}
-	if len(VisibleNativeCommands()) != len(original) {
-		t.Fatalf("only %s should be hidden: %#v", probe, VisibleNativeCommands())
+	if len(VisibleNativeCommands()) != visibleBefore {
+		t.Fatalf("adding the hidden %s must not change the listed commands: %#v", probe, VisibleNativeCommands())
+	}
+}
+
+// Verifies compile-check is registered as a hidden dispatcher-owned command: routable by name but
+// left out of the listed commands and of completion while its place beside `uloop compile` is open.
+func TestCompileCheckIsRoutableButNotListed(t *testing.T) {
+	if !IsDispatcherOwnedCommandName(CompileCheckCommandName) {
+		t.Fatalf("%s must stay registered as a dispatcher-owned command", CompileCheckCommandName)
+	}
+	for _, entry := range VisibleNativeCommands() {
+		if entry.Name == CompileCheckCommandName {
+			t.Fatalf("%s must not be listed: %#v", CompileCheckCommandName, VisibleNativeCommands())
+		}
+	}
+	for _, name := range NativeCommandNamesForCompletion() {
+		if name == CompileCheckCommandName {
+			t.Fatalf("%s must not be offered as a completion: %#v", CompileCheckCommandName, NativeCommandNamesForCompletion())
+		}
+	}
+	if len(VisibleNativeCommands()) != len(NativeCommands)-1 {
+		t.Fatalf("only %s should be hidden: %#v", CompileCheckCommandName, VisibleNativeCommands())
 	}
 }
