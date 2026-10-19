@@ -4,8 +4,11 @@
 without contacting a running one. It is a dispatcher-owned command: it needs no IPC connection and
 no project runner.
 
-Shown since ADR 0018 (`docs/adr/0018-compile-check-is-its-own-command-and-is-shown.md`); what it
-detects and what stays undetected is listed under Limitations.
+The command is hidden: it stays runnable, but help, `uloop list --names`, completion, and the
+installed skills do not list it, and its skill is marked `internal: true` so `uloop skills install`
+skips it. It is hidden because its place beside `uloop compile` is not settled, not because of a
+detection gap: what it detects and what stays undetected is listed under Limitations, and the
+decision history is in `docs/adr/0018-compile-check-is-its-own-command-and-is-shown.md`.
 
 It is not a replacement for `uloop compile`. Nothing it produces is loaded by Unity, so use it only
 when you want to know whether the code compiles — not when you need the result to be live in the
