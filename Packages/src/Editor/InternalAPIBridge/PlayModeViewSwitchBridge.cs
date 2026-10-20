@@ -163,7 +163,31 @@ namespace io.github.hatayama.UnityCliLoop.InternalAPIBridge
             object main = GetPropertyValue(simulatorWindow, "main", PublicInstance);
             object screenSimulation = GetPropertyValue(main, "ScreenSimulation", PublicInstance);
             object orientation = GetPropertyValue(screenSimulation, "orientation", PublicInstance);
+            if (orientation is ScreenOrientation value)
+            {
+                return OrientationName(value);
+            }
+
             return orientation?.ToString();
+        }
+
+        // ScreenOrientation still declares the obsolete alias Landscape with the same value as
+        // LandscapeLeft, and Enum.ToString does not promise which of two equal names it picks.
+        private static string OrientationName(ScreenOrientation value)
+        {
+            switch (value)
+            {
+                case ScreenOrientation.Portrait:
+                    return "Portrait";
+                case ScreenOrientation.PortraitUpsideDown:
+                    return "PortraitUpsideDown";
+                case ScreenOrientation.LandscapeLeft:
+                    return "LandscapeLeft";
+                case ScreenOrientation.LandscapeRight:
+                    return "LandscapeRight";
+                default:
+                    return value.ToString();
+            }
         }
 
         private static object GetPropertyValue(object target, string propertyName, BindingFlags flags)
