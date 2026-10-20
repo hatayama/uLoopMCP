@@ -759,7 +759,7 @@
     },
     {
       "name": "game-view-mode",
-      "description": "Show which view the Game tab is showing, or switch it between the Game view and the Device Simulator, rotating the simulated device to match the Game view's orientation. Use before Play when the UI must be checked in a device frame.",
+      "description": "Show which view the Game tab is showing, switch it between the Game view and the Device Simulator (rotating the simulated device to match the Game view's orientation), or pick the simulated device by name. Use before Play when the UI must be checked in a device frame.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -770,6 +770,14 @@
               "GameView",
               "Simulator"
             ]
+          },
+          "Device": {
+            "type": "string",
+            "description": "Shows the named device in the Device Simulator and implies --to Simulator when --to is omitted. Case-insensitive: a whole name wins, then a name ending in the given words (iPhone 12 picks Apple iPhone 12, not Apple iPhone 12 mini), then any name containing them. Several matches or none: nothing changes, Success is false, and AvailableDevices lists the candidates or every device."
+          },
+          "ListDevices": {
+            "type": "boolean",
+            "description": "Adds AvailableDevices, the names of every device the Simulator can show, to the response."
           }
         }
       }
