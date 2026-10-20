@@ -184,7 +184,7 @@ V2 のプロジェクトの Settings ウィンドウで **Update CLI** や **Dow
 
 
 <details>
-<summary>バンドルされている全23個のSkills一覧</summary>
+<summary>バンドルされている全24個のSkills一覧</summary>
 
 - `/uloop-launch` - 正しいバージョンでUnityを起動
 - `/uloop-status` - Unityが今コマンドを受け付けられるかを確認
@@ -202,6 +202,7 @@ V2 のプロジェクトの Settings ウィンドウで **Update CLI** や **Dow
 - `/uloop-screenshot` - EditorWindowのキャプチャ
 - `/uloop-pause-point` - 任意の行で実行を止めて変数をキャプチャ
 - `/uloop-set-game-view-size` - Game Viewのカスタム解像度の取得・設定
+- `/uloop-game-view-mode` - Game ViewタブがGame / Simulatorのどちらかを確認し、切り替えて向きを合わせる
 - `/uloop-record-video` - Play Mode中のGame Viewを動画ファイルへ録画
 - `/uloop-simulate-mouse-ui` - PlayMode UI要素のクリック・長押し・ドラッグシミュレーション
 - `/uloop-simulate-mouse-input` - Input System経由のPlayModeマウス入力シミュレーション
@@ -311,6 +312,7 @@ Unity CLI Loop はツールの数を追い求めません。C#コードの動的
 - `focus-window` - Unity Editorウィンドウを前面化
 - `screenshot` - EditorWindowやGame Viewのスクリーンショットを保存
 - `set-game-view-size` - Game Viewのカスタム解像度を取得・設定
+- `game-view-mode` - Game ViewタブがGame / Simulatorのどちらかを確認し、切り替えて向きを合わせる
 - `record-video` - Play Mode中のGame ViewをMP4（LinuxではWebM）へ録画
 - `control-play-mode` - Play Modeの再生・停止・一時停止
 - `execute-dynamic-code` - 動的C#コード実行

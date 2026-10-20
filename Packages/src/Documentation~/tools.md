@@ -132,6 +132,8 @@ uloop record-video --action stop
 
 ### 12. control-play-mode - Control Play Mode
 Control Unity Editor's Play Mode. Supports three actions: Play (start/resume), Stop, and Pause.
+
+Use `uloop game-view-mode --to Simulator` before playing when the game must be checked in a device frame: it replaces the current Game view tab with the Device Simulator in place (the same as the Game / Simulator dropdown) and rotates the simulated device to match the Game view's orientation as far as Player Settings allow. `--to GameView` switches back, and running it without arguments reports which view is showing. The play state is never changed.
 ```text
 → control-play-mode (Action: Play)
 → Start Play Mode to verify game behavior

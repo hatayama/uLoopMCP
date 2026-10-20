@@ -132,6 +132,8 @@ uloop record-video --action stop
 
 ### 12. control-play-mode - Play Modeの制御
 Unity EditorのPlay Modeを制御します。Play（再生開始/一時停止解除）、Stop（停止）、Pause（一時停止）の3つのアクションを実行できます。
+
+端末の枠の中でゲームを確認したいときは、再生の前に `uloop game-view-mode --to Simulator` を実行します。現在のGame Viewタブをその場でDevice Simulatorに置き換え（Game / Simulatorドロップダウンと同じ動き）、Player Settingsが許す範囲でGame Viewの向きに合わせて端末を回転させます。`--to GameView` で元に戻し、引数なしで実行すると現在どちらのビューかを報告します。再生状態は変更しません。
 ```text
 → control-play-mode (Action: Play)
 → Play Modeを開始してゲームの動作を確認
