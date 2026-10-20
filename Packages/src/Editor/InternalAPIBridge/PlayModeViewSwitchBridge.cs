@@ -27,7 +27,9 @@ namespace io.github.hatayama.UnityCliLoop.InternalAPIBridge
     public static class PlayModeViewSwitchBridge
     {
         private const string SimulatorWindowFullName = "UnityEditor.DeviceSimulation.SimulatorWindow";
+        private const string DeviceLoaderFullName = "UnityEditor.DeviceSimulation.DeviceLoader";
         private const BindingFlags PublicInstance = BindingFlags.Public | BindingFlags.Instance;
+        private const BindingFlags PublicStatic = BindingFlags.Public | BindingFlags.Static;
         private const BindingFlags AnyInstance = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
 
         public static PlayModeViewKind GetMainViewKind()
@@ -169,6 +171,123 @@ namespace io.github.hatayama.UnityCliLoop.InternalAPIBridge
             }
 
             return orientation?.ToString();
+        }
+
+        /// <summary>
+        /// Friendly names of every device the Simulator can show, in the Simulator's own order.
+        /// Precondition: <see cref="IsSimulatorAvailable"/>. Throws when this Unity version does not
+        /// expose the device loader: selecting a device was asked for explicitly, so unlike the
+        /// rotation it is not silently skipped.
+        /// </summary>
+        public static string[] LoadSimulatorDeviceNames()
+        {
+            if (!TryResolveSimulatorType(out Type simulatorType))
+            {
+                throw new InvalidOperationException("The Device Simulator is not available in this Editor.");
+            }
+
+            Type loader = simulatorType.Assembly.GetType(DeviceLoaderFullName);
+            MethodInfo loadDevices = loader?.GetMethod("LoadDevices", PublicStatic);
+            if (loadDevices == null)
+            {
+                throw new InvalidOperationException("The Device Simulator in this Unity version does not expose its device list.");
+            }
+
+            Array devices = (Array)InvokeUnwrapped(() => loadDevices.Invoke(null, null));
+            string[] names = new string[devices.Length];
+            for (int index = 0; index < devices.Length; index++)
+            {
+                names[index] = DeviceName(devices.GetValue(index));
+            }
+
+            return names;
+        }
+
+        /// <summary>
+        /// Friendly name of the device the Simulator shows, or null when it cannot be read.
+        /// </summary>
+        public static string GetSimulatorDeviceName(EditorWindow simulatorWindow)
+        {
+            Debug.Assert(simulatorWindow != null, "simulatorWindow must not be null");
+
+            object main = GetPropertyValue(simulatorWindow, "main", PublicInstance);
+            object current = GetPropertyValue(main, "currentDevice", PublicInstance);
+            return current == null ? null : DeviceName(current);
+        }
+
+        /// <summary>
+        /// Shows the named device. Precondition: friendlyName is one of
+        /// <see cref="LoadSimulatorDeviceNames"/>. Nothing happens when it is already shown. Throws
+        /// when the window's own device list does not contain the name.
+        /// </summary>
+        public static void SetSimulatorDevice(EditorWindow simulatorWindow, string friendlyName)
+        {
+            Debug.Assert(simulatorWindow != null, "simulatorWindow must not be null");
+            Debug.Assert(!string.IsNullOrEmpty(friendlyName), "friendlyName must not be empty");
+
+            object main = GetPropertyValue(simulatorWindow, "main", PublicInstance);
+            Array devices = GetPropertyValue(main, "devices", PublicInstance) as Array;
+            PropertyInfo deviceIndex = main?.GetType().GetProperty("deviceIndex", PublicInstance);
+            if (devices == null || deviceIndex == null)
+            {
+                throw new InvalidOperationException("The Device Simulator in this Unity version does not expose its device selection.");
+            }
+
+            int wanted = IndexOfDevice(devices, friendlyName);
+            if (wanted < 0)
+            {
+                throw new InvalidOperationException($"The Device Simulator has no device named \"{friendlyName}\".");
+            }
+
+            // The setter rebuilds the screen simulation even for the same index; the Simulator's own
+            // dropdown skips that case too.
+            int currentIndex = (int)InvokeUnwrapped(() => deviceIndex.GetValue(main));
+            if (currentIndex == wanted)
+            {
+                return;
+            }
+
+            InvokeUnwrapped(() =>
+            {
+                deviceIndex.SetValue(main, wanted);
+                return null;
+            });
+        }
+
+        private static int IndexOfDevice(Array devices, string friendlyName)
+        {
+            for (int index = 0; index < devices.Length; index++)
+            {
+                if (string.Equals(DeviceName(devices.GetValue(index)), friendlyName, StringComparison.Ordinal))
+                {
+                    return index;
+                }
+            }
+
+            return -1;
+        }
+
+        // DeviceInfoAsset.deviceInfo and DeviceInfo.friendlyName are public fields, not properties.
+        private static string DeviceName(object deviceInfoAsset)
+        {
+            object info = GetFieldValue(deviceInfoAsset, "deviceInfo");
+            return GetFieldValue(info, "friendlyName") as string;
+        }
+
+        private static object GetFieldValue(object target, string fieldName)
+        {
+            if (target == null)
+            {
+                return null;
+            }
+
+            FieldInfo field = target.GetType().GetField(fieldName, PublicInstance);
+            if (field == null)
+            {
+                return null;
+            }
+
+            return field.GetValue(target);
         }
 
         // ScreenOrientation still declares the obsolete alias Landscape with the same value as

@@ -146,7 +146,8 @@ editor state access; they are the only layer that sequences multi-step tool work
 Which view the Game tab shows: the Game view or the Device Simulator, the choice the Game /
 Simulator dropdown in the Game view toolbar makes. The first-party tool `game-view-mode` reports
 the current mode, or replaces the tab in place with the other one the same way the dropdown does. When it switches to the Simulator it rotates the simulated device to
-match the Game view's orientation as far as Player Settings allow. It never changes the play state;
+match the Game view's orientation as far as Player Settings allow, and `--device` shows a named
+device there, implying the Simulator mode when no target is given. It never changes the play state;
 `control-play-mode` does that.
 
 ### Pause point

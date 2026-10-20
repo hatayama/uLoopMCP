@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
@@ -59,6 +60,21 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         public string GetSimulatorRenderedOrientation()
         {
             return PlayModeViewSwitchBridge.GetSimulatorRenderedOrientation(CurrentSimulatorWindow());
+        }
+
+        public IReadOnlyList<string> LoadSimulatorDeviceNames()
+        {
+            return PlayModeViewSwitchBridge.LoadSimulatorDeviceNames();
+        }
+
+        public string GetSimulatorDeviceName()
+        {
+            return PlayModeViewSwitchBridge.GetSimulatorDeviceName(CurrentSimulatorWindow());
+        }
+
+        public void SetSimulatorDevice(string friendlyName)
+        {
+            PlayModeViewSwitchBridge.SetSimulatorDevice(CurrentSimulatorWindow(), friendlyName);
         }
 
         private EditorWindow CurrentSimulatorWindow()
