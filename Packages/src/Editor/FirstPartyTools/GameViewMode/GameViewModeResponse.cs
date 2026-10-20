@@ -18,7 +18,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         public string View { get; set; } = "";
 
         /// <summary>
-        /// True when the request swapped the tab or opened a view.
+        /// True when the request swapped the tab, opened a view, or changed the shown device.
         /// </summary>
         public bool Changed { get; set; }
 
