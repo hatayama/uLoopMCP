@@ -1,6 +1,6 @@
 ---
 name: uloop-pause-point
-description: "Breakpoint-like: pause Unity at a source file:line without editing code or recompiling, and get the locals, parameters, and fields there. Use to check values or confirm a code path ran."
+description: "Count how many times a source file:line runs (trace mode; zero hits shows it did not run), or pause there to read locals and screenshot that exact frame, without editing code. Use after a fix to confirm whether a code path ran."
 ---
 
 # uloop pause-point
