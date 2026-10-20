@@ -141,6 +141,14 @@ An Application-layer orchestration class that coordinates one tool execution flo
 domain services and infrastructure ports. UseCases contain no UI and no direct Unity
 editor state access; they are the only layer that sequences multi-step tool work.
 
+### Switch game view
+
+The first-party tool `switch-game-view` that replaces the current Game view tab in place with the
+Device Simulator, or the Simulator with a Game view, the same way the Game / Simulator dropdown in
+the Game view toolbar does. When it switches to the Simulator it rotates the simulated device to
+match the Game view's orientation as far as Player Settings allow. It never changes the play state;
+`control-play-mode` does that.
+
 ### Pause point
 
 A registry entry (`UloopPausePointRegistry`) that freezes PlayMode when a specific code path

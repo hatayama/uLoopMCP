@@ -758,6 +758,23 @@
       }
     },
     {
+      "name": "switch-game-view",
+      "description": "Switch the current Game view tab to the Device Simulator or back, rotating the simulated device to match the Game view's orientation. Use before Play when the UI must be checked in a device frame.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "To": {
+            "type": "string",
+            "description": "Simulator switches the current Game view tab to the Device Simulator in place and rotates the device to match the Game view (landscape or portrait) when Player Settings allow that orientation; GameView switches back. Omit to report the current view without changing it.",
+            "enum": [
+              "GameView",
+              "Simulator"
+            ]
+          }
+        }
+      }
+    },
+    {
       "name": "hot-reload",
       "description": "Apply C# edits to the running Editor without a compile or domain reload, keeping Play Mode state. Use instead of compile after editing method bodies or adding methods, fields, or new classes.",
       "inputSchema": {
