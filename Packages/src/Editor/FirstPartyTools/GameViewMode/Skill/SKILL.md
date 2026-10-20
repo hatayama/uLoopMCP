@@ -1,17 +1,17 @@
 ---
-name: uloop-switch-game-view
-toolName: switch-game-view
-description: "Switch the current Game view tab to the Device Simulator or back, rotating the simulated device to match the Game view's orientation. Use before Play when the UI must be checked in a device frame."
+name: uloop-game-view-mode
+toolName: game-view-mode
+description: "Show which view the Game tab is showing, or switch it between the Game view and the Device Simulator, rotating the simulated device to match the Game view's orientation. Use before Play when the UI must be checked in a device frame."
 ---
 
-# uloop switch-game-view
+# uloop game-view-mode
 
-Switch the current Game view tab to the Device Simulator or back, rotating the simulated device to match the Game view's orientation.
+Show which view the Game tab is showing, or switch it between the Game view and the Device Simulator, rotating the simulated device to match the Game view's orientation.
 
 ## Usage
 
 ```bash
-uloop switch-game-view [--to <GameView|Simulator>]
+uloop game-view-mode [--to <GameView|Simulator>]
 ```
 
 ## Parameters
@@ -36,14 +36,14 @@ Returns JSON containing:
 
 ```bash
 # Report which view is showing
-uloop switch-game-view
+uloop game-view-mode
 
 # Play in the Device Simulator, rotated like the Game view
-uloop switch-game-view --to Simulator
+uloop game-view-mode --to Simulator
 uloop control-play-mode --action Play
 
 # Back to the plain Game view
-uloop switch-game-view --to GameView
+uloop game-view-mode --to GameView
 ```
 
 ## Notes

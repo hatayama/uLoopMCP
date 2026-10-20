@@ -14,7 +14,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
     /// <summary>
     /// Verifies the Switch Game View use case against a fake Editor port, without a DockArea.
     /// </summary>
-    public sealed class SwitchGameViewUseCaseTests
+    public sealed class GameViewModeUseCaseTests
     {
         private static readonly Vector2 LandscapeSize = new(1920f, 1080f);
         private static readonly Vector2 PortraitSize = new(1080f, 1920f);
@@ -24,9 +24,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             return new OrientationPolicy(UIOrientation.AutoRotation, true, true, true, true);
         }
 
-        private static SwitchGameViewSchema Request(SwitchGameViewTarget? to)
+        private static GameViewModeSchema Request(GameViewModeTarget? to)
         {
-            return new SwitchGameViewSchema { To = to };
+            return new GameViewModeSchema { To = to };
         }
 
         [Test]
@@ -35,7 +35,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             // Verifies omitting --to only reports the current Game view and touches nothing.
             FakeGameViewSwitchPort port = new() { Kind = PlayModeViewKind.GameView };
 
-            SwitchGameViewResponse response = new SwitchGameViewUseCase(port).Execute(Request(null));
+            GameViewModeResponse response = new GameViewModeUseCase(port).Execute(Request(null));
 
             Assert.That(port.CountCalls("SwapMainViewTo"), Is.Zero);
             Assert.That(port.CountCalls("OpenView"), Is.Zero);
@@ -53,7 +53,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             // Verifies the status form includes the Simulator's rendered orientation.
             FakeGameViewSwitchPort port = new() { Kind = PlayModeViewKind.Simulator, Rendered = "Portrait" };
 
-            SwitchGameViewResponse response = new SwitchGameViewUseCase(port).Execute(Request(null));
+            GameViewModeResponse response = new GameViewModeUseCase(port).Execute(Request(null));
 
             Assert.That(response.Changed, Is.False);
             Assert.That(response.View, Is.EqualTo("Simulator"));
@@ -66,7 +66,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             // Verifies the status form reports "None" when no Play Mode view is open.
             FakeGameViewSwitchPort port = new() { Kind = PlayModeViewKind.None };
 
-            SwitchGameViewResponse response = new SwitchGameViewUseCase(port).Execute(Request(null));
+            GameViewModeResponse response = new GameViewModeUseCase(port).Execute(Request(null));
 
             Assert.That(response.View, Is.EqualTo("None"));
             Assert.That(response.Changed, Is.False);
@@ -84,8 +84,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
                 Rendered = "Portrait",
             };
 
-            SwitchGameViewResponse response =
-                new SwitchGameViewUseCase(port).Execute(Request(SwitchGameViewTarget.Simulator));
+            GameViewModeResponse response =
+                new GameViewModeUseCase(port).Execute(Request(GameViewModeTarget.Simulator));
 
             Assert.That(port.IndexOfCall("GetMainViewTargetSize"), Is.LessThan(port.IndexOfCall("SwapMainViewTo:Simulator")));
             Assert.That(port.CountCalls("SwapMainViewTo"), Is.EqualTo(1));
@@ -111,8 +111,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
                 Rendered = "LandscapeLeft",
             };
 
-            SwitchGameViewResponse response =
-                new SwitchGameViewUseCase(port).Execute(Request(SwitchGameViewTarget.Simulator));
+            GameViewModeResponse response =
+                new GameViewModeUseCase(port).Execute(Request(GameViewModeTarget.Simulator));
 
             Assert.That(port.Calls, Does.Contain("TrySetSimulatorRotation:0"));
             Assert.That(response.SimulatorOrientation, Is.EqualTo("Portrait"));
@@ -130,8 +130,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
                 Rendered = "Portrait",
             };
 
-            SwitchGameViewResponse response =
-                new SwitchGameViewUseCase(port).Execute(Request(SwitchGameViewTarget.Simulator));
+            GameViewModeResponse response =
+                new GameViewModeUseCase(port).Execute(Request(GameViewModeTarget.Simulator));
 
             Assert.That(port.CountCalls("SwapMainViewTo"), Is.EqualTo(1));
             Assert.That(port.CountCalls("TrySetSimulatorRotation"), Is.Zero);
@@ -154,8 +154,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
                 Rendered = "Portrait",
             };
 
-            SwitchGameViewResponse response =
-                new SwitchGameViewUseCase(port).Execute(Request(SwitchGameViewTarget.Simulator));
+            GameViewModeResponse response =
+                new GameViewModeUseCase(port).Execute(Request(GameViewModeTarget.Simulator));
 
             Assert.That(port.Calls, Does.Contain("TrySetSimulatorRotation:270"));
             Assert.That(response.Warning, Does.Contain("could not be applied"));
@@ -179,8 +179,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
                 RenderedOverride = "Portrait",
             };
 
-            SwitchGameViewResponse response =
-                new SwitchGameViewUseCase(port).Execute(Request(SwitchGameViewTarget.Simulator));
+            GameViewModeResponse response =
+                new GameViewModeUseCase(port).Execute(Request(GameViewModeTarget.Simulator));
 
             Assert.That(response.Warning, Does.Contain("may not support"));
             Assert.That(response.SimulatorOrientation, Is.EqualTo("Portrait"));
@@ -192,8 +192,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             // Verifies asking for the Simulator while it is showing swaps and rotates nothing.
             FakeGameViewSwitchPort port = new() { Kind = PlayModeViewKind.Simulator, Rendered = "LandscapeLeft" };
 
-            SwitchGameViewResponse response =
-                new SwitchGameViewUseCase(port).Execute(Request(SwitchGameViewTarget.Simulator));
+            GameViewModeResponse response =
+                new GameViewModeUseCase(port).Execute(Request(GameViewModeTarget.Simulator));
 
             Assert.That(port.CountCalls("SwapMainViewTo"), Is.Zero);
             Assert.That(port.CountCalls("TrySetSimulatorRotation"), Is.Zero);
@@ -208,8 +208,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             // Verifies a missing Play Mode view is replaced by a new Simulator window, rotation untouched.
             FakeGameViewSwitchPort port = new() { Kind = PlayModeViewKind.None };
 
-            SwitchGameViewResponse response =
-                new SwitchGameViewUseCase(port).Execute(Request(SwitchGameViewTarget.Simulator));
+            GameViewModeResponse response =
+                new GameViewModeUseCase(port).Execute(Request(GameViewModeTarget.Simulator));
 
             Assert.That(port.CountCalls("OpenView:Simulator"), Is.EqualTo(1));
             Assert.That(port.CountCalls("SwapMainViewTo"), Is.Zero);
@@ -225,8 +225,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             // Verifies an Editor without the Device Simulator gets a failed response and no swap.
             FakeGameViewSwitchPort port = new() { Kind = PlayModeViewKind.GameView, SimulatorAvailable = false };
 
-            SwitchGameViewResponse response =
-                new SwitchGameViewUseCase(port).Execute(Request(SwitchGameViewTarget.Simulator));
+            GameViewModeResponse response =
+                new GameViewModeUseCase(port).Execute(Request(GameViewModeTarget.Simulator));
 
             Assert.That(response.Success, Is.False);
             Assert.That(port.CountCalls("SwapMainViewTo"), Is.Zero);
@@ -241,8 +241,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             // Verifies switching back needs no size read and reports no Simulator orientation.
             FakeGameViewSwitchPort port = new() { Kind = PlayModeViewKind.Simulator };
 
-            SwitchGameViewResponse response =
-                new SwitchGameViewUseCase(port).Execute(Request(SwitchGameViewTarget.GameView));
+            GameViewModeResponse response =
+                new GameViewModeUseCase(port).Execute(Request(GameViewModeTarget.GameView));
 
             Assert.That(port.CountCalls("SwapMainViewTo:GameView"), Is.EqualTo(1));
             Assert.That(port.CountCalls("GetMainViewTargetSize"), Is.Zero);
@@ -257,8 +257,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             // Verifies asking for the Game view while it is showing is a no-op.
             FakeGameViewSwitchPort port = new() { Kind = PlayModeViewKind.GameView };
 
-            SwitchGameViewResponse response =
-                new SwitchGameViewUseCase(port).Execute(Request(SwitchGameViewTarget.GameView));
+            GameViewModeResponse response =
+                new GameViewModeUseCase(port).Execute(Request(GameViewModeTarget.GameView));
 
             Assert.That(port.CountCalls("SwapMainViewTo"), Is.Zero);
             Assert.That(port.CountCalls("OpenView"), Is.Zero);
@@ -272,8 +272,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             // Verifies a missing Play Mode view is replaced by a new Game view window.
             FakeGameViewSwitchPort port = new() { Kind = PlayModeViewKind.None };
 
-            SwitchGameViewResponse response =
-                new SwitchGameViewUseCase(port).Execute(Request(SwitchGameViewTarget.GameView));
+            GameViewModeResponse response =
+                new GameViewModeUseCase(port).Execute(Request(GameViewModeTarget.GameView));
 
             Assert.That(port.CountCalls("OpenView:GameView"), Is.EqualTo(1));
             Assert.That(response.Changed, Is.True);
@@ -292,7 +292,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             };
 
             Assert.That(
-                () => new SwitchGameViewUseCase(port).Execute(Request(SwitchGameViewTarget.Simulator)),
+                () => new GameViewModeUseCase(port).Execute(Request(GameViewModeTarget.Simulator)),
                 Throws.InvalidOperationException);
             Assert.That(port.CountCalls("TrySetSimulatorRotation"), Is.Zero);
         }

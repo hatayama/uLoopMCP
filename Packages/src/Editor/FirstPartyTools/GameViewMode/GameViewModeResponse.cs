@@ -5,7 +5,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
     /// <summary>
     /// Reports which Play Mode view was showing before and after a Switch Game View request.
     /// </summary>
-    public sealed class SwitchGameViewResponse : UnityCliLoopToolResponse
+    public sealed class GameViewModeResponse : UnityCliLoopToolResponse
     {
         /// <summary>
         /// View before the request: "GameView", "Simulator", "None", or "Other".

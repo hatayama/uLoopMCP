@@ -6,7 +6,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
     /// Which Play Mode view the current Game view tab becomes. Spelled like Unity's own concepts
     /// (ADR 0006).
     /// </summary>
-    public enum SwitchGameViewTarget
+    public enum GameViewModeTarget
     {
         GameView = 0,
         Simulator = 1,
@@ -15,11 +15,11 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
     /// <summary>
     /// Describes the optional target accepted by the Switch Game View tool.
     /// </summary>
-    public sealed class SwitchGameViewSchema : UnityCliLoopToolSchema
+    public sealed class GameViewModeSchema : UnityCliLoopToolSchema
     {
         /// <summary>
         /// Target view. Omit to report the current view without changing it.
         /// </summary>
-        public SwitchGameViewTarget? To { get; set; }
+        public GameViewModeTarget? To { get; set; }
     }
 }

@@ -758,8 +758,8 @@
       }
     },
     {
-      "name": "switch-game-view",
-      "description": "Switch the current Game view tab to the Device Simulator or back, rotating the simulated device to match the Game view's orientation. Use before Play when the UI must be checked in a device frame.",
+      "name": "game-view-mode",
+      "description": "Show which view the Game tab is showing, or switch it between the Game view and the Device Simulator, rotating the simulated device to match the Game view's orientation. Use before Play when the UI must be checked in a device frame.",
       "inputSchema": {
         "type": "object",
         "properties": {

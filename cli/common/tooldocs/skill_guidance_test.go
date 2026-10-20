@@ -156,11 +156,11 @@ func repositoryRoot(t *testing.T) string {
 	}
 }
 
-// Verifies switch-game-view points at its own skill rather than being folded into the Game view
-// size skill it sits next to in the catalog.
-func TestSkillGuidanceLineNamesTheSwitchGameViewSkill(t *testing.T) {
-	line, ok := SkillGuidanceLine("switch-game-view")
-	if !ok || !strings.Contains(line, "uloop-switch-game-view") {
-		t.Errorf("guidance line = %q (ok %v), want it to name uloop-switch-game-view", line, ok)
+// Verifies game-view-mode points at its own skill rather than being folded into the Game view size
+// skill it sits next to in the catalog.
+func TestSkillGuidanceLineNamesTheGameViewModeSkill(t *testing.T) {
+	line, ok := SkillGuidanceLine("game-view-mode")
+	if !ok || !strings.Contains(line, "uloop-game-view-mode") {
+		t.Errorf("guidance line = %q (ok %v), want it to name uloop-game-view-mode", line, ok)
 	}
 }

@@ -8,17 +8,17 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
     /// Decides whether the current Play Mode view tab must be swapped, swaps it, and rotates the
     /// simulated device to match the Game view's orientation.
     /// </summary>
-    internal sealed class SwitchGameViewUseCase
+    internal sealed class GameViewModeUseCase
     {
         private readonly IGameViewSwitchPort _port;
 
-        public SwitchGameViewUseCase(IGameViewSwitchPort port)
+        public GameViewModeUseCase(IGameViewSwitchPort port)
         {
             Debug.Assert(port != null, "port must not be null");
             _port = port;
         }
 
-        public SwitchGameViewResponse Execute(SwitchGameViewSchema parameters)
+        public GameViewModeResponse Execute(GameViewModeSchema parameters)
         {
             Debug.Assert(parameters != null, "parameters must not be null");
 
@@ -52,21 +52,21 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             return SwapToGameView(current);
         }
 
-        private SwitchGameViewResponse Report(PlayModeViewKind current)
+        private GameViewModeResponse Report(PlayModeViewKind current)
         {
             string orientation = current == PlayModeViewKind.Simulator ? _port.GetSimulatorRenderedOrientation() : null;
             return Build(current, current, false, orientation, $"The current Play Mode view is {Label(current)}.", string.Empty);
         }
 
-        private SwitchGameViewResponse AlreadyThere(PlayModeViewKind current)
+        private GameViewModeResponse AlreadyThere(PlayModeViewKind current)
         {
             string orientation = current == PlayModeViewKind.Simulator ? _port.GetSimulatorRenderedOrientation() : null;
             return Build(current, current, false, orientation, $"The Play Mode view is already {Label(current)}.", string.Empty);
         }
 
-        private static SwitchGameViewResponse SimulatorUnavailable(PlayModeViewKind current)
+        private static GameViewModeResponse SimulatorUnavailable(PlayModeViewKind current)
         {
-            SwitchGameViewResponse response = Build(
+            GameViewModeResponse response = Build(
                 current,
                 current,
                 false,
@@ -77,7 +77,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             return response;
         }
 
-        private SwitchGameViewResponse Open(PlayModeViewKind target)
+        private GameViewModeResponse Open(PlayModeViewKind target)
         {
             // Opening a fresh view has no Game view shape to copy, so the Simulator keeps its own rotation.
             _port.OpenView(target);
@@ -91,13 +91,13 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 string.Empty);
         }
 
-        private SwitchGameViewResponse SwapToGameView(PlayModeViewKind current)
+        private GameViewModeResponse SwapToGameView(PlayModeViewKind current)
         {
             _port.SwapMainViewTo(PlayModeViewKind.GameView);
             return Build(current, PlayModeViewKind.GameView, true, null, $"Switched {Label(current)} to the Game view.", string.Empty);
         }
 
-        private SwitchGameViewResponse SwapToSimulator(PlayModeViewKind current)
+        private GameViewModeResponse SwapToSimulator(PlayModeViewKind current)
         {
             // The size must be read before the swap: afterwards the main view is the Simulator, whose
             // rendering resolution is the device screen, not the shape the user was looking at.
@@ -146,9 +146,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             return first + " " + second;
         }
 
-        private static PlayModeViewKind ToKind(SwitchGameViewTarget target)
+        private static PlayModeViewKind ToKind(GameViewModeTarget target)
         {
-            return target == SwitchGameViewTarget.Simulator ? PlayModeViewKind.Simulator : PlayModeViewKind.GameView;
+            return target == GameViewModeTarget.Simulator ? PlayModeViewKind.Simulator : PlayModeViewKind.GameView;
         }
 
         private static string Label(PlayModeViewKind kind)
@@ -166,7 +166,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             }
         }
 
-        private static SwitchGameViewResponse Build(
+        private static GameViewModeResponse Build(
             PlayModeViewKind previous,
             PlayModeViewKind view,
             bool changed,
@@ -174,7 +174,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             string message,
             string warning)
         {
-            return new SwitchGameViewResponse
+            return new GameViewModeResponse
             {
                 PreviousView = previous.ToString(),
                 View = view.ToString(),

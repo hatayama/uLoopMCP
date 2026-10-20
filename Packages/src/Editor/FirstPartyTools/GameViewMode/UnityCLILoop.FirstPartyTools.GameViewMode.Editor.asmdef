@@ -1,5 +1,5 @@
 {
-    "name": "UnityCLILoop.FirstPartyTools.SwitchGameView.Editor",
+    "name": "UnityCLILoop.FirstPartyTools.GameViewMode.Editor",
     "rootNamespace": "io.github.hatayama.UnityCliLoop.FirstPartyTools",
     "references": [
         "GUID:fc3fd32eddbee40e39c2d76dc184957b",
