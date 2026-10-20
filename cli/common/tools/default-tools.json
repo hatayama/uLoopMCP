@@ -72,7 +72,7 @@
     },
     {
       "name": "run-tests",
-      "description": "Run Unity Test Runner and report detailed results. Use for EditMode/PlayMode tests, change verification, or failure diagnosis.",
+      "description": "Run Unity Test Runner and report detailed results. Use for EditMode/PlayMode tests or failure diagnosis; for runtime behavior the tests do not exercise, use pause-point (trace) or record-video.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -818,7 +818,7 @@
     },
     {
       "name": "record-video",
-      "description": "Record the Game View or any Editor window (Scene, Inspector, ...) to an .mp4 or .webm video. Use when a screenshot is not enough: motion, animation, physics, or a gameplay sequence.",
+      "description": "Record the Game View or any Editor window (Scene, Inspector, ...) to .mp4 or .webm. Use to verify motion after a change (fades, cut-ins, transitions, effect order) or anything a screenshot cannot show.",
       "inputSchema": {
         "type": "object",
         "properties": {

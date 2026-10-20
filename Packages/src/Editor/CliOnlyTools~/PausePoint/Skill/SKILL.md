@@ -85,9 +85,7 @@ Clear one or all registered C# watch expressions
 
 ## Status, Timeouts, Hot Reload
 
-`uloop pause-point-status` with no target lists every marker; inspect one with `--id "<file>:<line>"` or with `--file`/`--line` together (never both). `await-pause-point` and `clear-pause-point` take the same two forms; await always needs a target.
-
-On a wait timeout, `PAUSE_POINT_EXPIRED`, or an enable failure, read `Error.Details.Hint` or the failure `ErrorCode`, then `RecommendedNextAction`. After hot reload, `--line` stays the editor's line number.
+Target forms for `pause-point-status` / `await-pause-point` / `clear-pause-point`, what to read on a timeout or enable failure, and line numbers after hot reload: `references/troubleshooting.md`.
 
 ## Requirements & Safety
 
