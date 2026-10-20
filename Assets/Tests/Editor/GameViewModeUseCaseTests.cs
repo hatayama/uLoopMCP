@@ -29,6 +29,21 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             return new GameViewModeSchema { To = to };
         }
 
+        private static GameViewModeSchema DeviceRequest(GameViewModeTarget? to, string device)
+        {
+            return new GameViewModeSchema { To = to, Device = device };
+        }
+
+        private static GameViewModeSchema ListRequest()
+        {
+            return new GameViewModeSchema { ListDevices = true };
+        }
+
+        private static int IndexOfRotationCall(FakeGameViewSwitchPort port)
+        {
+            return port.Calls.FindIndex(call => call.StartsWith("TrySetSimulatorRotation", StringComparison.Ordinal));
+        }
+
         [Test]
         public void Execute_WithoutTargetOnGameView_ReportsWithoutChanging()
         {
@@ -314,6 +329,276 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             Assert.That(port.CountCalls("TrySetSimulatorRotation"), Is.Zero);
         }
 
+        [Test]
+        public void Execute_DeviceWithGameViewTarget_IsRejectedBeforeTouchingTheView()
+        {
+            // Verifies --device together with --to GameView fails without any Editor call.
+            FakeGameViewSwitchPort port = new() { Kind = PlayModeViewKind.Simulator };
+
+            GameViewModeResponse response =
+                new GameViewModeUseCase(port).Execute(DeviceRequest(GameViewModeTarget.GameView, "iPhone 12"));
+
+            Assert.That(response.Success, Is.False);
+            Assert.That(response.Message, Does.Contain("--to Simulator"));
+            Assert.That(response.View, Is.EqualTo("Simulator"));
+            Assert.That(response.Changed, Is.False);
+            Assert.That(port.CountCalls("SwapMainViewTo"), Is.Zero);
+            Assert.That(port.CountCalls("LoadSimulatorDeviceNames"), Is.Zero);
+            Assert.That(port.CountCalls("SetSimulatorDevice"), Is.Zero);
+        }
+
+        [Test]
+        public void Execute_BlankDevice_IsRejectedWithoutLoadingDevices()
+        {
+            // Verifies a whitespace-only device name fails before the device list is read.
+            FakeGameViewSwitchPort port = new();
+
+            GameViewModeResponse response = new GameViewModeUseCase(port).Execute(DeviceRequest(null, "   "));
+
+            Assert.That(response.Success, Is.False);
+            Assert.That(response.Message, Does.Contain("device name"));
+            Assert.That(response.Changed, Is.False);
+            Assert.That(port.CountCalls("LoadSimulatorDeviceNames"), Is.Zero);
+            Assert.That(port.CountCalls("SwapMainViewTo"), Is.Zero);
+        }
+
+        [Test]
+        public void Execute_DeviceAlone_ImpliesSimulatorAndSelectsBeforeRotating()
+        {
+            // Verifies --device without --to swaps to the Simulator, selects the device after the
+            // swap and before the rotation, and reports the device.
+            FakeGameViewSwitchPort port = new() { TargetSize = LandscapeSize };
+
+            GameViewModeResponse response = new GameViewModeUseCase(port).Execute(DeviceRequest(null, "iPhone 12"));
+
+            Assert.That(response.Success, Is.True);
+            Assert.That(response.View, Is.EqualTo("Simulator"));
+            Assert.That(response.Changed, Is.True);
+            Assert.That(response.Device, Is.EqualTo("Apple iPhone 12"));
+            Assert.That(response.SimulatorOrientation, Is.EqualTo("LandscapeLeft"));
+            Assert.That(response.Message, Does.Contain("shows Apple iPhone 12"));
+            int swap = port.IndexOfCall("SwapMainViewTo:Simulator");
+            int select = port.IndexOfCall("SetSimulatorDevice:Apple iPhone 12");
+            int rotate = IndexOfRotationCall(port);
+            Assert.That(swap, Is.GreaterThanOrEqualTo(0));
+            Assert.That(select, Is.GreaterThan(swap));
+            Assert.That(rotate, Is.GreaterThan(select));
+        }
+
+        [Test]
+        public void Execute_DeviceWithSimulatorTarget_SelectsTheDevice()
+        {
+            // Verifies an explicit --to Simulator with --device takes the same path as --device alone.
+            FakeGameViewSwitchPort port = new();
+
+            GameViewModeResponse response =
+                new GameViewModeUseCase(port).Execute(DeviceRequest(GameViewModeTarget.Simulator, "iPhone 12"));
+
+            Assert.That(response.Success, Is.True);
+            Assert.That(response.Device, Is.EqualTo("Apple iPhone 12"));
+            Assert.That(port.CountCalls("SwapMainViewTo:Simulator"), Is.EqualTo(1));
+            Assert.That(port.CountCalls("SetSimulatorDevice:Apple iPhone 12"), Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Execute_DeviceWhenAlreadySimulator_ChangesOnlyTheDevice()
+        {
+            // Verifies --device on a Simulator already showing another device swaps nothing and
+            // selects the device, reporting a change.
+            FakeGameViewSwitchPort port = new() { Kind = PlayModeViewKind.Simulator, CurrentDevice = "Google Pixel 5" };
+
+            GameViewModeResponse response = new GameViewModeUseCase(port).Execute(DeviceRequest(null, "iPhone 12"));
+
+            Assert.That(response.Success, Is.True);
+            Assert.That(response.PreviousView, Is.EqualTo("Simulator"));
+            Assert.That(response.View, Is.EqualTo("Simulator"));
+            Assert.That(response.Changed, Is.True);
+            Assert.That(response.Device, Is.EqualTo("Apple iPhone 12"));
+            Assert.That(response.Message, Does.Contain("Selected Apple iPhone 12"));
+            Assert.That(port.CountCalls("SwapMainViewTo"), Is.Zero);
+            Assert.That(port.CountCalls("SetSimulatorDevice"), Is.EqualTo(1));
+            Assert.That(port.CountCalls("TrySetSimulatorRotation"), Is.Zero);
+        }
+
+        [Test]
+        public void Execute_DeviceAlreadyShown_IsANoOp()
+        {
+            // Verifies naming the device the Simulator already shows changes nothing and says so.
+            FakeGameViewSwitchPort port = new() { Kind = PlayModeViewKind.Simulator, CurrentDevice = "Apple iPhone 12" };
+
+            GameViewModeResponse response = new GameViewModeUseCase(port).Execute(DeviceRequest(null, "iPhone 12"));
+
+            Assert.That(response.Success, Is.True);
+            Assert.That(response.Changed, Is.False);
+            Assert.That(response.Device, Is.EqualTo("Apple iPhone 12"));
+            Assert.That(response.Message, Does.Contain("already shows Apple iPhone 12"));
+            Assert.That(port.CountCalls("SetSimulatorDevice"), Is.Zero);
+            Assert.That(port.CountCalls("SwapMainViewTo"), Is.Zero);
+        }
+
+        [Test]
+        public void Execute_AmbiguousDevice_FailsBeforeSwappingAndListsCandidates()
+        {
+            // Verifies a name matching several devices fails before the swap and lists only those devices.
+            FakeGameViewSwitchPort port = new();
+
+            GameViewModeResponse response = new GameViewModeUseCase(port).Execute(DeviceRequest(null, "iPhone"));
+
+            Assert.That(response.Success, Is.False);
+            Assert.That(response.Message, Does.Contain("matches 2 devices"));
+            Assert.That(response.AvailableDevices, Is.EqualTo(new[] { "Apple iPhone 12", "Apple iPhone 12 Pro" }));
+            Assert.That(response.View, Is.EqualTo("GameView"));
+            Assert.That(response.Changed, Is.False);
+            Assert.That(port.CountCalls("SwapMainViewTo"), Is.Zero);
+            Assert.That(port.CountCalls("SetSimulatorDevice"), Is.Zero);
+        }
+
+        [Test]
+        public void Execute_UnknownDevice_FailsBeforeSwappingAndListsAllDevices()
+        {
+            // Verifies a name matching no device fails before the swap and lists every device.
+            FakeGameViewSwitchPort port = new();
+
+            GameViewModeResponse response = new GameViewModeUseCase(port).Execute(DeviceRequest(null, "Nokia"));
+
+            Assert.That(response.Success, Is.False);
+            Assert.That(response.Message, Does.Contain("No device matches"));
+            Assert.That(response.AvailableDevices, Is.EqualTo(port.DeviceNames.ToArray()));
+            Assert.That(response.Changed, Is.False);
+            Assert.That(port.CountCalls("SwapMainViewTo"), Is.Zero);
+        }
+
+        [Test]
+        public void Execute_DeviceWhenNoViewIsOpen_OpensThenSelects()
+        {
+            // Verifies --device with no Play Mode view opens the Simulator and then selects the device.
+            FakeGameViewSwitchPort port = new() { Kind = PlayModeViewKind.None };
+
+            GameViewModeResponse response = new GameViewModeUseCase(port).Execute(DeviceRequest(null, "iPhone 12"));
+
+            Assert.That(response.Success, Is.True);
+            Assert.That(response.PreviousView, Is.EqualTo("None"));
+            Assert.That(response.View, Is.EqualTo("Simulator"));
+            Assert.That(response.Changed, Is.True);
+            Assert.That(response.Device, Is.EqualTo("Apple iPhone 12"));
+            Assert.That(port.IndexOfCall("SetSimulatorDevice:Apple iPhone 12"), Is.GreaterThan(port.IndexOfCall("OpenView:Simulator")));
+            Assert.That(port.CountCalls("TrySetSimulatorRotation"), Is.Zero);
+        }
+
+        [Test]
+        public void Execute_DeviceWhenSimulatorIsUnavailable_FailsWithoutLoadingDevices()
+        {
+            // Verifies --device on an Editor without the Simulator fails before reading the device list.
+            FakeGameViewSwitchPort port = new() { SimulatorAvailable = false };
+
+            GameViewModeResponse response = new GameViewModeUseCase(port).Execute(DeviceRequest(null, "iPhone 12"));
+
+            Assert.That(response.Success, Is.False);
+            Assert.That(response.Message, Does.Contain("not available"));
+            Assert.That(port.CountCalls("LoadSimulatorDeviceNames"), Is.Zero);
+            Assert.That(port.CountCalls("SwapMainViewTo"), Is.Zero);
+        }
+
+        [Test]
+        public void Execute_SimulatorWithoutDevice_LeavesTheDeviceAlone()
+        {
+            // Verifies --to Simulator without --device neither reads the device list nor selects a device.
+            FakeGameViewSwitchPort port = new();
+
+            GameViewModeResponse response = new GameViewModeUseCase(port).Execute(Request(GameViewModeTarget.Simulator));
+
+            Assert.That(response.Success, Is.True);
+            Assert.That(response.Device, Is.EqualTo("Google Pixel 5"));
+            Assert.That(port.CountCalls("LoadSimulatorDeviceNames"), Is.Zero);
+            Assert.That(port.CountCalls("SetSimulatorDevice"), Is.Zero);
+        }
+
+        [Test]
+        public void Execute_ReportOnSimulator_IncludesTheDevice()
+        {
+            // Verifies the no-argument report names the device the Simulator shows.
+            FakeGameViewSwitchPort port = new() { Kind = PlayModeViewKind.Simulator, CurrentDevice = "Google Pixel 5" };
+
+            GameViewModeResponse response = new GameViewModeUseCase(port).Execute(Request(null));
+
+            Assert.That(response.Device, Is.EqualTo("Google Pixel 5"));
+            Assert.That(response.Changed, Is.False);
+            Assert.That(port.CountCalls("SetSimulatorDevice"), Is.Zero);
+        }
+
+        [Test]
+        public void Execute_ReportOnGameView_OmitsDeviceAndAvailableDevices()
+        {
+            // Verifies neither device field is serialized when the Game view is showing and no list was asked for.
+            FakeGameViewSwitchPort port = new();
+
+            GameViewModeResponse response = new GameViewModeUseCase(port).Execute(Request(null));
+
+            JObject json = JObject.FromObject(response);
+            Assert.That(json["Device"], Is.Null);
+            Assert.That(json["AvailableDevices"], Is.Null);
+        }
+
+        [Test]
+        public void Execute_ListDevices_AddsEveryDeviceWithoutChangingTheView()
+        {
+            // Verifies --list-devices reports every device name and touches nothing.
+            FakeGameViewSwitchPort port = new();
+
+            GameViewModeResponse response = new GameViewModeUseCase(port).Execute(ListRequest());
+
+            Assert.That(response.Success, Is.True);
+            Assert.That(response.AvailableDevices, Is.EqualTo(port.DeviceNames.ToArray()));
+            Assert.That(response.View, Is.EqualTo("GameView"));
+            Assert.That(response.Changed, Is.False);
+            Assert.That(port.CountCalls("SwapMainViewTo"), Is.Zero);
+            Assert.That(port.CountCalls("SetSimulatorDevice"), Is.Zero);
+        }
+
+        [Test]
+        public void Execute_ListDevicesWhenSimulatorIsUnavailable_Fails()
+        {
+            // Verifies --list-devices on an Editor without the Simulator fails instead of listing nothing.
+            FakeGameViewSwitchPort port = new() { SimulatorAvailable = false };
+
+            GameViewModeResponse response = new GameViewModeUseCase(port).Execute(ListRequest());
+
+            Assert.That(response.Success, Is.False);
+            Assert.That(response.AvailableDevices, Is.Null);
+            Assert.That(port.CountCalls("LoadSimulatorDeviceNames"), Is.Zero);
+        }
+
+        [Test]
+        public void Execute_ListDevicesWithGameViewTargetWhenSimulatorIsUnavailable_FailsWithoutOpening()
+        {
+            // Verifies asking for the device list fails up front even when the view request alone
+            // would have succeeded, so no view is opened for a request that cannot be completed.
+            FakeGameViewSwitchPort port = new() { Kind = PlayModeViewKind.None, SimulatorAvailable = false };
+
+            GameViewModeResponse response =
+                new GameViewModeUseCase(port).Execute(new GameViewModeSchema { To = GameViewModeTarget.GameView, ListDevices = true });
+
+            Assert.That(response.Success, Is.False);
+            Assert.That(response.View, Is.EqualTo("None"));
+            Assert.That(port.CountCalls("OpenView"), Is.Zero);
+            Assert.That(port.CountCalls("LoadSimulatorDeviceNames"), Is.Zero);
+        }
+
+        [Test]
+        public void Execute_ListDevicesWithDevice_ReadsTheListOnce()
+        {
+            // Verifies --device and --list-devices together read the device list a single time.
+            FakeGameViewSwitchPort port = new();
+
+            GameViewModeResponse response =
+                new GameViewModeUseCase(port).Execute(new GameViewModeSchema { Device = "iPhone 12", ListDevices = true });
+
+            Assert.That(response.Success, Is.True);
+            Assert.That(response.Device, Is.EqualTo("Apple iPhone 12"));
+            Assert.That(response.AvailableDevices, Is.EqualTo(port.DeviceNames.ToArray()));
+            Assert.That(port.CountCalls("LoadSimulatorDeviceNames"), Is.EqualTo(1));
+        }
+
         private sealed class FakeGameViewSwitchPort : IGameViewSwitchPort
         {
             public PlayModeViewKind Kind { get; set; } = PlayModeViewKind.GameView;
@@ -324,6 +609,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             public string Rendered { get; set; } = "Portrait";
             public string RenderedOverride { get; set; }
             public Exception SwapException { get; set; }
+            public List<string> DeviceNames { get; } = new() { "Apple iPhone 12", "Apple iPhone 12 Pro", "Google Pixel 5" };
+            public string CurrentDevice { get; set; } = "Google Pixel 5";
             public List<string> Calls { get; } = new();
 
             public int CountCalls(string prefix)
@@ -394,6 +681,24 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             {
                 Calls.Add("GetSimulatorRenderedOrientation");
                 return RenderedOverride ?? Rendered;
+            }
+
+            public IReadOnlyList<string> LoadSimulatorDeviceNames()
+            {
+                Calls.Add("LoadSimulatorDeviceNames");
+                return DeviceNames;
+            }
+
+            public string GetSimulatorDeviceName()
+            {
+                Calls.Add("GetSimulatorDeviceName");
+                return CurrentDevice;
+            }
+
+            public void SetSimulatorDevice(string friendlyName)
+            {
+                Calls.Add("SetSimulatorDevice:" + friendlyName);
+                CurrentDevice = friendlyName;
             }
 
             private static string OrientationFor(int degrees)

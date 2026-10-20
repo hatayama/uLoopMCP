@@ -33,6 +33,28 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             return !string.IsNullOrEmpty(SimulatorOrientation);
         }
 
+        /// <summary>
+        /// Name of the device the Simulator shows after the request. Present only when the request
+        /// succeeded and the current view is the Simulator.
+        /// </summary>
+        public string Device { get; set; }
+
+        public bool ShouldSerializeDevice()
+        {
+            return !string.IsNullOrEmpty(Device);
+        }
+
+        /// <summary>
+        /// Device names: every device with --list-devices, or the candidates (or every device) when
+        /// --device matched several devices or none. Absent otherwise.
+        /// </summary>
+        public string[] AvailableDevices { get; set; }
+
+        public bool ShouldSerializeAvailableDevices()
+        {
+            return AvailableDevices != null;
+        }
+
         public string Message { get; set; } = "";
 
         public string Warning { get; set; } = "";

@@ -21,5 +21,16 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         /// Target view. Omit to report the current view without changing it.
         /// </summary>
         public GameViewModeTarget? To { get; set; }
+
+        /// <summary>
+        /// Device to show in the Simulator, matched case-insensitively against the device names.
+        /// Implies Simulator as the target when <see cref="To"/> is omitted. Null when not given.
+        /// </summary>
+        public string Device { get; set; }
+
+        /// <summary>
+        /// When true the response lists every device the Simulator can show.
+        /// </summary>
+        public bool ListDevices { get; set; } = false;
     }
 }

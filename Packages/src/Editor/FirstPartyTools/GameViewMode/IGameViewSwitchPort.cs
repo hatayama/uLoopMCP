@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 using io.github.hatayama.UnityCliLoop.InternalAPIBridge;
@@ -37,5 +38,24 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
         /// <summary>Rendered orientation of the Simulator, or null when it cannot be read.</summary>
         string GetSimulatorRenderedOrientation();
+
+        /// <summary>
+        /// Friendly names of every device the Simulator can show, in the Simulator's own order.
+        /// Precondition: the Simulator is available.
+        /// </summary>
+        IReadOnlyList<string> LoadSimulatorDeviceNames();
+
+        /// <summary>
+        /// Friendly name of the device the Simulator shows, or null when it cannot be read.
+        /// Precondition: the current view is the Simulator.
+        /// </summary>
+        string GetSimulatorDeviceName();
+
+        /// <summary>
+        /// Shows the named device. Precondition: the current view is the Simulator and the name is
+        /// one of <see cref="LoadSimulatorDeviceNames"/>. Afterwards the Simulator renders that
+        /// device with its current rotation.
+        /// </summary>
+        void SetSimulatorDevice(string friendlyName);
     }
 }
