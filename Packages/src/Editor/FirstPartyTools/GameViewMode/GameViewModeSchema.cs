@@ -13,7 +13,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
     }
 
     /// <summary>
-    /// Describes the optional target accepted by the Switch Game View tool.
+    /// Describes the optional target accepted by the game-view-mode tool.
     /// </summary>
     public sealed class GameViewModeSchema : UnityCliLoopToolSchema
     {

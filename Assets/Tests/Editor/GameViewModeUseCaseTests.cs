@@ -12,7 +12,7 @@ using io.github.hatayama.UnityCliLoop.InternalAPIBridge;
 namespace io.github.hatayama.UnityCliLoop.Tests.Editor
 {
     /// <summary>
-    /// Verifies the Switch Game View use case against a fake Editor port, without a DockArea.
+    /// Verifies the game-view-mode use case against a fake Editor port, without a DockArea.
     /// </summary>
     public sealed class GameViewModeUseCaseTests
     {
@@ -233,6 +233,23 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             Assert.That(port.CountCalls("OpenView"), Is.Zero);
             Assert.That(response.View, Is.EqualTo("GameView"));
             Assert.That(response.Message, Does.Contain("Device Simulator"));
+        }
+
+        [Test]
+        public void Execute_SimulatorWhenNoViewIsOpenAndSimulatorIsUnavailable_FailsWithoutOpening()
+        {
+            // Verifies the availability check runs before the open path, so nothing is opened when
+            // there is no view and no Simulator to open.
+            FakeGameViewSwitchPort port = new() { Kind = PlayModeViewKind.None, SimulatorAvailable = false };
+
+            GameViewModeResponse response =
+                new GameViewModeUseCase(port).Execute(Request(GameViewModeTarget.Simulator));
+
+            Assert.That(response.Success, Is.False);
+            Assert.That(port.CountCalls("OpenView"), Is.Zero);
+            Assert.That(port.CountCalls("SwapMainViewTo"), Is.Zero);
+            Assert.That(response.View, Is.EqualTo("None"));
+            Assert.That(response.Changed, Is.False);
         }
 
         [Test]

@@ -5,7 +5,7 @@ using io.github.hatayama.UnityCliLoop.InternalAPIBridge;
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     /// <summary>
-    /// Editor-side operations the Switch Game View use case needs, kept behind a port so the
+    /// Editor-side operations the game-view-mode use case needs, kept behind a port so the
     /// decision logic can be exercised without a DockArea.
     /// </summary>
     internal interface IGameViewSwitchPort

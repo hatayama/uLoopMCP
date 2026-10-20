@@ -78,6 +78,17 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
         }
 
         [Test]
+        public void Decide_LandscapeViewWithFixedLandscapeLeft_RotatesToLandscapeLeft()
+        {
+            // Verifies the most common fixed landscape setting maps to 270 degrees.
+            SimulatorRotationDecisionResult result =
+                SimulatorRotationDecision.Decide(1920f, 1080f, Fixed(UIOrientation.LandscapeLeft));
+
+            Assert.That(result.RotationDegrees, Is.EqualTo(270));
+            Assert.That(result.Warning, Is.Empty);
+        }
+
+        [Test]
         public void Decide_LandscapeViewWithFixedPortrait_LeavesRotationUnchangedWithWarning()
         {
             // Verifies a fixed Portrait orientation ignores the allowed flags and refuses landscape.
@@ -97,6 +108,28 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
 
             Assert.That(result.WantsLandscape, Is.False);
             Assert.That(result.RotationDegrees, Is.EqualTo(0));
+            Assert.That(result.Warning, Is.Empty);
+        }
+
+        [Test]
+        public void Decide_PortraitViewWithFixedPortrait_RotatesToPortrait()
+        {
+            // Verifies a fixed Portrait orientation maps a tall view to 0 degrees.
+            SimulatorRotationDecisionResult result =
+                SimulatorRotationDecision.Decide(1080f, 1920f, Fixed(UIOrientation.Portrait));
+
+            Assert.That(result.RotationDegrees, Is.EqualTo(0));
+            Assert.That(result.Warning, Is.Empty);
+        }
+
+        [Test]
+        public void Decide_PortraitViewWithFixedPortraitUpsideDown_RotatesToPortraitUpsideDown()
+        {
+            // Verifies a fixed PortraitUpsideDown orientation maps a tall view to 180 degrees.
+            SimulatorRotationDecisionResult result =
+                SimulatorRotationDecision.Decide(1080f, 1920f, Fixed(UIOrientation.PortraitUpsideDown));
+
+            Assert.That(result.RotationDegrees, Is.EqualTo(180));
             Assert.That(result.Warning, Is.Empty);
         }
 

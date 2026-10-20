@@ -3,7 +3,7 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     /// <summary>
-    /// Reports which Play Mode view was showing before and after a Switch Game View request.
+    /// Reports which Play Mode view was showing before and after a game-view-mode request.
     /// </summary>
     public sealed class GameViewModeResponse : UnityCliLoopToolResponse
     {
