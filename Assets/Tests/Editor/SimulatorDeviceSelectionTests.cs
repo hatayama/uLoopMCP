@@ -71,9 +71,10 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
         [Test]
         public void Resolve_SeveralSuffixMatches_ListsThemInOrder()
         {
-            // Verifies several end-matches are reported as candidates in list order.
+            // Verifies several end-matches are reported as candidates in list order, and that a name
+            // merely containing the words (Fold 2) is not among them.
             SimulatorDeviceSelectionResult result =
-                Resolve("Fold", new[] { "Samsung Galaxy Fold", "Huawei Mate Fold", "Google Pixel 5" });
+                Resolve("Fold", new[] { "Samsung Galaxy Fold", "Samsung Galaxy Fold 2", "Huawei Mate Fold", "Google Pixel 5" });
 
             Assert.That(result.Kind, Is.EqualTo(SimulatorDeviceMatchKind.Ambiguous));
             Assert.That(result.Candidates, Is.EqualTo(new[] { "Samsung Galaxy Fold", "Huawei Mate Fold" }));
