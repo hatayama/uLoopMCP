@@ -80,7 +80,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
         }
 
         /// <summary>
-        /// What: a long recording stays within the tile limit and every kept tile still holds its own frame's pixels after repeated thinning.
+        /// What: a long recording stays within the tile limit, every thinning doubles the interval so kept
+        /// tiles stay evenly spaced end to end, and every kept tile still holds its own frame's pixels.
         /// </summary>
         [Test]
         public void Add_OverALongRecording_StaysWithinLimitAndKeepsOwnPixels()
@@ -94,6 +95,14 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
 
             Assert.That(sampler.Frames.Count, Is.LessThanOrEqualTo(TimelineFrameSampler.MaxTiles));
             Assert.That(sampler.Frames[0].Sample.CapturedIndex, Is.EqualTo(0));
+            // 0.5 -> 1 -> 2 -> 4 -> 8: at 4 s, 200 s would need 50 tiles, so a fourth thinning happens.
+            Assert.That(sampler.IntervalSeconds, Is.EqualTo(8.0));
+            for (int i = 1; i < sampler.Frames.Count; i++)
+            {
+                Assert.That(sampler.Frames[i].Sample.Seconds - sampler.Frames[i - 1].Sample.Seconds,
+                    Is.EqualTo(sampler.IntervalSeconds).Within(1e-6), "gap before tile " + i);
+            }
+
             foreach (CapturedTile frame in sampler.Frames)
             {
                 Assert.That(frame.Pixels[0].r, Is.EqualTo((byte)frame.Sample.CapturedIndex),
