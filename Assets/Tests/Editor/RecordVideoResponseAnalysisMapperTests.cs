@@ -59,6 +59,33 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             Assert.That(response.FrameChange.CapturedFrameCount, Is.EqualTo(1));
             Assert.That(response.BurstSheetPath, Is.Null);
             Assert.That(response.BurstAnchor, Is.Null);
+            Assert.That(response.TimelineSheetPath, Is.Null);
+        }
+
+        /// <summary>
+        /// What: a timeline sheet is carried even when the recording has no burst.
+        /// </summary>
+        [Test]
+        public void Apply_WithTimelineAndNoBurst_CarriesTimelineSheet()
+        {
+            List<SheetFrame> frames = new List<SheetFrame>
+            {
+                new SheetFrame { CapturedIndex = 0, Seconds = 0.0 },
+                new SheetFrame { CapturedIndex = 15, Seconds = 0.5 }
+            };
+            RecordingAnalysisDocument document = new RecordingAnalysisDocument
+            {
+                Summary = new FrameChangeSummary(),
+                Timeline = new SheetInfo { Path = "clip_timeline.png", Columns = 5, Frames = frames }
+            };
+            RecordVideoResponse response = new RecordVideoResponse();
+
+            RecordVideoResponseAnalysisMapper.Apply(response, Snapshot(new RecordingAnalysisResult("clip_frames.json", document), new double[0]));
+
+            Assert.That(response.TimelineSheetPath, Is.EqualTo("clip_timeline.png"));
+            Assert.That(response.TimelineSheetColumns, Is.EqualTo(5));
+            Assert.That(response.TimelineFrames[1].CapturedIndex, Is.EqualTo(15));
+            Assert.That(response.BurstSheetPath, Is.Null);
         }
 
         /// <summary>

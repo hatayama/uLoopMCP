@@ -68,6 +68,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             RecordingAnalysisResult analysis = AssertStoppedWithSidecar();
             Assert.That(analysis.Document.Samples, Is.Empty);
             AssertNoBurst(analysis);
+            Assert.That(analysis.Document.Timeline, Is.Null);
         }
 
         /// <summary>
@@ -83,6 +84,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             RecordingAnalysisResult analysis = AssertStoppedWithSidecar();
             Assert.That(analysis.Document.Samples.Count, Is.EqualTo(1));
             AssertNoBurst(analysis);
+            Assert.That(analysis.Document.Timeline.Frames.Count, Is.EqualTo(1));
+            Assert.That(File.Exists(analysis.Document.Timeline.Path), Is.True);
         }
 
         /// <summary>
@@ -99,6 +102,31 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             Assert.That(analysis.Document.Samples.Count, Is.EqualTo(10));
             Assert.That(analysis.Document.Summary.FramesChangedVsPrevious, Is.EqualTo(0));
             AssertNoBurst(analysis);
+        }
+
+        /// <summary>
+        /// What: a still recording longer than a second writes a timeline sheet beside the video, in time order, even without a burst.
+        /// </summary>
+        [Test]
+        public void Stop_WithStaticFrames_WritesTimelineSheetInTimeOrder()
+        {
+            CaptureFrames(30);
+
+            _session.Stop(RecordVideoConstants.StoppedByCli);
+
+            RecordingAnalysisResult analysis = AssertStoppedWithSidecar();
+            AssertNoBurst(analysis);
+            SheetInfo timeline = analysis.Document.Timeline;
+            Assert.That(timeline.Path, Is.EqualTo(Path.Combine(_directory, "clip_timeline.png")));
+            Assert.That(File.Exists(timeline.Path), Is.True);
+            Assert.That(timeline.Columns, Is.EqualTo(RecordingFrameAnalyzer.TimelineColumns));
+            Assert.That(timeline.Frames.Count, Is.GreaterThanOrEqualTo(3));
+            Assert.That(timeline.Frames[0].CapturedIndex, Is.EqualTo(0));
+            for (int i = 1; i < timeline.Frames.Count; i++)
+            {
+                Assert.That(timeline.Frames[i].Seconds - timeline.Frames[i - 1].Seconds,
+                    Is.GreaterThanOrEqualTo(TimelineFrameSampler.BaseIntervalSeconds));
+            }
         }
 
         /// <summary>

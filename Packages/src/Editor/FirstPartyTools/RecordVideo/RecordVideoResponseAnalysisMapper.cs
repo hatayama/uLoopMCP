@@ -24,6 +24,13 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             RecordingAnalysisDocument document = snapshot.Analysis.Document;
             response.AnalysisPath = snapshot.Analysis.Path;
             response.FrameChange = document.Summary;
+            if (document.Timeline != null)
+            {
+                response.TimelineSheetPath = document.Timeline.Path;
+                response.TimelineSheetColumns = document.Timeline.Columns;
+                response.TimelineFrames = document.Timeline.Frames;
+            }
+
             if (document.Burst == null)
             {
                 return;
