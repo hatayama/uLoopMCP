@@ -201,7 +201,9 @@ The dispatcher-owned native command `compile-check`. It compiles the project's C
 replaying the response files of the last Unity build through the C# compiler bundled with the
 Editor install. It never launches or contacts the Editor, and nothing it produces is loaded by
 Unity. When the project moved in a way the last build cannot describe, it refuses with
-`COMPILE_CHECK_UNITY_BUILD_REQUIRED` rather than guess. See `docs/compile-check.md` and
+`COMPILE_CHECK_UNITY_BUILD_REQUIRED` rather than guess. It is a hidden command: routable by
+name, but left out of `--help`, `uloop list`, shell completion and skill installs until its place
+beside `uloop compile` is settled. See `docs/compile-check.md` and
 `docs/adr/0018-compile-check-is-its-own-command-and-is-shown.md`.
 
 ### Hot reload
