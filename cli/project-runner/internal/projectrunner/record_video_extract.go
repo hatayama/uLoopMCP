@@ -5,14 +5,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
-	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
-	"strings"
 
 	clierrors "github.com/hatayama/unity-cli-loop/common/errors"
 
@@ -25,12 +21,7 @@ const (
 	recordVideoFfmpegNotFoundErrorCode = "FFMPEG_NOT_FOUND"
 	recordVideoFfmpegFailedErrorCode   = "FFMPEG_FAILED"
 
-	recordVideoExtractMaxTiles    = 40
-	recordVideoExtractColumns     = 5
-	recordVideoExtractTileWidth   = 320
-	recordVideoExtractSheetFilter = "fps=%s,scale=%d:-2,tile=%dx%d:padding=2:color=0x282828"
-	recordVideoAnalysisSuffix     = "_frames.json"
-	recordVideoFfmpegStderrLimit  = 2000
+	recordVideoFfmpegStderrLimit = 2000
 )
 
 // Injection points so tests can drive extraction without ffmpeg installed.
@@ -38,11 +29,6 @@ var (
 	lookPathForRecordVideo  = exec.LookPath
 	runFfmpegForRecordVideo = runFfmpegDefault
 )
-
-// recordVideoExtractFrame is the time, in seconds into the video, of one extracted image or tile.
-type recordVideoExtractFrame struct {
-	Seconds float64 `json:"Seconds"`
-}
 
 type recordVideoExtractResult struct {
 	Success   bool                      `json:"Success"`
@@ -83,13 +69,13 @@ func runRecordVideoExtract(
 	if !filepath.IsAbs(video) {
 		video = filepath.Join(startPath, video)
 	}
-	frameRate, err := readRecordVideoExtractFrameRate(video)
+	captures, err := readRecordVideoCaptures(video)
 	if err != nil {
 		clierrors.WriteClassifiedError(stderr, err, recordVideoErrorContext(connection))
 		return 1
 	}
 
-	plan := planRecordVideoExtract(options, video, frameRate)
+	plan := planRecordVideoExtract(options, video, captures)
 	// A file left by an earlier run with the same times would otherwise be reported as this run's image.
 	if err := os.Remove(plan.output); err != nil && !errors.Is(err, os.ErrNotExist) {
 		clierrors.WriteClassifiedError(stderr, err, recordVideoErrorContext(connection))
@@ -115,95 +101,6 @@ func runRecordVideoExtract(
 	}
 	clicore.WriteJSON(stdout, encoded)
 	return 0
-}
-
-// readRecordVideoExtractFrameRate reads the frame rate the recording was made at from the
-// frames.json written beside it when it stopped.
-func readRecordVideoExtractFrameRate(video string) (int, error) {
-	info, err := os.Stat(video)
-	if err != nil || info.IsDir() {
-		return 0, recordVideoArgumentError("--"+tooldocs.RecordVideoVideoFlagName,
-			"--video "+video+" does not exist or is not a file.",
-			"Pass the OutputPath of the stop or one-shot response.")
-	}
-	content, err := os.ReadFile(recordVideoStem(video) + recordVideoAnalysisSuffix)
-	if err != nil {
-		return 0, recordVideoArgumentError("--"+tooldocs.RecordVideoVideoFlagName,
-			"no frames.json beside the video; only recordings made by this version can be re-cut.",
-			"Record again with this version, or open the video in a player.")
-	}
-	var analysis struct {
-		FrameRate int `json:"FrameRate"`
-	}
-	if err := json.Unmarshal(content, &analysis); err != nil || analysis.FrameRate <= 0 {
-		return 0, recordVideoArgumentError("--"+tooldocs.RecordVideoVideoFlagName,
-			"the frames.json beside the video has no valid FrameRate.",
-			"Record again with this version.")
-	}
-	return analysis.FrameRate, nil
-}
-
-func planRecordVideoExtract(options recordVideoExtractOptions, video string, frameRate int) recordVideoExtractPlan {
-	stem := recordVideoStem(video)
-	if options.hasFrame {
-		output := fmt.Sprintf("%s_frame_%d.png", stem, recordVideoMilliseconds(options.frameAt))
-		return recordVideoExtractPlan{
-			args:   []string{"-y", "-ss", formatRecordVideoSeconds(options.frameAt), "-i", video, "-frames:v", "1", output},
-			output: output,
-			result: recordVideoExtractResult{
-				Success:   true,
-				Video:     video,
-				FramePath: output,
-				Frames:    []recordVideoExtractFrame{{Seconds: roundRecordVideoSeconds(options.frameAt)}},
-			},
-		}
-	}
-
-	duration := options.sheetTo - options.sheetFrom
-	// The small epsilon keeps a range of a whole number of frames from rounding up to one more.
-	count := int(math.Min(recordVideoExtractMaxTiles, math.Ceil(duration*float64(frameRate)-1e-9)))
-	count = max(count, 1)
-	rate := float64(count) / duration
-	rows := (count + recordVideoExtractColumns - 1) / recordVideoExtractColumns
-	output := fmt.Sprintf("%s_sheet_%d_%d.png", stem,
-		recordVideoMilliseconds(options.sheetFrom), recordVideoMilliseconds(options.sheetTo))
-	filter := fmt.Sprintf(recordVideoExtractSheetFilter,
-		strconv.FormatFloat(rate, 'f', 6, 64), recordVideoExtractTileWidth, recordVideoExtractColumns, rows)
-	frames := make([]recordVideoExtractFrame, count)
-	for index := range frames {
-		frames[index] = recordVideoExtractFrame{Seconds: roundRecordVideoSeconds(options.sheetFrom + float64(index)/rate)}
-	}
-	return recordVideoExtractPlan{
-		args: []string{
-			"-y", "-ss", formatRecordVideoSeconds(options.sheetFrom), "-t", formatRecordVideoSeconds(duration),
-			"-i", video, "-vf", filter, "-frames:v", "1", output,
-		},
-		output: output,
-		result: recordVideoExtractResult{
-			Success:   true,
-			Video:     video,
-			SheetPath: output,
-			Columns:   recordVideoExtractColumns,
-			TileWidth: recordVideoExtractTileWidth,
-			Frames:    frames,
-		},
-	}
-}
-
-func recordVideoStem(video string) string {
-	return strings.TrimSuffix(video, filepath.Ext(video))
-}
-
-func recordVideoMilliseconds(seconds float64) int {
-	return int(math.Round(seconds * 1000))
-}
-
-func formatRecordVideoSeconds(seconds float64) string {
-	return strconv.FormatFloat(seconds, 'f', 3, 64)
-}
-
-func roundRecordVideoSeconds(seconds float64) float64 {
-	return math.Round(seconds*1000) / 1000
 }
 
 // runFfmpegDefault runs ffmpeg by the absolute path LookPath returned, so a binary in the current

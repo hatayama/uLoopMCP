@@ -7,6 +7,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -58,20 +59,43 @@ func (fake *recordVideoExtractFake) install(t *testing.T) {
 
 // recordVideoExtractPayload decodes an extraction response.
 type recordVideoExtractPayload struct {
-	Success   bool   `json:"Success"`
-	Video     string `json:"Video"`
-	FramePath string `json:"FramePath"`
-	SheetPath string `json:"SheetPath"`
-	Columns   int    `json:"Columns"`
-	TileWidth int    `json:"TileWidth"`
-	Frames    []struct {
-		Seconds float64 `json:"Seconds"`
-	} `json:"Frames"`
+	Success   bool                      `json:"Success"`
+	Video     string                    `json:"Video"`
+	FramePath string                    `json:"FramePath"`
+	SheetPath string                    `json:"SheetPath"`
+	Columns   int                       `json:"Columns"`
+	TileWidth int                       `json:"TileWidth"`
+	Frames    []recordVideoExtractFrame `json:"Frames"`
+}
+
+// recordVideoExtractTestSamples are 100 captures at 30 fps, 10 ms after their frame's video time.
+// Capture 50 was late, so the encoder repeated capture 49 as frame 50 and capture 50 is frame 51:
+// frame 50 has no sample of its own.
+func recordVideoExtractTestSamples() []recordVideoExtractFrame {
+	samples := make([]recordVideoExtractFrame, 0, 100)
+	for index := 0; index < 100; index++ {
+		encoded := index
+		if index >= 50 {
+			encoded++
+		}
+		samples = append(samples, recordVideoExtractFrame{
+			CapturedIndex: index,
+			EncodedFrame:  encoded,
+			Seconds:       float64(index)/30 + 0.01,
+		})
+	}
+	return samples
 }
 
 // writeRecordVideoExtractFixture writes a video and, when frameRate is positive, the frames.json
-// a stopped recording leaves beside it. It returns the directory and the video path.
+// a stopped recording leaves beside it, with recordVideoExtractTestSamples. It returns the
+// directory and the video path.
 func writeRecordVideoExtractFixture(t *testing.T, frameRate int) (string, string) {
+	t.Helper()
+	return writeRecordVideoExtractFixtureWithSamples(t, frameRate, recordVideoExtractTestSamples())
+}
+
+func writeRecordVideoExtractFixtureWithSamples(t *testing.T, frameRate int, samples []recordVideoExtractFrame) (string, string) {
 	t.Helper()
 	directory := t.TempDir()
 	video := filepath.Join(directory, "clip.mp4")
@@ -79,17 +103,15 @@ func writeRecordVideoExtractFixture(t *testing.T, frameRate int) (string, string
 		t.Fatalf("write video: %v", err)
 	}
 	if frameRate > 0 {
-		sidecar := []byte(`{"Version":1,"FrameRate":` + jsonInt(frameRate) + `,"Samples":[]}`)
-		if err := os.WriteFile(filepath.Join(directory, "clip_frames.json"), sidecar, 0o600); err != nil {
+		sidecar, err := json.Marshal(map[string]any{"Version": 1, "FrameRate": frameRate, "Samples": samples})
+		if err != nil {
+			t.Fatalf("encode sidecar: %v", err)
+		}
+		if err = os.WriteFile(filepath.Join(directory, "clip_frames.json"), sidecar, 0o600); err != nil {
 			t.Fatalf("write sidecar: %v", err)
 		}
 	}
 	return directory, video
-}
-
-func jsonInt(value int) string {
-	encoded, _ := json.Marshal(value)
-	return string(encoded)
 }
 
 func runRecordVideoExtractForTest(t *testing.T, startPath string, args []string) (recordVideoOneShotRun, *recordVideoOneShotFake) {
@@ -130,9 +152,10 @@ func TestRunRecordVideoExtract_FfmpegMissing_ReportsNotFound(t *testing.T) {
 	requireRecordVideoCalls(t, unity)
 }
 
-// Verifies --frame-at runs ffmpeg once, by the looked-up path, with a seek and a single-frame
-// output beside the video, and reports that frame without contacting Unity.
-func TestRunRecordVideoExtract_FrameAt_WritesOneFrameBesideVideo(t *testing.T) {
+// Verifies --frame-at maps the capture-clock time to the frame captured last at or before it,
+// seeks half a frame before that frame, and reports the frame's number, capture, and seconds,
+// without contacting Unity.
+func TestRunRecordVideoExtract_FrameAt_CutsTheFrameCapturedAtThatTime(t *testing.T) {
 	directory, video := writeRecordVideoExtractFixture(t, 30)
 	fake := &recordVideoExtractFake{}
 	fake.install(t)
@@ -142,8 +165,9 @@ func TestRunRecordVideoExtract_FrameAt_WritesOneFrameBesideVideo(t *testing.T) {
 	if run.code != 0 {
 		t.Fatalf("run = %+v", run)
 	}
+	// Capture 44 was taken at 44/30 + 0.01 = 1.477 s, the last one at or before 1.5 s.
 	wantOut := filepath.Join(directory, "clip_frame_1500.png")
-	wantArgs := []string{"-y", "-ss", "1.500", "-i", video, "-frames:v", "1", wantOut}
+	wantArgs := []string{"-y", "-ss", "1.450", "-i", video, "-frames:v", "1", wantOut}
 	if len(fake.ffmpegArgs) != 1 || strings.Join(fake.ffmpegArgs[0], " ") != strings.Join(wantArgs, " ") {
 		t.Fatalf("ffmpeg args = %q, want %q", fake.ffmpegArgs, wantArgs)
 	}
@@ -154,10 +178,43 @@ func TestRunRecordVideoExtract_FrameAt_WritesOneFrameBesideVideo(t *testing.T) {
 	if !payload.Success || payload.FramePath != wantOut || payload.Video != video || payload.SheetPath != "" {
 		t.Fatalf("payload = %+v", payload)
 	}
-	if len(payload.Frames) != 1 || payload.Frames[0].Seconds != 1.5 {
-		t.Fatalf("frames = %+v", payload.Frames)
+	want := recordVideoExtractTestSamples()[44]
+	if len(payload.Frames) != 1 || payload.Frames[0] != want {
+		t.Fatalf("frames = %+v, want %+v", payload.Frames, want)
 	}
 	requireRecordVideoCalls(t, unity)
+}
+
+// Verifies the time-to-frame boundaries: a time exactly at a capture picks that capture, and times
+// outside the recording clamp to its first and last captured frames with the seek never below zero.
+func TestRunRecordVideoExtract_FrameAt_MapsBoundaryTimes(t *testing.T) {
+	samples := recordVideoExtractTestSamples()
+	for _, testCase := range []struct {
+		at       string
+		wantSeek string
+		want     recordVideoExtractFrame
+	}{
+		{at: strconv.FormatFloat(samples[44].Seconds, 'g', -1, 64), wantSeek: "1.450", want: samples[44]},
+		{at: "0", wantSeek: "0.000", want: samples[0]},
+		{at: "99", wantSeek: "3.317", want: samples[99]},
+	} {
+		_, video := writeRecordVideoExtractFixture(t, 30)
+		fake := &recordVideoExtractFake{}
+		fake.install(t)
+
+		run, _ := runRecordVideoExtractForTest(t, "/project", []string{"--video", video, "--frame-at", testCase.at})
+
+		if run.code != 0 {
+			t.Fatalf("at %s: run = %+v", testCase.at, run)
+		}
+		if got := fake.ffmpegArgs[0][2]; got != testCase.wantSeek {
+			t.Fatalf("at %s: seek = %q, want %q", testCase.at, got, testCase.wantSeek)
+		}
+		payload := decodeRecordVideoExtractPayload(t, run.stdout)
+		if payload.Frames[0] != testCase.want {
+			t.Fatalf("at %s: frame = %+v, want %+v", testCase.at, payload.Frames[0], testCase.want)
+		}
+	}
 }
 
 // Verifies a relative --video is read from the directory the command ran in.
@@ -176,37 +233,35 @@ func TestRunRecordVideoExtract_RelativeVideo_ResolvesFromStartPath(t *testing.T)
 	}
 }
 
-// Verifies the sheet's tile count, rate, and rows: every frame of a short range, capped at 40 for a
-// longer one, and the tile seconds that follow from the rate.
-func TestRunRecordVideoExtract_Sheet_SizesTilesFromRangeAndFrameRate(t *testing.T) {
+// Verifies the sheet reads exactly frames A..B (seek half a frame before A, length B-A+1 frames),
+// keeps every step-th frame so at most 40 remain, and sizes the tile rows from that count.
+func TestRunRecordVideoExtract_Sheet_SelectsFramesOfTheRange(t *testing.T) {
 	for _, testCase := range []struct {
-		name        string
-		from, to    string
-		wantOut     string
-		wantFilter  string
-		wantCount   int
-		wantSecond1 float64
+		name       string
+		from, to   string
+		wantOut    string
+		wantSeek   string
+		wantLength string
+		wantFilter string
+		wantFrames []int
 	}{
 		{
-			name: "one second at 30 fps", from: "1", to: "2",
-			wantOut:     "clip_sheet_1000_2000.png",
-			wantFilter:  "fps=30.000000,scale=320:-2,tile=5x6:padding=2:color=0x282828",
-			wantCount:   30,
-			wantSecond1: 1 + 1.0/30,
+			// 1.5 s is capture 44 (frame 44) and 1.75 s is capture 52 (frame 53): 10 frames, one each.
+			name: "every frame of a short range", from: "1.5", to: "1.75",
+			wantOut:    "clip_sheet_1500_1750.png",
+			wantSeek:   "1.450",
+			wantLength: "0.333",
+			wantFilter: "select='not(mod(n,1))',scale=320:-2,tile=5x2:padding=2:color=0x282828",
+			wantFrames: recordVideoExtractSteps(44, 53, 1),
 		},
 		{
-			name: "three seconds capped at 40", from: "0.5", to: "3.5",
-			wantOut:     "clip_sheet_500_3500.png",
-			wantFilter:  "fps=13.333333,scale=320:-2,tile=5x8:padding=2:color=0x282828",
-			wantCount:   40,
-			wantSecond1: 0.5 + 3.0/40,
-		},
-		{
-			name: "range not a whole number of frames", from: "0.2", to: "0.8",
-			wantOut:     "clip_sheet_200_800.png",
-			wantFilter:  "fps=30.000000,scale=320:-2,tile=5x4:padding=2:color=0x282828",
-			wantCount:   18,
-			wantSecond1: 0.2 + 0.6/18,
+			// The whole recording is frames 0..100: 101 frames, every third keeps 34.
+			name: "the whole recording thinned to 40 or fewer", from: "0", to: "99",
+			wantOut:    "clip_sheet_0_99000.png",
+			wantSeek:   "0.000",
+			wantLength: "3.367",
+			wantFilter: "select='not(mod(n,3))',scale=320:-2,tile=5x7:padding=2:color=0x282828",
+			wantFrames: recordVideoExtractSteps(0, 100, 3),
 		},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -220,44 +275,98 @@ func TestRunRecordVideoExtract_Sheet_SizesTilesFromRangeAndFrameRate(t *testing.
 			if run.code != 0 {
 				t.Fatalf("run = %+v", run)
 			}
-			args := fake.ffmpegArgs[0]
 			wantOut := filepath.Join(directory, testCase.wantOut)
-			if args[len(args)-1] != wantOut {
-				t.Fatalf("args = %q", args)
+			wantArgs := []string{
+				"-y", "-ss", testCase.wantSeek, "-t", testCase.wantLength, "-i", video,
+				"-vf", testCase.wantFilter, "-frames:v", "1", wantOut,
 			}
-			if got := args[indexOfToken(args, "-vf")+1]; got != testCase.wantFilter {
-				t.Fatalf("filter = %q, want %q", got, testCase.wantFilter)
+			if strings.Join(fake.ffmpegArgs[0], " ") != strings.Join(wantArgs, " ") {
+				t.Fatalf("ffmpeg args = %q, want %q", fake.ffmpegArgs[0], wantArgs)
 			}
 			payload := decodeRecordVideoExtractPayload(t, run.stdout)
 			if payload.SheetPath != wantOut || payload.Columns != 5 || payload.TileWidth != 320 || payload.FramePath != "" {
 				t.Fatalf("payload = %+v", payload)
 			}
-			if len(payload.Frames) != testCase.wantCount {
-				t.Fatalf("frames = %d, want %d", len(payload.Frames), testCase.wantCount)
-			}
-			if !closeTo(payload.Frames[1].Seconds, testCase.wantSecond1) {
-				t.Fatalf("second tile at %v, want %v", payload.Frames[1].Seconds, testCase.wantSecond1)
+			if got := recordVideoExtractEncodedFrames(payload.Frames); strings.Join(got, ",") != strings.Join(intsToStrings(testCase.wantFrames), ",") {
+				t.Fatalf("frames = %v, want %v", got, testCase.wantFrames)
 			}
 			requireRecordVideoCalls(t, unity)
 		})
 	}
 }
 
-// Verifies the sheet seeks to the range start and limits the read to the range length.
-func TestRunRecordVideoExtract_Sheet_SeeksToRange(t *testing.T) {
+// Verifies a tile on a frame the encoder repeated reports the capture it repeats, and every other
+// tile reports its own capture.
+func TestRunRecordVideoExtract_Sheet_RepeatedFrameReportsItsSource(t *testing.T) {
 	_, video := writeRecordVideoExtractFixture(t, 30)
 	fake := &recordVideoExtractFake{}
 	fake.install(t)
 
-	run, _ := runRecordVideoExtractForTest(t, "/project", []string{"--video", video, "--sheet-from=0.5", "--sheet-to=3.5"})
+	run, _ := runRecordVideoExtractForTest(t, "/project", []string{"--video", video, "--sheet-from", "1.62", "--sheet-to", "1.72"})
 
 	if run.code != 0 {
 		t.Fatalf("run = %+v", run)
 	}
-	wantHead := []string{"-y", "-ss", "0.500", "-t", "3.000", "-i", video, "-vf"}
-	if strings.Join(fake.ffmpegArgs[0][:len(wantHead)], " ") != strings.Join(wantHead, " ") {
-		t.Fatalf("args = %q", fake.ffmpegArgs[0])
+	samples := recordVideoExtractTestSamples()
+	repeated := samples[49]
+	repeated.EncodedFrame = 50
+	want := []recordVideoExtractFrame{samples[48], samples[49], repeated, samples[50], samples[51]}
+	payload := decodeRecordVideoExtractPayload(t, run.stdout)
+	if len(payload.Frames) != len(want) {
+		t.Fatalf("frames = %+v, want %+v", payload.Frames, want)
 	}
+	for index := range want {
+		if payload.Frames[index] != want[index] {
+			t.Fatalf("frame %d = %+v, want %+v", index, payload.Frames[index], want[index])
+		}
+	}
+}
+
+// Verifies a --sheet-to past the end of the recording ends the range at its last frame.
+func TestRunRecordVideoExtract_Sheet_ToPastTheEndStopsAtTheLastFrame(t *testing.T) {
+	_, video := writeRecordVideoExtractFixture(t, 30)
+	fake := &recordVideoExtractFake{}
+	fake.install(t)
+
+	run, _ := runRecordVideoExtractForTest(t, "/project", []string{"--video", video, "--sheet-from", "3", "--sheet-to", "99"})
+
+	if run.code != 0 {
+		t.Fatalf("run = %+v", run)
+	}
+	// From capture 89 (frame 90) to the last frame, 100: 11 frames.
+	args := fake.ffmpegArgs[0]
+	if args[2] != "2.983" || args[4] != "0.367" {
+		t.Fatalf("args = %q", args)
+	}
+	payload := decodeRecordVideoExtractPayload(t, run.stdout)
+	frames := recordVideoExtractEncodedFrames(payload.Frames)
+	if len(frames) != 11 || frames[0] != "90" || frames[10] != "100" {
+		t.Fatalf("frames = %v", frames)
+	}
+}
+
+func recordVideoExtractSteps(from int, to int, step int) []int {
+	frames := []int{}
+	for frame := from; frame <= to; frame += step {
+		frames = append(frames, frame)
+	}
+	return frames
+}
+
+func recordVideoExtractEncodedFrames(frames []recordVideoExtractFrame) []string {
+	encoded := make([]string, 0, len(frames))
+	for _, frame := range frames {
+		encoded = append(encoded, strconv.Itoa(frame.EncodedFrame))
+	}
+	return encoded
+}
+
+func intsToStrings(values []int) []string {
+	converted := make([]string, 0, len(values))
+	for _, value := range values {
+		converted = append(converted, strconv.Itoa(value))
+	}
+	return converted
 }
 
 // Verifies argument mistakes are rejected before ffmpeg is looked up or Unity is contacted.
@@ -320,6 +429,22 @@ func TestRunRecordVideoExtract_MissingVideoOrAnalysis_RunsNoFfmpeg(t *testing.T)
 	}
 }
 
+// Verifies a frames.json without samples is rejected before ffmpeg runs, since no time can be mapped to a frame.
+func TestRunRecordVideoExtract_AnalysisWithoutSamples_RunsNoFfmpeg(t *testing.T) {
+	_, video := writeRecordVideoExtractFixtureWithSamples(t, 30, []recordVideoExtractFrame{})
+	fake := &recordVideoExtractFake{}
+	fake.install(t)
+
+	run, _ := runRecordVideoExtractForTest(t, "/project", []string{"--video", video, "--frame-at", "1"})
+
+	if run.code != 1 || !strings.Contains(run.stderr, "no captured frames") {
+		t.Fatalf("run = %+v", run)
+	}
+	if len(fake.ffmpegArgs) != 0 {
+		t.Fatal("ffmpeg ran")
+	}
+}
+
 // Verifies an ffmpeg failure is reported as FFMPEG_FAILED with the tail of its stderr.
 func TestRunRecordVideoExtract_FfmpegFails_ReportsStderrTail(t *testing.T) {
 	_, video := writeRecordVideoExtractFixture(t, 30)
@@ -365,18 +490,4 @@ func TestRunRecordVideoExtract_StaleOutput_IsNotReported(t *testing.T) {
 	if run.code != 1 || !strings.Contains(run.stderr, recordVideoFfmpegFailedErrorCode) {
 		t.Fatalf("run = %+v", run)
 	}
-}
-
-func indexOfToken(tokens []string, want string) int {
-	for index, token := range tokens {
-		if token == want {
-			return index
-		}
-	}
-	return -1
-}
-
-func closeTo(got float64, want float64) bool {
-	difference := got - want
-	return difference < 0.0005 && difference > -0.0005
 }
