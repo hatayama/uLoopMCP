@@ -20,7 +20,7 @@ Every action returns JSON containing:
 A stopped recording (from `stop`, a one-shot, or `status`/`stop` after an auto-stop) also returns:
 
 - `AnalysisPath`: `<stem>_frames.json` beside the video, with every captured frame's measurements (`Samples`) and the sheets' frame lists. Extraction reads it.
-- `BurstSheetPath` / `BurstSheetColumns` / `BurstAnchor` / `BurstFrames`: The burst sheet (`<stem>_burst.png`, 4 columns, top-left first), 32 consecutive frames around the anchor. `BurstAnchor` is `"mark"` when a mark was made (a later mark replaces an earlier one), otherwise `"largest-change"`. Omitted when fewer than two frames were captured, or nothing changed and there was no mark.
+- `BurstSheetPath` / `BurstSheetColumns` / `BurstAnchor` / `BurstFrames`: The burst sheet (`<stem>_burst.png`, 4 columns, top-left first), up to 32 consecutive frames around the anchor: 16 before it and 16 after (15 after a largest-change anchor, which is itself a tile). Fewer when the anchor is within 16 frames of the start or the recording stops before the frames after it are filled. `BurstAnchor` is `"mark"` when a mark was made (a later mark replaces an earlier one), otherwise `"largest-change"`. Omitted when fewer than two frames were captured, or nothing changed and there was no mark.
 - `TimelineSheetPath` / `TimelineSheetColumns` / `TimelineFrames`: The timeline sheet (`<stem>_timeline.png`, 5 columns), tiles half a second apart; past 40 tiles every other one is dropped and the spacing doubles, so it always covers the whole recording. Written whenever at least one frame was captured.
 - `MarkSeconds`: The seconds of every mark accepted.
 - `FrameChange`: The numbers below.

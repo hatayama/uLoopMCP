@@ -818,7 +818,7 @@
     },
     {
       "name": "record-video",
-      "description": "Record the Game View or any Editor window to .mp4/.webm and get back what you can read without watching it: a sheet of the 32 consecutive frames around the trigger (or around the biggest change when there is no trigger), a timeline sheet, and per-frame change numbers. Use for flicker, stutter, one-frame glitches, fades, cut-ins, transitions, effect order, or anything one screenshot cannot show. One shot: --seconds N --trigger '<uloop command>'.",
+      "description": "Record the Game View or any Editor window to .mp4/.webm and get back what you can read without watching it: a sheet of up to 32 consecutive frames around the trigger (or around the biggest change when there is no trigger), a timeline sheet, and per-frame change numbers. Use for flicker, stutter, one-frame glitches, fades, cut-ins, transitions, effect order, or anything one screenshot cannot show. One shot: --seconds N --trigger '<uloop command>'.",
       "inputSchema": {
         "type": "object",
         "properties": {

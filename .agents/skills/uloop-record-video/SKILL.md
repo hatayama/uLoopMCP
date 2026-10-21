@@ -1,7 +1,7 @@
 ---
 name: uloop-record-video
 toolName: record-video
-description: "Record the Game View or any Editor window to .mp4/.webm and get back what you can read without watching it: a sheet of the 32 consecutive frames around the trigger (or around the biggest change when there is no trigger), a timeline sheet, and per-frame change numbers. Use for flicker, stutter, one-frame glitches, fades, cut-ins, transitions, effect order, or anything one screenshot cannot show. One shot: --seconds N --trigger '<uloop command>'."
+description: "Record the Game View or any Editor window to .mp4/.webm and get back what you can read without watching it: a sheet of up to 32 consecutive frames around the trigger (or around the biggest change when there is no trigger), a timeline sheet, and per-frame change numbers. Use for flicker, stutter, one-frame glitches, fades, cut-ins, transitions, effect order, or anything one screenshot cannot show. One shot: --seconds N --trigger '<uloop command>'."
 ---
 
 # Task
@@ -12,7 +12,7 @@ Record the Game View during Play Mode, or any Editor window with `--window-name`
 
 1. A Game View recording needs Play Mode (`uloop control-play-mode --action Play`); `--window-name` does not.
 2. `uloop record-video --seconds 3 --trigger "<uloop command>"`: focuses Unity, starts, runs the trigger, marks the moment it returns, waits, stops, and prints one JSON.
-3. Read the PNG at `BurstSheetPath`: 32 consecutive frames, 4 columns, top-left first. `BurstFrames` gives each tile's `EncodedFrame` and `Seconds`; `BurstAnchor: "mark"` centers it on the trigger, `"largest-change"` on the biggest change.
+3. Read the PNG at `BurstSheetPath`: up to 32 consecutive frames, 4 columns, top-left first. `BurstFrames` gives each tile's `EncodedFrame` and `Seconds`; `BurstAnchor: "mark"` centers it on the trigger, `"largest-change"` on the biggest change.
 4. Read the PNG at `TimelineSheetPath`: the whole recording at even spacing, 5 columns.
 5. Read `FrameChange` (below).
 6. To look closer, with ffmpeg installed (works with Unity closed): `uloop record-video --video <OutputPath> --sheet-from <s> --sheet-to <s>`, or `--frame-at <s>` for one full-size frame. Pass the `Seconds` the sheets report.

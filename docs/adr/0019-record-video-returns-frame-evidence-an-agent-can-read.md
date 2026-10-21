@@ -7,7 +7,7 @@ Date: 2026-10-21
 Every stopped `uloop record-video` recording returns, beside the video file, evidence an agent
 can read without watching the video:
 
-- a burst sheet: 32 consecutive frames around the moment of interest, anchored on a mark when one
+- a burst sheet: up to 32 consecutive frames around the moment of interest, anchored on a mark when one
   was made, otherwise on the frame with the largest change;
 - a timeline sheet: tiles evenly spaced across the whole recording, at most 40;
 - frame change numbers: per-frame measurements in a `frames.json` sidecar and a summary in the
