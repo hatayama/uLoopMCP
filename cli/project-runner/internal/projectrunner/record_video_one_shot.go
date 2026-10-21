@@ -71,6 +71,15 @@ func runRecordVideoCommand(
 	stdout io.Writer,
 	stderr io.Writer,
 ) int {
+	extract, err := parseRecordVideoExtractOptions(commandArgs)
+	if err != nil {
+		clierrors.WriteClassifiedError(stderr, err, recordVideoErrorContext(connection))
+		return 1
+	}
+	if extract.requested {
+		return runRecordVideoExtract(ctx, connection, extract, startPath, stdout, stderr)
+	}
+
 	options, rest, err := parseRecordVideoOneShotOptions(commandArgs)
 	if err != nil {
 		clierrors.WriteClassifiedError(stderr, err, recordVideoErrorContext(connection))
