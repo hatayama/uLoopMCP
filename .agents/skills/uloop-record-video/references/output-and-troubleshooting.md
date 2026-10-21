@@ -27,7 +27,7 @@ A stopped recording (from `stop`, a one-shot, or `status`/`stop` after an auto-s
 
 Each entry of `BurstFrames` and `TimelineFrames` is `{CapturedIndex, EncodedFrame, Seconds}`. `Seconds` is the capture clock, the same clock as `MarkSeconds`. `EncodedFrame` is the frame number in the video. The two clocks can drift by a frame or more, so match frames by `EncodedFrame`.
 
-A one-shot (`--seconds`/`--trigger`) adds `OneShot`: `Seconds`, `TriggerCommand`, `TriggerResult` (the trigger's own JSON), `MarkAccepted`, `FocusWindowNote` when focusing Unity failed, and `Warning` when the mark was refused or a pause point paused Play Mode. A failed trigger or a cancelled one-shot still stops the recording and returns it, with `RECORD_VIDEO_TRIGGER_FAILED` or `RECORD_VIDEO_CANCELLED`. `RECORD_VIDEO_STOP_FAILED` means the stop itself failed; check `--action status`.
+A one-shot (`--seconds`/`--trigger`) adds `OneShot`: `Seconds`, `TriggerCommand`, `TriggerResult` (`Command`, `Completed`, `Response` holding the trigger's own JSON, `Error`, `Explanation`), `MarkAccepted`, `FocusWindowNote` when focusing Unity failed, and `Warning` when the mark was refused or a pause point paused Play Mode. A failed trigger or a cancelled one-shot still stops the recording, but exits 1 with nothing on stdout: the error envelope on stderr (`RECORD_VIDEO_TRIGGER_FAILED` or `RECORD_VIDEO_CANCELLED`) carries the stop response, `OneShot` included, in `Error.Details.Recording`. `RECORD_VIDEO_STOP_FAILED` means the stop itself failed; its `Error.Details.Recording` holds what the stop returned; check `--action status`.
 
 ## Reading the numbers
 

@@ -11,7 +11,7 @@ Record the Game View during Play Mode, or any Editor window with `--window-name`
 ## Workflow
 
 1. A Game View recording needs Play Mode (`uloop control-play-mode --action Play`); `--window-name` does not.
-2. `uloop record-video --seconds 3 --trigger "<uloop command>"`: focuses Unity, starts, runs the trigger, marks the moment it returns, waits, stops, and prints one JSON.
+2. `uloop record-video --seconds 3 --trigger "simulate-keyboard --action Press --key Space"` (the trigger is a uloop command without the leading `uloop`): focuses Unity, starts, runs the trigger, marks the moment it returns, waits, stops, and prints one JSON.
 3. Read the PNG at `BurstSheetPath`: up to 32 consecutive frames, 4 columns, top-left first. `BurstFrames` gives each tile's `EncodedFrame` and `Seconds`; `BurstAnchor: "mark"` centers it on the trigger, `"largest-change"` on the biggest change.
 4. Read the PNG at `TimelineSheetPath`: the whole recording at even spacing, 5 columns.
 5. Read `FrameChange` (below).
@@ -52,7 +52,7 @@ uloop record-video --video <file> --frame-at <s> | --sheet-from <s> --sheet-to <
 | `--window-name` | string | empty | Editor window title to record instead of the Game View (for example Scene, Inspector, Console). Empty records the Game View and requires Play Mode. A window recording does not require Play Mode, brings the tab to the front, repaints it every frame, and keeps running when Play Mode stops. Used by `start` only. |
 | `--match-mode` | enum | `exact` | Window title matching for `--window-name`: `exact`, `prefix`, or `contains` (case-insensitive). Used by `start` only. |
 | `--output-path` | string | empty | Output file path. Empty uses `.uloop/outputs/Videos/gameview_<yyyyMMdd_HHmmss_fff>.mp4` (`.webm` on Linux). Extension must be `.mp4` (H.264) or `.webm` (VP8). Linux rejects `.mp4`. Used by `start` only. |
-| `--seconds` | integer | - | CLI-only. Record one clip in a single command: start, the trigger, a mark, wait this long, stop. 1–600. |
+| `--seconds` | integer | - | CLI-only. Record one clip in a single command: start, the trigger, a mark, wait this long, stop. 1–600, at most `--max-duration-seconds` (default 60); raise both for a longer clip. |
 | `--trigger` | string | - | CLI-only. uloop command run after start, then marked. Implies `--seconds 3`. |
 | `--video` | string | - | CLI-only. Recorded video to cut frames from (`OutputPath`). Needs ffmpeg; does not contact Unity. |
 | `--frame-at` | number | - | CLI-only. Write the full-size frame at these seconds beside the video. |
