@@ -269,6 +269,42 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
         }
 
         /// <summary>
+        /// What: a burst rebuilt around a larger spike during the tail keeps its own pixels, though the old burst shared frames with it.
+        /// </summary>
+        [Test]
+        public void Frames_WhenRebuiltDuringTail_KeepTheirOwnPixels()
+        {
+            BurstFrameBuffer buffer = new BurstFrameBuffer();
+
+            FeedNumbered(buffer, 1, 19, 0);
+            FeedNumbered(buffer, 20, 20, 5);
+            FeedNumbered(buffer, 21, 24, 0);
+            FeedNumbered(buffer, 25, 25, 10);
+            FeedNumbered(buffer, 26, 120, 0);
+
+            Assert.That(Indices(buffer), Is.EqualTo(Range(9, 40)));
+            AssertTilesHoldOwnNumbers(buffer);
+        }
+
+        /// <summary>
+        /// What: a mark placed while a largest-change burst still shares frames with the window keeps its own pixels.
+        /// </summary>
+        [Test]
+        public void Frames_WhenMarkedDuringPeakTail_KeepTheirOwnPixels()
+        {
+            BurstFrameBuffer buffer = new BurstFrameBuffer();
+
+            FeedNumbered(buffer, 1, 19, 0);
+            FeedNumbered(buffer, 20, 20, 10);
+            FeedNumbered(buffer, 21, 25, 0);
+            buffer.Mark(2.5);
+            FeedNumbered(buffer, 26, 120, 0);
+
+            Assert.That(Indices(buffer), Is.EqualTo(Range(10, 41)));
+            AssertTilesHoldOwnNumbers(buffer);
+        }
+
+        /// <summary>
         /// What: tile arrays dropped from the look-back window are reused, so a still recording keeps one spare array instead of allocating per frame.
         /// </summary>
         [Test]
