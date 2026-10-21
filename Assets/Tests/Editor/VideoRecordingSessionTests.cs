@@ -337,6 +337,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             Assert.That(snapshot.IsRecording, Is.False);
             Assert.That(snapshot.Analysis, Is.Null);
             Assert.That(_encoder.DisposeCallCount, Is.EqualTo(1));
+            Assert.That(_session.FrameTextureForTests, Is.Null);
         }
 
         private sealed class FakeVideoFrameEncoder : IVideoFrameEncoder
