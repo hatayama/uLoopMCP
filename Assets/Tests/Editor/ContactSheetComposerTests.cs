@@ -75,5 +75,23 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             Assert.That(sheet[(topRow - 1) * layout.width + 1], Is.EqualTo(first));
             Assert.That(sheet[0], Is.EqualTo(other));
         }
+    
+        /// <summary>
+        /// What: a tile keeps its own row order on the sheet, so the bottom row of a tile is not flipped to its top.
+        /// </summary>
+        [Test]
+        public void Compose_KeepsRowOrderInsideTile()
+        {
+            Color32 bottom = new Color32(255, 0, 0, 255);
+            Color32 top = new Color32(0, 0, 255, 255);
+            List<Color32[]> tiles = new List<Color32[]> { new[] { bottom, top } };
+
+            Color32[] sheet = ContactSheetComposer.Compose(tiles, 1, 2, 1, Gutter);
+
+            (int columns, int rows, int width, int height) layout =
+                ContactSheetComposer.Layout(1, 1, 1, 2, Gutter);
+            Assert.That(sheet[0], Is.EqualTo(bottom));
+            Assert.That(sheet[layout.width], Is.EqualTo(top));
+        }
     }
 }
