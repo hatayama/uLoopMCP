@@ -50,10 +50,24 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
         }
 
         /// <summary>
+        /// What: ForFrame derives the tile and grid sizes from the frame size.
+        /// </summary>
+        [Test]
+        public void ForFrame_UsesResolvedTileAndGridSizes()
+        {
+            FrameTileSampler sampler = FrameTileSampler.ForFrame(1280, 720);
+
+            Assert.That(sampler.TileWidth, Is.EqualTo(320));
+            Assert.That(sampler.TileHeight, Is.EqualTo(180));
+            Assert.That(sampler.GridColumns, Is.EqualTo(64));
+            Assert.That(sampler.GridRows, Is.EqualTo(36));
+        }
+
+        /// <summary>
         /// What: sampling a 2x2 source into a 2x2 tile copies every pixel unchanged.
         /// </summary>
         [Test]
-        public void SampleTile_WhenSameSize_CopiesPixels()
+        public void Sample_WhenSameSize_CopiesPixels()
         {
             Color32[] source =
             {
@@ -64,7 +78,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             };
             Color32[] tile = new Color32[4];
 
-            FrameTileSampler.SampleTile(source, 2, 2, tile, 2, 2);
+            new FrameTileSampler(2, 2, 2, 2, 2, 2).Sample(source, tile, new byte[4]);
 
             Assert.That(tile, Is.EqualTo(source));
         }
@@ -73,7 +87,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
         /// What: downsampling 4x4 to 2x2 picks the nearest source pixel at even coordinates.
         /// </summary>
         [Test]
-        public void SampleTile_WhenDownsampling_PicksNearestPixel()
+        public void Sample_WhenDownsampling_PicksNearestPixel()
         {
             Color32[] source = new Color32[16];
             for (int i = 0; i < source.Length; i++)
@@ -83,7 +97,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
 
             Color32[] tile = new Color32[4];
 
-            FrameTileSampler.SampleTile(source, 4, 4, tile, 2, 2);
+            new FrameTileSampler(4, 4, 2, 2, 2, 2).Sample(source, tile, new byte[4]);
 
             Assert.That(tile[0].r, Is.EqualTo(0));
             Assert.That(tile[1].r, Is.EqualTo(2));
@@ -92,56 +106,83 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
         }
 
         /// <summary>
-        /// What: a single-color tile gives the same luminance in every grid cell.
+        /// What: a single-color frame gives the same luminance in every grid cell.
         /// </summary>
         [Test]
-        public void ComputeLuminanceGrid_WhenSingleColor_AllCellsEqual()
+        public void Sample_WhenSingleColor_AllCellsEqual()
         {
-            Color32[] tile = Fill(8, 8, new Color32(100, 100, 100, 255));
+            Color32[] source = Fill(8, 8, new Color32(100, 100, 100, 255));
             byte[] grid = new byte[4];
 
-            FrameTileSampler.ComputeLuminanceGrid(tile, 8, 8, grid, 2, 2);
+            new FrameTileSampler(8, 8, 8, 8, 2, 2).Sample(source, new Color32[64], grid);
 
             Assert.That(grid, Is.All.EqualTo(100));
         }
 
         /// <summary>
-        /// What: a tile whose upper half is white keeps that half in the upper grid rows (rows count from the bottom).
+        /// What: a cell averages the luminance of the tile pixels inside it.
         /// </summary>
         [Test]
-        public void ComputeLuminanceGrid_KeepsRowOrderFromBottom()
+        public void Sample_AveragesLuminanceInsideCell()
         {
-            Color32[] tile = new Color32[16];
+            Color32[] source = { Black, White, Black, White };
+            byte[] grid = new byte[1];
+
+            new FrameTileSampler(2, 2, 2, 2, 1, 1).Sample(source, new Color32[4], grid);
+
+            Assert.That(grid[0], Is.EqualTo(127));
+        }
+
+        /// <summary>
+        /// What: a frame whose upper half is white keeps that half in the upper grid rows (rows count from the bottom).
+        /// </summary>
+        [Test]
+        public void Sample_KeepsRowOrderFromBottom()
+        {
+            Color32[] source = new Color32[16];
             for (int y = 0; y < 4; y++)
             {
                 for (int x = 0; x < 4; x++)
                 {
-                    tile[y * 4 + x] = y >= 2 ? White : Black;
+                    source[y * 4 + x] = y >= 2 ? White : Black;
                 }
             }
 
             byte[] grid = new byte[4];
 
-            FrameTileSampler.ComputeLuminanceGrid(tile, 4, 4, grid, 2, 2);
+            new FrameTileSampler(4, 4, 4, 4, 2, 2).Sample(source, new Color32[16], grid);
 
-            Assert.That(grid[0], Is.EqualTo(0));
-            Assert.That(grid[1], Is.EqualTo(0));
-            Assert.That(grid[2], Is.EqualTo(255));
-            Assert.That(grid[3], Is.EqualTo(255));
+            Assert.That(grid, Is.EqualTo(new byte[] { 0, 0, 255, 255 }));
         }
 
         /// <summary>
         /// What: a grid larger than the tile falls back to the nearest pixel instead of an empty average.
         /// </summary>
         [Test]
-        public void ComputeLuminanceGrid_WhenGridLargerThanTile_UsesNearestPixel()
+        public void Sample_WhenGridLargerThanTile_UsesNearestPixel()
         {
-            Color32[] tile = { Black, White };
+            Color32[] source = { Black, White };
             byte[] grid = new byte[4];
 
-            FrameTileSampler.ComputeLuminanceGrid(tile, 2, 1, grid, 4, 1);
+            new FrameTileSampler(2, 1, 2, 1, 4, 1).Sample(source, new Color32[2], grid);
 
             Assert.That(grid, Is.EqualTo(new byte[] { 0, 0, 255, 255 }));
+        }
+
+        /// <summary>
+        /// What: sampling a frame twice gives the same grid, so cell sums do not carry over between frames.
+        /// </summary>
+        [Test]
+        public void Sample_Twice_DoesNotCarryOverSums()
+        {
+            FrameTileSampler sampler = new FrameTileSampler(2, 2, 2, 2, 1, 1);
+            Color32[] source = Fill(2, 2, new Color32(100, 100, 100, 255));
+            byte[] grid = new byte[1];
+
+            sampler.Sample(source, new Color32[4], grid);
+            sampler.Sample(source, new Color32[4], grid);
+
+            Assert.That(grid[0], Is.EqualTo(100));
         }
 
         private static Color32[] Fill(int width, int height, Color32 color)

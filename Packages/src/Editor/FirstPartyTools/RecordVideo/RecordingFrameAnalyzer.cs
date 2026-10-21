@@ -20,6 +20,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         private readonly int _tileHeight;
         private readonly int _gridColumns;
         private readonly int _gridRows;
+        private readonly FrameTileSampler _sampler;
         private readonly Color32[] _source;
         private readonly Color32[] _tile;
         private readonly byte[] _grid;
@@ -32,8 +33,11 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
             _width = width;
             _height = height;
-            (_tileWidth, _tileHeight) = FrameTileSampler.ResolveTileSize(width, height);
-            (_gridColumns, _gridRows) = FrameTileSampler.ResolveGridSize(_tileWidth, _tileHeight);
+            _sampler = FrameTileSampler.ForFrame(width, height);
+            _tileWidth = _sampler.TileWidth;
+            _tileHeight = _sampler.TileHeight;
+            _gridColumns = _sampler.GridColumns;
+            _gridRows = _sampler.GridRows;
             // Allocated once: a per-frame allocation would add GC pressure to every Editor update while recording.
             _source = new Color32[width * height];
             _tile = new Color32[_tileWidth * _tileHeight];
@@ -45,10 +49,11 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         {
             Debug.Assert(frame.width == _width && frame.height == _height, "frame size must match the recording.");
 
+            // Why copy instead of reading the NativeArray in place: Unity 2022.3 has no span view of a
+            // NativeArray and this assembly does not allow unsafe code.
             NativeArray<Color32> raw = frame.GetRawTextureData<Color32>();
             raw.CopyTo(_source);
-            FrameTileSampler.SampleTile(_source, _width, _height, _tile, _tileWidth, _tileHeight);
-            FrameTileSampler.ComputeLuminanceGrid(_tile, _tileWidth, _tileHeight, _grid, _gridColumns, _gridRows);
+            _sampler.Sample(_source, _tile, _grid);
             FrameChangeSample sample = _series.Add(encodedFrame, seconds, _grid);
             _burst.Add(_tile, sample);
         }
