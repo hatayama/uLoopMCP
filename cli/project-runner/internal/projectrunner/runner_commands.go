@@ -8,6 +8,7 @@ import (
 
 	"github.com/hatayama/unity-cli-loop/common/clicore"
 	"github.com/hatayama/unity-cli-loop/common/project"
+	"github.com/hatayama/unity-cli-loop/common/tooldocs"
 	"github.com/hatayama/unity-cli-loop/common/unityipc"
 )
 
@@ -44,6 +45,8 @@ func runResolvedProjectCommand(
 		return runCancelCommand(ctx, connection, commandArgs, stdout, stderr)
 	case pausePointEnableCommandName:
 		return runEnablePausePointCommand(ctx, connection, commandArgs, startPath, stdout, stderr)
+	case tooldocs.RecordVideoCommandName:
+		return runRecordVideoCommand(ctx, connection, commandArgs, startPath, stdout, stderr)
 	default:
 		return runDynamicProjectTool(ctx, connection, command, commandArgs, startPath, stdout, stderr)
 	}
@@ -75,38 +78,8 @@ func runDynamicProjectToolWithCompileNote(
 	includeCompileNote bool,
 	compileWarning string,
 ) int {
-	tool, cache, ok, err := clicore.FindToolForCommand(connection.ProjectRoot, command)
-	if err != nil {
-		clierrors.WriteClassifiedError(stderr, err, clierrors.ErrorContext{ProjectRoot: connection.ProjectRoot, Command: command})
-		return 1
-	}
+	params, ok := resolveDynamicToolParams(connection, command, commandArgs, startPath, stderr)
 	if !ok {
-		clierrors.WriteErrorEnvelope(stderr, clicore.UnknownCommandError(command, cache, clierrors.ErrorContext{
-			ProjectRoot: connection.ProjectRoot,
-			Command:     command,
-		}))
-		return 1
-	}
-
-	params, nestedProjectPath, ok := prepareDynamicToolParams(
-		command,
-		commandArgs,
-		tool,
-		connection,
-		startPath,
-		stderr,
-	)
-	if !ok {
-		return 1
-	}
-	if nestedProjectPath != "" && nestedProjectPath != connection.ProjectRoot {
-		clierrors.WriteErrorEnvelope(stderr, (&clierrors.ArgumentError{
-			Message:      "--project-path must target the same Unity project for this command",
-			Option:       "--project-path",
-			ExpectedType: "path",
-			Command:      command,
-			NextActions:  []string{"Use one `--project-path <path>` value for the target Unity project."},
-		}).ToCLIError(clierrors.ErrorContext{ProjectRoot: connection.ProjectRoot, Command: command}))
 		return 1
 	}
 	if !includeCompileNote {
@@ -124,6 +97,52 @@ func runDynamicProjectToolWithCompileNote(
 	}
 	clicore.WriteJSON(stdout, withCompileNote)
 	return result.exitCode
+}
+
+// resolveDynamicToolParams finds the schema-driven tool for command and builds the params Unity
+// receives, writing any failure to stderr in the envelope a plain tool call reports.
+func resolveDynamicToolParams(
+	connection unityipc.Connection,
+	command string,
+	commandArgs []string,
+	startPath string,
+	stderr io.Writer,
+) (map[string]any, bool) {
+	tool, cache, ok, err := clicore.FindToolForCommand(connection.ProjectRoot, command)
+	if err != nil {
+		clierrors.WriteClassifiedError(stderr, err, clierrors.ErrorContext{ProjectRoot: connection.ProjectRoot, Command: command})
+		return nil, false
+	}
+	if !ok {
+		clierrors.WriteErrorEnvelope(stderr, clicore.UnknownCommandError(command, cache, clierrors.ErrorContext{
+			ProjectRoot: connection.ProjectRoot,
+			Command:     command,
+		}))
+		return nil, false
+	}
+
+	params, nestedProjectPath, ok := prepareDynamicToolParams(
+		command,
+		commandArgs,
+		tool,
+		connection,
+		startPath,
+		stderr,
+	)
+	if !ok {
+		return nil, false
+	}
+	if nestedProjectPath != "" && nestedProjectPath != connection.ProjectRoot {
+		clierrors.WriteErrorEnvelope(stderr, (&clierrors.ArgumentError{
+			Message:      "--project-path must target the same Unity project for this command",
+			Option:       "--project-path",
+			ExpectedType: "path",
+			Command:      command,
+			NextActions:  []string{"Use one `--project-path <path>` value for the target Unity project."},
+		}).ToCLIError(clierrors.ErrorContext{ProjectRoot: connection.ProjectRoot, Command: command}))
+		return nil, false
+	}
+	return params, true
 }
 
 func prepareDynamicToolParams(

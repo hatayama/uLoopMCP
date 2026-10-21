@@ -63,6 +63,7 @@ func VisibleOptionHelpEntriesForTool(tool tools.ToolDefinition) []OptionHelpEntr
 	entries = appendRunTestsSkipCompileOptionHelpEntry(tool, entries)
 	entries = appendPausePointEnableCLIOnlyOptionHelpEntries(tool.Name, entries)
 	entries = appendPausePointClearCLIOnlyOptionHelpEntries(tool.Name, entries)
+	entries = appendRecordVideoCLIOnlyOptionHelpEntries(tool.Name, entries)
 	sort.Slice(entries, func(i int, j int) bool {
 		return entries[i].Name < entries[j].Name
 	})
