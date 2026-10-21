@@ -1,7 +1,7 @@
 ---
 name: uloop-screenshot
 toolName: screenshot
-description: "Capture Unity Editor windows or Game View rendering as PNG. Use for visual checks, debugging, documentation, or annotated UI element coordinates."
+description: "Capture Unity Editor windows or Game View rendering as PNG. Use for visual checks, debugging, documentation, or annotated UI element coordinates. A screenshot is one frame; for flicker, stutter, one-frame glitches, or anything that changes between frames, use record-video."
 ---
 
 # uloop screenshot
