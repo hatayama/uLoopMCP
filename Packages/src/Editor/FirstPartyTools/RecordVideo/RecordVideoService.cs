@@ -21,7 +21,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             () => EditorApplication.timeSinceStartup,
             callback => EditorApplication.update += callback,
             callback => EditorApplication.update -= callback,
-            ApplyDefaultDirectoryRetention);
+            ApplyDefaultDirectoryRetention,
+            (width, height) => new RecordingFrameAnalyzer(width, height));
 
         internal static bool IsRecording => ServiceValue.IsRecording;
 
@@ -63,6 +64,11 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             return ServiceValue.Stop(reason);
         }
 
+        internal static bool Mark()
+        {
+            return ServiceValue.Mark();
+        }
+
         internal static VideoRecordingSnapshot GetSnapshot()
         {
             return ServiceValue.GetSnapshot();
@@ -76,6 +82,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 UnityCliLoopConstants.VIDEOS_DIR);
             OutputFileRetention.DeleteOldestBeyondLimit(directory, RecordVideoConstants.Mp4SearchPattern);
             OutputFileRetention.DeleteOldestBeyondLimit(directory, RecordVideoConstants.WebmSearchPattern);
+            RecordVideoSidecarRetention.DeleteOrphans(directory);
         }
     }
 }
