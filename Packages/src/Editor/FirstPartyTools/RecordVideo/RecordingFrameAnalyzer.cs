@@ -8,11 +8,12 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     /// <summary>
     /// Measures every captured frame of a recording on CPU copies and, when the recording stops,
-    /// writes the burst sheet and the sidecar JSON beside the video.
+    /// writes the burst sheet, the timeline sheet, and the sidecar JSON beside the video.
     /// </summary>
     internal sealed class RecordingFrameAnalyzer : IRecordingFrameAnalyzer
     {
         internal const int BurstColumns = 4;
+        internal const int TimelineColumns = 5;
 
         private readonly int _width;
         private readonly int _height;
@@ -26,6 +27,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         private readonly byte[] _grid;
         private readonly FrameChangeSeries _series;
         private readonly BurstFrameBuffer _burst = new BurstFrameBuffer();
+        private readonly TimelineFrameSampler _timeline = new TimelineFrameSampler();
 
         internal RecordingFrameAnalyzer(int width, int height)
         {
@@ -56,6 +58,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             _sampler.Sample(_source, _tile, _grid);
             FrameChangeSample sample = _series.Add(encodedFrame, seconds, _grid);
             _burst.Add(_tile, sample);
+            _timeline.Add(_tile, sample);
         }
 
         public void Mark(double seconds)
@@ -89,6 +92,13 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             {
                 document.Burst = WriteSheet(RecordVideoSidecarPaths.Burst(videoPath), _burst.Frames, BurstColumns);
                 document.BurstAnchor = _burst.Anchor == BurstAnchor.mark ? "mark" : "largest-change";
+            }
+
+            // Unlike the burst, a single tile is still worth a sheet here: it shows what a short
+            // recording looked like without opening the video.
+            if (_timeline.Frames.Count >= 1)
+            {
+                document.Timeline = WriteSheet(RecordVideoSidecarPaths.Timeline(videoPath), _timeline.Frames, TimelineColumns);
             }
 
             string analysisPath = RecordVideoSidecarPaths.Analysis(videoPath);

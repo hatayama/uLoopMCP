@@ -53,6 +53,15 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         public List<SheetFrame> BurstFrames { get; set; }
 
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+        public string TimelineSheetPath { get; set; }
+
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+        public int? TimelineSheetColumns { get; set; }
+
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+        public List<SheetFrame> TimelineFrames { get; set; }
+
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public List<double> MarkSeconds { get; set; }
 
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
