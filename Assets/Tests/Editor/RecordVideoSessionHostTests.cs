@@ -25,6 +25,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
         private int _unsubscribeCount;
         private int _retentionCount;
         private RecordVideoSessionHost _host;
+        private List<FakeRecordingFrameAnalyzer> _analyzers;
 
         [SetUp]
         public void SetUp()
@@ -45,6 +46,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             _updateCallbacks = new List<EditorApplication.CallbackFunction>();
             _unsubscribeCount = 0;
             _retentionCount = 0;
+            _analyzers = new List<FakeRecordingFrameAnalyzer>();
             _host = new RecordVideoSessionHost(
                 CreateEncoder,
                 ReadClock,
@@ -54,7 +56,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
                     _unsubscribeCount++;
                     _updateCallbacks.Remove(callback);
                 },
-                () => _retentionCount++);
+                () => _retentionCount++,
+                CreateAnalyzer);
         }
 
         [TearDown]
@@ -305,6 +308,71 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             Assert.That(LastCompletedRecordingStore.TryRead().HasValue, Is.False);
         }
 
+        /// <summary>
+        /// What: Mark while recording marks the session's analyzer with the elapsed time and returns true.
+        /// </summary>
+        [Test]
+        public void Mark_WhileRecording_MarksSession()
+        {
+            StartRecording(Path.Combine(_outputDirectory, "clip.mp4"), usedDefaultOutputPath: false, stopOnPlayModeExit: false);
+            _now = 0.75;
+
+            bool marked = _host.Mark();
+
+            Assert.That(marked, Is.True);
+            Assert.That(_analyzers[0].MarkSeconds, Is.EqualTo(new[] { 0.75 }));
+            Assert.That(_host.GetSnapshot().MarkSeconds, Is.EqualTo(new[] { 0.75 }));
+        }
+
+        /// <summary>
+        /// What: Mark without a recording, or after the recording stopped, returns false.
+        /// </summary>
+        [Test]
+        public void Mark_WithoutRecording_ReturnsFalse()
+        {
+            Assert.That(_host.Mark(), Is.False);
+
+            StartRecording(Path.Combine(_outputDirectory, "clip.mp4"), usedDefaultOutputPath: false, stopOnPlayModeExit: false);
+            _host.Stop(RecordVideoConstants.StoppedByCli);
+
+            Assert.That(_host.Mark(), Is.False);
+            Assert.That(_analyzers[0].MarkSeconds, Is.Empty);
+        }
+
+        /// <summary>
+        /// What: an automatic stop saves the analysis path with the last completed recording, so the next
+        /// stop or status can report the analysis.
+        /// </summary>
+        [Test]
+        public void AutoStop_SavesAnalysisPathToLastCompleted()
+        {
+            string outputPath = Path.Combine(_outputDirectory, "clip.mp4");
+            StartRecording(outputPath, usedDefaultOutputPath: false, stopOnPlayModeExit: false);
+            _now = 11.0;
+
+            _updateCallbacks[0]();
+
+            LastCompletedRecording lastRecording = LastCompletedRecordingStore.TryRead();
+            Assert.That(_analyzers[0].FinishCallCount, Is.EqualTo(1));
+            Assert.That(lastRecording.Snapshot.Analysis, Is.Not.Null);
+            Assert.That(lastRecording.Snapshot.Analysis.Path, Is.EqualTo(RecordVideoSidecarPaths.Analysis(outputPath)));
+        }
+
+        /// <summary>
+        /// What: an assembly reload finishes the analysis before the recording is saved as the last completed one.
+        /// </summary>
+        [Test]
+        public void OnBeforeAssemblyReload_FinishesAnalysis()
+        {
+            string outputPath = Path.Combine(_outputDirectory, "clip.mp4");
+            StartRecording(outputPath, usedDefaultOutputPath: false, stopOnPlayModeExit: false);
+
+            _host.OnBeforeAssemblyReload();
+
+            Assert.That(_analyzers[0].FinishCallCount, Is.EqualTo(1));
+            Assert.That(LastCompletedRecordingStore.TryRead().Snapshot.Analysis.Path, Is.EqualTo(RecordVideoSidecarPaths.Analysis(outputPath)));
+        }
+
         private VideoRecordingSnapshot StartRecording(string outputPath, bool usedDefaultOutputPath, bool stopOnPlayModeExit)
         {
             return _host.Start(
@@ -333,6 +401,13 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             return encoder;
         }
 
+        private IRecordingFrameAnalyzer CreateAnalyzer(int width, int height)
+        {
+            FakeRecordingFrameAnalyzer analyzer = new FakeRecordingFrameAnalyzer();
+            _analyzers.Add(analyzer);
+            return analyzer;
+        }
+
         private double ReadClock()
         {
             if (_clockThrows)
@@ -355,7 +430,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
                 1.0,
                 RecordVideoConstants.StoppedByMaxDuration,
                 false,
-                "high");
+                "high",
+                null,
+                null);
         }
 
         private readonly struct EncoderRequest
@@ -406,6 +483,31 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             public void Dispose()
             {
                 DisposeCallCount++;
+            }
+        }
+
+        private sealed class FakeRecordingFrameAnalyzer : IRecordingFrameAnalyzer
+        {
+            internal List<double> MarkSeconds { get; } = new List<double>();
+
+            internal int FinishCallCount { get; private set; }
+
+            public void OnCapturedFrame(Texture2D frame, int encodedFrame, double seconds)
+            {
+            }
+
+            public void Mark(double seconds)
+            {
+                MarkSeconds.Add(seconds);
+            }
+
+            public RecordingAnalysisResult Finish(string videoPath, int width, int height, int frameRate)
+            {
+                FinishCallCount++;
+                string analysisPath = RecordVideoSidecarPaths.Analysis(videoPath);
+                RecordingAnalysisDocument document = new RecordingAnalysisDocument { VideoPath = videoPath };
+                RecordingAnalysisDocument.Write(analysisPath, document);
+                return new RecordingAnalysisResult(analysisPath, document);
             }
         }
 

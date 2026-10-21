@@ -111,6 +111,7 @@ func listOptionsForTool(tool clicore.ToolDefinition) []listOption {
 	options = appendRunTestsSkipCompileListOption(tool, options)
 	options = appendPausePointEnableAwaitListOptions(tool, options)
 	options = appendPausePointClearListOptions(tool, options)
+	options = appendRecordVideoListOptions(tool, options)
 	sort.Slice(options, func(i int, j int) bool {
 		return options[i].Name < options[j].Name
 	})
@@ -204,6 +205,28 @@ func appendPausePointClearListOptions(tool clicore.ToolDefinition, options []lis
 	}
 
 	for _, option := range tooldocs.PausePointClearCLIOnlyOptions() {
+		optionName := "--" + option.FlagName
+		if hasListOption(options, optionName) {
+			continue
+		}
+		options = append(options, listOption{
+			Name:        optionName,
+			Type:        option.Type,
+			Description: option.Description,
+			Values:      option.Values,
+		})
+	}
+	return options
+}
+
+// appendRecordVideoListOptions documents record-video's CLI-only one-shot flags. They are not part
+// of RecordVideoSchema, so the schema-driven loop above never emits them.
+func appendRecordVideoListOptions(tool clicore.ToolDefinition, options []listOption) []listOption {
+	if tool.Name != tooldocs.RecordVideoCommandName {
+		return options
+	}
+
+	for _, option := range tooldocs.RecordVideoCLIOnlyOptions() {
 		optionName := "--" + option.FlagName
 		if hasListOption(options, optionName) {
 			continue
