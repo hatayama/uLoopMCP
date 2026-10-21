@@ -64,6 +64,11 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             return ServiceValue.Stop(reason);
         }
 
+        internal static bool Mark()
+        {
+            return ServiceValue.Mark();
+        }
+
         internal static VideoRecordingSnapshot GetSnapshot()
         {
             return ServiceValue.GetSnapshot();

@@ -29,7 +29,7 @@ uloop record-video --action stop
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `--action` | enum | `start` | `start` - begin recording, `stop` - finalize the file, `status` - report progress |
+| `--action` | enum | `start` | `start` - begin recording, `stop` - finalize the file, `status` - report progress, `mark` - tell the running recording that the moment you want to see is now; the burst sheet is built around it |
 | `--frame-rate` | integer | `30` | Output video fps. Valid range 1–60. Frames are paced by wall-clock time; when the Editor renders slower than this, the previous frame is repeated. Used by `start` only. |
 | `--max-duration-seconds` | integer | `60` | Auto-stop safety limit in seconds. Valid range 1–600. Used by `start` only. |
 | `--resolution-scale` | number | `1.0` | Resolution scale (0.1 to 1.0) applied to the Game View size before encoding. `0.5` cuts file size and encoding cost to about a quarter. Used by `start` only. |

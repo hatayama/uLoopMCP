@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEditor;
@@ -10,7 +11,7 @@ using io.github.hatayama.UnityCliLoop.ToolContracts;
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     /// <summary>
-    /// Executes Start, Stop, and Status for the record-video tool.
+    /// Executes Start, Stop, Status, and Mark for the record-video tool.
     /// </summary>
     public sealed class RecordVideoUseCase
     {
@@ -35,6 +36,11 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             if (parameters.Action == RecordVideoAction.status)
             {
                 return Task.FromResult(ExecuteStatus());
+            }
+
+            if (parameters.Action == RecordVideoAction.mark)
+            {
+                return Task.FromResult(ExecuteMark());
             }
 
             return ExecuteStartAsync(parameters, isLinux, ct);
@@ -224,6 +230,24 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             }
 
             return CreateFailure(RecordVideoAction.stop, RecordVideoConstants.NoRecordingMessage);
+        }
+
+        private static RecordVideoResponse ExecuteMark()
+        {
+            // Unlike stop, a mark does not report the last auto-stopped recording: a mark that arrives
+            // after the recording ended marks nothing, and the caller must learn that.
+            if (!RecordVideoService.Mark())
+            {
+                return CreateFailure(RecordVideoAction.mark, RecordVideoConstants.NoRecordingMessage);
+            }
+
+            VideoRecordingSnapshot snapshot = RecordVideoService.GetSnapshot();
+            double markedAt = snapshot.MarkSeconds[snapshot.MarkSeconds.Count - 1];
+            return CreateResponse(
+                true,
+                string.Format(CultureInfo.InvariantCulture, RecordVideoConstants.MarkedMessageFormat, markedAt),
+                RecordVideoAction.mark,
+                snapshot);
         }
 
         private static RecordVideoResponse ExecuteStatus()

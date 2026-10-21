@@ -25,6 +25,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
         private int _unsubscribeCount;
         private int _retentionCount;
         private RecordVideoSessionHost _host;
+        private List<FakeRecordingFrameAnalyzer> _analyzers;
 
         [SetUp]
         public void SetUp()
@@ -45,6 +46,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             _updateCallbacks = new List<EditorApplication.CallbackFunction>();
             _unsubscribeCount = 0;
             _retentionCount = 0;
+            _analyzers = new List<FakeRecordingFrameAnalyzer>();
             _host = new RecordVideoSessionHost(
                 CreateEncoder,
                 ReadClock,
@@ -55,7 +57,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
                     _updateCallbacks.Remove(callback);
                 },
                 () => _retentionCount++,
-                (width, height) => new FakeRecordingFrameAnalyzer());
+                CreateAnalyzer);
         }
 
         [TearDown]
@@ -306,6 +308,37 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             Assert.That(LastCompletedRecordingStore.TryRead().HasValue, Is.False);
         }
 
+        /// <summary>
+        /// What: Mark while recording marks the session's analyzer with the elapsed time and returns true.
+        /// </summary>
+        [Test]
+        public void Mark_WhileRecording_MarksSession()
+        {
+            StartRecording(Path.Combine(_outputDirectory, "clip.mp4"), usedDefaultOutputPath: false, stopOnPlayModeExit: false);
+            _now = 0.75;
+
+            bool marked = _host.Mark();
+
+            Assert.That(marked, Is.True);
+            Assert.That(_analyzers[0].MarkSeconds, Is.EqualTo(new[] { 0.75 }));
+            Assert.That(_host.GetSnapshot().MarkSeconds, Is.EqualTo(new[] { 0.75 }));
+        }
+
+        /// <summary>
+        /// What: Mark without a recording, or after the recording stopped, returns false.
+        /// </summary>
+        [Test]
+        public void Mark_WithoutRecording_ReturnsFalse()
+        {
+            Assert.That(_host.Mark(), Is.False);
+
+            StartRecording(Path.Combine(_outputDirectory, "clip.mp4"), usedDefaultOutputPath: false, stopOnPlayModeExit: false);
+            _host.Stop(RecordVideoConstants.StoppedByCli);
+
+            Assert.That(_host.Mark(), Is.False);
+            Assert.That(_analyzers[0].MarkSeconds, Is.Empty);
+        }
+
         private VideoRecordingSnapshot StartRecording(string outputPath, bool usedDefaultOutputPath, bool stopOnPlayModeExit)
         {
             return _host.Start(
@@ -332,6 +365,13 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             FakeVideoFrameEncoder encoder = new(width, height);
             _encoders.Add(encoder);
             return encoder;
+        }
+
+        private IRecordingFrameAnalyzer CreateAnalyzer(int width, int height)
+        {
+            FakeRecordingFrameAnalyzer analyzer = new FakeRecordingFrameAnalyzer();
+            _analyzers.Add(analyzer);
+            return analyzer;
         }
 
         private double ReadClock()
@@ -414,12 +454,15 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
 
         private sealed class FakeRecordingFrameAnalyzer : IRecordingFrameAnalyzer
         {
+            internal List<double> MarkSeconds { get; } = new List<double>();
+
             public void OnCapturedFrame(Texture2D frame, int encodedFrame, double seconds)
             {
             }
 
             public void Mark(double seconds)
             {
+                MarkSeconds.Add(seconds);
             }
 
             public RecordingAnalysisResult Finish(string videoPath, int width, int height, int frameRate)

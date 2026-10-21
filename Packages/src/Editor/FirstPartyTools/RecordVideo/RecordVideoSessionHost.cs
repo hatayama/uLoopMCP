@@ -118,6 +118,20 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             return FinishStoppedSession(reason);
         }
 
+        /// <summary>
+        /// Marks the running recording; returns false when nothing is recording.
+        /// </summary>
+        internal bool Mark()
+        {
+            if (!IsRecording)
+            {
+                return false;
+            }
+
+            _session.Mark();
+            return true;
+        }
+
         internal VideoRecordingSnapshot GetSnapshot()
         {
             if (_session == null)

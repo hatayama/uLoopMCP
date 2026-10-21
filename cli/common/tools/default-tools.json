@@ -827,9 +827,10 @@
             "enum": [
               "start",
               "stop",
-              "status"
+              "status",
+              "mark"
             ],
-            "description": "start - begin recording, stop - finalize the file, status - report progress",
+            "description": "start - begin recording, stop - finalize the file, status - report progress, mark - tell the running recording that the moment you want to see is now; the burst sheet is built around it",
             "default": "start"
           },
           "FrameRate": {
