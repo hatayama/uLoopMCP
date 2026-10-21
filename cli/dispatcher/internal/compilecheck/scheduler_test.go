@@ -62,6 +62,76 @@ type schedulerRecorder struct {
 	// run kills it mid-compile: whatever it had already printed, plus an exit error. Without this a
 	// test can only produce the tidy failure of a process that never ran.
 	killedUnits map[string]bool
+	// outputByRun holds, per unit, what the n-th invocation of it prints and exits with. An
+	// invocation past its end falls back to output.
+	outputByRun map[string][]fakeCompilerOutput
+	// surfacesByRun holds, per unit, the reference assembly the n-th invocation of it writes; an
+	// empty one writes none. An invocation past its end falls back to surfaces.
+	surfacesByRun map[string][]string
+	// startOrder lists the units in the order their invocations started.
+	startOrder []string
+	// begun names the units whose compile or changed-files check has begun.
+	begun map[string]bool
+	// heldUntilBegun holds, per unit, the units its fake invocation waits to see begun before it
+	// finishes, so a test can rely on those starting while it still runs instead of on a hold long
+	// enough under every load. gatesReleased lets every waiting invocation finish.
+	heldUntilBegun map[string][]string
+	gatesReleased  bool
+}
+
+// gateLimit is how long a held invocation waits for the units it waits on before it finishes anyway.
+// Why it finishes rather than fails: the test's own assertions then say what started in which
+// order, which says more than a timeout would.
+const gateLimit = 10 * time.Second
+
+// holdUntilBegun makes the fake invocation of unit finish only once every named unit has begun, or
+// gateLimit has passed. Every invocation still waiting is let go when the test ends.
+func (recorder *schedulerRecorder) holdUntilBegun(t *testing.T, unit string, names ...string) {
+	t.Helper()
+	recorder.mutex.Lock()
+	recorder.heldUntilBegun[unit] = names
+	recorder.mutex.Unlock()
+	t.Cleanup(func() {
+		recorder.mutex.Lock()
+		recorder.gatesReleased = true
+		recorder.mutex.Unlock()
+	})
+}
+
+// markBegun records that the named unit has begun, for a unit checked on its changed files, which
+// never reaches the fake compiler.
+func (recorder *schedulerRecorder) markBegun(name string) {
+	recorder.mutex.Lock()
+	recorder.begun[name] = true
+	recorder.mutex.Unlock()
+}
+
+// waitForGate returns once every unit the named one waits on has begun, the gates were released, or
+// gateLimit has passed.
+func (recorder *schedulerRecorder) waitForGate(name string) {
+	deadline := time.Now().Add(gateLimit)
+	for time.Now().Before(deadline) {
+		if recorder.gateOpen(name) {
+			return
+		}
+		time.Sleep(time.Millisecond)
+	}
+}
+
+// gateOpen reports whether the named unit no longer has to wait.
+func (recorder *schedulerRecorder) gateOpen(name string) bool {
+	recorder.mutex.Lock()
+	defer recorder.mutex.Unlock()
+	if recorder.gatesReleased {
+		return true
+	}
+	for _, waited := range recorder.heldUntilBegun[name] {
+		if !recorder.begun[waited] {
+			return false
+		}
+	}
+
+	return true
 }
 
 // fakeCompilerOutput is what one fake invocation prints and exits with.
@@ -73,16 +143,20 @@ type fakeCompilerOutput struct {
 // newSchedulerRecorder prepares a recorder whose units each take the same time to compile.
 func newSchedulerRecorder(hold time.Duration) *schedulerRecorder {
 	return &schedulerRecorder{
-		hold:         hold,
-		holdByUnit:   map[string]time.Duration{},
-		started:      map[string]bool{},
-		surfaces:     map[string]string{},
-		assemblies:   map[string]string{},
-		output:       map[string]fakeCompilerOutput{},
-		killedUnits:  map[string]bool{},
-		runs:         map[string]int{},
-		finished:     map[string]bool{},
-		finishedWhen: map[string][]string{},
+		hold:           hold,
+		holdByUnit:     map[string]time.Duration{},
+		started:        map[string]bool{},
+		surfaces:       map[string]string{},
+		assemblies:     map[string]string{},
+		output:         map[string]fakeCompilerOutput{},
+		killedUnits:    map[string]bool{},
+		runs:           map[string]int{},
+		finished:       map[string]bool{},
+		finishedWhen:   map[string][]string{},
+		outputByRun:    map[string][]fakeCompilerOutput{},
+		surfacesByRun:  map[string][]string{},
+		begun:          map[string]bool{},
+		heldUntilBegun: map[string][]string{},
 	}
 }
 
@@ -93,6 +167,9 @@ func (recorder *schedulerRecorder) runner() CommandRunner {
 		recorder.mutex.Lock()
 		recorder.started[name] = true
 		recorder.runs[name]++
+		run := recorder.runs[name]
+		recorder.startOrder = append(recorder.startOrder, name)
+		recorder.begun[name] = true
 		recorder.running++
 		if recorder.running > recorder.maxRunning {
 			recorder.maxRunning = recorder.running
@@ -109,6 +186,9 @@ func (recorder *schedulerRecorder) runner() CommandRunner {
 		failing := recorder.failingUnit == name
 		during := recorder.during
 		output := recorder.output[name]
+		if byRun := recorder.outputByRun[name]; run <= len(byRun) {
+			output = byRun[run-1]
+		}
 		killed := recorder.killedUnits[name]
 		recorder.mutex.Unlock()
 
@@ -116,8 +196,9 @@ func (recorder *schedulerRecorder) runner() CommandRunner {
 			during(name)
 		}
 		time.Sleep(hold)
+		recorder.waitForGate(name)
 
-		recorder.writeReferenceAssembly(cmd, name)
+		recorder.writeReferenceAssembly(cmd, name, run)
 		recorder.writeAssembly(cmd, name)
 
 		recorder.mutex.Lock()
@@ -159,11 +240,14 @@ func (recorder *schedulerRecorder) writeAssembly(cmd *exec.Cmd, name string) {
 	writeBesideResponseFile(cmd, name+assemblyExtension, content)
 }
 
-// writeReferenceAssembly writes the reference assembly this fake invocation is set up to produce,
-// beside the response file it was given, which is where csc writes it too.
-func (recorder *schedulerRecorder) writeReferenceAssembly(cmd *exec.Cmd, name string) {
+// writeReferenceAssembly writes the reference assembly the run-th invocation of the unit is set up to
+// produce, beside the response file it was given, which is where csc writes it too.
+func (recorder *schedulerRecorder) writeReferenceAssembly(cmd *exec.Cmd, name string, run int) {
 	recorder.mutex.Lock()
 	surface, produces := recorder.surfaces[name]
+	if byRun := recorder.surfacesByRun[name]; run <= len(byRun) {
+		surface, produces = byRun[run-1], byRun[run-1] != ""
+	}
 	recorder.mutex.Unlock()
 	if !produces {
 		return
@@ -350,8 +434,8 @@ func compiledNames(results []UnitResult) []string {
 }
 
 // Verifies a dependent is left out when the assembly it waited for came out byte-identical to the
-// one the last Unity build produced, and that the stale output of an earlier run is removed with it.
-func TestCompileUnitsSkipsADependentWhoseReferenceKeptItsSurface(t *testing.T) {
+// one the last Unity build produced, and that the output an earlier run left for it is kept.
+func TestCompileUnitsKeepsTheOutputOfASkippedDependent(t *testing.T) {
 	plan := newSchedulerPlan(map[string][]string{"B": {"A"}}, "A", "B")
 	markSelectedAsDependent(t, plan, "B")
 	recorder := newSchedulerRecorder(0)
@@ -373,8 +457,8 @@ func TestCompileUnitsSkipsADependentWhoseReferenceKeptItsSurface(t *testing.T) {
 	if recorder.started["B"] {
 		t.Error("a dependent whose reference kept its surface should not have been compiled")
 	}
-	if _, statErr := os.Stat(staleOutput); !os.IsNotExist(statErr) {
-		t.Error("the skipped unit's earlier output should have been removed")
+	if _, statErr := os.Stat(staleOutput); statErr != nil {
+		t.Errorf("the skipped unit's earlier output should have been kept, got: %v", statErr)
 	}
 }
 
@@ -494,8 +578,10 @@ func TestCompileUnitsBlocksTheDependentsOfAnAssemblyThatFailedToCompile(t *testi
 			t.Errorf("%s should not have compiled against an assembly that failed", name)
 		}
 	}
-	if _, statErr := os.Stat(staleOutput); !os.IsNotExist(statErr) {
-		t.Error("the blocked unit's earlier output should have been removed")
+	// Why the earlier output stays: nothing in this run reads it, and a later run checks it against
+	// the unit's record before using it.
+	if _, statErr := os.Stat(staleOutput); statErr != nil {
+		t.Errorf("the blocked unit's earlier output should have been kept, got %v", statErr)
 	}
 }
 

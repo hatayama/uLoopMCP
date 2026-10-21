@@ -32,6 +32,9 @@ type Options struct {
 	Jobs                 int // how many assemblies compile at once; 0 asks for the default
 	// LockTimeout bounds the wait for another run on the same project; 0 asks for the default.
 	LockTimeout time.Duration
+	// DisableFastPath compiles every changed assembly in full instead of checking only its changed
+	// files. Successful full compiles still record the baseline the next run checks against.
+	DisableFastPath bool
 }
 
 // Result is everything one compile-check run produced.
@@ -43,6 +46,12 @@ type Result struct {
 	// They are kept apart from Skipped: a skipped assembly was read and found to have nothing left
 	// to say, and nothing about these was read at all.
 	Blocked []string
+	// NameSkips names the skipped assemblies a reference changed under, in names they never write.
+	NameSkips []NameSkip
+	// NameIndex says what reading the names of the assemblies with references in the plan took.
+	NameIndex NameIndexReport
+	// BuildSettings says what comparing the build settings with the last Unity build found.
+	BuildSettings BuildSettingsReport
 }
 
 // Run compiles the assemblies that need checking and collects their diagnostics.
@@ -75,6 +84,12 @@ func Run(ctx context.Context, options Options) (Result, error) {
 		ProjectRoot: options.ProjectRoot,
 		Timeout:     unitCompileTimeout,
 		Run:         defaultRun,
+		FastPath: &fastPathRunner{
+			TryDisabled: options.DisableFastPath,
+			Worker: newBootstrappedWorker(paths,
+				filepath.Join(options.ProjectRoot, filepath.FromSlash(compileCheckOutputRoot)),
+				filepath.Join(options.ProjectRoot, plan.OutputDir), defaultRun),
+		},
 	}
 
 	jobs := options.Jobs
@@ -93,8 +108,11 @@ func Run(ctx context.Context, options Options) (Result, error) {
 		// Why the two counts are added: both name an assembly the run did not compile - one because
 		// nothing it compiles from changed, the other because everything it references kept the
 		// public surface the last Unity build recorded.
-		Skipped: plan.Skipped + outcome.Skipped,
-		Blocked: outcome.Blocked,
+		Skipped:       plan.Skipped + outcome.Skipped,
+		Blocked:       outcome.Blocked,
+		NameSkips:     outcome.NameSkips,
+		NameIndex:     outcome.NameIndex,
+		BuildSettings: plan.BuildSettings,
 	}, nil
 }
 

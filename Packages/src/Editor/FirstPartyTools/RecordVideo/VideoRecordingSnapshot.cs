@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 {
     /// <summary>
@@ -15,7 +17,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             double elapsedSeconds,
             string stoppedBy,
             bool isRecording,
-            string quality)
+            string quality,
+            RecordingAnalysisResult analysis,
+            IReadOnlyList<double> markSeconds)
         {
             OutputPath = outputPath;
             Width = width;
@@ -27,6 +31,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             StoppedBy = stoppedBy;
             IsRecording = isRecording;
             Quality = quality;
+            Analysis = analysis;
+            MarkSeconds = markSeconds;
         }
 
         internal string OutputPath { get; }
@@ -48,5 +54,15 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         internal bool IsRecording { get; }
 
         internal string Quality { get; }
+
+        /// <summary>
+        /// The sidecar written when the recording stopped; null while recording or when the analysis failed.
+        /// </summary>
+        internal RecordingAnalysisResult Analysis { get; }
+
+        /// <summary>
+        /// Recording-relative seconds of every mark; null for a default snapshot.
+        /// </summary>
+        internal IReadOnlyList<double> MarkSeconds { get; }
     }
 }

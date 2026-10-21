@@ -19,6 +19,15 @@ func TestSkillGuidanceLineNamesTheMatchingSkill(t *testing.T) {
 	}
 }
 
+// Verifies the hidden compile-check command gets no skill guidance line: its skill is internal and
+// not installed, so pointing at it would send the reader to a skill that does not exist.
+func TestSkillGuidanceLineLeavesOutTheHiddenCompileCheckCommand(t *testing.T) {
+	line, ok := SkillGuidanceLine("compile-check")
+	if ok {
+		t.Errorf("guidance line = %q, want none while compile-check is hidden", line)
+	}
+}
+
 // Verifies all four pause-point commands point at the single uloop-pause-point skill rather than a
 // per-command skill name derived from the command, which would not exist.
 func TestSkillGuidanceLineMapsEveryPausePointCommandToOneSkill(t *testing.T) {
@@ -144,5 +153,14 @@ func repositoryRoot(t *testing.T) string {
 			t.Fatalf("failed to find the repository root from %s", directory)
 		}
 		directory = parent
+	}
+}
+
+// Verifies game-view-mode points at its own skill rather than being folded into the Game view size
+// skill it sits next to in the catalog.
+func TestSkillGuidanceLineNamesTheGameViewModeSkill(t *testing.T) {
+	line, ok := SkillGuidanceLine("game-view-mode")
+	if !ok || !strings.Contains(line, "uloop-game-view-mode") {
+		t.Errorf("guidance line = %q (ok %v), want it to name uloop-game-view-mode", line, ok)
 	}
 }

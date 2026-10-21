@@ -72,7 +72,7 @@
     },
     {
       "name": "run-tests",
-      "description": "Run Unity Test Runner and report detailed results. Use for EditMode/PlayMode tests, change verification, or failure diagnosis.",
+      "description": "Run Unity Test Runner and report detailed results. Use for EditMode/PlayMode tests or failure diagnosis; for runtime behavior the tests do not exercise, use pause-point (trace) or record-video.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -247,7 +247,7 @@
     },
     {
       "name": "screenshot",
-      "description": "Capture Unity Editor windows or Game View rendering as PNG. Use for visual checks, debugging, documentation, or annotated UI element coordinates.",
+      "description": "Capture Unity Editor windows or Game View rendering as PNG. Use for visual checks, debugging, documentation, or annotated UI element coordinates. A screenshot is one frame; for flicker, stutter, one-frame glitches, or anything that changes between frames, use record-video.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -758,6 +758,31 @@
       }
     },
     {
+      "name": "game-view-mode",
+      "description": "Show which view the Game tab is showing, switch it between the Game view and the Device Simulator (rotating the simulated device to match the Game view's orientation), or pick the simulated device by name. Use before Play when the UI must be checked in a device frame.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "To": {
+            "type": "string",
+            "description": "Simulator switches the current Game view tab to the Device Simulator in place and rotates the device to match the Game view (landscape or portrait) when Player Settings allow that orientation; GameView switches back. Omit to report the current view without changing it.",
+            "enum": [
+              "GameView",
+              "Simulator"
+            ]
+          },
+          "Device": {
+            "type": "string",
+            "description": "Shows the named device in the Device Simulator and implies --to Simulator when --to is omitted. Case-insensitive: a whole name wins, then a name ending in the given words (iPhone 12 picks Apple iPhone 12, not Apple iPhone 12 mini), then any name containing them. Several matches or none: nothing changes, Success is false, and AvailableDevices lists the candidates or every device."
+          },
+          "ListDevices": {
+            "type": "boolean",
+            "description": "Adds AvailableDevices, the names of every device the Simulator can show, to the response."
+          }
+        }
+      }
+    },
+    {
       "name": "hot-reload",
       "description": "Apply C# edits to the running Editor without a compile or domain reload, keeping Play Mode state. Use instead of compile after editing method bodies or adding methods, fields, or new classes.",
       "inputSchema": {
@@ -793,7 +818,7 @@
     },
     {
       "name": "record-video",
-      "description": "Record the Game View or any Editor window (Scene, Inspector, ...) to an .mp4 or .webm video. Use when a screenshot is not enough: motion, animation, physics, or a gameplay sequence.",
+      "description": "Record the Game View or any Editor window to .mp4/.webm and get back what you can read without watching it: a sheet of up to 32 consecutive frames around the trigger (or around the biggest change when there is no trigger), a timeline sheet, and per-frame change numbers. Use for flicker, stutter, one-frame glitches, fades, cut-ins, transitions, effect order, or anything one screenshot cannot show. One shot: --seconds N --trigger '<uloop command>'.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -802,9 +827,10 @@
             "enum": [
               "start",
               "stop",
-              "status"
+              "status",
+              "mark"
             ],
-            "description": "start - begin recording, stop - finalize the file, status - report progress",
+            "description": "start - begin recording, stop - finalize the file, status - report progress, mark - tell the running recording that the moment you want to see is now; the burst sheet is built around it",
             "default": "start"
           },
           "FrameRate": {

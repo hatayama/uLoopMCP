@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 )
@@ -49,56 +50,71 @@ func projectIndexRoots(projectRoot string) []string {
 }
 
 // IndexAssemblyDefinitions maps every assembly name in the project to the .asmdef that declares it.
-func IndexAssemblyDefinitions(projectRoot string) (map[string]AssemblyDefinition, error) {
+// Each root's .asmdef files are read in walk order before that root's walk error is reported, which
+// is the order the errors surfaced in when each file was read as the walk met it.
+// Why the files are read side by side first: a large project holds hundreds of them, and the
+// decisions below - which of two same-named files wins, which error is reported - only need the
+// results in walk order, not the reads.
+func IndexAssemblyDefinitions(tree projectTree) (map[string]AssemblyDefinition, error) {
+	return indexAssemblyDefinitionsReading(tree, readAssemblyDefinition)
+}
+
+// indexAssemblyDefinitionsReading is IndexAssemblyDefinitions with the read of one .asmdef given.
+// The index it returns does not depend on the order the reads finish in.
+func indexAssemblyDefinitionsReading(
+	tree projectTree, read func(path string) assemblyDefinitionRead,
+) (map[string]AssemblyDefinition, error) {
+	paths := []string{}
+	for _, root := range tree.roots {
+		paths = append(paths, root.definitionFiles...)
+	}
+	reads := computeInParallel(len(paths), func(index int) assemblyDefinitionRead {
+		return read(paths[index])
+	})
+
 	index := map[string]AssemblyDefinition{}
-	for _, root := range projectIndexRoots(projectRoot) {
-		if !directoryExists(root) {
-			continue
+	next := 0
+	for _, root := range tree.roots {
+		for _, path := range root.definitionFiles {
+			read := reads[next]
+			next++
+			if read.err != nil {
+				return nil, fmt.Errorf(assemblyDefinitionIndexError, root.path, read.err)
+			}
+			// Why the first wins: Unity itself rejects duplicate assembly names, so a second one means
+			// a stale copy, and taking it would point the rebuild at the wrong directory.
+			if _, exists := index[read.name]; !exists {
+				index[read.name] = AssemblyDefinition{
+					Name:      read.name,
+					Path:      path,
+					Directory: filepath.Dir(path),
+					GUID:      read.guid,
+				}
+			}
 		}
-		if err := indexAssemblyDefinitionsUnder(root, index); err != nil {
-			return nil, fmt.Errorf(assemblyDefinitionIndexError, root, err)
+		if root.walkErr != nil {
+			return nil, fmt.Errorf(assemblyDefinitionIndexError, root.path, root.walkErr)
 		}
 	}
 
 	return index, nil
 }
 
-// indexAssemblyDefinitionsUnder adds every .asmdef found below one project root to the index.
-func indexAssemblyDefinitionsUnder(root string, index map[string]AssemblyDefinition) error {
-	return filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if entry.IsDir() {
-			if path != root && isUnityIgnoredName(entry.Name()) {
-				return filepath.SkipDir
-			}
+// assemblyDefinitionRead is what one .asmdef and its .meta say, or why the .asmdef could not be read.
+type assemblyDefinitionRead struct {
+	name string
+	guid string
+	err  error
+}
 
-			return nil
-		}
-		if isUnityIgnoredName(entry.Name()) {
-			return nil
-		}
-		if filepath.Ext(path) != assemblyDefinitionExtension {
-			return nil
-		}
-		name, readErr := readAssemblyDefinitionName(path)
-		if readErr != nil {
-			return readErr
-		}
-		// Why the first wins: Unity itself rejects duplicate assembly names, so a second one means a
-		// stale copy, and taking it would point the rebuild at the wrong directory.
-		if _, exists := index[name]; !exists {
-			index[name] = AssemblyDefinition{
-				Name:      name,
-				Path:      path,
-				Directory: filepath.Dir(path),
-				GUID:      readAssemblyDefinitionGUID(path),
-			}
-		}
+// readAssemblyDefinition reads the name one .asmdef declares and the GUID its .meta records.
+func readAssemblyDefinition(path string) assemblyDefinitionRead {
+	name, err := readAssemblyDefinitionName(path)
+	if err != nil {
+		return assemblyDefinitionRead{err: err}
+	}
 
-		return nil
-	})
+	return assemblyDefinitionRead{name: name, guid: readAssemblyDefinitionGUID(path)}
 }
 
 // readUnityJSONFile reads one of Unity's JSON files into target.
@@ -150,21 +166,43 @@ func readAssemblyDefinitionGUID(assemblyDefinitionPath string) string {
 }
 
 // RebuildSources lists the sources to compile now, reflecting .cs files added or deleted since Bee ran.
+// The recorded sources keep the order of the response file, and the ones added since follow them in
+// ordinal order.
+// Why the order is kept: csc emits types in the order of its sources, so another order gives an
+// assembly nobody edited a reference assembly in other bytes than Unity's, and its dependents compile
+// again. Why the added ones are not slotted in where Unity would put them: Unity versions order the
+// response file differently, and appending leaves the relative order of every recorded source as is.
 func RebuildSources(
 	projectRoot string, rsp ResponseFile, asmdef *AssemblyDefinition, owners assemblyOwnerIndex,
 ) ([]string, error) {
 	existing := make([]string, 0, len(rsp.Sources))
+	seen := map[string]bool{}
 	for _, source := range rsp.Sources {
-		if fileExists(sourcePath(projectRoot, source)) {
-			existing = append(existing, source)
+		if seen[source] || !owners.tree.fileExists(sourcePath(projectRoot, source)) {
+			continue
 		}
+		seen[source] = true
+		existing = append(existing, source)
 	}
 
+	// Why only the predefined assemblies gain sources without an .asmdef: an assembly with no .asmdef
+	// that is not one of them is an .asmdef the index does not hold, so nothing says which folder it
+	// owns.
+	if asmdef == nil {
+		if predefinedAssemblyNames[rsp.AssemblyName] {
+			if owners.predefinedSources == nil {
+				return nil, fmt.Errorf(
+					"the scripts outside every assembly definition were never listed for %s", rsp.AssemblyName)
+			}
+
+			return appendPredefinedSources(existing, owners.predefinedSources[rsp.AssemblyName]), nil
+		}
+
+		return existing, nil
+	}
 	// Why package-cache assemblies are not re-globbed: their contents are restored from the package
 	// manager and never edited in place, so the walk would only cost time.
-	if asmdef == nil || isUnderPackageCache(projectRoot, asmdef.Directory) {
-		sort.Strings(existing)
-
+	if isUnderPackageCache(projectRoot, asmdef.Directory) {
 		return existing, nil
 	}
 
@@ -210,10 +248,11 @@ func detectMovedAssemblyDefinition(
 			"so it moved after the last Unity build", asmdef.Name)
 }
 
-// rescueRecordedSources adds back the recorded sources the glob did not produce, which are the files
-// an .asmref attaches to this assembly from a folder the glob never reaches - the folder is not
-// always outside the assembly directory, since an .asmref nested inside a child assembly's directory
-// sits under it yet stops the glob at the child's boundary.
+// rescueRecordedSources keeps the recorded sources the glob did not produce, which are the files an
+// .asmref attaches to this assembly from a folder the glob never reaches - the folder is not always
+// outside the assembly directory, since an .asmref nested inside a child assembly's directory sits
+// under it yet stops the glob at the child's boundary. It returns every recorded source in response
+// file order, then the sources the glob found that the response file did not record, sorted.
 // Why each one is checked against the .asmref that owns its folder rather than simply kept: removing
 // or retargeting an .asmref leaves the .cs file where it is, so the response file still records it
 // while the project has handed it to another assembly, and keeping it would compile the file into
@@ -222,12 +261,13 @@ func rescueRecordedSources(
 	projectRoot string, asmdef AssemblyDefinition, globbed []string, existing []string,
 	owners assemblyOwnerIndex,
 ) ([]string, error) {
-	result := globbed
 	globbedSet := map[string]bool{}
 	for _, source := range globbed {
 		globbedSet[filepath.ToSlash(source)] = true
 	}
+	recordedSet := map[string]bool{}
 	for _, source := range existing {
+		recordedSet[filepath.ToSlash(source)] = true
 		if globbedSet[filepath.ToSlash(source)] {
 			continue
 		}
@@ -236,15 +276,54 @@ func rescueRecordedSources(
 				"the last build recorded %s in %s, which no assembly reference attaches to it any more",
 				filepath.Base(source), asmdef.Name)
 		}
-		result = append(result, source)
 	}
-	sort.Strings(result)
 
-	return result, nil
+	added := []string{}
+	for _, source := range globbed {
+		if !recordedSet[filepath.ToSlash(source)] {
+			added = append(added, source)
+		}
+	}
+	sort.Strings(added)
+
+	return append(slices.Clone(existing), added...), nil
 }
 
 // globAssemblySources lists the .cs files an assembly owns, stopping at nested assembly boundaries.
+// It reads the listing the run took of the project, and the disk for a directory the listing does
+// not hold, which keeps the answer for a directory outside the index roots what it always was.
 func globAssemblySources(
+	projectRoot string, assemblyDirectory string, owners assemblyOwnerIndex,
+) ([]string, error) {
+	listing, listed := owners.tree.directory(assemblyDirectory)
+	if !listed {
+		return globAssemblySourcesOnDisk(projectRoot, assemblyDirectory, owners)
+	}
+
+	sources := []string{}
+	for _, entry := range listing.entries {
+		path := filepath.Join(assemblyDirectory, entry.name)
+		if !entry.isDirectory {
+			if filepath.Ext(entry.name) == cSharpSourceExtension {
+				sources = append(sources, recordSourcePath(projectRoot, path))
+			}
+			continue
+		}
+		if owners.startsAnotherAssembly(path) {
+			continue
+		}
+		nested, err := globAssemblySources(projectRoot, path, owners)
+		if err != nil {
+			return nil, err
+		}
+		sources = append(sources, nested...)
+	}
+
+	return sources, nil
+}
+
+// globAssemblySourcesOnDisk lists the .cs files an assembly owns by walking the disk.
+func globAssemblySourcesOnDisk(
 	projectRoot string, assemblyDirectory string, owners assemblyOwnerIndex,
 ) ([]string, error) {
 	sources := []string{}
@@ -279,7 +358,8 @@ func globAssemblySources(
 	return sources, nil
 }
 
-// directoryHoldsAssemblyDefinition reports whether a directory declares an assembly of its own.
+// directoryHoldsAssemblyDefinition reports whether a directory declares an assembly of its own, by
+// reading it from the disk.
 func directoryHoldsAssemblyDefinition(path string) bool {
 	entries, err := os.ReadDir(path)
 	if err != nil {

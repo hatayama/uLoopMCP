@@ -1,6 +1,7 @@
 package compilecheck
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -34,58 +35,80 @@ func writeReferenceAssembly(t *testing.T, path string, content string) {
 	}
 }
 
+// keptWithAWorkerThatSaysSame asks for the unit's verdict with a worker that would call any two
+// reference assemblies the same surface, and fails the test when the worker was asked: every case
+// here is settled before a comparison.
+func keptWithAWorkerThatSaysSame(t *testing.T, projectRoot string, plan BuildPlan, unit CompileUnit) bool {
+	t.Helper()
+	worker := newFakeFastCheckWorker()
+	worker.surfaceOutcome = "same"
+	compiler := Compiler{ProjectRoot: projectRoot, FastPath: &fastPathRunner{Worker: worker}}
+	verdict := compiler.referenceSurfaceVerdict(context.Background(), plan, unit)
+	if len(worker.surfaceComparisons) != 0 {
+		t.Errorf("expected the verdict to be settled without the worker, got %d comparisons", len(worker.surfaceComparisons))
+	}
+
+	return verdict.Kept
+}
+
+// keptWithoutAWorker asks for the unit's verdict in a run that has no worker to compare surfaces.
+func keptWithoutAWorker(projectRoot string, plan BuildPlan, unit CompileUnit) bool {
+	return Compiler{ProjectRoot: projectRoot}.referenceSurfaceVerdict(context.Background(), plan, unit).Kept
+}
+
 // Verifies a reference assembly identical to the one the last Unity build produced counts as an
 // unchanged public surface, which is what lets a dependent be left out of the run.
-func TestReferenceSurfaceUnchangedAcceptsIdenticalReferenceAssemblies(t *testing.T) {
+func TestReferenceSurfaceVerdictAcceptsIdenticalReferenceAssemblies(t *testing.T) {
 	unityPath := filepath.Join(planDagDirectory, "A.ref.dll")
 	projectRoot, plan, unit := newReferenceSurfaceProject(t, unityPath)
 	writeReferenceAssembly(t, filepath.Join(projectRoot, unityPath), "surface")
 	writeReferenceAssembly(t, filepath.Join(projectRoot, plan.OutputDir, "A.ref.dll"), "surface")
 
-	if !referenceSurfaceUnchanged(projectRoot, plan, unit) {
+	if !keptWithAWorkerThatSaysSame(t, projectRoot, plan, unit) {
 		t.Error("identical reference assemblies should count as an unchanged surface")
 	}
 }
 
-// Verifies a single differing byte counts as a changed surface, so the dependents are compiled.
-func TestReferenceSurfaceUnchangedRejectsDifferingReferenceAssemblies(t *testing.T) {
+// Verifies a single differing byte counts as a changed surface in a run with no worker to compare
+// the API, so the dependents are compiled.
+func TestReferenceSurfaceVerdictRejectsDifferingReferenceAssemblies(t *testing.T) {
 	unityPath := filepath.Join(planDagDirectory, "A.ref.dll")
 	projectRoot, plan, unit := newReferenceSurfaceProject(t, unityPath)
 	writeReferenceAssembly(t, filepath.Join(projectRoot, unityPath), "surface")
 	writeReferenceAssembly(t, filepath.Join(projectRoot, plan.OutputDir, "A.ref.dll"), "surfacf")
 
-	if referenceSurfaceUnchanged(projectRoot, plan, unit) {
+	if keptWithoutAWorker(projectRoot, plan, unit) {
 		t.Error("reference assemblies differing by one byte should count as a changed surface")
 	}
 }
 
 // Verifies a missing output - which is what a failed compile leaves behind - counts as changed.
-func TestReferenceSurfaceUnchangedRejectsAMissingOutput(t *testing.T) {
+func TestReferenceSurfaceVerdictRejectsAMissingOutput(t *testing.T) {
 	unityPath := filepath.Join(planDagDirectory, "A.ref.dll")
 	projectRoot, plan, unit := newReferenceSurfaceProject(t, unityPath)
 	writeReferenceAssembly(t, filepath.Join(projectRoot, unityPath), "surface")
 
-	if referenceSurfaceUnchanged(projectRoot, plan, unit) {
+	if keptWithAWorkerThatSaysSame(t, projectRoot, plan, unit) {
 		t.Error("a reference assembly this run did not produce should count as a changed surface")
 	}
 }
 
 // Verifies a missing Unity-side reference assembly counts as changed rather than as a match.
-func TestReferenceSurfaceUnchangedRejectsAMissingUnityOutput(t *testing.T) {
+func TestReferenceSurfaceVerdictRejectsAMissingUnityOutput(t *testing.T) {
 	unityPath := filepath.Join(planDagDirectory, "A.ref.dll")
 	projectRoot, plan, unit := newReferenceSurfaceProject(t, unityPath)
 	writeReferenceAssembly(t, filepath.Join(projectRoot, plan.OutputDir, "A.ref.dll"), "surface")
 
-	if referenceSurfaceUnchanged(projectRoot, plan, unit) {
+	if keptWithAWorkerThatSaysSame(t, projectRoot, plan, unit) {
 		t.Error("a missing Unity reference assembly should count as a changed surface")
 	}
 }
 
 // Verifies an assembly built without a reference assembly has nothing to compare and counts as changed.
-func TestReferenceSurfaceUnchangedRejectsAnAssemblyWithoutAReferenceAssembly(t *testing.T) {
+func TestReferenceSurfaceVerdictRejectsAnAssemblyWithoutAReferenceAssembly(t *testing.T) {
 	projectRoot, plan, unit := newReferenceSurfaceProject(t, "")
 
-	if referenceSurfaceUnchanged(projectRoot, plan, unit) {
+	if keptWithAWorkerThatSaysSame(t, projectRoot, plan, unit) {
 		t.Error("an assembly with no reference assembly should count as a changed surface")
 	}
 }

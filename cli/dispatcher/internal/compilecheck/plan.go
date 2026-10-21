@@ -23,9 +23,15 @@ type CompileUnit struct {
 	// every unit of an --all run.
 	SelectedAsDependent bool
 	// PlanReferences names the assemblies this one references that this run compiles too. It is
-	// what the scheduler waits for: a reference left out of the plan was not rebuilt, so its
-	// reference assembly from the last Unity build is already on disk and nothing has to wait.
+	// what the scheduler waits for, or starts ahead of: a reference left out of the plan was not
+	// rebuilt, so its reference assembly from the last Unity build is already on disk.
 	PlanReferences []string
+	// KeptSurfaceReferences names the assemblies among PlanReferences this unit reads Unity's
+	// reference assembly for: the ones whose rebuilt reference assembly the run found to describe
+	// the same public surface as Unity's, or assumed would while they were still compiling. The
+	// scheduler fills it when it starts the unit, and nothing writes to it afterwards. Empty
+	// everywhere else.
+	KeptSurfaceReferences map[string]bool
 }
 
 // BuildPlan is the ordered set of assemblies to compile for one run.
@@ -37,6 +43,8 @@ type BuildPlan struct {
 	// All says the caller asked for every assembly to be compiled. Such a run reuses nothing, which
 	// is what makes --all the way out of a reuse that got something wrong.
 	All bool
+	// BuildSettings says what comparing the build settings with the last Unity build found.
+	BuildSettings BuildSettingsReport
 }
 
 // assemblyGraph holds every response file in the dag together with the edges between them.
@@ -50,12 +58,13 @@ type assemblyGraph struct {
 
 // BuildCompilePlan decides which assemblies to compile, in which order, for one project.
 func BuildCompilePlan(projectRoot string, dagDir string, all bool) (BuildPlan, error) {
-	graph, err := loadAssemblyGraph(projectRoot, dagDir)
-	if err != nil {
-		return BuildPlan{}, err
+	inputs := loadPlanInputs(projectRoot, dagDir, all)
+	if inputs.graphErr != nil {
+		return BuildPlan{}, inputs.graphErr
 	}
+	graph := inputs.graph
 
-	reasons, err := selectChangedAssemblies(projectRoot, dagDir, graph, all)
+	reasons, buildSettings, err := selectChangedAssemblies(projectRoot, dagDir, inputs, all)
 	if err != nil {
 		return BuildPlan{}, err
 	}
@@ -63,7 +72,7 @@ func BuildCompilePlan(projectRoot string, dagDir string, all bool) (BuildPlan, e
 
 	order, err := topologicalOrder(graph, reasons)
 	if err != nil {
-		return BuildPlan{}, err
+		return BuildPlan{}, withBuildSettingsReport(buildSettings, err)
 	}
 
 	units := make([]CompileUnit, 0, len(order))
@@ -78,11 +87,12 @@ func BuildCompilePlan(projectRoot string, dagDir string, all bool) (BuildPlan, e
 	}
 
 	return BuildPlan{
-		DagDir:    dagDir,
-		OutputDir: filepath.Join(filepath.FromSlash(compileCheckOutputRoot), filepath.Base(dagDir)),
-		Units:     units,
-		Skipped:   len(graph.names) - len(units),
-		All:       all,
+		DagDir:        dagDir,
+		OutputDir:     filepath.Join(filepath.FromSlash(compileCheckOutputRoot), filepath.Base(dagDir)),
+		Units:         units,
+		Skipped:       len(graph.names) - len(units),
+		All:           all,
+		BuildSettings: buildSettings,
 	}, nil
 }
 
@@ -160,59 +170,91 @@ func listResponseFiles(dagDirectoryPath string) ([]string, error) {
 }
 
 // selectChangedAssemblies rebuilds each assembly's source list and records why it needs compiling.
+// Why it takes the walk and the Bee log rather than reading them: they are read once per run, at the
+// same time as the response files, and the .asmdef index, the .asmref index and every source rebuild
+// below read the same walk.
 func selectChangedAssemblies(
-	projectRoot string, dagDir string, graph assemblyGraph, all bool,
-) (map[string]string, error) {
-	assemblyDefinitions, err := IndexAssemblyDefinitions(projectRoot)
+	projectRoot string, dagDir string, inputs planInputs, all bool,
+) (map[string]string, BuildSettingsReport, error) {
+	graph := inputs.graph
+	assemblyDefinitions, err := IndexAssemblyDefinitions(inputs.tree)
 	if err != nil {
-		return nil, err
+		return nil, BuildSettingsReport{}, err
 	}
 
 	if setErr := DetectAssemblySetChange(projectRoot, dagDir, graph, assemblyDefinitions); setErr != nil {
-		return nil, setErr
+		return nil, BuildSettingsReport{}, setErr
 	}
 
+	buildSettings, settingsErr := DetectBuildSettingsChange(projectRoot, dagDir, graph, assemblyDefinitions)
+	if settingsErr != nil {
+		return nil, buildSettings, withBuildSettingsReport(buildSettings, settingsErr)
+	}
+
+	reasons, err := selectAssembliesByOwnership(projectRoot, dagDir, inputs, assemblyDefinitions, all)
+
+	return reasons, buildSettings, withBuildSettingsReport(buildSettings, err)
+}
+
+// selectAssembliesByOwnership checks which assemblies own which sources now, refuses a run whose
+// ownership moved, and returns why each changed assembly needs compiling.
+func selectAssembliesByOwnership(
+	projectRoot string, dagDir string, inputs planInputs,
+	assemblyDefinitions map[string]AssemblyDefinition, all bool,
+) (map[string]string, error) {
+	graph := inputs.graph
+	tree := inputs.tree
+
 	// Why the .asmref files are indexed here: both the reference check and every source rebuild need
-	// them, and walking the project once per assembly would repeat the same walk for each of them.
-	references, referenceIndexErr := IndexAssemblyReferences(projectRoot)
+	// them.
+	references, referenceIndexErr := IndexAssemblyReferences(tree)
 	if referenceIndexErr != nil {
 		return nil, referenceIndexErr
 	}
 
 	context := NewAssemblyContext(graph, assemblyDefinitions)
-	owners := newAssemblyOwnerIndex(assemblyDefinitions, references, context)
+	owners := newAssemblyOwnerIndex(assemblyDefinitions, references, context, tree)
+	// Why Assets is walked once here rather than per assembly: one walk decides the assembly of every
+	// script outside the assembly definitions, and each predefined assembly takes its share of it.
+	predefined, predefinedErr := globPredefinedSources(projectRoot, owners)
+	if predefinedErr != nil {
+		return nil, predefinedErr
+	}
+	if lackErr := detectPredefinedAssemblyTheBuildLacks(predefined, graph); lackErr != nil {
+		return nil, lackErr
+	}
+	owners.predefinedSources = predefined
 	if referenceErr := DetectAssemblyReferenceChange(
 		projectRoot, graph, context, references, owners); referenceErr != nil {
 		return nil, referenceErr
 	}
 
-	// Why the Bee log is read once here: it describes the whole of the last build, and reading it per
-	// assembly would reread tens of megabytes for every response file in the dag. An --all run reads
-	// nothing, because it selects every assembly whatever the last build made of it.
-	failedLastBuild := map[string]bool{}
-	if !all {
-		failedLastBuild = ReadFailedUnityCompiles(projectRoot, dagDir)
-	}
+	return decideAssembliesInNameOrder(graph, inputs.failedLastBuild, all, func(name string) assemblyCheck {
+		return checkAssembly(projectRoot, dagDir, graph.byName[name],
+			lookupAssemblyDefinition(assemblyDefinitions, name), context, owners)
+	})
+}
+
+// decideAssembliesInNameOrder checks every assembly, then records each one's sources and why it needs
+// compiling, in name order, returning the first error in that order.
+// Why every assembly is checked side by side first: each check only reads the disk and the indexes
+// built before it, while the order below decides which error is reported, so only the checks may
+// run in any order and the result does not depend on the order they finish in.
+func decideAssembliesInNameOrder(
+	graph assemblyGraph, failedLastBuild map[string]bool, all bool, check func(name string) assemblyCheck,
+) (map[string]string, error) {
+	checks := computeInParallel(len(graph.names), func(index int) assemblyCheck {
+		return check(graph.names[index])
+	})
 
 	reasons := map[string]string{}
-	for _, name := range graph.names {
-		rsp := graph.byName[name]
-		asmdef := lookupAssemblyDefinition(assemblyDefinitions, name)
-		if structuralErr := DetectStructuralChange(
-			projectRoot, rsp, asmdef, dagDir, context); structuralErr != nil {
-			return nil, structuralErr
+	for index, name := range graph.names {
+		result := checks[index]
+		if result.err != nil {
+			return nil, result.err
 		}
-
-		sources, sourceErr := RebuildSources(projectRoot, rsp, asmdef, owners)
-		if sourceErr != nil {
-			return nil, sourceErr
-		}
-		graph.sources[name] = sources
-
-		report, changeErr := DetectSourceChange(projectRoot, rsp, sources, dagDir)
-		if changeErr != nil {
-			return nil, changeErr
-		}
+		graph.sources[name] = result.sources
+		report := result.report
 		// Why a failed build only speaks for an assembly nothing else selected: when a source did
 		// move, that is what this run found itself, and it says more about why the assembly needs
 		// compiling than what the previous build made of it.
@@ -231,6 +273,35 @@ func selectChangedAssemblies(
 	}
 
 	return reasons, nil
+}
+
+// assemblyCheck is what checking one assembly found: its sources and whether they changed, or the
+// first error the checks met.
+type assemblyCheck struct {
+	sources []string
+	report  ChangeReport
+	err     error
+}
+
+// checkAssembly runs one assembly's checks in the order whose first error is the one to report: its
+// structure, then its sources, then whether they changed since Unity built it.
+func checkAssembly(
+	projectRoot string, dagDir string, rsp ResponseFile, asmdef *AssemblyDefinition,
+	context AssemblyContext, owners assemblyOwnerIndex,
+) assemblyCheck {
+	if err := DetectStructuralChange(projectRoot, rsp, asmdef, dagDir, context); err != nil {
+		return assemblyCheck{err: err}
+	}
+	sources, err := RebuildSources(projectRoot, rsp, asmdef, owners)
+	if err != nil {
+		return assemblyCheck{err: err}
+	}
+	report, err := DetectSourceChange(projectRoot, rsp, sources, dagDir)
+	if err != nil {
+		return assemblyCheck{err: err}
+	}
+
+	return assemblyCheck{sources: sources, report: report}
 }
 
 // lookupAssemblyDefinition finds the .asmdef for an assembly, if the assembly has one at all.

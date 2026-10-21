@@ -1,7 +1,7 @@
 ---
 name: uloop-run-tests
 toolName: run-tests
-description: "Run Unity Test Runner and report detailed results. Use for EditMode/PlayMode tests, change verification, or failure diagnosis."
+description: "Run Unity Test Runner and report detailed results. Use for EditMode/PlayMode tests or failure diagnosis; for runtime behavior the tests do not exercise, use pause-point (trace) or record-video."
 ---
 
 # uloop run-tests

@@ -38,8 +38,9 @@ func newAssemblyReferenceProject(t *testing.T) (string, assemblyGraph, AssemblyC
 		},
 	}
 	context := AssemblyContext{
-		BuiltAssemblies: map[string]bool{"P": true, "Q": true},
-		AssemblyByGUID:  map[string]string{"qqqq": "Q"},
+		BuiltAssemblies:   map[string]bool{"P": true, "Q": true},
+		DefinedAssemblies: map[string]bool{"P": true, "Q": true},
+		AssemblyByGUID:    map[string]string{"qqqq": "Q"},
 	}
 
 	return projectRoot, graph, context, buildTime
@@ -51,15 +52,16 @@ func detectReferenceChange(
 	t *testing.T, projectRoot string, graph assemblyGraph, context AssemblyContext,
 ) error {
 	t.Helper()
-	references, err := IndexAssemblyReferences(projectRoot)
+	tree := walkProjectTree(projectRoot)
+	references, err := IndexAssemblyReferences(tree)
 	if err != nil {
 		t.Fatalf("failed to index the assembly references: %v", err)
 	}
-	definitions, definitionErr := IndexAssemblyDefinitions(projectRoot)
+	definitions, definitionErr := IndexAssemblyDefinitions(tree)
 	if definitionErr != nil {
 		t.Fatalf("failed to index the assembly definitions: %v", definitionErr)
 	}
-	owners := newAssemblyOwnerIndex(definitions, references, context)
+	owners := newAssemblyOwnerIndex(definitions, references, context, tree)
 
 	return DetectAssemblyReferenceChange(projectRoot, graph, context, references, owners)
 }

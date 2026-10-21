@@ -184,10 +184,11 @@ That's it! After installing Skills, LLM tools can automatically handle instructi
 
 
 <details>
-<summary>All 21 Bundled Skills</summary>
+<summary>All 23 Bundled Skills</summary>
 
 - `/uloop-launch` - Launch Unity with correct version
 - `/uloop-status` - Check whether Unity can take a command now
+- `/uloop-cancel` - Cancel the command Unity is running now, when BUSY keeps rejecting commands
 - `/uloop-compile` - Execute compilation
 - `/uloop-verify-project` - Check .meta files, GUIDs, conflict markers, and the package manifest without Unity
 - `/uloop-get-logs` - Get console logs
@@ -200,7 +201,8 @@ That's it! After installing Skills, LLM tools can automatically handle instructi
 - `/uloop-screenshot` - Capture EditorWindow
 - `/uloop-pause-point` - Pause execution at any line and capture variables
 - `/uloop-set-game-view-size` - Read and set the Game View custom resolution
-- `/uloop-record-video` - Record the Game View to a video file while Play Mode runs
+- `/uloop-game-view-mode` - Show or switch the Game view tab between Game view and Device Simulator, matching its orientation, or pick the simulated device
+- `/uloop-record-video` - Record the Game View or an Editor window and get back frame sheets and change numbers an agent can read; one command can record around an action
 - `/uloop-simulate-mouse-ui` - Simulate mouse click, long-press, and drag on PlayMode UI elements
 - `/uloop-simulate-mouse-input` - Simulate mouse input in PlayMode via Input System
 - `/uloop-simulate-keyboard` - Simulate keyboard input in PlayMode via Input System
@@ -306,7 +308,8 @@ For detailed descriptions and usage examples of every tool, see the **[Tool Refe
 - `focus-window` - Bring the Unity Editor window to the front
 - `screenshot` - Save screenshots of EditorWindows or the Game View
 - `set-game-view-size` - Read and set the Game View custom resolution
-- `record-video` - Record the Game View to MP4 (WebM on Linux) during Play Mode
+- `game-view-mode` - Show or switch the Game view tab between Game view and Device Simulator, matching its orientation, or pick the simulated device
+- `record-video` - Record the Game View or an Editor window to MP4 (WebM on Linux) and return frame sheets and per-frame change numbers; with ffmpeg, cut frames out afterward
 - `control-play-mode` - Play, stop, and pause Play Mode
 - `execute-dynamic-code` - Execute dynamic C# code
 

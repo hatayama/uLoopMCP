@@ -2,6 +2,12 @@
 
 Read this when a wait times out, `HitCount` stays `0`, or `enable-pause-point` fails.
 
+## Targets, Timeouts, Hot Reload
+
+`uloop pause-point-status` with no target lists every marker; inspect one with `--id "<file>:<line>"` or with `--file`/`--line` together (never both). `await-pause-point` and `clear-pause-point` take the same two forms; await always needs a target.
+
+On a wait timeout, `PAUSE_POINT_EXPIRED`, or an enable failure, read `Error.Details.Hint` or the failure `ErrorCode`, then `RecommendedNextAction`. After hot reload, `--line` stays the editor's line number.
+
 ## Timeout Diagnosis
 
 A `PAUSE_POINT_EXPIRED` error carries the same `Error.Details.Hint` as a timeout plus a shell-neutral `Error.Details.RecommendedNextAction`. Inspect `Error.Details.Status`, `HitCount`, `Generation`, `EnabledAtUtc`, `EditorState`, `ElapsedSinceEnabledMilliseconds`, and `RemainingMilliseconds` to distinguish input not being consumed, stale evidence from an older marker generation, runtime conditions not being met, an id mismatch, or Unity already being paused. `ElapsedSinceEnabledMilliseconds` is measured from `enable-pause-point`, not from `await-pause-point`. A wait timeout that is not waiting for a new hit on a continuous/trace marker auto-clears the marker; `Error.Details.MarkerClearedByThisCommand` is true when this command did that.

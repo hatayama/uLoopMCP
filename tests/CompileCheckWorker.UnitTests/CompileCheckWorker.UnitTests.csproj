@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- Unity 2022.3 and 6000.3 run the worker on .NET 6, so a newer BCL API must fail this build. -->
+    <TargetFramework>net6.0</TargetFramework>
+    <RollForward>Major</RollForward>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <IsPackable>false</IsPackable>
+    <!-- Roslyn 4.3.1, the oldest compiler that builds the worker on a user's machine, defaults to C# 10. -->
+    <LangVersion>10.0</LangVersion>
+    <!-- The worker's own Main is the entry point, so Program.cs gets the same TFM and C# version checks. -->
+    <GenerateProgramFile>false</GenerateProgramFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="NUnit" Version="3.14.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+    <!-- The oldest Roslyn the worker runs on, so an API added later fails this build. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.3.1" />
+    <!-- A .NET Standard reference assembly for the surface comparison tests to build against, so the
+         compiler embeds the attribute types it embeds in a Unity build: .NET Standard defines none
+         of the nullable, unmanaged or native-integer attributes. Taken as a file, not referenced. -->
+    <PackageReference Include="NETStandard.Library" Version="2.0.3" ExcludeAssets="all" GeneratePathProperty="true" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="$(PkgNETStandard_Library)/build/netstandard2.0/ref/netstandard.dll" Link="SurfaceReferences/netstandard.dll" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="../../cli/dispatcher/internal/compilecheck/fastcheck/worker/*.cs" LinkBase="Production" />
+  </ItemGroup>
+</Project>

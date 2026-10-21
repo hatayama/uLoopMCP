@@ -1,5 +1,20 @@
 # Changelog
 
+## [3.11.0](https://github.com/hatayama/unity-cli-loop/compare/uloop-project-runner-v3.10.0...uloop-project-runner-v3.11.0) (2026-10-21)
+
+
+### Features
+
+* compile-check closes its miss-side gaps and is shown as an ordinary command ([#3364](https://github.com/hatayama/unity-cli-loop/issues/3364)) ([dfc73da](https://github.com/hatayama/unity-cli-loop/commit/dfc73dae8c898318baa34b32a370ffca7c7344cc))
+* game-view-mode shows or switches the Game view tab to the Device Simulator and matches its orientation ([#3369](https://github.com/hatayama/unity-cli-loop/issues/3369)) ([24b46f1](https://github.com/hatayama/unity-cli-loop/commit/24b46f1ac4eb6be7b7776608d438461a1a7fa5bd))
+* pick the simulated device by name with game-view-mode --device ([#3370](https://github.com/hatayama/unity-cli-loop/issues/3370)) ([28f020b](https://github.com/hatayama/unity-cli-loop/commit/28f020b4598b6ab2ae9599cec9eca53f9424fcad))
+* record-video returns frame sheets and change numbers an agent can read, around one action in one command ([#3377](https://github.com/hatayama/unity-cli-loop/issues/3377)) ([a8c665b](https://github.com/hatayama/unity-cli-loop/commit/a8c665b47006922a14e743b0846b26b2ae1c3138))
+
+
+### Reverts
+
+* hide compile-check again until its place beside compile is settled ([#3368](https://github.com/hatayama/unity-cli-loop/issues/3368)) ([87e69cd](https://github.com/hatayama/unity-cli-loop/commit/87e69cd0508d9ac14cb13c2544376b60fa037b64))
+
 ## [3.10.0](https://github.com/hatayama/unity-cli-loop/compare/uloop-project-runner-v3.9.1...uloop-project-runner-v3.10.0) (2026-10-13)
 
 

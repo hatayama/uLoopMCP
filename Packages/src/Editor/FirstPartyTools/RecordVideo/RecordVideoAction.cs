@@ -7,6 +7,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
     {
         start = 0,
         stop = 1,
-        status = 2
+        status = 2,
+        mark = 3
     }
 }

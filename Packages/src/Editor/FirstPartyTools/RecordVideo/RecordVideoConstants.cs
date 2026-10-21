@@ -24,9 +24,10 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         internal const string WindowLayoutTimedOutMessage =
             "Timed out waiting for the window to lay out; retry after focusing the Editor.";
         internal const string NoRecordingMessage = "No recording is in progress.";
-        internal const string InvalidActionMessage = "Action must be Start, Stop, or Status.";
+        internal const string InvalidActionMessage = "Action must be Start, Stop, Status, or Mark.";
         internal const string StartedMessage = "Recording started.";
         internal const string StoppedMessage = "Recording stopped.";
+        internal const string MarkedMessageFormat = "Marked at {0:F2} s.";
         internal const string StatusRecordingMessage = "Recording is in progress.";
         internal const string StatusIdleMessage = "No recording is in progress.";
 

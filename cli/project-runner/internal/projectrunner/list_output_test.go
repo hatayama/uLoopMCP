@@ -184,6 +184,21 @@ func TestNewListCatalogIncludesClearPausePointFileLineOptions(t *testing.T) {
 	findListOption(t, clearPausePoint, "--"+tooldocs.PausePointLineFlagName)
 }
 
+// Tests that list output includes record-video's CLI-only one-shot flags, which are not part of the
+// Unity-side RecordVideoSchema.
+func TestNewListCatalogIncludesRecordVideoOneShotOptions(t *testing.T) {
+	tool, ok := clicore.FindTool(clicore.LoadDefaultTools(), tooldocs.RecordVideoCommandName)
+	if !ok {
+		t.Fatal("record-video was not found in default tools")
+	}
+
+	catalog := newListCatalog(clicore.ToolsCache{Tools: []clicore.ToolDefinition{tool}})
+	recordVideo := findListTool(t, catalog, tooldocs.RecordVideoCommandName)
+
+	findListOption(t, recordVideo, "--"+tooldocs.RecordVideoSecondsFlagName)
+	findListOption(t, recordVideo, "--"+tooldocs.RecordVideoTriggerFlagName)
+}
+
 // Tests that list replaces Unity's generated placeholder descriptions with the embedded catalog's
 // real text. list formats the raw get-tool-details response, so it does not inherit the fallback the
 // project-cache loader applies for `--help`.

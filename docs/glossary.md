@@ -141,6 +141,15 @@ An Application-layer orchestration class that coordinates one tool execution flo
 domain services and infrastructure ports. UseCases contain no UI and no direct Unity
 editor state access; they are the only layer that sequences multi-step tool work.
 
+### Game view mode
+
+Which view the Game tab shows: the Game view or the Device Simulator, the choice the Game /
+Simulator dropdown in the Game view toolbar makes. The first-party tool `game-view-mode` reports
+the current mode, or replaces the tab in place with the other one the same way the dropdown does. When it switches to the Simulator it rotates the simulated device to
+match the Game view's orientation as far as Player Settings allow, and `--device` shows a named
+device there, implying the Simulator mode when no target is given. It never changes the play state;
+`control-play-mode` does that.
+
 ### Pause point
 
 A registry entry (`UloopPausePointRegistry`) that freezes PlayMode when a specific code path
@@ -185,6 +194,17 @@ Editor session state and are restored — recompiled and re-registered — after
 including the reload a `uloop compile` or a Play entry with Domain Reload enabled
 causes; they are lost when the Editor process exits. Value history does not cross a
 reload: a restored watch starts from a new baseline.
+
+### Compile check
+
+The dispatcher-owned native command `compile-check`. It compiles the project's C# offline by
+replaying the response files of the last Unity build through the C# compiler bundled with the
+Editor install. It never launches or contacts the Editor, and nothing it produces is loaded by
+Unity. When the project moved in a way the last build cannot describe, it refuses with
+`COMPILE_CHECK_UNITY_BUILD_REQUIRED` rather than guess. It is a hidden command: routable by
+name, but left out of `--help`, `uloop list`, shell completion and skill installs until its place
+beside `uloop compile` is settled. See `docs/compile-check.md` and
+`docs/adr/0018-compile-check-is-its-own-command-and-is-shown.md`.
 
 ### Hot reload
 

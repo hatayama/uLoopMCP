@@ -5,8 +5,10 @@ without contacting a running one. It is a dispatcher-owned command: it needs no 
 no project runner.
 
 The command is hidden: it stays runnable, but help, `uloop list --names`, completion, and the
-installed skills do not list it, because it covers too few situations to recommend yet (see the
-limitations below). Its skill is marked `internal: true`, so `uloop skills install` skips it.
+installed skills do not list it, and its skill is marked `internal: true` so `uloop skills install`
+skips it. It is hidden because its place beside `uloop compile` is not settled, not because of a
+detection gap: what it detects and what stays undetected is listed under Limitations, and the
+decision history is in `docs/adr/0018-compile-check-is-its-own-command-and-is-shown.md`.
 
 It is not a replacement for `uloop compile`. Nothing it produces is loaded by Unity, so use it only
 when you want to know whether the code compiles — not when you need the result to be live in the
@@ -38,10 +40,50 @@ references, scripting defines and analyzers. `compile-check` replays those respo
 3. **Decide what to compile.** By default the run compiles the assemblies whose sources changed
    since the last Unity build, plus every assembly that references one of them. An assembly pulled
    in only through a reference is dropped again once everything it references has been compiled and
-   every one of those reference assemblies (`.ref.dll`, which holds the public surface alone) came
-   out byte-identical to the last Unity build's. That is the decision Unity itself makes through
-   Bee: a change that does not reach the public surface — a method body, say — cannot change what a
-   dependent compiles to. The comparison is always against Unity's own artifact, never against the
+   every one of those reference assemblies (`.ref.dll`, which holds the public surface alone) shows
+   a dependent the same API as the last Unity build's: a change that does not reach the public
+   surface — a method body, say — cannot change what a dependent compiles to. A reference assembly
+   that came out byte-identical counts as the same, as it does for Unity. One whose bytes differ is
+   handed to the changed-files check worker, which writes both out as text and counts them the same
+   only when the texts match. The text leaves out what no dependent can read: the attribute types
+   the compiler embeds, the top-level types the compiler owns outright, whose names start with `<`,
+   together with everything nested in them (such as `<PrivateImplementationDetails>`, which holds
+   array-initializer data and string-switch hashing), private nested types nothing visible refers to
+   (closures and async or iterator state machines) along with the attributes naming them, and where
+   the compiler happens to put nullable annotations — each annotation is written as the value that
+   applies to its member. So a private reference-type field in a nullable-enabled assembly, a
+   private generic method with an `unmanaged` constraint, or a private member added before a lambda
+   no longer compiles every dependent again, which Unity, going by bytes, does. This is safe because
+   a dependent cannot name an embedded type, a top-level type whose name starts with `<` or anything
+   nested in it, or an unreferenced private nested type, and reads every annotation by the value
+   that applies to it. One difference remains: a dependent that already fails because it names a
+   private nested type may report the error under another ID (CS0246, CS0426 or CS0117 in place of
+   CS0122, or the other way round) until it compiles again; whether it compiles does not change.
+   When the worker cannot be built or cannot answer, the dependents are compiled.
+   When the API did change, the worker also says which names the change touches: the simple name of
+   the type at each level of nesting (with and without an `Attribute` suffix), a namespace segment
+   only when one side lacks that namespace, the member's name (a property or event rather than its
+   accessor, the member alone for an explicit implementation), and `new(` for a constructor that a
+   target-typed `new` can reach. A dependent that writes none of those names - in its own sources
+   or in the generator output its last full compile saved, comments and strings included - is
+   dropped the same way, and counts as keeping its surface for the assemblies below it. Whether
+   a reference touches a dependent never decides which reference assembly the dependent reads when
+   it compiles for another reason. A change a dependent can feel without writing any name is
+   unnamed and compiles every dependent: an assembly-level row; for a type both sides have, its
+   flags or attributes, base type, interfaces, type parameters, an instance field of a value type,
+   a parameterless constructor or an indexer; an abstract member added; an operator; a
+   compiler-generated member; a member C# binds by pattern (`GetEnumerator`, `GetAwaiter`, `Add`,
+   `Deconstruct`, `Dispose`, `SetResult`, the LINQ query methods and the like); every member of an
+   interpolated string handler or collection builder type; every member of a type in `System`,
+   `Microsoft.CodeAnalysis` or a namespace under them, which the compiler looks up by name for
+   `init`, `^1` and the like; members that only moved; and a change naming more than 2000 names. A dependent whose sources cannot be read compiles too.
+   The saved generator output is read before any assembly compiles; the sources are read from the
+   moment the run first compiles an assembly or has the worker check its changed files, or first
+   needs the names for a verdict, whichever comes first; a run that only replays earlier results and
+   has no verdict that needs names never reads them.
+   Its answer is kept in `<Assembly>.surface.json`, keyed by the content of both reference
+   assemblies and the worker build, so the runs until Unity builds again do not compare the same
+   pair twice. The comparison is always against Unity's own artifact, never against the
    previous `compile-check` output, which would only say that nothing moved since that run and would
    hide an error a dependent has been carrying all along. An assembly whose compiler step failed in
    the last Unity build is selected whatever its timestamps say: Unity runs Bee with deferred dag
@@ -65,23 +107,60 @@ references, scripting defines and analyzers. `compile-check` replays those respo
    their `.asmref` folders are re-globbed. A source
    the last build recorded for this assembly that no glob produces any more stops the run unless an
    `.asmref` still attaches its folder to this assembly: the walk up from the file to the first
-   folder holding an `.asmref` or an `.asmdef` says which assembly owns it today. An `.asmref` naming an assembly the build never produced — an
-   unresolvable reference, or one excluded by platform or package settings — attaches nothing, so
-   its folder is treated as an ordinary part of the assembly around it, which is what Unity compiles
-   it as. A package shipping a sample for a render pipeline the project does not install is the
-   ordinary case. Membership is compared without looking at any timestamp, because
+   folder holding an `.asmref` or an `.asmdef` says which assembly owns it today. An `.asmref` whose
+   reference resolves to no `.asmdef` in the project attaches nothing, so its folder is treated as an
+   ordinary part of the assembly around it, which is what Unity compiles it as. A package shipping a
+   sample for a render pipeline the project does not install is the ordinary case. An `.asmref`
+   naming an `.asmdef` the build left out by platform or package settings still owns its folder:
+   Unity attaches the folder to that assembly and then drops it, so the folder's sources go into no
+   assembly. Scripts under `Assets` that no `.asmdef` or `.asmref` owns are walked once per run and
+   given to the four predefined assemblies by Unity's own path rules: a folder named `Editor`
+   anywhere sends a script to an editor assembly, and `Assets/Plugins`, `Assets/Standard Assets`,
+   `Assets/Pro Standard Assets` and `Assets/iPhone Standard Assets` send it to a first-pass one, so
+   a new script there is compiled with the assembly Unity would put it in. Scripts in
+   `Assets/StreamingAssets`, `Assets/WebPlayerTemplates`, `Assets/WebGLTemplates` and
+   `Assets/Plugins/Android` are left out, as Unity imports them without compiling them. Membership is compared without looking at any timestamp, because
    moving a file carries its modification time along, and either an `.asmdef` or an `.asmref` can
-   hand a folder's sources to a different assembly without editing a single `.cs` file.
+   hand a folder's sources to a different assembly without editing a single `.cs` file. The
+   recorded sources keep the order of the response file, and the ones added since the last Unity
+   build follow them in ordinal order: csc emits types in the order of its sources, so any other
+   order gives an assembly nobody edited a reference assembly in other bytes than Unity's, and
+   every assembly that references it compiles again.
 4. **Check that the response files still describe the project.** An assembly definition that was
-   added, removed, or that stopped building for the Editor, and a reference or a precompiled
-   reference that was added to one, invalidate the recorded build. The run then stops with
-   `COMPILE_CHECK_UNITY_BUILD_REQUIRED` rather than reporting diagnostics for a configuration the
-   project no longer has.
-5. **Compile in dependency order** and parse the compiler's diagnostics into JSON. An assembly starts
-   as soon as every assembly it references that this run also compiles has finished, so independent
-   assemblies compile at the same time. `--jobs <n>` caps how many run at once; the default is half
-   the machine's CPUs and never less than one, because one `csc` process already keeps two to three
-   cores busy on its own. `--jobs 1` compiles the assemblies one after another.
+   added, removed, or that stopped building for the Editor, a reference or a precompiled
+   reference that was added to one, and a project reference it lost (a reference in the response
+   file that the `.asmdef` no longer declares and Unity does not add on its own: `UnityEngine.UI`,
+   `UnityEditor.UI`, `UnityEngine.TestRunner`, `UnityEditor.TestRunner`), invalidate the recorded
+   build. The run then stops with `COMPILE_CHECK_UNITY_BUILD_REQUIRED` rather than reporting
+   diagnostics for a configuration the project no longer has.
+
+   The build settings the response files cannot be read back into - scripting defines,
+   `csc.rsp`, `defineConstraints` and `versionDefines`, and the package manifest and lock file -
+   are recorded by the first run after a Unity build in
+   `Library/uloop/compile-check/<dag>/build-settings.json`, keyed to the build-trace file Bee
+   rewrites on every build. A later run against the same build refuses any of them that moved; a
+   run after another Unity build replaces the record instead. A scripting define of the active
+   build target group that the response files lack is refused whenever `ProjectSettings.asset` was
+   saved after the last build, or there is no build-trace file.
+5. **Compile in dependency order** and parse the compiler's diagnostics into JSON. An assembly
+   starts once every assembly it references that this run also compiles has finished, so
+   independent assemblies compile at the same time. An assembly selected for its own sources, or a
+   dependent that is already known to need compiling, starts sooner: as soon as every assembly it
+   references that was selected for its own sources has finished. The dependents it references
+   that are still compiling are assumed to keep Unity's public surface, so it reads Unity's
+   reference assembly for them. When one of them turns out to have changed its surface, the
+   assembly is compiled again after all of them finished; when one of them fails, the assembly is
+   blocked. An assembly is compiled at most twice per run. An assembly whose recorded result may
+   still apply once those dependents finish waits for them instead, so a run over the same inputs
+   still replays it. `assumed_kept` and `compiled_again_after` in the VibeLog's `units` say which
+   happened. A unit whose record applied after the wait is counted under `reused` and does not
+   appear in `units`; `waited_for_record` marks a unit that waited for a record that then did not
+   apply. `--jobs <n>` caps how many run at once; the default is half the machine's CPUs and never
+   less than one, because one `csc` process already keeps two to three cores busy on its own.
+   `--jobs 1` compiles the assemblies one after another.
+   Among the assemblies ready at the same time, one whose references have all finished starts
+   before one started early, then the one with the most sources, and a tie goes to the one first in
+   dependency order.
    The reported order does not depend on the job count: results are collected in dependency order
    whatever finishes first. An assembly that fails to compile stops the run at that point of the
    tree: it wrote no reference assembly, so everything below it has nothing to compile against and
@@ -98,15 +177,20 @@ references, scripting defines and analyzers. `compile-check` replays those respo
    reported errors reports them again until one of its inputs moves. Because the outputs stay in
    place, the assemblies below it resolve the same reference assembly and are reused in turn, which
    is what makes editing a single method body cost one compile rather than one per dependent.
-   References this check produces are compared by content and everything else by timestamp, so a
+   A reference to an assembly this run rebuilt is read from Unity's artifact when the rebuilt
+   reference assembly shows dependents the same API (step 3), and from this check's own output
+   otherwise. The
+   first is digested by timestamp, like every reference the run did not rebuild, so rebuilding an
+   assembly without moving its public surface leaves the digests of the assemblies that reference it
+   where the runs that did not rebuild it left them. The second is digested by content, so a
    reference assembly rewritten with identical bytes still counts as unmoved. A response file naming
    a file the digest does not follow — `keyfile`, `resource`, `link`, `addmodule` — gets no digest,
    and such an assembly always compiles. `--all` looks nothing up, though it still records what it
-   compiled. What `--all` records is keyed slightly differently, and the difference is visible:
-   every assembly is in its plan, so every reference to an assembly Bee builds resolves to this
-   check's own output, while an ordinary run resolves the references of an assembly it does not
-   compile to Unity's artifacts instead. The first ordinary run after an `--all` may therefore
-   compile such an assembly once more before it starts reusing it. This is a separate mechanism from the dependent skip in step 3: that one compares this
+   compiled, under the same rule: a reference whose rebuilt reference assembly keeps Unity's API stays
+   on Unity's artifact, so an ordinary run after it reuses what it compiled. Only a reference whose
+   rebuilt surface differs from Unity's resolves to this check's output under `--all`; an ordinary
+   run that leaves that assembly out reads Unity's artifact instead, and may compile the assemblies
+   that reference it once more before it starts reusing them. This is a separate mechanism from the dependent skip in step 3: that one compares this
    run's reference assembly against Unity's artifact to decide whether a *dependent* needs compiling
    at all, while this one compares an assembly's own inputs against what the previous `compile-check`
    read.
@@ -119,6 +203,129 @@ Assembly definitions are indexed from `Assets`, `Packages` and `Library/PackageC
 directory a `Packages/manifest.json` dependency points at with a `file:` path — a package a project
 develops locally lives outside the project root and would otherwise look like one whose assembly
 definitions were deleted.
+
+## Checking only the changed files
+
+In short: once compile-check has compiled a large assembly in full without errors, an edit that
+keeps every declaration is checked on its changed files only. It compiles in full instead on the
+first run after a Unity build, when a `.cs` file is added, removed or renamed, when more than 30
+files changed, when a declaration changes (a `using` directive counts), on the first run after a
+full compile that had errors, and for an assembly compiled only because one it references changed. A
+change to the public surface also compiles the dependents that can see it: those that write a
+changed name, or all of them when no name carries the change.
+
+When an assembly would otherwise be compiled in full, compile-check first tries to check only its
+changed files against the last successful full compile of that assembly. The decision and the
+guarantees are recorded in `docs/adr/0015-compile-check-checks-only-changed-files-after-a-full-compile.md`.
+
+The check is used when all of these hold:
+
+- The run is not `--all` or `--full`, the assembly has an input key and at least 300 sources, and
+  it was picked because its own sources changed, not only because an assembly it references
+  changed. Smaller assemblies are always compiled in full and are not listed as fallbacks.
+- The last full compile of the assembly by compile-check succeeded and left a baseline, and its
+  outputs, result, and saved generator output are still on disk as it wrote them.
+- Every input other than the source contents is the same as at that compile: the compiler, the
+  response files, the references, the analyzers and the files they read, the output names, and the
+  list of source paths.
+- 1 to 30 of its sources changed.
+- Every changed file keeps its declarations: only method bodies, accessor bodies, expression
+  bodies, non-constant initializers outside partial types, comments, or whitespace changed. Adding
+  or removing a `using` directive counts as a declaration change, because it can change what every
+  name in the file resolves to.
+
+The changed files are checked by a worker built once per Editor toolchain with the Editor's own
+dotnet and Roslyn. It reports their compiler and analyzer diagnostics, with `DiagnosticSuppressor`s
+and the response file's options applied, and the diagnostics of the files that did not change are
+carried over from the last full compile. The outputs, the result, and the baseline of that compile
+are left as they were.
+
+A second run over the same changed files - the same inputs, the same baseline, and the same worker
+build - does not call the worker again: it reports what the previous check reported, and
+`FastChecks[].Reused` says so.
+
+Otherwise the assembly is compiled in full as before, and `FastPathFallbacks` says why:
+
+- `no baseline: no full compile of this assembly is on record` (none ran yet, or an input changed
+  while the last full compile ran, so it left no record; `FastPathBaselineNotes` of that run says
+  which)
+- `no baseline: the last full compile (at <time>) had errors; the first full compile without errors
+  records one` (a full compile that fails drops the baseline an earlier one left, and the assembly
+  is compiled in full until a compile succeeds)
+- `no baseline: the last full compile (at <time>) did not record one` (`FastPathBaselineNotes` of
+  that run says why, or the assembly was compiled only because a reference changed)
+- `no baseline: it was recorded by another version of compile-check`
+- `baseline compile is no longer on disk`
+- `inputs other than source contents could not be read`
+- `inputs other than source contents changed: <kinds>`, naming which of `compiler`,
+  `response file`, `source list`, `references`, `analyzers`, `analyzer inputs`, and `output name`
+  changed
+- `generator output of the baseline is gone`
+- `baseline record does not match its compile result`
+- `too many changed files (<count>, limit 30)`
+- `worker unavailable: ...` (the worker could not be built; a build that failed is not retried
+  until the worker sources or the toolchain change)
+- `baseline was fingerprinted by another worker build`
+- `worker failed: ...`
+- `DeclarationChanged: <files>`, naming every changed file whose declarations differ, comma-separated
+- `Unsupported: ...` (for example an analyzer that threw, or a response file option the worker does
+  not support)
+
+`<time>` is when that full compile finished, in UTC; it can be from an earlier session or from
+before a Unity build in between.
+
+A full compile that succeeds records a new baseline, `--full` runs included, so the run after it can
+use the check again. A source or another input edited while csc was compiling leaves no baseline
+and no record of that compile to reuse, so the next run compiles the assembly again;
+`FastPathBaselineNotes` says why a successful full compile left no baseline. An input edited while the
+changed files were being checked leaves no record of that check, so the next run checks them again.
+
+So the first body edit is compiled in full more often than it looks:
+
+- Right after a Unity build, compile-check finds nothing to compile and records nothing. The first
+  body edit after that is compiled in full and records the baseline; the edits after it are checked.
+- A run with `--all` records baselines too. It rebuilds the assemblies the next ordinary run takes
+  from Unity's build, but a reference whose rebuilt reference assembly keeps Unity's API is read
+  from Unity's build in both runs. A reference whose rebuilt API differs is read from this check's
+  output under `--all`; while the next ordinary run rebuilds it too, the reference reads the same
+  and the first body edit is checked as usual. Only when that run leaves the reference out, so it
+  reads Unity's build instead, does the first body edit of an assembly referencing it fall back
+  with `inputs other than source contents changed: references`.
+- An assembly a run leaves out because nothing it compiles from changed keeps its result and
+  baseline, so its next body edit is checked against them. An assembly a run picks up only because
+  a reference changed records no baseline when it is compiled, so its next body edit is compiled in
+  full. When it is left out instead, because every such reference kept its public surface or
+  changed only names the assembly never writes, it keeps its result, baseline and saved generator
+  output, so its next body edit is checked against them as before. A run that blocks an assembly because one it references has errors keeps
+  its result and baseline: the next run checks them against the inputs and output hashes they were
+  recorded with before using them, so a reference that comes back the same leaves the assembly
+  reused or checked on its changed files, and one that comes back changed compiles it.
+- A full compile while the assembly still has errors, whether a `--full` run or a run that fell
+  back to one, drops its baseline, so the run after the fix is compiled in full. Running `--full`
+  once the errors are fixed keeps it.
+
+What the check does not guarantee, so run `--full` before finishing:
+
+- CS0067, CS0169, CS0414, and CS0649, which the compiler reports only after it has seen the whole
+  assembly, and the rules of analyzers that use Compilation, CompilationEnd, SemanticModel, or
+  SymbolStart actions. `FastChecks[].UncheckedCodes` lists the IDs it could not run, leaving out
+  the ones the response file already turns off (with `-nowarn` or a ruleset) and analyzer rules
+  that are disabled, so an assembly may list fewer than these four. In a project that treats
+  warnings as errors (`-warnaserror`), these are errors that only `--full` reports.
+- Errors the compiler reports only while emitting, such as CS8178 and CS0656.
+- Source generators. The check reads the generator output saved by the last full compile and does
+  not run them again; `FastChecks[].GeneratorsNotRerun` says so.
+
+That run compiles in full the assemblies whose inputs differ from their last full compile - the ones
+fast-checked since, the dependents their rebuilt reference assemblies reach, and anything edited
+since the last run - and reuses the rest; after a run that compiled everything in full it takes
+about a second.
+
+The check keeps its state next to the compile outputs: `<Assembly>.fastcheck.json` (the baseline),
+`<Assembly>.generated/` (the saved generator output, whose files the baseline records by content
+hash), `<Assembly>.fastresult.json` (the result of the last changed-files check, reported again
+while nothing it read has changed), and the worker build in `Library/uloop/compile-check/fastcheck-worker/<key>/`. Deleting or
+changing any of them only costs a full compile.
 
 ## One run per project at a time
 
@@ -142,44 +349,104 @@ CPUs and never less than one, and `--jobs 1` compiles them one after another.
 
 The command prints a JSON payload with `Success`, `ErrorCount`, `WarningCount`, `Errors`,
 `Warnings` (each diagnostic carrying `Message`, `Code`, `File`, `Line`, `Column`, `Assembly`),
-`CompiledAssemblies`, `ReusedAssemblies`, `BlockedAssemblies`, `SkippedAssemblies`,
-`ResponseFileSet`, `ProjectRoot` and
-a one-line `Message`. `CompiledAssemblies` names the assemblies this run handed to the compiler and
+`CompiledAssemblies`, `ReusedAssemblies`, `BlockedAssemblies`, `FastCheckedAssemblies`,
+`FastChecks`, `FastPathFallbacks`, `FastPathBaselineNotes`, `SurfaceChecks`, `SkippedAssemblies`,
+`ResponseFileSet`, `ProjectRoot`,
+a one-line `Message` and `NextActions`. `CompiledAssemblies` names the assemblies this run handed to the compiler and
 `ReusedAssemblies` the ones it reported on without compiling; the diagnostics of both are in
 `Errors` and `Warnings` alike. `BlockedAssemblies` names the assemblies the run stopped short of
 because one they reference has errors — they are not counted in `SkippedAssemblies`, which counts
 the assemblies the check read and found nothing left to say about: the ones nothing changed for,
-and the ones left out because every assembly they reference kept the same public surface. The process exits 1 when
-`ErrorCount` is greater than zero.
+and the ones left out because every assembly they reference kept the same public surface.
+`FastCheckedAssemblies` names the assemblies checked on their changed files only, which are in
+neither `CompiledAssemblies` nor `ReusedAssemblies`; `FastChecks` gives each one's `ChangedFiles`,
+`UncheckedCodes`, `GeneratorsNotRerun`, and `Reused` (set when the run reported the previous run's
+check of the same changed files instead of checking them again), and `FastPathFallbacks` gives the `Assembly` and
+`Reason` of each assembly the check was tried on and compiled in full. `FastPathBaselineNotes`
+gives the `Assembly` and `Reason` of each successful full compile that left no baseline.
+`SurfaceChecks` lists each assembly that others reference and that this run compiled, replayed or
+fast-checked without errors: whether its public surface was `Kept` and the `Verdict` that decided
+it, the first 20 `ChangedNames` a dependent has to write to be affected with their
+`ChangedNameCount`, `Unnamed` when no name tells the change, the `Dependents` the change reached
+among the assemblies this run compiled (each with the `Name` that selected it, or the `Reason` the
+names were not applied), and `UnaffectedDependents`, how many were left out because they write none
+of the names. An assembly compiled for its own sources is listed when the change reaches it, so
+`Dependents` and `UnaffectedDependents` need not add up to every dependent.
+`NextActions` names the next step: fix the errors and run again while errors remain; after a clean
+run, `--full` when an assembly was fast-checked and then `uloop compile` to make the result live; and
+nothing when no assembly changed since the last Unity build. The
+process exits 1 when
+`ErrorCount` is greater than zero. A failure of the command itself also exits 1 but writes nothing to
+stdout: stderr gets `{"Success": false, "Error": {...}}`, whose `ErrorCode` names the failure.
+
+With the `ULOOP_DEBUG` environment variable set, each run also writes two entries to the CLI
+VibeLog of the project, `cli_compile_check_start` and `cli_compile_check_complete`, with which
+assemblies it compiled, reused, checked on their changed files, or blocked, why each fallback
+happened, and how long each assembly took. `docs/vibe-logs.md` lists their fields.
 
 ## Limitations
 
-- **It replays the last Unity build, and only some staleness is detectable.** Four `.asmdef`
+- **It replays the last Unity build, and only some staleness is detectable.** Five `.asmdef`
   settings are compared against the response file, because they reach `csc` and can be read without
   evaluating defines or package versions: whether the assembly still builds for the Editor, a
-  project reference it gained, `allowUnsafeCode` turning on, and a precompiled reference it gained
+  project reference it gained, a project reference it lost (a reference in the response file that
+  the `.asmdef` no longer declares and Unity does not add on its own: `UnityEngine.UI`,
+  `UnityEditor.UI`, `UnityEngine.TestRunner`, `UnityEditor.TestRunner`), `allowUnsafeCode` turning on, and a precompiled reference it gained
   under `overrideReferences`. A new or deleted `.asmdef` is detected too, as is every way
   assembly membership moves without any `.cs` file changing: an `.asmdef` that no longer sits over
   any source its response file recorded (it was moved into another assembly's folder), an `.asmref`
   whose folder holds sources the assembly it names does not record (it was added or moved), and a
   recorded source no `.asmref` attaches to its assembly any more (one was removed or retargeted).
-  Those cases — and only those — stop the run with `COMPILE_CHECK_UNITY_BUILD_REQUIRED` and ask for
-  `uloop compile`.
+  So do the build settings described below. Those cases — and only those — stop the run with
+  `COMPILE_CHECK_UNITY_BUILD_REQUIRED` and ask for `uloop compile`.
   Every other edit listed below is invisible to the check: the run proceeds and silently reuses
   what the last build recorded.
-- **A removed `.asmdef` reference is not detected.** Unity injects references of its own that no
-  `.asmdef` declares, so a reference present in the response file but absent from the `.asmdef`
-  cannot be told apart from an injected one. Diagnostics may therefore miss an error that removing
-  a reference would cause. Run `uloop compile` after removing one.
-- **`defineConstraints` and `versionDefines` changes are not detected**, because they depend on
-  scripting defines and package versions that can only be evaluated inside the Editor.
-- **Changed scripting defines are not detected**; the defines recorded in the last build are reused.
-- **The predefined assemblies** (`Assembly-CSharp` and friends) keep the source list of the last
-  build, so a brand-new `.cs` file outside any `.asmdef` is not compiled until Unity imports it.
-- **An `.editorconfig` or global analyzer config that is not named by a response file does not
-  invalidate a reused result**, because it is not part of the input digest — the same exposure the
-  dependent skip in step 3 already has. One handed to the compiler as `/analyzerconfig:` is read by
-  content and does invalidate it. `--all` compiles everything again.
+- **Build settings are compared against a record keyed to the last Unity build.** The scripting
+  defines of the active build target group (from `ProjectSettings/ProjectSettings.asset`), every
+  `csc.rsp` Unity may read (`Assets/csc.rsp` and the one beside each `.asmdef` outside the package
+  cache), the `defineConstraints` and `versionDefines` of each such `.asmdef`,
+  `Packages/packages-lock.json` and `Packages/manifest.json` are recorded by the first run after a
+  Unity build, keyed to the build-trace file Bee rewrites on every build
+  (`Library/Bee/tundra.log.json`, `TundraBuildState.state` or `fullprofile.json`, whichever is
+  newest). A later run against the same build refuses any of them that moved. A scripting define
+  that the response files lack is refused, record or not, whenever `ProjectSettings.asset` was
+  saved after the last build or there is no build-trace file. What stays invisible:
+  - on a Unity version whose `Library/Bee` has none of the build-trace files, only an added
+    scripting define is seen - not a removed one, and not the other recorded settings;
+  - a change made before the record exists (before the first run after that build), other than an
+    added scripting define;
+  - the scripting defines of a project whose active build target is Dedicated Server (the
+    response files carry `UNITY_SERVER`), because which settings group Unity reads for it cannot be
+    determined, and those of a `ProjectSettings.asset` saved in binary;
+  - an analyzer config added since the last build that Unity passes with `/analyzerconfig:`; one a
+    response file already names is read by content and invalidates a reused result;
+  - a Unity 6 build profile that overrides Player Settings or carries its own scripting defines:
+    only the global ProjectSettings defines are compared, and a global define the build lacks is
+    refused only when `ProjectSettings.asset` was saved after the last build.
+- **A new script outside every `.asmdef` is given to one of the four predefined assemblies by
+  Unity's path rules.** When that assembly is one the last build did not produce - the first
+  editor script of a project that had none - the run stops with `COMPILE_CHECK_UNITY_BUILD_REQUIRED`.
+  Scripts in the folders Unity never compiles (`Assets/StreamingAssets`, `Assets/WebPlayerTemplates`,
+  `Assets/WebGLTemplates`, `Assets/Plugins/Android`) are left out.
+  A new script in a package folder that has no `.asmdef` is not seen, because where Unity puts
+  such a script differs between Unity versions.
+- **A dependent compile-check has never compiled is compiled, not narrowed by names, the first time
+  a reference changes.** The names are read from the dependent's sources and from the generator
+  output its last finished compile saved; a unit with analyzers and no saved output, whether it was
+  picked up as a dependent or started on its own sources ahead of the reference, compiles on any
+  named change, and the VibeLog reports it with `changed_by.reason` `no saved generator output` and
+  counts it in `name_index.without_generated`. After that its saved generator output is read, and
+  leaving it out keeps that output. What stays invisible is a generator that generates from a
+  referenced assembly's contents rather than from the dependent's own code. Neither is a change to
+  the type of an async method builder seen, which a dependent never names; a change to its members
+  is unnamed and compiles every dependent.
+- **Every change to a type in `System`, `Microsoft.CodeAnalysis` or a namespace under them compiles
+  every dependent.** The compiler looks these types up by name, so only polyfills normally live
+  there; a project that puts its own extension classes in `System.*` gets no narrowing for them.
+- **A run that stops on declaration errors reports nothing else for that assembly.** With an
+  unknown type or an ambiguous name in it, the errors inside method bodies, the warnings of that
+  stage and the analyzer diagnostics are reported only by the run after the declaration errors are
+  fixed.
 - **Linux (x86_64) is supported.** The Editor is looked up under `~/Unity/Hub/Editor/<version>/Editor/Unity`.
 
 ## Troubleshooting
@@ -204,22 +471,39 @@ headless run imports the project, writes the response files and exits.
 `uloop launch` is the same first build with the Editor window open; use whichever fits. The run
 takes as long as the project's initial import (about a minute for a 100-assembly project, longer
 for a large one). Once `Library` exists, compile-check runs without the Editor; it refuses again only
-when it detects an `.asmdef` change. A scripting define change is not detected (see Limitations), so
-run `uloop compile` yourself after one. The same applies on CI: restore `Library` from a cache or
+when it detects an `.asmdef` change or a build setting that moved (see Limitations for what stays
+unseen). The same applies on CI: restore `Library` from a cache or
 run this headless build once per job before calling compile-check.
 
 **`COMPILE_CHECK_UNITY_BUILD_REQUIRED`: an assembly definition no longer matches the last build**
 Raised when an `.asmdef` was added, deleted or moved, when an `.asmref` was added, moved, removed
 or retargeted so that a folder's sources now belong to a different assembly than the one the last
-build compiled them into, or when one of the four compared settings changed (no longer builds for
-the Editor, gained a project reference, turned on `allowUnsafeCode`, gained a precompiled reference
-under `overrideReferences`). This is the intended refusal, not a bug. Run
+build compiled them into, or when one of the five compared settings changed (no longer builds for
+the Editor, gained a project reference, lost a project reference, turned on `allowUnsafeCode`,
+gained a precompiled reference under `overrideReferences`). A lost reference reads
+`no longer references <assembly>`; a reference, by GUID or by name, that matches no `.asmdef` in the project
+makes the check skip that `.asmdef` rather than guess. This is the intended refusal, not a bug. Run
 `uloop compile` once so Unity rewrites the response files, then `compile-check` works again against
 the new configuration.
 
 An `.asmdef` edit that is not one of those does **not** raise this error — see Limitations for what
 goes undetected. In that case the run succeeds against the previous configuration, so run
 `uloop compile` yourself after such an edit rather than trusting a clean result.
+
+**`COMPILE_CHECK_UNITY_BUILD_REQUIRED`: a build setting changed since the last Unity build**
+The message reads `<setting> changed since the last Unity build` - for example
+`scripting defines of Standalone (removed: FOO)`, `Assets/csc.rsp`,
+`defineConstraints or versionDefines of Assets/X/X.asmdef` or `Packages/packages-lock.json` - or
+`scripting define <NAME> is not in the last Unity build`. The response files were written with the
+settings of the last Unity build, so compiling against them would check a configuration the project
+no longer has. Run `uloop compile` once; the build moves the build-trace file forward, the next run
+records the settings as they are now, and `compile-check` works again.
+
+**`COMPILE_CHECK_UNITY_BUILD_REQUIRED`: a script belongs to an assembly the last build did not produce**
+The message reads `<script> belongs to <assembly>, which the last Unity build did not produce`. The
+script sits outside every `.asmdef`, and Unity's path rules give it to a predefined assembly - such
+as `Assembly-CSharp-Editor` for the first script in an `Editor` folder - that has no response file
+yet. Run `uloop compile` once so Unity creates that assembly.
 
 **`COMPILE_CHECK_UNITY_BUILD_REQUIRED`: cannot tell which Bee build to check**
 Both a debug and a release dag exist and neither `tundra.log.json` nor

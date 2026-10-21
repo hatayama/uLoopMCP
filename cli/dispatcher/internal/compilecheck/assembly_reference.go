@@ -2,7 +2,6 @@ package compilecheck
 
 import (
 	"fmt"
-	"io/fs"
 	"path/filepath"
 	"sort"
 )
@@ -18,53 +17,23 @@ type AssemblyReference struct {
 }
 
 // IndexAssemblyReferences lists every .asmref in the project, ordered by path.
-func IndexAssemblyReferences(projectRoot string) ([]AssemblyReference, error) {
+func IndexAssemblyReferences(tree projectTree) ([]AssemblyReference, error) {
 	references := []AssemblyReference{}
-	for _, root := range projectIndexRoots(projectRoot) {
-		if !directoryExists(root) {
-			continue
+	for _, root := range tree.roots {
+		for _, path := range root.referenceFiles {
+			reference, readErr := readAssemblyReference(path)
+			if readErr != nil {
+				return nil, fmt.Errorf(assemblyReferenceIndexError, root.path, readErr)
+			}
+			references = append(references, reference)
 		}
-		found, err := indexAssemblyReferencesUnder(root)
-		if err != nil {
-			return nil, fmt.Errorf(assemblyReferenceIndexError, root, err)
+		if root.walkErr != nil {
+			return nil, fmt.Errorf(assemblyReferenceIndexError, root.path, root.walkErr)
 		}
-		references = append(references, found...)
 	}
 	sort.Slice(references, func(first int, second int) bool {
 		return references[first].Path < references[second].Path
 	})
-
-	return references, nil
-}
-
-// indexAssemblyReferencesUnder collects every .asmref found below one project root.
-func indexAssemblyReferencesUnder(root string) ([]AssemblyReference, error) {
-	references := []AssemblyReference{}
-	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if entry.IsDir() {
-			if path != root && isUnityIgnoredName(entry.Name()) {
-				return filepath.SkipDir
-			}
-
-			return nil
-		}
-		if isUnityIgnoredName(entry.Name()) || filepath.Ext(path) != assemblyReferenceExtension {
-			return nil
-		}
-		reference, readErr := readAssemblyReference(path)
-		if readErr != nil {
-			return readErr
-		}
-		references = append(references, reference)
-
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
 
 	return references, nil
 }
