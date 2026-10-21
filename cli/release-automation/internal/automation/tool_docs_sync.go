@@ -48,6 +48,10 @@ var cliOnlyParameterTableOptions = map[string]map[string]bool{
 		tooldocs.PausePointFileFlagName: true,
 		tooldocs.PausePointLineFlagName: true,
 	},
+	tooldocs.RecordVideoCommandName: {
+		tooldocs.RecordVideoSecondsFlagName: true,
+		tooldocs.RecordVideoTriggerFlagName: true,
+	},
 }
 
 // descriptionKey identifies one description in the catalog. Property is empty for the tool's own
