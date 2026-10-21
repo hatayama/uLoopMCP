@@ -83,6 +83,9 @@ func runRecordVideoExtract(
 	}
 	stderrTail, err := runFfmpegForRecordVideo(ctx, ffmpegPath, plan.args)
 	if err != nil {
+		// ffmpeg killed mid-write, by cancellation for example, can leave a truncated image that a
+		// later reader would take for a real frame.
+		_ = os.Remove(plan.output)
 		clierrors.WriteErrorEnvelope(stderr, recordVideoExtractError(connection, recordVideoFfmpegFailedErrorCode,
 			"ffmpeg failed: "+err.Error(), "Read Details.Stderr; check that the video plays and the times are inside it.", stderrTail))
 		return 1

@@ -19,6 +19,7 @@ const recordVideoExtractTestFfmpegPath = "/fake/bin/ffmpeg"
 type recordVideoExtractFake struct {
 	lookPathErr   error
 	runErr        error
+	writeOnError  bool
 	stderrTail    string
 	skipOutput    bool
 	ffmpegPath    string
@@ -46,6 +47,11 @@ func (fake *recordVideoExtractFake) install(t *testing.T) {
 		fake.ffmpegPath = ffmpegPath
 		fake.ffmpegArgs = append(fake.ffmpegArgs, args)
 		if fake.runErr != nil {
+			if fake.writeOnError {
+				if err := os.WriteFile(args[len(args)-1], []byte("partial"), 0o600); err != nil {
+					t.Fatalf("write fake output: %v", err)
+				}
+			}
 			return fake.stderrTail, fake.runErr
 		}
 		if !fake.skipOutput {
@@ -445,20 +451,29 @@ func TestRunRecordVideoExtract_AnalysisWithoutSamples_RunsNoFfmpeg(t *testing.T)
 	}
 }
 
-// Verifies an ffmpeg failure is reported as FFMPEG_FAILED with the tail of its stderr.
-func TestRunRecordVideoExtract_FfmpegFails_ReportsStderrTail(t *testing.T) {
-	_, video := writeRecordVideoExtractFixture(t, 30)
-	fake := &recordVideoExtractFake{runErr: errors.New("exit status 1"), stderrTail: "Invalid data found when processing input"}
+// Verifies ffmpeg exiting non-zero is reported as FFMPEG_FAILED with the tail of its stderr even
+// when it had already written an image, and that the partly written image is removed.
+func TestRunRecordVideoExtract_FfmpegFails_ReportsStderrTailAndRemovesPartialImage(t *testing.T) {
+	directory, video := writeRecordVideoExtractFixture(t, 30)
+	fake := &recordVideoExtractFake{
+		runErr:       errors.New("exit status 1"),
+		stderrTail:   "Invalid data found when processing input",
+		writeOnError: true,
+	}
 	fake.install(t)
 
 	run, _ := runRecordVideoExtractForTest(t, "/project", []string{"--video", video, "--frame-at", "1"})
 
 	if run.code != 1 || !strings.Contains(run.stderr, recordVideoFfmpegFailedErrorCode) ||
+		!strings.Contains(run.stderr, "ffmpeg failed: exit status 1") ||
 		!strings.Contains(run.stderr, "Invalid data found when processing input") {
 		t.Fatalf("run = %+v", run)
 	}
 	if run.stdout != "" {
 		t.Fatalf("stdout = %q", run.stdout)
+	}
+	if _, err := os.Stat(filepath.Join(directory, "clip_frame_1000.png")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("partial image left behind: %v", err)
 	}
 }
 
