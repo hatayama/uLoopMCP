@@ -152,6 +152,13 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 }
             }
 
+            // A still recording has nothing worth pointing at; naming frame 1 would send the agent to an
+            // arbitrary frame, and the burst sheet already reports "no change" the same way.
+            if (largest.ChangedCellsVsPrevious == 0)
+            {
+                return null;
+            }
+
             return new LargestFrameChange
             {
                 CapturedIndex = largest.CapturedIndex,

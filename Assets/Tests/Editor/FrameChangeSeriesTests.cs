@@ -33,6 +33,24 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
         }
 
         /// <summary>
+        /// What: a recording whose frames never change reports no largest change, while still counting its frames.
+        /// </summary>
+        [Test]
+        public void Summarize_WithStaticFrames_HasNoLargestChange()
+        {
+            FrameChangeSeries series = CreateSeries();
+            byte[] grid = Grid(0);
+
+            series.Add(0, 0.0, grid);
+            series.Add(1, 0.1, grid);
+            series.Add(2, 0.2, grid);
+
+            FrameChangeSummary summary = series.Summarize();
+            Assert.That(summary.LargestChange, Is.Null);
+            Assert.That(summary.CapturedFrameCount, Is.EqualTo(3));
+        }
+
+        /// <summary>
         /// What: one cell changing by the threshold counts as a changed cell but not as a changed frame.
         /// </summary>
         [Test]
