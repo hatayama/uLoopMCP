@@ -297,7 +297,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             RecordVideoAction action,
             VideoRecordingSnapshot snapshot)
         {
-            return new RecordVideoResponse
+            RecordVideoResponse response = new RecordVideoResponse
             {
                 Success = success,
                 Message = message,
@@ -313,6 +313,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 StoppedBy = snapshot.StoppedBy,
                 Quality = snapshot.Quality
             };
+            RecordVideoResponseAnalysisMapper.Apply(response, snapshot);
+            return response;
         }
     }
 

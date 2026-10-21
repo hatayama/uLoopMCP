@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Newtonsoft.Json;
 
 using io.github.hatayama.UnityCliLoop.ToolContracts;
@@ -35,5 +36,26 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public string Quality { get; set; }
+
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+        public string AnalysisPath { get; set; }
+
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+        public string BurstSheetPath { get; set; }
+
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+        public int? BurstSheetColumns { get; set; }
+
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+        public string BurstAnchor { get; set; }
+
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+        public List<SheetFrame> BurstFrames { get; set; }
+
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+        public List<double> MarkSeconds { get; set; }
+
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+        public FrameChangeSummary FrameChange { get; set; }
     }
 }
