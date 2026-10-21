@@ -1,5 +1,26 @@
 # Changelog
 
+## [3.18.0](https://github.com/hatayama/unity-cli-loop/compare/v3.17.0...v3.18.0) (2026-10-21)
+
+
+### Features
+
+* compile-check answers a method-body edit in a large assembly in seconds instead of a full recompile ([#3318](https://github.com/hatayama/unity-cli-loop/issues/3318)) ([e917059](https://github.com/hatayama/unity-cli-loop/commit/e917059fde46431a24a9f4c7d84ca3e686160307))
+* compile-check closes its miss-side gaps and is shown as an ordinary command ([#3364](https://github.com/hatayama/unity-cli-loop/issues/3364)) ([dfc73da](https://github.com/hatayama/unity-cli-loop/commit/dfc73dae8c898318baa34b32a370ffca7c7344cc))
+* game-view-mode shows or switches the Game view tab to the Device Simulator and matches its orientation ([#3369](https://github.com/hatayama/unity-cli-loop/issues/3369)) ([24b46f1](https://github.com/hatayama/unity-cli-loop/commit/24b46f1ac4eb6be7b7776608d438461a1a7fa5bd))
+* pick the simulated device by name with game-view-mode --device ([#3370](https://github.com/hatayama/unity-cli-loop/issues/3370)) ([28f020b](https://github.com/hatayama/unity-cli-loop/commit/28f020b4598b6ab2ae9599cec9eca53f9424fcad))
+* record-video returns frame sheets and change numbers an agent can read, around one action in one command ([#3377](https://github.com/hatayama/unity-cli-loop/issues/3377)) ([a8c665b](https://github.com/hatayama/unity-cli-loop/commit/a8c665b47006922a14e743b0846b26b2ae1c3138))
+
+
+### Bug Fixes
+
+* skill descriptions lead agents to pause-point and record-video when verifying a fix at runtime ([#3371](https://github.com/hatayama/unity-cli-loop/issues/3371)) ([0e6d483](https://github.com/hatayama/unity-cli-loop/commit/0e6d4832558568ca703bf8e5b092df71e33f84ca))
+
+
+### Reverts
+
+* hide compile-check again until its place beside compile is settled ([#3368](https://github.com/hatayama/unity-cli-loop/issues/3368)) ([87e69cd](https://github.com/hatayama/unity-cli-loop/commit/87e69cd0508d9ac14cb13c2544376b60fa037b64))
+
 ## [3.17.0](https://github.com/hatayama/unity-cli-loop/compare/v3.16.0...v3.17.0) (2026-10-14)
 
 
