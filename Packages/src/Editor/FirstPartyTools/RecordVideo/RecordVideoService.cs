@@ -82,6 +82,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 UnityCliLoopConstants.VIDEOS_DIR);
             OutputFileRetention.DeleteOldestBeyondLimit(directory, RecordVideoConstants.Mp4SearchPattern);
             OutputFileRetention.DeleteOldestBeyondLimit(directory, RecordVideoConstants.WebmSearchPattern);
+            RecordVideoSidecarRetention.DeleteOrphans(directory);
         }
     }
 }
