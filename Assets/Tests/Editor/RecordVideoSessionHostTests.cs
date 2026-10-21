@@ -339,6 +339,40 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             Assert.That(_analyzers[0].MarkSeconds, Is.Empty);
         }
 
+        /// <summary>
+        /// What: an automatic stop saves the analysis path with the last completed recording, so the next
+        /// stop or status can report the analysis.
+        /// </summary>
+        [Test]
+        public void AutoStop_SavesAnalysisPathToLastCompleted()
+        {
+            string outputPath = Path.Combine(_outputDirectory, "clip.mp4");
+            StartRecording(outputPath, usedDefaultOutputPath: false, stopOnPlayModeExit: false);
+            _now = 11.0;
+
+            _updateCallbacks[0]();
+
+            LastCompletedRecording lastRecording = LastCompletedRecordingStore.TryRead();
+            Assert.That(_analyzers[0].FinishCallCount, Is.EqualTo(1));
+            Assert.That(lastRecording.Snapshot.Analysis, Is.Not.Null);
+            Assert.That(lastRecording.Snapshot.Analysis.Path, Is.EqualTo(RecordVideoSidecarPaths.Analysis(outputPath)));
+        }
+
+        /// <summary>
+        /// What: an assembly reload finishes the analysis before the recording is saved as the last completed one.
+        /// </summary>
+        [Test]
+        public void OnBeforeAssemblyReload_FinishesAnalysis()
+        {
+            string outputPath = Path.Combine(_outputDirectory, "clip.mp4");
+            StartRecording(outputPath, usedDefaultOutputPath: false, stopOnPlayModeExit: false);
+
+            _host.OnBeforeAssemblyReload();
+
+            Assert.That(_analyzers[0].FinishCallCount, Is.EqualTo(1));
+            Assert.That(LastCompletedRecordingStore.TryRead().Snapshot.Analysis.Path, Is.EqualTo(RecordVideoSidecarPaths.Analysis(outputPath)));
+        }
+
         private VideoRecordingSnapshot StartRecording(string outputPath, bool usedDefaultOutputPath, bool stopOnPlayModeExit)
         {
             return _host.Start(
@@ -456,6 +490,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
         {
             internal List<double> MarkSeconds { get; } = new List<double>();
 
+            internal int FinishCallCount { get; private set; }
+
             public void OnCapturedFrame(Texture2D frame, int encodedFrame, double seconds)
             {
             }
@@ -467,7 +503,11 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
 
             public RecordingAnalysisResult Finish(string videoPath, int width, int height, int frameRate)
             {
-                return null;
+                FinishCallCount++;
+                string analysisPath = RecordVideoSidecarPaths.Analysis(videoPath);
+                RecordingAnalysisDocument document = new RecordingAnalysisDocument { VideoPath = videoPath };
+                RecordingAnalysisDocument.Write(analysisPath, document);
+                return new RecordingAnalysisResult(analysisPath, document);
             }
         }
 
