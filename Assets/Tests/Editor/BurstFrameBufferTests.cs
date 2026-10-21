@@ -204,6 +204,86 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             Assert.That(buffer.Frames[0].Pixels[0].r, Is.EqualTo(10));
         }
 
+        /// <summary>
+        /// What: every kept tile still holds its own frame's pixels after many later frames reuse released arrays.
+        /// </summary>
+        [Test]
+        public void Frames_AfterManyLaterFrames_KeepTheirOwnPixels()
+        {
+            BurstFrameBuffer buffer = new BurstFrameBuffer();
+
+            FeedNumbered(buffer, 1, 19, 0);
+            FeedNumbered(buffer, 20, 20, 10);
+            FeedNumbered(buffer, 21, 100, 0);
+
+            Assert.That(Indices(buffer), Is.EqualTo(Range(4, 35)));
+            AssertTilesHoldOwnNumbers(buffer);
+        }
+
+        /// <summary>
+        /// What: a marked burst keeps its own pixels while later frames reuse released arrays.
+        /// </summary>
+        [Test]
+        public void Frames_AfterMarkAndManyLaterFrames_KeepTheirOwnPixels()
+        {
+            BurstFrameBuffer buffer = new BurstFrameBuffer();
+
+            FeedNumbered(buffer, 1, 20, 0);
+            buffer.Mark(2.0);
+            FeedNumbered(buffer, 21, 100, 0);
+
+            Assert.That(Indices(buffer), Is.EqualTo(Range(5, 36)));
+            AssertTilesHoldOwnNumbers(buffer);
+        }
+
+        /// <summary>
+        /// What: a burst rebuilt around a later, larger spike keeps its own pixels after the old burst's arrays are reused.
+        /// </summary>
+        [Test]
+        public void Frames_WhenRebuiltAroundLaterSpike_KeepTheirOwnPixels()
+        {
+            BurstFrameBuffer buffer = new BurstFrameBuffer();
+
+            FeedNumbered(buffer, 1, 19, 0);
+            FeedNumbered(buffer, 20, 20, 5);
+            FeedNumbered(buffer, 21, 59, 0);
+            FeedNumbered(buffer, 60, 60, 10);
+            FeedNumbered(buffer, 61, 150, 0);
+
+            Assert.That(Indices(buffer), Is.EqualTo(Range(44, 75)));
+            AssertTilesHoldOwnNumbers(buffer);
+        }
+
+        /// <summary>
+        /// What: tile arrays dropped from the look-back window are reused, so a still recording keeps one spare array instead of allocating per frame.
+        /// </summary>
+        [Test]
+        public void Add_WhenFramesLeaveTheWindow_ReusesTheirArrays()
+        {
+            BurstFrameBuffer buffer = new BurstFrameBuffer();
+
+            FeedNumbered(buffer, 1, 50, 0);
+
+            Assert.That(buffer.FreeArrayCount, Is.EqualTo(1));
+        }
+
+        private static void FeedNumbered(BurstFrameBuffer buffer, int from, int to, int changedCells)
+        {
+            for (int index = from; index <= to; index++)
+            {
+                buffer.Add(new[] { new Color32((byte)index, 0, 0, 255) }, Sample(index, changedCells));
+            }
+        }
+
+        private static void AssertTilesHoldOwnNumbers(BurstFrameBuffer buffer)
+        {
+            foreach (CapturedTile frame in buffer.Frames)
+            {
+                Assert.That(frame.Pixels[0].r, Is.EqualTo((byte)frame.Sample.CapturedIndex),
+                    "frame " + frame.Sample.CapturedIndex + " holds another frame's pixels");
+            }
+        }
+
         private static void Feed(BurstFrameBuffer buffer, int from, int to, int changedCells)
         {
             for (int index = from; index <= to; index++)

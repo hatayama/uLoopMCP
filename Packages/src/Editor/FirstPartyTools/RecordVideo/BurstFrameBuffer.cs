@@ -44,6 +44,11 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
         private readonly Queue<CapturedTile> _ring = new Queue<CapturedTile>();
         private readonly List<double> _markSeconds = new List<double>();
+
+        // Tile arrays no longer held by the window or the burst. Reusing them keeps a recording from
+        // allocating a tile per captured frame; the resulting GC pauses would show up as the very
+        // repeated frames this analysis exists to find.
+        private readonly Stack<Color32[]> _free = new Stack<Color32[]>();
         private List<CapturedTile> _burst = new List<CapturedTile>();
         private int _tailRemaining;
         private int _peakCells;
@@ -53,13 +58,15 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
         internal IReadOnlyList<double> MarkSeconds => _markSeconds;
 
+        internal int FreeArrayCount => _free.Count;
+
         internal IReadOnlyList<CapturedTile> Frames =>
             _anchor == BurstAnchor.none ? (IReadOnlyList<CapturedTile>)Array.Empty<CapturedTile>() : _burst;
 
         internal void Mark(double seconds)
         {
             _markSeconds.Add(seconds);
-            _burst = new List<CapturedTile>(_ring);
+            ReplaceBurst(new List<CapturedTile>(_ring));
             _tailRemaining = FramesAfterMark;
             _anchor = BurstAnchor.mark;
         }
@@ -70,7 +77,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             Debug.Assert(sample != null, "sample must not be null.");
 
             // The caller reuses its tile buffer for the next frame.
-            Color32[] pixels = new Color32[tile.Length];
+            Color32[] pixels = RentArray(tile.Length);
             Array.Copy(tile, pixels, tile.Length);
             CapturedTile captured = new CapturedTile(pixels, sample);
 
@@ -79,7 +86,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             {
                 _peakCells = sample.ChangedCellsVsPrevious;
                 _anchor = BurstAnchor.largestChange;
-                _burst = new List<CapturedTile>(_ring) { captured };
+                ReplaceBurst(new List<CapturedTile>(_ring) { captured });
                 _tailRemaining = FramesAfterPeak;
             }
             else if (_tailRemaining > 0)
@@ -91,8 +98,63 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             _ring.Enqueue(captured);
             if (_ring.Count > FramesBefore)
             {
-                _ring.Dequeue();
+                CapturedTile dropped = _ring.Dequeue();
+                if (!BurstHolds(_burst, dropped.Pixels))
+                {
+                    _free.Push(dropped.Pixels);
+                }
             }
+        }
+
+        private Color32[] RentArray(int length)
+        {
+            if (_free.Count > 0 && _free.Peek().Length == length)
+            {
+                return _free.Pop();
+            }
+
+            return new Color32[length];
+        }
+
+        private void ReplaceBurst(List<CapturedTile> burst)
+        {
+            List<CapturedTile> previous = _burst;
+            _burst = burst;
+            foreach (CapturedTile tile in previous)
+            {
+                if (!RingHolds(tile.Pixels) && !BurstHolds(_burst, tile.Pixels))
+                {
+                    _free.Push(tile.Pixels);
+                }
+            }
+        }
+
+        // Separate per collection type: enumerating through IEnumerable would box the struct
+        // enumerator and allocate on every frame, which is what the reuse avoids.
+        private bool RingHolds(Color32[] pixels)
+        {
+            foreach (CapturedTile tile in _ring)
+            {
+                if (ReferenceEquals(tile.Pixels, pixels))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool BurstHolds(List<CapturedTile> tiles, Color32[] pixels)
+        {
+            foreach (CapturedTile tile in tiles)
+            {
+                if (ReferenceEquals(tile.Pixels, pixels))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }
