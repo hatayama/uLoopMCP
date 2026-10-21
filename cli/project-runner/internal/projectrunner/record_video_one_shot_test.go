@@ -394,9 +394,15 @@ func TestRunRecordVideoOneShot_StartFails_DoesNotTriggerOrStop(t *testing.T) {
 		t.Fatal("the trigger must not run after a failed start")
 		return 1
 	}
+	originalRequest := sendRecordVideoRequest
+	sendRecordVideoRequest = func(_ context.Context, _ unityipc.Connection, args []string, _ string) (toolExecutionResult, error) {
+		t.Fatalf("nothing may be sent after a failed start, got %q", args)
+		return toolExecutionResult{}, nil
+	}
 	t.Cleanup(func() {
 		runFocusWindowForRecordVideo = originalFocus
 		dispatchPausePointTriggerCommand = originalDispatch
+		sendRecordVideoRequest = originalRequest
 	})
 
 	oneShotRoot := t.TempDir()
