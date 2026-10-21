@@ -8,6 +8,7 @@ import (
 
 	"github.com/hatayama/unity-cli-loop/common/clicore"
 	"github.com/hatayama/unity-cli-loop/common/project"
+	"github.com/hatayama/unity-cli-loop/common/tooldocs"
 	"github.com/hatayama/unity-cli-loop/common/unityipc"
 )
 
@@ -44,6 +45,8 @@ func runResolvedProjectCommand(
 		return runCancelCommand(ctx, connection, commandArgs, stdout, stderr)
 	case pausePointEnableCommandName:
 		return runEnablePausePointCommand(ctx, connection, commandArgs, startPath, stdout, stderr)
+	case tooldocs.RecordVideoCommandName:
+		return runRecordVideoCommand(ctx, connection, commandArgs, startPath, stdout, stderr)
 	default:
 		return runDynamicProjectTool(ctx, connection, command, commandArgs, startPath, stdout, stderr)
 	}
