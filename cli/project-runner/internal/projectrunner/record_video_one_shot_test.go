@@ -532,17 +532,28 @@ func TestRunRecordVideoOneShot_FocusWindow_NotesOnlyFailure(t *testing.T) {
 	}
 }
 
-// Verifies an invalid one-shot flag is reported before anything is focused or sent.
+// Verifies an invalid one-shot flag, including an empty value (an unset shell variable), is
+// reported before anything is focused or sent, instead of being read as an absent flag.
 func TestRunRecordVideoCommand_InvalidOneShotFlag_SendsNothing(t *testing.T) {
-	fake := newRecordVideoOneShotFake()
-	fake.install(t)
+	for _, testCase := range []struct {
+		args     []string
+		wantText string
+	}{
+		{args: []string{"--seconds", "0"}, wantText: "--seconds must be an integer"},
+		{args: []string{"--trigger", ""}, wantText: "--trigger requires a value"},
+		{args: []string{"--seconds", ""}, wantText: "--seconds requires a value"},
+		{args: []string{"--seconds", "3", "--trigger", ""}, wantText: "--trigger requires a value"},
+	} {
+		fake := newRecordVideoOneShotFake()
+		fake.install(t)
 
-	run := runRecordVideoOneShotForTest(context.Background(), []string{"--seconds", "0"})
+		run := runRecordVideoOneShotForTest(context.Background(), testCase.args)
 
-	if run.code != 1 || !strings.Contains(run.stderr, "INVALID_ARGUMENT") {
-		t.Fatalf("run = %+v", run)
+		if run.code != 1 || !strings.Contains(run.stderr, "INVALID_ARGUMENT") || !strings.Contains(run.stderr, testCase.wantText) {
+			t.Fatalf("args %q: run = %+v", testCase.args, run)
+		}
+		requireRecordVideoCalls(t, fake)
 	}
-	requireRecordVideoCalls(t, fake)
 }
 
 type recordVideoCommandOutput struct {

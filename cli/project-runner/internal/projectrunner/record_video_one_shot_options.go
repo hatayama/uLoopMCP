@@ -84,6 +84,11 @@ func extractRecordVideoOneShotFlags(args []string) ([]string, string, string, er
 		if err != nil {
 			return nil, "", "", err
 		}
+		// An empty value usually comes from an unset shell variable. Reading it as an absent flag
+		// would silently drop the trigger or pass the flag on to Unity as an unknown option.
+		if value == "" {
+			return nil, "", "", clierrors.MissingValueArgumentError("--" + name)
+		}
 		if name == tooldocs.RecordVideoSecondsFlagName {
 			secondsValue = value
 		} else {
