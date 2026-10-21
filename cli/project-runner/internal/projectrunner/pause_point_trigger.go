@@ -82,9 +82,25 @@ func pausePointTriggerRejectedBeforeExecution(result *pausePointTriggerResult) b
 		envelope.Error.ErrorCode == clierrors.ErrorCodeUnknownCommand
 }
 
+// triggerCommandValidator rejects a parsed trigger command that its caller cannot run. It sees
+// the command name and arguments after the shared shape checks, and returns nil to accept them.
+type triggerCommandValidator func(command string, triggerCommand string, triggerArgs []string) error
+
 // parsePausePointTriggerCommand splits a --trigger value into a command name and its arguments,
 // and rejects shapes that cannot behave sensibly when dispatched from inside this CLI process.
 func parsePausePointTriggerCommand(command string, value string) (string, []string, error) {
+	return parseTriggerCommandValue(command, value, rejectNestedPausePointWaitTrigger)
+}
+
+// parseTriggerCommandValue holds the --trigger checks every caller shares: quoting, an empty value,
+// a leading "uloop", and --project-path. validate adds the caller's own rules between the
+// leading-uloop and --project-path checks, and is also what decides whether a leading-uloop
+// correction can be offered back, so each caller judges corrections by its own rules.
+func parseTriggerCommandValue(
+	command string,
+	value string,
+	validate triggerCommandValidator,
+) (string, []string, error) {
 	tokens, err := tokenizePausePointTriggerValue(value)
 	if err != nil {
 		return "", nil, &clierrors.ArgumentError{
@@ -106,22 +122,11 @@ func parsePausePointTriggerCommand(command string, value string) (string, []stri
 	// The value is dispatched in-process as argv, not through a shell. A leading "uloop" is
 	// therefore a command name, not a prefix, and becomes UNKNOWN_COMMAND after arming.
 	if triggerCommand == pausePointTriggerLeadingDispatcherToken {
-		return "", nil, rejectLeadingUloopTrigger(command, triggerArgs)
+		return "", nil, rejectLeadingUloopTrigger(command, triggerArgs, validate)
 	}
 
-	// A pause-point wait cannot make progress from inside another pause-point wait: there is no
-	// legitimate use case, only a wasted goroutine that outlives its parent's own timeout.
-	if triggerCommand == clicore.PausePointAwaitCommandName || triggerCommand == pausePointEnableCommandName {
-		return "", nil, &clierrors.ArgumentError{
-			Message: fmt.Sprintf(
-				"--trigger cannot target %q: waiting for a pause point from inside another pause-point wait cannot make progress.",
-				triggerCommand),
-			Option:  "--" + tooldocs.PausePointTriggerFlagName,
-			Command: command,
-			NextActions: []string{
-				"Pass a command that performs an action (for example simulate-keyboard), not another pause-point wait.",
-			},
-		}
+	if err := validate(command, triggerCommand, triggerArgs); err != nil {
+		return "", nil, err
 	}
 
 	for _, arg := range triggerArgs {
@@ -141,6 +146,25 @@ func parsePausePointTriggerCommand(command string, value string) (string, []stri
 	return triggerCommand, triggerArgs, nil
 }
 
+// rejectNestedPausePointWaitTrigger is the pause-point rule: a pause-point wait cannot make
+// progress from inside another pause-point wait. There is no legitimate use case, only a wasted
+// goroutine that outlives its parent's own timeout.
+func rejectNestedPausePointWaitTrigger(command string, triggerCommand string, _ []string) error {
+	if triggerCommand != clicore.PausePointAwaitCommandName && triggerCommand != pausePointEnableCommandName {
+		return nil
+	}
+	return &clierrors.ArgumentError{
+		Message: fmt.Sprintf(
+			"--trigger cannot target %q: waiting for a pause point from inside another pause-point wait cannot make progress.",
+			triggerCommand),
+		Option:  "--" + tooldocs.PausePointTriggerFlagName,
+		Command: command,
+		NextActions: []string{
+			"Pass a command that performs an action (for example simulate-keyboard), not another pause-point wait.",
+		},
+	}
+}
+
 const (
 	pausePointTriggerLeadingDispatcherToken   = "uloop"
 	pausePointTriggerLeadingUloopMessage      = `--trigger must name the uloop subcommand without the leading "uloop": the value runs in-process, not through a shell.`
@@ -150,11 +174,11 @@ const (
 // rejectLeadingUloopTrigger reports a parse-time ArgumentError so a prefixed --trigger never
 // reaches dispatch. Why not reuse pausePointTriggerCommandString: that helper joins tokens
 // without quoting, which would flatten a whitespace-bearing argument such as "10 20".
-func rejectLeadingUloopTrigger(command string, triggerArgs []string) error {
+func rejectLeadingUloopTrigger(command string, triggerArgs []string, validate triggerCommandValidator) error {
 	corrected := pausePointTriggerExampleWithoutDispatcher
 	if len(triggerArgs) > 0 {
 		candidate := formatPausePointTriggerTokens(triggerArgs)
-		if pausePointTriggerCorrectionIsReusable(command, triggerArgs, candidate) {
+		if pausePointTriggerCorrectionIsReusable(command, triggerArgs, candidate, validate) {
 			corrected = candidate
 		}
 	}
@@ -173,7 +197,12 @@ func rejectLeadingUloopTrigger(command string, triggerArgs []string) error {
 // round-trip through the tokenizer, and nested-wait / --project-path remainders are rejected
 // on the next parse. Why refuse a remainder that still starts with uloop: re-parsing it would
 // re-enter rejectLeadingUloopTrigger; a leftover prefix is already an unusable correction.
-func pausePointTriggerCorrectionIsReusable(command string, original []string, corrected string) bool {
+func pausePointTriggerCorrectionIsReusable(
+	command string,
+	original []string,
+	corrected string,
+	validate triggerCommandValidator,
+) bool {
 	tokens, err := tokenizePausePointTriggerValue(corrected)
 	if err != nil {
 		return false
@@ -184,7 +213,7 @@ func pausePointTriggerCorrectionIsReusable(command string, original []string, co
 	if tokens[0] == pausePointTriggerLeadingDispatcherToken {
 		return false
 	}
-	_, _, err = parsePausePointTriggerCommand(command, corrected)
+	_, _, err = parseTriggerCommandValue(command, corrected, validate)
 	return err == nil
 }
 
