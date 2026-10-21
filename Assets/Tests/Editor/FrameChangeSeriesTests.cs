@@ -68,6 +68,25 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
         }
 
         /// <summary>
+        /// What: a recording where only one cell flickers reports no largest change, matching its zero changed frames.
+        /// </summary>
+        [Test]
+        public void Summarize_WhenOnlyOneCellChanges_HasNoLargestChange()
+        {
+            FrameChangeSeries series = CreateSeries();
+            byte[] changed = Grid(0);
+            changed[5] = 8;
+
+            series.Add(0, 0.0, Grid(0));
+            series.Add(1, 0.1, changed);
+            series.Add(2, 0.2, Grid(0));
+
+            FrameChangeSummary summary = series.Summarize();
+            Assert.That(summary.FramesChangedVsPrevious, Is.EqualTo(0));
+            Assert.That(summary.LargestChange, Is.Null);
+        }
+
+        /// <summary>
         /// What: a difference of 7, one below the threshold, is not counted as a changed cell.
         /// </summary>
         [Test]

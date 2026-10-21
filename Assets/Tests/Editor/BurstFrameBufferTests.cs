@@ -205,6 +205,20 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
         }
 
         /// <summary>
+        /// What: frames where only one cell changes give no burst, matching a summary that counts no changed frame.
+        /// </summary>
+        [Test]
+        public void Frames_WhenOnlyOneCellChanges_IsEmpty()
+        {
+            BurstFrameBuffer buffer = new BurstFrameBuffer();
+
+            Feed(buffer, 1, 30, 1);
+
+            Assert.That(buffer.Frames, Is.Empty);
+            Assert.That(buffer.Anchor, Is.EqualTo(BurstAnchor.none));
+        }
+
+        /// <summary>
         /// What: every kept tile still holds its own frame's pixels after many later frames reuse released arrays.
         /// </summary>
         [Test]

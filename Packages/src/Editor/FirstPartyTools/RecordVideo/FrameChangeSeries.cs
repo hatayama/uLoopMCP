@@ -152,9 +152,10 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 }
             }
 
-            // A still recording has nothing worth pointing at; naming frame 1 would send the agent to an
-            // arbitrary frame, and the burst sheet already reports "no change" the same way.
-            if (largest.ChangedCellsVsPrevious == 0)
+            // A frame below the changed-frame minimum is not counted as changed, so it is not worth
+            // pointing at either; this keeps LargestChange, the burst sheet, and FramesChangedVsPrevious
+            // agreeing on whether anything changed.
+            if (largest.ChangedCellsVsPrevious < ChangedFrameMinCells)
             {
                 return null;
             }

@@ -51,7 +51,10 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         private readonly Stack<Color32[]> _free = new Stack<Color32[]>();
         private List<CapturedTile> _burst = new List<CapturedTile>();
         private int _tailRemaining;
-        private int _peakCells;
+
+        // A peak needs as many changed cells as a frame needs to count as changed, so a burst exists
+        // exactly when the summary reports a changed frame.
+        private int _peakCells = FrameChangeSeries.ChangedFrameMinCells - 1;
         private BurstAnchor _anchor = BurstAnchor.none;
 
         internal BurstAnchor Anchor => _anchor;
