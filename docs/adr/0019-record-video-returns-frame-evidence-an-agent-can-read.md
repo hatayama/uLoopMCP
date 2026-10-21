@@ -8,8 +8,11 @@ Every stopped `uloop record-video` recording returns, beside the video file, evi
 can read without watching the video:
 
 - a burst sheet: up to 32 consecutive frames around the moment of interest, anchored on a mark when one
-  was made, otherwise on the frame with the largest change;
-- a timeline sheet: tiles evenly spaced across the whole recording, at most 40;
+  was made, otherwise on the frame with the largest change; omitted when fewer than two frames
+  were captured, or when nothing changed and nothing was marked, because one frame or an
+  unanchored still clip shows nothing a screenshot does not;
+- a timeline sheet: tiles evenly spaced across the whole recording, at most 40; written whenever
+  at least one frame was captured;
 - frame change numbers: per-frame measurements in a `frames.json` sidecar and a summary in the
   response (changed frames, frames matching the one two before, and the cells where that
   alternation happened most).
