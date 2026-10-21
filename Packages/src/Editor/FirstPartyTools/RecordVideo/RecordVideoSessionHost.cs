@@ -17,6 +17,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         private readonly Action<EditorApplication.CallbackFunction> _subscribeUpdate;
         private readonly Action<EditorApplication.CallbackFunction> _unsubscribeUpdate;
         private readonly Action _applyDefaultDirectoryRetention;
+        private readonly Func<int, int, IRecordingFrameAnalyzer> _createAnalyzer;
         private VideoRecordingSession _session;
         private bool _usedDefaultOutputPath;
         private bool _stopOnPlayModeExit;
@@ -26,19 +27,22 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             Func<double> clock,
             Action<EditorApplication.CallbackFunction> subscribeUpdate,
             Action<EditorApplication.CallbackFunction> unsubscribeUpdate,
-            Action applyDefaultDirectoryRetention)
+            Action applyDefaultDirectoryRetention,
+            Func<int, int, IRecordingFrameAnalyzer> createAnalyzer)
         {
             Debug.Assert(createEncoder != null, "createEncoder must not be null");
             Debug.Assert(clock != null, "clock must not be null");
             Debug.Assert(subscribeUpdate != null, "subscribeUpdate must not be null");
             Debug.Assert(unsubscribeUpdate != null, "unsubscribeUpdate must not be null");
             Debug.Assert(applyDefaultDirectoryRetention != null, "applyDefaultDirectoryRetention must not be null");
+            Debug.Assert(createAnalyzer != null, "createAnalyzer must not be null");
 
             _createEncoder = createEncoder;
             _clock = clock;
             _subscribeUpdate = subscribeUpdate;
             _unsubscribeUpdate = unsubscribeUpdate;
             _applyDefaultDirectoryRetention = applyDefaultDirectoryRetention;
+            _createAnalyzer = createAnalyzer;
         }
 
         internal bool IsRecording => _session != null && _session.Snapshot().IsRecording;
@@ -85,7 +89,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                     frameRate,
                     maxDurationSeconds,
                     outputPath,
-                    quality);
+                    quality,
+                    _createAnalyzer(width, height));
                 _usedDefaultOutputPath = usedDefaultOutputPath;
                 _stopOnPlayModeExit = stopOnPlayModeExit;
                 LastCompletedRecordingStore.Clear();

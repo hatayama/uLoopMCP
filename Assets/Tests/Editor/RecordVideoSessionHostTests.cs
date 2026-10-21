@@ -54,7 +54,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
                     _unsubscribeCount++;
                     _updateCallbacks.Remove(callback);
                 },
-                () => _retentionCount++);
+                () => _retentionCount++,
+                (width, height) => new FakeRecordingFrameAnalyzer());
         }
 
         [TearDown]
@@ -355,7 +356,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
                 1.0,
                 RecordVideoConstants.StoppedByMaxDuration,
                 false,
-                "high");
+                "high",
+                null,
+                null);
         }
 
         private readonly struct EncoderRequest
@@ -406,6 +409,22 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             public void Dispose()
             {
                 DisposeCallCount++;
+            }
+        }
+
+        private sealed class FakeRecordingFrameAnalyzer : IRecordingFrameAnalyzer
+        {
+            public void OnCapturedFrame(Texture2D frame, int encodedFrame, double seconds)
+            {
+            }
+
+            public void Mark(double seconds)
+            {
+            }
+
+            public RecordingAnalysisResult Finish(string videoPath, int width, int height, int frameRate)
+            {
+                return null;
             }
         }
 

@@ -55,7 +55,9 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 SessionState.GetFloat(ElapsedSecondsKey, 0f),
                 SessionState.GetString(StoppedByKey, string.Empty),
                 false,
-                SessionState.GetString(QualityKey, string.Empty));
+                SessionState.GetString(QualityKey, string.Empty),
+                null,
+                null);
             bool isReported = SessionState.GetInt(ReportedKey, 0) != 0;
             return new LastCompletedRecording(snapshot, isReported);
         }

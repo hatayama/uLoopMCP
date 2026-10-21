@@ -39,7 +39,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
                 3.0,
                 RecordVideoConstants.StoppedByMaxDuration,
                 false,
-                RecordVideoQuality.high.ToString());
+                RecordVideoQuality.high.ToString(),
+                null,
+                null);
 
             LastCompletedRecordingStore.Save(snapshot);
             LastCompletedRecording unread = LastCompletedRecordingStore.TryRead();

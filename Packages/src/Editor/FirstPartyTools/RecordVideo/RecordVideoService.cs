@@ -21,7 +21,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             () => EditorApplication.timeSinceStartup,
             callback => EditorApplication.update += callback,
             callback => EditorApplication.update -= callback,
-            ApplyDefaultDirectoryRetention);
+            ApplyDefaultDirectoryRetention,
+            (width, height) => new RecordingFrameAnalyzer(width, height));
 
         internal static bool IsRecording => ServiceValue.IsRecording;
 
