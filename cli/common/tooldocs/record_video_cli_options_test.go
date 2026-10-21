@@ -10,14 +10,33 @@ import (
 // Verifies record-video's CLI-only table declares --seconds as an integer and --trigger as a string.
 func TestRecordVideoCLIOnlyOptionsDeclareSecondsAndTrigger(t *testing.T) {
 	options := RecordVideoCLIOnlyOptions()
-	if len(options) != 2 {
-		t.Fatalf("got %d options, want 2", len(options))
+	if len(options) != 6 {
+		t.Fatalf("got %d options, want 6", len(options))
 	}
 	if options[0].FlagName != RecordVideoSecondsFlagName || options[0].Type != "integer" {
 		t.Errorf("first option = %+v, want --seconds integer", options[0])
 	}
 	if options[1].FlagName != RecordVideoTriggerFlagName || options[1].Type != "string" {
 		t.Errorf("second option = %+v, want --trigger string", options[1])
+	}
+}
+
+// Verifies record-video's CLI-only table declares the extraction flags with their types.
+func TestRecordVideoCLIOnlyOptionsDeclareExtractionFlags(t *testing.T) {
+	want := map[string]string{
+		RecordVideoVideoFlagName:     "string",
+		RecordVideoFrameAtFlagName:   "number",
+		RecordVideoSheetFromFlagName: "number",
+		RecordVideoSheetToFlagName:   "number",
+	}
+	for _, option := range RecordVideoCLIOnlyOptions()[2:] {
+		if want[option.FlagName] != option.Type {
+			t.Errorf("option %s type = %q, want %q", option.FlagName, option.Type, want[option.FlagName])
+		}
+		delete(want, option.FlagName)
+	}
+	if len(want) != 0 {
+		t.Errorf("missing extraction flags: %v", want)
 	}
 }
 

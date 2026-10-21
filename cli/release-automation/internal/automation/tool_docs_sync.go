@@ -49,8 +49,12 @@ var cliOnlyParameterTableOptions = map[string]map[string]bool{
 		tooldocs.PausePointLineFlagName: true,
 	},
 	tooldocs.RecordVideoCommandName: {
-		tooldocs.RecordVideoSecondsFlagName: true,
-		tooldocs.RecordVideoTriggerFlagName: true,
+		tooldocs.RecordVideoSecondsFlagName:   true,
+		tooldocs.RecordVideoTriggerFlagName:   true,
+		tooldocs.RecordVideoVideoFlagName:     true,
+		tooldocs.RecordVideoFrameAtFlagName:   true,
+		tooldocs.RecordVideoSheetFromFlagName: true,
+		tooldocs.RecordVideoSheetToFlagName:   true,
 	},
 }
 
