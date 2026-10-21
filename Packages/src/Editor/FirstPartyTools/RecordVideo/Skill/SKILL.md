@@ -1,7 +1,7 @@
 ---
 name: uloop-record-video
 toolName: record-video
-description: "Record the Game View or any Editor window (Scene, Inspector, ...) to an .mp4 or .webm video. Use when a screenshot is not enough: motion, animation, physics, or a gameplay sequence."
+description: "Record the Game View or any Editor window (Scene, Inspector, ...) to .mp4 or .webm. Use to verify motion after a change (fades, cut-ins, transitions, effect order) or anything a screenshot cannot show."
 ---
 
 # Task
