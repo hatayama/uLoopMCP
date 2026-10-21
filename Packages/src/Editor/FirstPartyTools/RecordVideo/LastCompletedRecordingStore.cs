@@ -19,6 +19,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         private const string StoppedByKey = KeyPrefix + "stoppedBy";
         private const string QualityKey = KeyPrefix + "quality";
         private const string ReportedKey = KeyPrefix + "reported";
+        // Only the sidecar path is kept: the analysis itself lives in that file and is read back from it.
+        private const string AnalysisPathKey = KeyPrefix + "analysisPath";
 
         internal static void Save(VideoRecordingSnapshot snapshot)
         {
@@ -34,6 +36,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             SessionState.SetFloat(ElapsedSecondsKey, (float)snapshot.ElapsedSeconds);
             SessionState.SetString(StoppedByKey, snapshot.StoppedBy);
             SessionState.SetString(QualityKey, snapshot.Quality);
+            SessionState.SetString(AnalysisPathKey, snapshot.Analysis?.Path ?? string.Empty);
             SessionState.SetInt(ReportedKey, 0);
         }
 
@@ -45,6 +48,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 return LastCompletedRecording.Empty;
             }
 
+            RecordingAnalysisResult analysis = ReadAnalysis(SessionState.GetString(AnalysisPathKey, string.Empty));
             VideoRecordingSnapshot snapshot = new VideoRecordingSnapshot(
                 outputPath,
                 SessionState.GetInt(WidthKey, 0),
@@ -56,8 +60,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 SessionState.GetString(StoppedByKey, string.Empty),
                 false,
                 SessionState.GetString(QualityKey, string.Empty),
-                null,
-                null);
+                analysis,
+                analysis?.Document.MarkSeconds);
             bool isReported = SessionState.GetInt(ReportedKey, 0) != 0;
             return new LastCompletedRecording(snapshot, isReported);
         }
@@ -78,7 +82,19 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             SessionState.SetFloat(ElapsedSecondsKey, 0f);
             SessionState.SetString(StoppedByKey, string.Empty);
             SessionState.SetString(QualityKey, string.Empty);
+            SessionState.SetString(AnalysisPathKey, string.Empty);
             SessionState.SetInt(ReportedKey, 0);
+        }
+
+        private static RecordingAnalysisResult ReadAnalysis(string analysisPath)
+        {
+            RecordingAnalysisDocument document = RecordingAnalysisDocument.TryRead(analysisPath);
+            if (document == null)
+            {
+                return null;
+            }
+
+            return new RecordingAnalysisResult(analysisPath, document);
         }
     }
 
