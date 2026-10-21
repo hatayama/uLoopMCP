@@ -330,6 +330,52 @@ func TestGenerateCatalogAcceptsCliOnlyTableRows(t *testing.T) {
 	}
 }
 
+const fixtureRecordVideoCatalogEntry = `{
+      "name": "record-video",
+      "description": "Stale record-video description",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "Action": {
+            "type": "string",
+            "description": "Stale action description"
+          }
+        }
+      }
+    },
+    `
+
+const fixtureRecordVideoSkill = `---
+name: uloop-record-video
+toolName: record-video
+description: "Record the Game View."
+---
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| ` + "`--action`" + ` | enum | start | start or stop |
+| ` + "`--seconds`" + ` | integer | - | Parsed by the native runner |
+| ` + "`--trigger`" + ` | string | - | Parsed by the native runner |
+`
+
+// Verifies record-video's skill table may list the one-shot flags the native runner parses itself.
+func TestGenerateCatalogAcceptsRecordVideoOneShotRows(t *testing.T) {
+	catalog := strings.Replace(fixtureCatalogContent, `"tools": [
+    `, `"tools": [
+    `+fixtureRecordVideoCatalogEntry, 1)
+	skills := defaultGeneratorSkills()
+	skills["FirstPartyTools/RecordVideo"] = fixtureRecordVideoSkill
+	repositoryRoot := writeGeneratorFixture(t, skills, catalog)
+
+	generated, err := GenerateCatalogWithSkillDescriptions([]byte(catalog), repositoryRoot)
+	if err != nil {
+		t.Fatalf("generation failed: %v", err)
+	}
+	if !strings.Contains(string(generated), `"start or stop"`) {
+		t.Fatalf("the record-video property description was not replaced:\n%s", generated)
+	}
+}
+
 // Verifies an unparsable catalog, a root with no skills, a catalog missing the table-less tool, a catalog of only table-less tools, a skill without a tool description, and a parameterless tool not on the table-less list each stop generation with their own error.
 func TestGenerateCatalogRejectsInconsistentInputs(t *testing.T) {
 	withoutDescription := strings.Replace(fixtureFocusWindowSkill, "description: \"Bring the Unity Editor window to front.\"\n", "", 1)

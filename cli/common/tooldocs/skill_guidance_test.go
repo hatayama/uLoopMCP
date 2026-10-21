@@ -155,3 +155,12 @@ func repositoryRoot(t *testing.T) string {
 		directory = parent
 	}
 }
+
+// Verifies game-view-mode points at its own skill rather than being folded into the Game view size
+// skill it sits next to in the catalog.
+func TestSkillGuidanceLineNamesTheGameViewModeSkill(t *testing.T) {
+	line, ok := SkillGuidanceLine("game-view-mode")
+	if !ok || !strings.Contains(line, "uloop-game-view-mode") {
+		t.Errorf("guidance line = %q (ok %v), want it to name uloop-game-view-mode", line, ok)
+	}
+}

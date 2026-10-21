@@ -19,6 +19,7 @@ var commandSkillNames = map[string]string{
 	"run-tests":            "uloop-run-tests",
 	"screenshot":           "uloop-screenshot",
 	"set-game-view-size":   "uloop-set-game-view-size",
+	"game-view-mode":       "uloop-game-view-mode",
 	"simulate-keyboard":    "uloop-simulate-keyboard",
 	"simulate-mouse-input": "uloop-simulate-mouse-input",
 	"simulate-mouse-ui":    "uloop-simulate-mouse-ui",

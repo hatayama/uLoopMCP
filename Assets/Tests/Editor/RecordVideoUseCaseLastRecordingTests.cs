@@ -118,7 +118,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
 
         private static VideoRecordingSnapshot CreateSnapshot()
         {
-            return new VideoRecordingSnapshot("<PROJECT_ROOT>/clip.mp4", 640, 360, 24, 48, 3, 2.5, "MaxDuration", false, "high");
+            return new VideoRecordingSnapshot("<PROJECT_ROOT>/clip.mp4", 640, 360, 24, 48, 3, 2.5, "MaxDuration", false, "high", null, null);
         }
 
         private static void AssertSnapshotFields(RecordVideoResponse response)

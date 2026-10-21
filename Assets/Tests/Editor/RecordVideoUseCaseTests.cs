@@ -137,6 +137,47 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
         }
 
         /// <summary>
+        /// What: Mark with no recording fails with the no-recording message.
+        /// </summary>
+        [Test]
+        public async Task ExecuteAsync_MarkWhenIdle_ReturnsNoRecordingFailure()
+        {
+            RecordVideoUseCase useCase = new RecordVideoUseCase();
+            RecordVideoSchema parameters = new RecordVideoSchema
+            {
+                Action = RecordVideoAction.mark
+            };
+
+            RecordVideoResponse response = await useCase.ExecuteAsync(parameters, CancellationToken.None);
+
+            Assert.That(response.Success, Is.False);
+            Assert.That(response.IsRecording, Is.False);
+            Assert.That(response.Message, Is.EqualTo(RecordVideoConstants.NoRecordingMessage));
+            Assert.That(response.Action, Is.EqualTo(RecordVideoAction.mark.ToString()));
+        }
+
+        /// <summary>
+        /// What: unlike stop, Mark does not report an unreported auto-stopped recording, and leaves it unreported.
+        /// </summary>
+        [Test]
+        public async Task ExecuteAsync_MarkWithAnUnreportedLastRecording_FailsAndLeavesItUnreported()
+        {
+            LastCompletedRecordingStore.Save(new VideoRecordingSnapshot(
+                "<PROJECT_ROOT>/clip.mp4", 640, 360, 24, 48, 3, 2.5, "max-duration", false, "high", null, null));
+            RecordVideoUseCase useCase = new RecordVideoUseCase();
+            RecordVideoSchema parameters = new RecordVideoSchema
+            {
+                Action = RecordVideoAction.mark
+            };
+
+            RecordVideoResponse response = await useCase.ExecuteAsync(parameters, CancellationToken.None);
+
+            Assert.That(response.Success, Is.False);
+            Assert.That(response.OutputPath, Is.Null.Or.Empty);
+            Assert.That(LastCompletedRecordingStore.TryRead().IsReported, Is.False);
+        }
+
+        /// <summary>
         /// What: an undefined Action is rejected instead of falling through to Start.
         /// </summary>
         [Test]

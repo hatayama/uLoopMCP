@@ -155,7 +155,8 @@ func visibleToolOptions(tool clicore.ToolDefinition) []visibleToolOption {
 	options = appendDynamicCodeFileSuggestionOption(tool, options)
 	options = appendRunTestsSkipCompileSuggestionOption(tool, options)
 	options = appendPausePointEnableSuggestionOptions(tool, options)
-	return appendPausePointClearSuggestionOptions(tool, options)
+	options = appendPausePointClearSuggestionOptions(tool, options)
+	return appendRecordVideoSuggestionOptions(tool, options)
 }
 
 func appendDynamicCodeFileSuggestionOption(tool clicore.ToolDefinition, options []visibleToolOption) []visibleToolOption {
@@ -187,6 +188,16 @@ func appendPausePointClearSuggestionOptions(tool clicore.ToolDefinition, options
 		return options
 	}
 	for _, option := range tooldocs.PausePointClearCLIOnlyOptions() {
+		options = appendSuggestionOption(options, option.FlagName)
+	}
+	return options
+}
+
+func appendRecordVideoSuggestionOptions(tool clicore.ToolDefinition, options []visibleToolOption) []visibleToolOption {
+	if tool.Name != tooldocs.RecordVideoCommandName {
+		return options
+	}
+	for _, option := range tooldocs.RecordVideoCLIOnlyOptions() {
 		options = appendSuggestionOption(options, option.FlagName)
 	}
 	return options
