@@ -306,6 +306,16 @@
             "type": "string",
             "description": "Comma-separated physics layer names to narrow which layers --annotate-raycast-grid clusters. Hits are limited to layers also visible to Camera.main.cullingMask. When omitted, clusters against Physics.DefaultRaycastLayers.",
             "default": ""
+          },
+          "PrefabPath": {
+            "type": "string",
+            "description": "Prefab or model asset path to render alone in an isolated preview scene, in Edit or Play Mode. Open scenes, Prefab Mode, and the asset stay untouched.",
+            "default": ""
+          },
+          "PrefabBackgroundColor": {
+            "type": "string",
+            "description": "Background for --prefab-path as #RRGGBB or #RRGGBBAA. Empty uses #808080.",
+            "default": ""
           }
         }
       }
