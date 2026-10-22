@@ -159,3 +159,36 @@ Release named in its package pin. The change becomes active only after a new
 dispatcher Release is published and a later package release stamps that
 Release. The pin guard reports source-script drift for review but does not
 block the dispatcher Release that is required to resolve it.
+
+## When merging a release pull request starts no workflow
+
+GitHub can drop push events while Actions or webhook delivery is degraded
+(check https://www.githubstatus.com). On 2026-10-21 three merges to `main`
+started no workflow at all: the events were lost, not delayed, so waiting does
+not help. A release pull request merged in such a window is neither published
+nor followed by release-please.
+
+To tell, look a few minutes after the merge:
+
+```sh
+gh run list --repo hatayama/unity-cli-loop --commit <merge commit sha> --event push
+```
+
+An empty list means the push never reached Actions. Start, from `main`, what the
+push would have started:
+
+- always: `gh workflow run release-please.yml --repo hatayama/unity-cli-loop --ref main`;
+- after merging the dispatcher release pull request:
+  `gh workflow run dispatcher-publish.yml --repo hatayama/unity-cli-loop --ref main`,
+  then approve `cli-release` as usual;
+- after merging the project runner release pull request:
+  `gh workflow run native-cli-publish.yml --repo hatayama/unity-cli-loop --ref main`.
+
+A manually started publish run does not check that `main`'s head is the release
+commit. A push run skips when the head commit does not stamp the version, but a
+manual run publishes `main`'s head as the release whenever the version has no
+tag yet (`scripts/resolve-dispatcher-release-target.sh`,
+`scripts/resolve-native-cli-release-target.sh`). Start a publish workflow by hand
+only while `git log -1 origin/main` is still that `chore(main): release ...`
+commit. If anything else has landed on `main` since, stop and decide by hand
+instead of publishing a later commit under the release version.
