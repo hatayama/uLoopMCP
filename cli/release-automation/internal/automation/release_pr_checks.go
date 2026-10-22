@@ -95,6 +95,7 @@ func runReleasePleasePRChecksWithDeps(ctx context.Context, stdout io.Writer, std
 		writeReleasePRCheckLine(stdout, "No pending release-please PR found for "+config.targetBranch+".")
 		return 0
 	}
+	releasePRs = orderReleasePRsForChecks(releasePRs, config.targetBranch)
 
 	// One component's failing checks must not strand the other components'
 	// release PRs in draft, so every PR is processed and the failures are
