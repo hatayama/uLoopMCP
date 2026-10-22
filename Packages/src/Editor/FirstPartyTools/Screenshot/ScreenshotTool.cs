@@ -15,6 +15,13 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
         protected override async Task<ScreenshotResponse> ExecuteAsync(ScreenshotSchema parameters, CancellationToken ct)
         {
+            // Prefab captures bypass ScreenshotUseCase, which resolves auto to rendering in Play Mode before validating.
+            if (!string.IsNullOrEmpty(parameters.PrefabPath))
+            {
+                PrefabScreenshotUseCase prefabUseCase = new();
+                return await prefabUseCase.CaptureAsync(parameters, ct).ConfigureAwait(false);
+            }
+
             ScreenshotUseCase useCase = new();
             return await useCase.CaptureAsync(parameters, ct).ConfigureAwait(false);
         }

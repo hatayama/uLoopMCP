@@ -123,6 +123,11 @@ namespace io.github.hatayama.UnityCliLoop.ToolContracts
         public const string SCREENSHOT_SIMULATOR_WINDOW_NAME = "Simulator";
         public const string SCREENSHOT_RESOLVED_CAPTURE_MODE_WINDOW = "window";
         public const string SCREENSHOT_RESOLVED_CAPTURE_MODE_RENDERING = "rendering";
+        public const string SCREENSHOT_RESOLVED_CAPTURE_MODE_PREFAB = "prefab";
+        public const string COORDINATE_SYSTEM_TOP_LEFT_PREFAB_IMAGE = "top-left-prefab-image";
+        public const string SCREENSHOT_PREFAB_TO_INPUT_FORMULA_UNAVAILABLE =
+            "unavailable: prefab screenshots render the asset in an isolated preview scene, not the Game View";
+        public const string SCREENSHOT_PREFAB_DEFAULT_BACKGROUND_COLOR = "#808080";
 
         public const int CORRELATION_ID_LENGTH = 8;
         public const string GUID_FORMAT_NO_HYPHENS = "N";

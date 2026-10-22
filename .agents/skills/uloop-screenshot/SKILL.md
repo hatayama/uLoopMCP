@@ -11,7 +11,7 @@ Take a screenshot of any Unity EditorWindow by name and save as PNG.
 ## Usage
 
 ```bash
-uloop screenshot [--window-name <name>] [--resolution-scale <scale>] [--match-mode <mode>] [--capture-mode <mode>] [--annotate-elements] [--annotate-raycast-grid] [--raycast-layer-mask <layers>] [--elements-only] [--output-directory <path>]
+uloop screenshot [--window-name <name>] [--resolution-scale <scale>] [--match-mode <mode>] [--capture-mode <mode>] [--annotate-elements] [--annotate-raycast-grid] [--raycast-layer-mask <layers>] [--elements-only] [--output-directory <path>] [--prefab-path <path>] [--prefab-background-color <color>]
 ```
 
 ## Parameters
@@ -27,14 +27,12 @@ uloop screenshot [--window-name <name>] [--resolution-scale <scale>] [--match-mo
 | `--annotate-raycast-grid` | flag | - | Annotate clustered 3D physics collider candidates as `PhysicsCollider` entries in `AnnotatedElements`. Uses `Camera.main` visibility and the same top-left Game View coordinates as `simulate-mouse-input`. Only works when the resolved capture mode is rendering (auto during Play Mode resolves to rendering) in PlayMode. |
 | `--raycast-layer-mask` | string | `""` | Comma-separated physics layer names to narrow which layers `--annotate-raycast-grid` clusters. Hits are limited to layers also visible to `Camera.main.cullingMask`. When omitted, clusters against `Physics.DefaultRaycastLayers`. |
 | `--elements-only` | flag | - | Return only annotated element JSON without capturing a screenshot image. Requires `--annotate-elements` or `--annotate-raycast-grid`, and the resolved capture mode to be rendering (auto during Play Mode resolves to rendering) in PlayMode. |
+| `--prefab-path` | string | `""` | Prefab or model asset path to render alone in an isolated preview scene, in Edit or Play Mode. Open scenes, Prefab Mode, and the asset stay untouched. |
+| `--prefab-background-color` | string | `""` | Background for `--prefab-path` as `#RRGGBB` or `#RRGGBBAA`. Empty uses `#808080`. |
 
 ## Match Modes
 
-| Mode | Description | Example |
-|------|-------------|---------|
-| `exact` | Window name must match exactly (case-insensitive) | "Project" matches "Project" only |
-| `prefix` | Window name must start with the input | "Project" matches "Project" and "Project Settings" |
-| `contains` | Window name must contain the input anywhere | "set" matches "Project Settings" |
+See [references/match-modes.md](references/match-modes.md) for exact / prefix / contains examples.
 
 ## Window Name
 
@@ -51,14 +49,14 @@ The window name is the text displayed in the window's title bar (tab). Common na
 Returns JSON with:
 
 - `ScreenshotCount`: Number of windows captured
-- `ResolvedCaptureMode`: `"window"` or `"rendering"` — the mode actually used after resolving `auto`
+- `ResolvedCaptureMode`: `"window"`, `"rendering"`, or `"prefab"` — the mode actually used after resolving `auto`
 - `Warning`: Appears for window captures taken while Play Mode is running with at least one image, and for any image captured while Play Mode is paused (UGUI/canvas content may show the frame rendered before the pause; run `uloop control-play-mode --action Step` once and capture again to refresh it).
 - `Screenshots`: Array of screenshot info, each containing:
   - `ImagePath`: Absolute path to the saved PNG file. Empty (`""`) when `--elements-only` is used because no image file is written; `FileSizeBytes`, `Width`, and `Height` are then `0`, while `GameViewWidth`/`GameViewHeight` and `AnnotatedElements` still carry real values. When it is non-empty, always open the file named here — the output directory accumulates every past capture, so guessing the newest file with directory listing (`ls -t` or similar) can silently pick a stale screenshot from an earlier run.
   - `FileSizeBytes`: Size of the saved file in bytes
   - `Width`: Captured image width in pixels
   - `Height`: Captured image height in pixels
-  - `ImageCoordinateSystem`: `"top-left-game-view"` or `"top-left-window"`
+  - `ImageCoordinateSystem`: `"top-left-game-view"`, `"top-left-window"`, or `"top-left-prefab-image"`
   - `ResolutionScale`: Resolution scale used for capture
   - `ImageToInputOffsetY`: Y offset used for top-left-game-view coordinate conversion
   - `GameViewWidth`, `GameViewHeight`: Game View size in input coordinates at capture time — the basis for `SimX`/`SimY` and for the Y flip inside `simulate-mouse-input`. Populated for rendering captures, including `--elements-only`
@@ -75,3 +73,4 @@ When multiple windows match (e.g., multiple Inspector windows or when using `con
 - Use `uloop focus-window` first if needed
 - Target window must be open in Unity Editor
 - Window name matching is always case-insensitive
+- Before using --prefab-path, read [references/prefab-capture.md](references/prefab-capture.md).

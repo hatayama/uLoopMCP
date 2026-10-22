@@ -358,7 +358,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             return Mathf.RoundToInt(gameViewSize.y) - renderTextureHeight;
         }
 
-        private static Texture2D ApplyResolutionScaling(Texture2D originalTexture, float scale)
+        internal static Texture2D ApplyResolutionScaling(Texture2D originalTexture, float scale)
         {
             int newWidth = Mathf.RoundToInt(originalTexture.width * scale);
             int newHeight = Mathf.RoundToInt(originalTexture.height * scale);
