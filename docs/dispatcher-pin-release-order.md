@@ -39,7 +39,9 @@ and is merged only by automation; the other two are the ones people merge.
 2. `post-publish` stamps the pin on `main`, then marks the **unity-package**
    release pull request ready and merges it, once that pull request's head
    records the dispatcher tag just published and has a successful run of every
-   required workflow for that exact head commit.
+   required workflow for that exact head commit. The release PR checks run one
+   pull request at a time, so the unity-package one always goes first; behind
+   another component's checks it would outlast the time `post-publish` waits.
 3. A package release that carries no dispatcher bump never reaches step 2, so
    `release-please.yml` merges it instead: after the release PR checks, it
    marks the package pull request ready and merges it, but only while no

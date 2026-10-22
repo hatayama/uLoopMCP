@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 )
@@ -83,6 +84,22 @@ func releasePRCheckComponentFromHeadRef(headRefName string, targetBranch string)
 		return ""
 	}
 	return strings.TrimPrefix(headRefName, componentPrefix)
+}
+
+// orderReleasePRsForChecks puts the Unity package release pull request first and
+// keeps every other pull request in listed order. Checks run one pull request at a
+// time, and dispatcher-publish's post-publish waits a bounded time for the package
+// pull request's checks before merging it; a package pull request listed after
+// another component's waited behind that component's checks and timed out.
+func orderReleasePRsForChecks(releasePRs []releasePullRequest, targetBranch string) []releasePullRequest {
+	ordered := append([]releasePullRequest(nil), releasePRs...)
+	isPackage := func(releasePR releasePullRequest) bool {
+		return releasePRCheckComponentFromHeadRef(releasePR.HeadRefName, targetBranch) == mergePackageReleasePRComponent
+	}
+	sort.SliceStable(ordered, func(i, j int) bool {
+		return isPackage(ordered[i]) && !isPackage(ordered[j])
+	})
+	return ordered
 }
 
 // releasePleaseReleaseTitleMatches says whether a title is a release-please release title. A

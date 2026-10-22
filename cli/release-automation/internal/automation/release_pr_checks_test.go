@@ -890,6 +890,49 @@ func TestReleasePRChecksLeaveUnityPackagePullRequestDraft(t *testing.T) {
 	assertReleasePRCheckLogDoesNotContainLine(t, commandLogText, "gh pr ready 2002 --repo owner/repository")
 }
 
+// Verifies that the Unity package release PR's checks are dispatched before another component's even when the listing puts the package PR last, so post-publish's bounded wait for that PR never sits behind another component's checks.
+func TestReleasePRChecksDispatchUnityPackagePullRequestFirst(t *testing.T) {
+	prListJSON := `[` +
+		`{"number":2001,"headRefName":"release-please--branches--main--components--dispatcher","headRefOid":"dispatcher123","title":"chore(main): release dispatcher 3.6.0","url":"https://example.test/pr/2001"},` +
+		`{"number":2002,"headRefName":"release-please--branches--main--components--unity-package","headRefOid":"package123","title":"chore(main): release 3.6.0","url":"https://example.test/pr/2002"}` +
+		`]`
+
+	exitCode, _, stderr, stub := runMultiReleasePRCheck(t, prListJSON, nil)
+
+	if exitCode != 0 {
+		t.Fatalf("expected exit code 0, got %d\nstderr: %s", exitCode, stderr)
+	}
+	dispatchedBranches := []string{}
+	for _, commandLine := range stub.commandLog {
+		if strings.HasPrefix(commandLine, "gh workflow run ") {
+			dispatchedBranches = append(dispatchedBranches, commandLine)
+		}
+	}
+	if len(dispatchedBranches) == 0 || !strings.Contains(dispatchedBranches[0], "--components--unity-package") {
+		t.Fatalf("expected the first dispatch to target the Unity package release branch, got %v", dispatchedBranches)
+	}
+	if !strings.Contains(dispatchedBranches[len(dispatchedBranches)-1], "--components--dispatcher") {
+		t.Fatalf("expected the dispatcher release branch to be dispatched after the package one, got %v", dispatchedBranches)
+	}
+}
+
+// Verifies that failing Unity package checks, which now run first, still let the next component's release PR be marked ready, and the command reports only the package PR as failed.
+func TestReleasePRChecksContinueAfterUnityPackageChecksFail(t *testing.T) {
+	prListJSON := `[` +
+		`{"number":2001,"headRefName":"release-please--branches--main--components--dispatcher","headRefOid":"dispatcher123","title":"chore(main): release dispatcher 3.6.0","url":"https://example.test/pr/2001"},` +
+		`{"number":2002,"headRefName":"release-please--branches--main--components--unity-package","headRefOid":"package123","title":"chore(main): release 3.6.0","url":"https://example.test/pr/2002"}` +
+		`]`
+
+	exitCode, _, stderr, stub := runMultiReleasePRCheck(t, prListJSON, map[string]bool{"21": true})
+
+	if exitCode != 1 {
+		t.Fatalf("expected exit code 1, got %d\nstderr: %s", exitCode, stderr)
+	}
+	commandLogText := strings.Join(stub.commandLog, "\n")
+	assertReleasePRCheckLogContainsLine(t, commandLogText, "gh pr ready 2001 --repo owner/repository")
+	assertReleasePRCheckLogContains(t, stderr, "Release PR checks failed for #2002; the errors above say why.")
+}
+
 // Verifies that one component's failing checks still let the other component's release PR be finalized, and the command reports the failure.
 func TestReleasePRChecksContinueAfterOneComponentFails(t *testing.T) {
 	prListJSON := `[` +
@@ -922,7 +965,7 @@ func TestReleasePRChecksNameEveryFailedPullRequestLast(t *testing.T) {
 	}
 	stderrLines := strings.Split(strings.TrimRight(stderr, "\n"), "\n")
 	lastLine := stderrLines[len(stderrLines)-1]
-	expected := "Release PR checks failed for #2001, #2002; the errors above say why."
+	expected := "Release PR checks failed for #2002, #2001; the errors above say why."
 	if lastLine != expected {
 		t.Fatalf("expected last stderr line %q, got %q\nstderr: %s", expected, lastLine, stderr)
 	}
