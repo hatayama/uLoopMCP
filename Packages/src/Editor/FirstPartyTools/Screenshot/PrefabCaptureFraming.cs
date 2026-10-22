@@ -115,7 +115,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             return new PrefabCaptureFrame(PrefabCaptureKind.ScreenUi, gameViewSize);
         }
 
-        // Returns only outermost Canvases; nested ones follow their parent and must not be switched.
+        // Returns only outermost Canvases. Nested canvases follow their root canvas and Unity ignores
+        // renderMode/worldCamera assignments on them; skipping them keeps only the canvases that decide how the UI renders.
         private static List<Canvas> CollectTopCanvases(GameObject root, bool includeWorldSpace)
         {
             List<Canvas> canvases = new();

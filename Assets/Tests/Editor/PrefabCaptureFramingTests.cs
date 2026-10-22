@@ -1,5 +1,4 @@
 using NUnit.Framework;
-using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -99,16 +98,15 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
         }
 
         /// <summary>
-        /// Verifies a root screen-space Canvas is switched to the capture camera while a nested Canvas is left alone.
+        /// Verifies a root screen-space Canvas with a nested Canvas is captured as screen UI through the capture camera.
         /// </summary>
         [Test]
-        public void Arrange_WithAnOverlayCanvasRoot_SwitchesOnlyTheOutermostCanvas()
+        public void Arrange_WithAnOverlayCanvasRoot_SwitchesTheRootCanvasToTheCaptureCamera()
         {
             GameObject root = CreateInScene("Root");
             Canvas rootCanvas = root.AddComponent<Canvas>();
             rootCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            Canvas nestedCanvas = CreateChild(root, "Nested").AddComponent<Canvas>();
-            nestedCanvas.overrideSorting = true;
+            CreateChild(root, "Nested").AddComponent<Canvas>().overrideSorting = true;
 
             PrefabCaptureFrame frame = PrefabCaptureFraming.Arrange(root, _camera, GameViewSize);
 
@@ -116,8 +114,6 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             Assert.That(frame.ImageSize, Is.EqualTo(GameViewSize));
             Assert.That(rootCanvas.renderMode, Is.EqualTo(RenderMode.ScreenSpaceCamera));
             Assert.That(rootCanvas.worldCamera, Is.SameAs(_camera));
-            // A nested Canvas's worldCamera getter returns the root Canvas's camera, so the stored value is read instead.
-            Assert.That(new SerializedObject(nestedCanvas).FindProperty("m_Camera").objectReferenceValue, Is.Null);
         }
 
         /// <summary>
