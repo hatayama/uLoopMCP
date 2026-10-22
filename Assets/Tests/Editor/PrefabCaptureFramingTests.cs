@@ -306,6 +306,24 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
         }
 
         /// <summary>
+        /// Verifies float noise from dividing by the root scale does not add a pixel to a scaled UI part.
+        /// </summary>
+        [Test]
+        public void Arrange_WithAScaledRootOfAnAwkwardWidth_DoesNotAddAPixel()
+        {
+            GameObject root = CreateRectInScene("Root");
+            Canvas canvas = root.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.WorldSpace;
+            RectTransform rect = (RectTransform)root.transform;
+            rect.sizeDelta = new Vector2(109f, 100f);
+            rect.localScale = new Vector3(0.01f, 0.01f, 1f);
+
+            PrefabCaptureFrame frame = PrefabCaptureFraming.Arrange(root, _camera, GameViewSize);
+
+            Assert.That(frame.ImageSize, Is.EqualTo(new Vector2Int(109, 100)));
+        }
+
+        /// <summary>
         /// Verifies disabled screen-space Canvases do not make a prefab screen UI.
         /// </summary>
         [Test]

@@ -52,6 +52,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         private const float FlatDepthRatio = 0.001f;
         private const float FlatCameraDistance = 10f;
         private const float MinimumVisibleExtent = 1e-4f;
+        private const float PixelSnapTolerance = 0.01f;
 
         /// <summary>
         /// Rearranges the instance and camera for rendering and returns what was decided; rejects prefabs with nothing to capture.
@@ -222,7 +223,13 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             camera.farClipPlane = WorldUiCameraDistance * 2f;
             return new PrefabCaptureFrame(
                 PrefabCaptureKind.UiPart,
-                new Vector2Int(Mathf.CeilToInt(pixelSize.x), Mathf.CeilToInt(pixelSize.y)));
+                new Vector2Int(ToPixelCount(pixelSize.x), ToPixelCount(pixelSize.y)));
+        }
+
+        // Dividing world corners by the root scale leaves float noise such as 109.0000076, which must not add a pixel.
+        private static int ToPixelCount(float uiUnits)
+        {
+            return Mathf.CeilToInt(uiUnits - PixelSnapTolerance);
         }
 
         private static int UiLayer()
