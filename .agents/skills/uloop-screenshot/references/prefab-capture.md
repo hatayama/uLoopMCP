@@ -11,10 +11,10 @@ uloop screenshot --prefab-path Assets/UI/Panel.prefab --prefab-background-color 
 
 The first matching rule decides the image (the response `Message` says which one was used):
 
-1. **Screen UI** — the prefab has an enabled Screen Space Canvas (Overlay or Camera). The outermost Canvases are switched to the capture camera and the image is the Game View size, so the layout matches the game.
-2. **UI part** — the root is a RectTransform. The image is sized to the union of all active RectTransforms, so children that overflow the root are included. Sizes are counted in UI units, so a world-space Canvas saved at a small scale keeps its pixel size. A stretched root fills the Game View size.
-3. **3D object** — anything else with an enabled Renderer or a world-space Canvas is viewed from the front-left with a perspective camera at the Game View size, with the whole object in frame.
-4. **Flat object** — content with no depth (sprites, quads, a lone world-space Canvas) is viewed straight on with an orthographic camera at the Game View size.
+1. **UI part** — the root is a RectTransform with no enabled Canvas of its own, or its own Canvas is World Space. The image is sized to the union of all active RectTransforms, so children that overflow the root are included, and nested Canvases inside the part are drawn with it. Sizes are counted in UI units, so a world-space Canvas saved at a small scale keeps its pixel size. A stretched root fills the Game View size.
+2. **Screen UI** — the root itself has an enabled Screen Space Canvas (Overlay or Camera), or the root is not a RectTransform and contains one. The outermost Canvases are switched to the capture camera and the image is the Game View size, so the layout matches the game.
+3. **Flat object** — content with no depth (sprites, quads, a lone world-space Canvas) is viewed straight on with an orthographic camera at the Game View size.
+4. **3D object** — anything else with an enabled Renderer is viewed from the front-left with a perspective camera at the Game View size, with the whole object in frame.
 
 A prefab with nothing to render is rejected, including one whose renderers have empty bounds, such as a particle system that has not emitted. When a prefab has both Screen Space UI and 3D content, the UI rule wins and the 3D content may not appear.
 
