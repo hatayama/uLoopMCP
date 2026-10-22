@@ -14,5 +14,7 @@ namespace io.github.hatayama.UnityCliLoop.ToolContracts
         public bool ElementsOnly { get; set; } = false;
         public bool AnnotateRaycastGrid { get; set; } = false;
         public string RaycastLayerMask { get; set; } = "";
+        public string PrefabPath { get; set; } = "";
+        public string PrefabBackgroundColor { get; set; } = "";
     }
 }
