@@ -265,12 +265,63 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             ScreenshotSchema request = CreateRequest(UiPartPath);
             request.PrefabBackgroundColor = "#00000000";
 
-            ScreenshotResponse response = Capture(new RecordingRenderer(), request);
+            RecordingRenderer renderer = new();
+
+            ScreenshotResponse response = Capture(renderer, request);
 
             Texture2D image = LoadSavedImage(response);
             try
             {
                 Assert.That(((Color32)image.GetPixel(0, 0)).a, Is.EqualTo(0));
+                Assert.That(renderer.ClearsBackgroundCount, Is.EqualTo(0));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(image);
+            }
+        }
+
+        /// <summary>
+        /// Verifies that when the pipeline does not clear, a translucent pixel is composited over the opaque background in linear space.
+        /// </summary>
+        [Test]
+        public void CaptureAsync_WhenThePipelineDoesNotClear_CompositesInLinearSpace()
+        {
+            Assume.That(QualitySettings.activeColorSpace, Is.EqualTo(ColorSpace.Linear));
+            RecordingRenderer renderer = new() { ExtraPixel = new Color32(188, 188, 188, 128) };
+
+            ScreenshotResponse response = Capture(renderer, CreateRequest(UiPartPath));
+
+            Texture2D image = LoadSavedImage(response);
+            try
+            {
+                AssertColor32Near(image.GetPixel(1, 1), new Color32(205, 205, 205, 255), 1);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(image);
+            }
+        }
+
+        /// <summary>
+        /// Verifies that when the pipeline clears to the background, drawn colors are kept as they are and only made opaque.
+        /// </summary>
+        [Test]
+        public void CaptureAsync_WhenThePipelineClears_KeepsTheDrawnColorAndMakesItOpaque()
+        {
+            RecordingRenderer renderer = new()
+            {
+                ClearsBackgroundResult = true,
+                ExtraPixel = new Color32(192, 192, 192, 191)
+            };
+
+            ScreenshotResponse response = Capture(renderer, CreateRequest(UiPartPath));
+
+            Texture2D image = LoadSavedImage(response);
+            try
+            {
+                AssertColor32Near(image.GetPixel(1, 1), new Color32(192, 192, 192, 255), 0);
+                AssertColor32Near(image.GetPixel(image.width / 2, image.height / 2), new Color32(255, 0, 0, 255), 0);
             }
             finally
             {
@@ -414,7 +465,10 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             public bool ThrowOnRender { get; set; }
             public bool ReturnBlank { get; set; }
             public bool FillWithCameraBackground { get; set; }
+            public bool ClearsBackgroundResult { get; set; }
+            public Color32? ExtraPixel { get; set; }
             public int RenderCount { get; private set; }
+            public int ClearsBackgroundCount { get; private set; }
             public Texture2D LastReturnedTexture { get; private set; }
             public Color CameraBackgroundColor { get; private set; }
             public CameraClearFlags CameraClearFlags { get; private set; }
@@ -438,9 +492,11 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
                 return LastReturnedTexture;
             }
 
+            // A renderer that paints the camera background stands for a pipeline that clears, so it always reports true.
             public bool ClearsBackground(Camera camera, Vector2Int size)
             {
-                return false;
+                ClearsBackgroundCount++;
+                return ClearsBackgroundResult || FillWithCameraBackground;
             }
 
             // Transparent everywhere except one opaque red pixel in the middle, unless a blank or background-only image is asked for.
@@ -456,6 +512,11 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
                 if (!ReturnBlank && !FillWithCameraBackground)
                 {
                     pixels[size.y / 2 * size.x + size.x / 2] = new Color32(255, 0, 0, 255);
+                }
+
+                if (ExtraPixel.HasValue)
+                {
+                    pixels[1 * size.x + 1] = ExtraPixel.Value;
                 }
 
                 return pixels;

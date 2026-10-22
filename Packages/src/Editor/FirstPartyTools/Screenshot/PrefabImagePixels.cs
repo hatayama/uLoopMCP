@@ -60,6 +60,17 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             }
         }
 
+        /// <summary>
+        /// Sets every pixel fully opaque without changing its color; used when the pipeline already blended everything over the background.
+        /// </summary>
+        internal static void MakeOpaque(Color32[] pixels)
+        {
+            for (int i = 0; i < pixels.Length; i++)
+            {
+                pixels[i].a = 255;
+            }
+        }
+
         private static byte Over(byte source, byte background, float coverage, bool linearBlending)
         {
             float s = ToBlend(source / 255f, linearBlending);

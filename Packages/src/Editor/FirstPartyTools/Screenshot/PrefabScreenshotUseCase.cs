@@ -60,8 +60,11 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 Camera camera = CreateCamera(scene, background);
                 GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(asset, scene);
                 PrefabCaptureFrame frame = PrefabCaptureFraming.Arrange(instance, camera, gameViewSize);
+                // Only an opaque background is composited, so only then is the extra probe render worth it.
+                // The probe runs before the real render so the decision rests on the pipeline, never on the image content.
+                bool pipelineClears = background.a >= 1f && _renderer.ClearsBackground(camera, frame.ImageSize);
                 texture = _renderer.Render(camera, frame.ImageSize);
-                CheckAndFillBackground(texture, background, request.PrefabPath);
+                CheckAndFillBackground(texture, background, request.PrefabPath, pipelineClears);
                 if (!Mathf.Approximately(request.ResolutionScale, 1f))
                 {
                     // ApplyResolutionScaling destroys the original only after it succeeds, so finally destroys exactly one texture.
@@ -93,7 +96,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             }
         }
 
-        private static void CheckAndFillBackground(Texture2D texture, Color background, string prefabPath)
+        private static void CheckAndFillBackground(Texture2D texture, Color background, string prefabPath, bool pipelineClears)
         {
             Color32[] pixels = texture.GetPixels32();
             if (!PrefabImagePixels.HasDrawnPixel(pixels, background))
@@ -109,7 +112,17 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 return;
             }
 
-            PrefabImagePixels.FillBackground(pixels, background, QualitySettings.activeColorSpace == ColorSpace.Linear);
+            if (pipelineClears)
+            {
+                // The GPU already blended every pixel over the background; only alpha can be off,
+                // because shaders without a separate alpha blend leave it below 255.
+                PrefabImagePixels.MakeOpaque(pixels);
+            }
+            else
+            {
+                PrefabImagePixels.FillBackground(pixels, background, QualitySettings.activeColorSpace == ColorSpace.Linear);
+            }
+
             texture.SetPixels32(pixels);
             texture.Apply();
         }

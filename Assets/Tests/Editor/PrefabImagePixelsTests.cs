@@ -127,6 +127,21 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
                 () => PrefabImagePixels.FillBackground(pixels, new Color32(128, 128, 128, 254), false));
         }
 
+        /// <summary>
+        /// Verifies MakeOpaque raises alpha to 255 without changing color, and leaves an opaque pixel unchanged.
+        /// </summary>
+        [Test]
+        public void MakeOpaque_KeepsColorAndSetsAlphaTo255()
+        {
+            Color32 red = new(255, 0, 0, 255);
+            Color32[] pixels = { new Color32(192, 192, 192, 191), red };
+
+            PrefabImagePixels.MakeOpaque(pixels);
+
+            AssertColor32Near(pixels[0], new Color32(192, 192, 192, 255), 0);
+            AssertColor32Near(pixels[1], red, 0);
+        }
+
         private static Color32[] Filled(Color32 color, int count)
         {
             Color32[] pixels = new Color32[count];
