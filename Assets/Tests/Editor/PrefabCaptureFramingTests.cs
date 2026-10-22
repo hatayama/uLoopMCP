@@ -331,6 +331,31 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
         }
 
         /// <summary>
+        /// Verifies an overlay Canvas nested in a Canvas-less UI part does not turn the part into screen UI.
+        /// </summary>
+        [Test]
+        public void Arrange_WithAnOverlayCanvasInsideACanvaslessUiRoot_TreatsItAsAUiPart()
+        {
+            GameObject root = CreateRectInScene("Root");
+            ((RectTransform)root.transform).sizeDelta = new Vector2(100f, 100f);
+            GameObject child = new GameObject("Child", typeof(RectTransform));
+            child.transform.SetParent(root.transform, false);
+            Canvas childCanvas = child.AddComponent<Canvas>();
+            childCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            childCanvas.overrideSorting = true;
+            RectTransform childRect = (RectTransform)child.transform;
+            childRect.anchorMin = new Vector2(0.5f, 0.5f);
+            childRect.anchorMax = new Vector2(0.5f, 0.5f);
+            childRect.sizeDelta = new Vector2(40f, 20f);
+            childRect.anchoredPosition = new Vector2(-70f, 0f);
+
+            PrefabCaptureFrame frame = PrefabCaptureFraming.Arrange(root, _camera, GameViewSize);
+
+            Assert.That(frame.Kind, Is.EqualTo(PrefabCaptureKind.UiPart));
+            Assert.That(frame.ImageSize, Is.EqualTo(new Vector2Int(140, 100)));
+        }
+
+        /// <summary>
         /// Verifies a MeshRenderer without a mesh has empty bounds and is rejected instead of rendering a blank image.
         /// </summary>
         [Test]

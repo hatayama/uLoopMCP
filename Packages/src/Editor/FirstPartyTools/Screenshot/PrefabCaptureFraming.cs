@@ -85,7 +85,13 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 instanceRoot.SetActive(true);
             }
 
-            // Screen UI is checked first so a RectTransform root with a screen-space Canvas keeps its in-game layout.
+            // A UI part is placed under a Canvas in the game, so its own nested canvases must not be treated as screen UI.
+            if (instanceRoot.transform is RectTransform && !HasEnabledCanvas(instanceRoot))
+            {
+                return ArrangeUiPart(instanceRoot, camera, gameViewSize);
+            }
+
+            // Screen UI is checked before the remaining UI part case so a root with its own screen-space Canvas keeps its in-game layout.
             List<Canvas> screenCanvases = CollectTopCanvases(instanceRoot, false);
             if (screenCanvases.Count > 0)
             {
@@ -98,6 +104,11 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             }
 
             return ArrangeObject(instanceRoot, camera, gameViewSize);
+        }
+
+        private static bool HasEnabledCanvas(GameObject gameObject)
+        {
+            return gameObject.TryGetComponent(out Canvas canvas) && canvas.enabled;
         }
 
         private static PrefabCaptureFrame ArrangeScreenUi(List<Canvas> screenCanvases, Camera camera, Vector2Int gameViewSize)
