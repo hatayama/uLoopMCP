@@ -215,6 +215,29 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
         }
 
         /// <summary>
+        /// Verifies the real renderer produces a PNG sized to the whole UI part on any device with a GPU path.
+        /// </summary>
+        [Test]
+        public void CaptureAsync_WithTheRealRenderer_WritesAnImageSizedToTheUiPart()
+        {
+            if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null)
+            {
+                Assert.Ignore("Rendering needs a graphics device; skipped on the Null device.");
+            }
+
+            Texture2D image = CaptureWithTheRealRenderer();
+            try
+            {
+                Assert.That(image.width, Is.EqualTo(140));
+                Assert.That(image.height, Is.EqualTo(100));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(image);
+            }
+        }
+
+        /// <summary>
         /// Verifies the real renderer draws the panel, the overflowing badge, and the gray background into the PNG.
         /// </summary>
         [Test]
@@ -226,15 +249,9 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
                 Assert.Ignore($"Pixel values need a real GPU with matching sRGB writes; skipped on {deviceType}.");
             }
 
-            PrefabScreenshotUseCase useCase = new(null, () => new Vector2(800f, 600f));
-            ScreenshotResponse response = useCase.CaptureAsync(CreateRequest(UiPartPath), CancellationToken.None).Result;
-
-            Texture2D image = new(2, 2);
+            Texture2D image = CaptureWithTheRealRenderer();
             try
             {
-                Assert.That(image.LoadImage(File.ReadAllBytes(response.Screenshots[0].ImagePath)), Is.True);
-                Assert.That(image.width, Is.EqualTo(140));
-                Assert.That(image.height, Is.EqualTo(100));
                 AssertColor32Near(image.GetPixel(2, 2), new Color32(128, 128, 128, 255), 1);
                 AssertColor32Near(image.GetPixel(90, 50), new Color32(255, 255, 255, 255), 1);
                 AssertColor32Near(image.GetPixel(20, 50), new Color32(255, 0, 0, 255), 1);
@@ -243,6 +260,20 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             {
                 UnityEngine.Object.DestroyImmediate(image);
             }
+        }
+
+        private Texture2D CaptureWithTheRealRenderer()
+        {
+            PrefabScreenshotUseCase useCase = new(null, () => new Vector2(800f, 600f));
+            ScreenshotResponse response = useCase.CaptureAsync(CreateRequest(UiPartPath), CancellationToken.None).Result;
+            Texture2D image = new(2, 2);
+            if (!image.LoadImage(File.ReadAllBytes(response.Screenshots[0].ImagePath)))
+            {
+                UnityEngine.Object.DestroyImmediate(image);
+                Assert.Fail("The saved PNG could not be decoded.");
+            }
+
+            return image;
         }
 
         private void AssertRejectedWithoutSideEffects<TException>(ScreenshotSchema request, CancellationToken ct)
