@@ -438,6 +438,11 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
                 return LastReturnedTexture;
             }
 
+            public bool ClearsBackground(Camera camera, Vector2Int size)
+            {
+                return false;
+            }
+
             // Transparent everywhere except one opaque red pixel in the middle, unless a blank or background-only image is asked for.
             private Color32[] CreatePixels(Camera camera, Vector2Int size)
             {

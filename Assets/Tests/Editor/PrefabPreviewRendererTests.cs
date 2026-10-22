@@ -55,5 +55,70 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
                 EditorSceneManager.ClosePreviewScene(scene);
             }
         }
+
+        /// <summary>
+        /// Verifies a camera cleared to an opaque solid color is reported as cleared by the pipeline.
+        /// </summary>
+        [Test]
+        public void ClearsBackground_WithACameraClearedToAnOpaqueColor_ReturnsTrue()
+        {
+            IgnoreWithoutARealGpu();
+            Scene scene = EditorSceneManager.NewPreviewScene();
+            try
+            {
+                Camera camera = CreateSolidColorCamera(scene);
+
+                bool clears = new PrefabPreviewRenderer().ClearsBackground(camera, new Vector2Int(16, 16));
+
+                Assert.That(clears, Is.True);
+            }
+            finally
+            {
+                EditorSceneManager.ClosePreviewScene(scene);
+            }
+        }
+
+        /// <summary>
+        /// Verifies the probe render leaves the camera's culling mask as it found it, so the real render still draws the prefab.
+        /// </summary>
+        [Test]
+        public void ClearsBackground_RestoresTheCullingMask()
+        {
+            IgnoreWithoutARealGpu();
+            Scene scene = EditorSceneManager.NewPreviewScene();
+            try
+            {
+                Camera camera = CreateSolidColorCamera(scene);
+                camera.cullingMask = 1 << 5;
+
+                new PrefabPreviewRenderer().ClearsBackground(camera, new Vector2Int(16, 16));
+
+                Assert.That(camera.cullingMask, Is.EqualTo(1 << 5));
+            }
+            finally
+            {
+                EditorSceneManager.ClosePreviewScene(scene);
+            }
+        }
+
+        private static void IgnoreWithoutARealGpu()
+        {
+            GraphicsDeviceType device = SystemInfo.graphicsDeviceType;
+            if (device == GraphicsDeviceType.Null || device == GraphicsDeviceType.OpenGLCore)
+            {
+                Assert.Ignore("Reading rendered pixels needs a real GPU; skipped on the Null and OpenGLCore devices.");
+            }
+        }
+
+        private static Camera CreateSolidColorCamera(Scene scene)
+        {
+            GameObject cameraObject = new("Camera");
+            SceneManager.MoveGameObjectToScene(cameraObject, scene);
+            Camera camera = cameraObject.AddComponent<Camera>();
+            camera.scene = scene;
+            camera.clearFlags = CameraClearFlags.SolidColor;
+            camera.backgroundColor = new Color(0.5f, 0.5f, 0.5f, 1f);
+            return camera;
+        }
     }
 }
