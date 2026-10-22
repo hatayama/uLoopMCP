@@ -460,7 +460,8 @@ jobs:
   # starts the extracted Editor itself, like the latest 6000.7 job.
   editmode-tests-release-optimization:
     name: EditMode Tests (Release code optimization)
-    runs-on: ubuntu-latest
+    # Pinned because this job runs the Unity 2022.3 editor directly on the runner, and it needs libxml2.so.2, which ubuntu-26.04 does not ship.
+    runs-on: ubuntu-24.04
     timeout-minutes: 90
     env:
       HAS_UNITY_LICENSE: ${{ secrets.UNITY_LICENSE != '' }}
