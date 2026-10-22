@@ -16,7 +16,7 @@ The first matching rule decides the image (the response `Message` says which one
 3. **3D object** — anything else with an enabled Renderer or a world-space Canvas is viewed from the front-left with a perspective camera at the Game View size, with the whole object in frame.
 4. **Flat object** — content with no depth (sprites, quads, a lone world-space Canvas) is viewed straight on with an orthographic camera at the Game View size.
 
-A prefab with nothing to render is rejected. When a prefab has both Screen Space UI and 3D content, the UI rule wins and the 3D content may not appear.
+A prefab with nothing to render is rejected, including one whose renderers have empty bounds, such as a particle system that has not emitted. When a prefab has both Screen Space UI and 3D content, the UI rule wins and the 3D content may not appear.
 
 The Game View size comes from the current Game View; change it with `uloop set-game-view-size`.
 

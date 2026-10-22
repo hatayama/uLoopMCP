@@ -331,6 +331,32 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
         }
 
         /// <summary>
+        /// Verifies a MeshRenderer without a mesh has empty bounds and is rejected instead of rendering a blank image.
+        /// </summary>
+        [Test]
+        public void Arrange_WithOnlyAMeshRendererWithoutAMesh_Throws()
+        {
+            GameObject root = CreateInScene("Root");
+            CreateChild(root, "Renderer").AddComponent<MeshRenderer>();
+
+            Assert.Throws<UnityCliLoopToolParameterValidationException>(
+                () => PrefabCaptureFraming.Arrange(root, _camera, GameViewSize));
+        }
+
+        /// <summary>
+        /// Verifies a particle system that has not emitted has empty bounds and is rejected instead of rendering a blank image.
+        /// </summary>
+        [Test]
+        public void Arrange_WithOnlyAParticleSystem_Throws()
+        {
+            GameObject root = CreateInScene("Root");
+            CreateChild(root, "Particles").AddComponent<ParticleSystem>();
+
+            Assert.Throws<UnityCliLoopToolParameterValidationException>(
+                () => PrefabCaptureFraming.Arrange(root, _camera, GameViewSize));
+        }
+
+        /// <summary>
         /// Verifies a disabled light in the prefab does not count, so a directional light is still added.
         /// </summary>
         [Test]

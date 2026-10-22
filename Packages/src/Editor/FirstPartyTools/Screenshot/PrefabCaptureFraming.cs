@@ -51,6 +51,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         private const float FlatFitMargin = 1.05f;
         private const float FlatDepthRatio = 0.001f;
         private const float FlatCameraDistance = 10f;
+        private const float MinimumVisibleExtent = 1e-4f;
 
         /// <summary>
         /// Rearranges the instance and camera for rendering and returns what was decided; rejects prefabs with nothing to capture.
@@ -239,6 +240,14 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             if (bounds == null)
             {
                 throw new UnityCliLoopToolParameterValidationException("Prefab has no Renderer or UI to capture");
+            }
+
+            // Empty bounds would give a zero-sized orthographic camera and a blank image reported as success.
+            Vector3 size = bounds.Value.size;
+            if (Mathf.Max(size.x, size.y, size.z) <= MinimumVisibleExtent)
+            {
+                throw new UnityCliLoopToolParameterValidationException(
+                    "Prefab has nothing with a visible size to capture; renderer bounds are empty (for example, a particle system that has not emitted)");
             }
 
             if (!HasEnabledLight(root))
