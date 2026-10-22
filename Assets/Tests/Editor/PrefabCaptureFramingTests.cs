@@ -50,6 +50,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             Assert.That(_camera.orthographicSize, Is.EqualTo(50f).Within(Tolerance));
             Assert.That(_camera.transform.position.x, Is.EqualTo(-20f).Within(Tolerance));
             Assert.That(_camera.transform.position.y, Is.EqualTo(0f).Within(Tolerance));
+            Assert.That(_camera.cameraType, Is.EqualTo(CameraType.Game));
+            Assert.That(root.transform.parent.gameObject.layer, Is.EqualTo(LayerMask.NameToLayer("UI")));
         }
 
         /// <summary>
@@ -112,6 +114,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
 
             Assert.That(frame.Kind, Is.EqualTo(PrefabCaptureKind.ScreenUi));
             Assert.That(frame.ImageSize, Is.EqualTo(GameViewSize));
+            Assert.That(_camera.cameraType, Is.EqualTo(CameraType.Game));
             Assert.That(rootCanvas.renderMode, Is.EqualTo(RenderMode.ScreenSpaceCamera));
             Assert.That(rootCanvas.worldCamera, Is.SameAs(_camera));
         }
@@ -162,6 +165,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             Assert.That(frame.Kind, Is.EqualTo(PrefabCaptureKind.Object3D));
             Assert.That(frame.ImageSize, Is.EqualTo(GameViewSize));
             Assert.That(_camera.orthographic, Is.False);
+            Assert.That(_camera.cameraType, Is.EqualTo(CameraType.Preview));
             AssertCornersInView(BoundsCorners(cube.bounds));
         }
 
@@ -211,6 +215,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             Assert.That(frame.Kind, Is.EqualTo(PrefabCaptureKind.Flat2D));
             Assert.That(_camera.orthographic, Is.True);
             Assert.That(_camera.transform.rotation, Is.EqualTo(Quaternion.identity));
+            Assert.That(_camera.cameraType, Is.EqualTo(CameraType.Preview));
             AssertCornersInView(BoundsCorners(quad.bounds));
         }
 
@@ -255,6 +260,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             PrefabCaptureFrame frame = PrefabCaptureFraming.Arrange(root, _camera, GameViewSize);
 
             Assert.That(frame.Kind, Is.EqualTo(PrefabCaptureKind.ScreenUi));
+            Assert.That(_camera.cameraType, Is.EqualTo(CameraType.Game));
         }
 
         /// <summary>
@@ -273,6 +279,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             PrefabCaptureFrame frame = PrefabCaptureFraming.Arrange(root, _camera, GameViewSize);
 
             Assert.That(frame.Kind, Is.EqualTo(PrefabCaptureKind.Flat2D));
+            Assert.That(_camera.cameraType, Is.EqualTo(CameraType.Game));
             Vector3[] corners = new Vector3[4];
             canvasRect.GetWorldCorners(corners);
             AssertCornersInView(corners);
@@ -295,6 +302,7 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
 
             Assert.That(frame.Kind, Is.EqualTo(PrefabCaptureKind.UiPart));
             Assert.That(frame.ImageSize, Is.EqualTo(new Vector2Int(100, 100)));
+            Assert.That(root.transform.parent.gameObject.layer, Is.EqualTo(LayerMask.NameToLayer("UI")));
         }
 
         /// <summary>
@@ -356,6 +364,42 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
         }
 
         /// <summary>
+        /// Verifies a prefab with renderers and a world-space Canvas uses a preview camera and frames both.
+        /// </summary>
+        [Test]
+        public void Arrange_WithACubeAndAWorldSpaceCanvas_UsesAPreviewCameraAndFramesBoth()
+        {
+            GameObject root = CreateInScene("Root");
+            Renderer cube = CreatePrimitiveChild(root, PrimitiveType.Cube);
+            RectTransform canvasRect = CreateWorldSpaceCanvasChild(root);
+
+            PrefabCaptureFrame frame = PrefabCaptureFraming.Arrange(root, _camera, GameViewSize);
+
+            Assert.That(frame.Kind, Is.EqualTo(PrefabCaptureKind.Object3D));
+            Assert.That(_camera.cameraType, Is.EqualTo(CameraType.Preview));
+            AssertCornersInView(BoundsCorners(cube.bounds));
+            Vector3[] corners = new Vector3[4];
+            canvasRect.GetWorldCorners(corners);
+            AssertCornersInView(corners);
+        }
+
+        /// <summary>
+        /// Verifies a renderer with empty bounds does not switch a world-space Canvas prefab to a preview camera, which would hide the Canvas.
+        /// </summary>
+        [Test]
+        public void Arrange_WithAnEmptyParticleSystemAndAWorldSpaceCanvas_KeepsAGameCamera()
+        {
+            GameObject root = CreateInScene("Root");
+            CreateChild(root, "Particles").AddComponent<ParticleSystem>();
+            CreateWorldSpaceCanvasChild(root);
+
+            PrefabCaptureFrame frame = PrefabCaptureFraming.Arrange(root, _camera, GameViewSize);
+
+            Assert.That(frame.Kind, Is.EqualTo(PrefabCaptureKind.Flat2D));
+            Assert.That(_camera.cameraType, Is.EqualTo(CameraType.Game));
+        }
+
+        /// <summary>
         /// Verifies a MeshRenderer without a mesh has empty bounds and is rejected instead of rendering a blank image.
         /// </summary>
         [Test]
@@ -408,6 +452,15 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
             childRect.sizeDelta = new Vector2(40f, 20f);
             childRect.anchoredPosition = new Vector2(-70f, 0f);
             return root;
+        }
+
+        private static RectTransform CreateWorldSpaceCanvasChild(GameObject parent)
+        {
+            GameObject canvasObject = CreateChild(parent, "Canvas");
+            canvasObject.AddComponent<Canvas>().renderMode = RenderMode.WorldSpace;
+            RectTransform canvasRect = (RectTransform)canvasObject.transform;
+            canvasRect.sizeDelta = new Vector2(100f, 100f);
+            return canvasRect;
         }
 
         private GameObject CreateInScene(string name)

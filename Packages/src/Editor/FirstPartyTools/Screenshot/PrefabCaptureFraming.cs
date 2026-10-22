@@ -182,6 +182,8 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
         private static PrefabCaptureFrame ArrangeUiPart(GameObject root, Camera camera, Vector2Int gameViewSize)
         {
             GameObject wrapper = new("PrefabCaptureCanvas", typeof(RectTransform), typeof(Canvas));
+            // Some pipelines draw game cameras only on certain layers; uGUI follows the outermost Canvas's layer.
+            wrapper.layer = UiLayer();
             SceneManager.MoveGameObjectToScene(wrapper, root.scene);
             Canvas wrapperCanvas = wrapper.GetComponent<Canvas>();
             wrapperCanvas.renderMode = RenderMode.WorldSpace;
@@ -223,6 +225,18 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 new Vector2Int(Mathf.CeilToInt(pixelSize.x), Mathf.CeilToInt(pixelSize.y)));
         }
 
+        private static int UiLayer()
+        {
+            int layer = LayerMask.NameToLayer("UI");
+            if (layer < 0)
+            {
+                // Continuing would return an image the pipeline never drew into.
+                throw new InvalidOperationException("The built-in UI layer is missing");
+            }
+
+            return layer;
+        }
+
         private static Rect UnionOfWorldRects(GameObject root)
         {
             Vector3[] corners = new Vector3[4];
@@ -247,18 +261,25 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
         private static PrefabCaptureFrame ArrangeObject(GameObject root, Camera camera, Vector2Int gameViewSize)
         {
-            Bounds? bounds = CollectRenderableBounds(root);
+            Bounds? rendererBounds = CollectRendererBounds(root);
+            Bounds? bounds = Union(rendererBounds, CollectWorldCanvasBounds(root));
             if (bounds == null)
             {
                 throw new UnityCliLoopToolParameterValidationException("Prefab has no Renderer or UI to capture");
             }
 
             // Empty bounds would give a zero-sized orthographic camera and a blank image reported as success.
-            Vector3 size = bounds.Value.size;
-            if (Mathf.Max(size.x, size.y, size.z) <= MinimumVisibleExtent)
+            if (MaxExtent(bounds.Value) <= MinimumVisibleExtent)
             {
                 throw new UnityCliLoopToolParameterValidationException(
                     "Prefab has nothing with a visible size to capture; renderer bounds are empty (for example, a particle system that has not emitted)");
+            }
+
+            // uGUI is not drawn by preview cameras, so only prefabs with visible renderers switch to one;
+            // every pipeline draws preview cameras plainly because Inspector previews depend on them.
+            if (rendererBounds != null && MaxExtent(rendererBounds.Value) > MinimumVisibleExtent)
+            {
+                camera.cameraType = CameraType.Preview;
             }
 
             if (!HasEnabledLight(root))
@@ -292,7 +313,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             return new PrefabCaptureFrame(PrefabCaptureKind.Object3D, gameViewSize);
         }
 
-        private static Bounds? CollectRenderableBounds(GameObject root)
+        private static Bounds? CollectRendererBounds(GameObject root)
         {
             Bounds? bounds = null;
             foreach (Renderer renderer in root.GetComponentsInChildren<Renderer>(false))
@@ -305,6 +326,12 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 bounds = Encapsulate(bounds, renderer.bounds);
             }
 
+            return bounds;
+        }
+
+        private static Bounds? CollectWorldCanvasBounds(GameObject root)
+        {
+            Bounds? bounds = null;
             Vector3[] corners = new Vector3[4];
             foreach (Canvas canvas in CollectTopCanvases(root, true))
             {
@@ -316,6 +343,22 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
             }
 
             return bounds;
+        }
+
+        private static Bounds? Union(Bounds? first, Bounds? second)
+        {
+            if (second == null)
+            {
+                return first;
+            }
+
+            return Encapsulate(first, second.Value);
+        }
+
+        private static float MaxExtent(Bounds bounds)
+        {
+            Vector3 size = bounds.size;
+            return Mathf.Max(size.x, size.y, size.z);
         }
 
         private static Bounds Encapsulate(Bounds? current, Bounds addition)
