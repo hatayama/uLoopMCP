@@ -61,6 +61,7 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
                 GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(asset, scene);
                 PrefabCaptureFrame frame = PrefabCaptureFraming.Arrange(instance, camera, gameViewSize);
                 texture = _renderer.Render(camera, frame.ImageSize);
+                CheckAndFillBackground(texture, background, request.PrefabPath);
                 if (!Mathf.Approximately(request.ResolutionScale, 1f))
                 {
                     // ApplyResolutionScaling destroys the original only after it succeeds, so finally destroys exactly one texture.
@@ -90,6 +91,27 @@ namespace io.github.hatayama.UnityCliLoop.FirstPartyTools
 
                 EditorSceneManager.ClosePreviewScene(scene);
             }
+        }
+
+        private static void CheckAndFillBackground(Texture2D texture, Color background, string prefabPath)
+        {
+            Color32[] pixels = texture.GetPixels32();
+            if (!PrefabImagePixels.HasDrawnPixel(pixels, background))
+            {
+                throw new UnityCliLoopToolParameterValidationException(
+                    $"Nothing was drawn for {prefabPath}; the project's render pipeline did not draw this content. If the prefab is a single flat color, pass a different --prefab-background-color.");
+            }
+
+            // Some pipelines do not clear game cameras, so an opaque background is filled in afterwards;
+            // a translucent background is left to the pipeline because compositing it again would double it.
+            if (background.a < 1f)
+            {
+                return;
+            }
+
+            PrefabImagePixels.FillBackground(pixels, background, QualitySettings.activeColorSpace == ColorSpace.Linear);
+            texture.SetPixels32(pixels);
+            texture.Apply();
         }
 
         private static Camera CreateCamera(Scene scene, Color background)

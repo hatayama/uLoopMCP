@@ -202,6 +202,83 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
         }
 
         /// <summary>
+        /// Verifies an image with nothing drawn is rejected, and no file, texture, or preview scene is left behind.
+        /// </summary>
+        [Test]
+        public void CaptureAsync_WhenNothingIsDrawn_RejectsWithoutWritingAFile()
+        {
+            RecordingRenderer renderer = new() { ReturnBlank = true };
+            int previewScenesBefore = EditorSceneManager.previewSceneCount;
+            PrefabScreenshotUseCase useCase = CreateUseCase(renderer);
+
+            Assert.Throws<UnityCliLoopToolParameterValidationException>(
+                () => useCase.CaptureAsync(CreateRequest(UiPartPath), CancellationToken.None));
+
+            Assert.That(Directory.GetFiles(_outputDirectory), Is.Empty);
+            Assert.That(EditorSceneManager.previewSceneCount, Is.EqualTo(previewScenesBefore));
+            Assert.That(renderer.LastReturnedTexture == null, Is.True, "the rendered texture must be destroyed");
+        }
+
+        /// <summary>
+        /// Verifies an image showing only the camera's background color is rejected as nothing drawn.
+        /// </summary>
+        [Test]
+        public void CaptureAsync_WhenOnlyTheBackgroundIsDrawn_RejectsWithoutWritingAFile()
+        {
+            RecordingRenderer renderer = new() { FillWithCameraBackground = true };
+            int previewScenesBefore = EditorSceneManager.previewSceneCount;
+            PrefabScreenshotUseCase useCase = CreateUseCase(renderer);
+
+            Assert.Throws<UnityCliLoopToolParameterValidationException>(
+                () => useCase.CaptureAsync(CreateRequest(UiPartPath), CancellationToken.None));
+
+            Assert.That(Directory.GetFiles(_outputDirectory), Is.Empty);
+            Assert.That(EditorSceneManager.previewSceneCount, Is.EqualTo(previewScenesBefore));
+        }
+
+        /// <summary>
+        /// Verifies pixels the pipeline left transparent are filled with the default opaque gray while drawn pixels stay.
+        /// </summary>
+        [Test]
+        public void CaptureAsync_WithTheDefaultBackground_FillsUndrawnPixelsWithGray()
+        {
+            ScreenshotResponse response = Capture(new RecordingRenderer(), CreateRequest(UiPartPath));
+
+            Texture2D image = LoadSavedImage(response);
+            try
+            {
+                AssertColor32Near(image.GetPixel(0, 0), new Color32(128, 128, 128, 255), 1);
+                AssertColor32Near(image.GetPixel(image.width / 2, image.height / 2), new Color32(255, 0, 0, 255), 0);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(image);
+            }
+        }
+
+        /// <summary>
+        /// Verifies a transparent background is not composited, so undrawn pixels stay transparent.
+        /// </summary>
+        [Test]
+        public void CaptureAsync_WithATransparentBackground_KeepsUndrawnPixelsTransparent()
+        {
+            ScreenshotSchema request = CreateRequest(UiPartPath);
+            request.PrefabBackgroundColor = "#00000000";
+
+            ScreenshotResponse response = Capture(new RecordingRenderer(), request);
+
+            Texture2D image = LoadSavedImage(response);
+            try
+            {
+                Assert.That(((Color32)image.GetPixel(0, 0)).a, Is.EqualTo(0));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(image);
+            }
+        }
+
+        /// <summary>
         /// Verifies capturing does not modify the prefab asset.
         /// </summary>
         [Test]
@@ -266,6 +343,11 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
         {
             PrefabScreenshotUseCase useCase = new(null, () => new Vector2(800f, 600f));
             ScreenshotResponse response = useCase.CaptureAsync(CreateRequest(UiPartPath), CancellationToken.None).Result;
+            return LoadSavedImage(response);
+        }
+
+        private static Texture2D LoadSavedImage(ScreenshotResponse response)
+        {
             Texture2D image = new(2, 2);
             if (!image.LoadImage(File.ReadAllBytes(response.Screenshots[0].ImagePath)))
             {
@@ -330,6 +412,8 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
         private sealed class RecordingRenderer : IPrefabPreviewRenderer
         {
             public bool ThrowOnRender { get; set; }
+            public bool ReturnBlank { get; set; }
+            public bool FillWithCameraBackground { get; set; }
             public int RenderCount { get; private set; }
             public Texture2D LastReturnedTexture { get; private set; }
             public Color CameraBackgroundColor { get; private set; }
@@ -349,7 +433,27 @@ namespace io.github.hatayama.UnityCliLoop.Tests.Editor
                 }
 
                 LastReturnedTexture = new Texture2D(size.x, size.y, TextureFormat.RGBA32, false);
+                LastReturnedTexture.SetPixels32(CreatePixels(camera, size));
+                LastReturnedTexture.Apply();
                 return LastReturnedTexture;
+            }
+
+            // Transparent everywhere except one opaque red pixel in the middle, unless a blank or background-only image is asked for.
+            private Color32[] CreatePixels(Camera camera, Vector2Int size)
+            {
+                Color32 fill = FillWithCameraBackground ? (Color32)camera.backgroundColor : new Color32(0, 0, 0, 0);
+                Color32[] pixels = new Color32[size.x * size.y];
+                for (int i = 0; i < pixels.Length; i++)
+                {
+                    pixels[i] = fill;
+                }
+
+                if (!ReturnBlank && !FillWithCameraBackground)
+                {
+                    pixels[size.y / 2 * size.x + size.x / 2] = new Color32(255, 0, 0, 255);
+                }
+
+                return pixels;
             }
         }
     }
