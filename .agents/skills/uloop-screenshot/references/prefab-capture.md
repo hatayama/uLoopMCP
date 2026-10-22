@@ -27,7 +27,7 @@ The Game View size comes from the current Game View; change it with `uloop set-g
 - `--window-name` and `--match-mode` are ignored.
 - `--capture-mode` other than `auto`, `--annotate-elements`, `--annotate-raycast-grid`, `--raycast-layer-mask`, and `--elements-only` are rejected.
 - `--resolution-scale` shrinks the image after it is rendered.
-- `--prefab-background-color` takes `#RRGGBB` or `#RRGGBBAA`. The default `#808080` keeps both dark and white text readable. An opaque color is also composited after rendering under pixels the pipeline left unpainted. `#00000000` gives a transparent background with URP; transparent and translucent backgrounds depend on the render pipeline.
+- `--prefab-background-color` takes `#RRGGBB` or `#RRGGBBAA`. The default `#808080` keeps both dark and white text readable. When the render pipeline clears the capture camera to the background color, the drawn colors are kept and only made opaque. When it does not, the background is composited after rendering under unpainted and translucent pixels. `#00000000` gives a transparent background with URP; transparent and translucent backgrounds depend on the render pipeline.
 - `--prefab-background-color` without `--prefab-path` is rejected.
 
 ## What happens to the instance
@@ -35,6 +35,7 @@ The Game View size comes from the current Game View; change it with `uloop set-g
 - If the prefab has no enabled Light, one directional light is added to the preview scene.
 - A root saved inactive is activated so it can be captured; children keep their saved state.
 - Inside the preview scene, scripts other than `[ExecuteAlways]` ones do not run, even in Play Mode. uGUI draws normally.
+- The prefab is rendered right after it is instantiated, so content that scripts assign later (asynchronous loads, Start, or Update) is missing, and post-processing such as bloom is not applied.
 
 ## Output
 
