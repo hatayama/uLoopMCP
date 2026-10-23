@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.12.0](https://github.com/hatayama/unity-cli-loop/compare/uloop-project-runner-v3.11.0...uloop-project-runner-v3.12.0) (2026-10-23)
+
+
+### Features
+
+* screenshot can render a prefab asset by path without opening it ([#3383](https://github.com/hatayama/unity-cli-loop/issues/3383)) ([5556f24](https://github.com/hatayama/unity-cli-loop/commit/5556f24031ba4f63028dbfa4ce233b503ff1d2a2))
+
 ## [3.11.0](https://github.com/hatayama/unity-cli-loop/compare/uloop-project-runner-v3.10.0...uloop-project-runner-v3.11.0) (2026-10-21)
 
 
