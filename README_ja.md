@@ -140,7 +140,7 @@ Name: OpenUPM
 URL: https://package.openupm.com
 Scope(s): io.github.hatayama.uloopmcp
 ```
-2. `Window > Package Manager` で My Registries の OpenUPM を選び、Unity Loop Harness をインストールします。
+2. `Window > Package Manager` で My Registries の OpenUPM を選び、Unity Loop Harness（v3.19.0 までは Unity CLI Loop と表示）をインストールします。
 
 </details>
 
